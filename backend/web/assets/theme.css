@@ -1,0 +1,41 @@
+/* ============================================================
+   主题变量层（皮肤）
+   换主题 = 换一份这样的变量定义。变量契约 v1：
+   - 组件结构层只引用这些变量，不定义颜色
+   - 加载顺序：reveal.css → moon.css(兜底) → theme.css(本文件，最后加载优先)
+   骨架阶段手写默认值；阶段4接 update_theme 时由后端把 JSON 配置渲染进这里。
+   ============================================================ */
+:root {
+  /* reveal.js 官方变量 */
+  --r-background-color: #0b132b;
+  --r-main-color: #e2e8f0;
+  --r-heading-color: #5eead4;
+  --r-link-color: #2dd4bf;
+  --r-main-font: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --r-heading-font: var(--r-main-font);
+  --r-code-font: Consolas, "JetBrains Mono", monospace;
+
+  /* 组件库引用的业务变量 */
+  --accent: #5eead4;
+  --border: rgba(94, 234, 212, 0.25);
+  --card-bg: rgba(94, 234, 212, 0.06);
+  --text-muted: #94a3b8;
+  --radius: 10px;
+  --space-md: 0.6em;
+  --space-lg: 1.2em;
+}
+
+.reveal {
+  font-family: var(--r-main-font);
+  font-size: 34px;
+}
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family: var(--r-heading-font);
+  color: var(--r-heading-color);
+  text-transform: none;
+  font-weight: 700;
+}
+.reveal p, .reveal li {
+  color: var(--r-main-color);
+  line-height: 1.6;
+}

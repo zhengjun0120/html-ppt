@@ -1,0 +1,27 @@
+{{/* deck 统一骨架模板。只有两处占位：{{.Title}} 和 {{.Sections}}，
+     其余内容属于第①层（框架）与第②层（组件库引用），LLM 永远不可见不可改。
+     使用 Go 的 text/template 渲染；Title 必须先做 HTML 转义再传入，
+     Sections 是受信任的内部生成的 HTML，原样插入。 */}}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>{{.Title}}</title>
+  <!-- 第①层：框架与主题（LLM 不可见不可改） -->
+  <link rel="stylesheet" href="/assets/reveal.css">
+  <link rel="stylesheet" href="/assets/moon.css">
+  <link rel="stylesheet" href="/assets/theme.css">
+  <!-- 第②层：组件库（LLM 只可使用 class，不可修改定义） -->
+  <link rel="stylesheet" href="/assets/components.css">
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <!-- ============ AGENT-EDITABLE-START（第③层：LLM 唯一可写区域） ============ -->
+{{.Sections}}
+      <!-- ============ AGENT-EDITABLE-END ============ -->
+    </div>
+  </div>
+  <script src="/assets/reveal.js"></script>
+  <script src="/assets/init.js"></script>
+</body>
+</html>

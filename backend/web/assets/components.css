@@ -1,0 +1,70 @@
+/* ============================================================
+   组件库 —— 结构层（所有主题共用）
+   规则：
+   1. 禁止写死颜色/圆角/间距，一律引用 theme.css 里的变量
+   2. LLM 生成的 section 只允许使用这里的 class 搭页面
+   3. 组件集 v1：.center .grid-2 .card .quote .steps .badge .tag .footer .muted
+   ============================================================ */
+
+.reveal .slides section { text-align: left; }
+.reveal .slides section.center { text-align: center; }
+
+/* 封面/结尾页装饰标签 */
+.reveal .tag {
+  display: inline-block;
+  margin-top: 1.2em;
+  padding: 0.25em 1em;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.6em;
+}
+
+/* 卡片网格 */
+.reveal .grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md) var(--space-lg);
+  margin-top: var(--space-lg);
+}
+.reveal .card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-md) var(--space-lg);
+}
+.reveal .card h3 { color: var(--accent); margin: 0 0 0.3em; font-size: 0.8em; }
+.reveal .card p  { margin: 0; font-size: 0.62em; color: var(--text-muted); }
+
+/* 引用块 */
+.reveal .quote {
+  border-left: 4px solid var(--accent);
+  padding-left: 1em;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+/* 分步列表（li 上配 reveal 的 fragment 类） */
+.reveal .steps li { margin-bottom: 0.4em; }
+
+/* 徽章 */
+.reveal .badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #0b132b;
+  border-radius: 5px;
+  padding: 0 0.4em;
+  font-size: 0.65em;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* 辅助 */
+.reveal .muted { color: var(--text-muted); }
+.reveal .footer {
+  position: absolute;
+  bottom: -2.2em;
+  left: 0;
+  font-size: 0.42em;
+  color: var(--text-muted);
+}
