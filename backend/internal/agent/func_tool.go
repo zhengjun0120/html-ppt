@@ -2,11 +2,14 @@ package agent
 
 import (
 	"context"
+	"errors"
+	"strings"
 
-	"github.com/openai/openai-go/v3"
-	"github.com/invopop/jsonschema"
 	"encoding/json"
 	"fmt"
+
+	"github.com/invopop/jsonschema"
+	"github.com/openai/openai-go/v3"
 )
 
 type ToolFunc func(ctx context.Context,arguments string)(string,error)
@@ -20,8 +23,23 @@ type WriteDeckArgs struct {
 	SectionHtml string `json:"section_html" jsonschema:"required,type:string,description:所有页面的 <section> HTML，按顺序拼接成一整个字符串"`
 }
 
-func toolWriteDeck(ctx context.Context,arguments string)(string,error){
-	return "",nil
+func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string,error){
+	var args WriteDeckArgs
+	if err := json.Unmarshal([]byte(arguments),&args); err !=nil{
+		return "",fmt.Errorf("write_deck 参数不是合法json:%v",err)
+	}
+
+	if strings.TrimSpace(args.Title) == ""{
+		return "",errors.New("title 不可为空")
+	}
+
+	res,err := a.DeckService.Create(args.Title,args.SectionHtml)
+	if err !=nil{
+		return "",err
+	}
+
+	return fmt.Sprintf(`{"deck_id":%q,"slides":%d,"url":"/api/decks/%s/file"}`,
+		res.DeckID, res.Slides, res.DeckID), nil
 }
 
 // generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
@@ -56,7 +74,7 @@ func generateSchema[T any]() openai.FunctionParameters {
 	return fp
 }
 
-func buildTools () map[string]Tool{
+func (a *AgentService)buildTools () map[string]Tool{
 	return map[string]Tool{
 		"write_deck":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
@@ -64,7 +82,7 @@ func buildTools () map[string]Tool{
 				Description: openai.String("从零创建一整份新演示文稿。sections_html 中提供全部 <section> 内容，按页序拼接，不要写 data-id（系统自动编号）。若用户要修改已有 deck，禁止使用本工具（会覆盖重做），应使用页级编辑工具。"),
 				Parameters: generateSchema[WriteDeckArgs](),
 			}),
-			Execute: toolWriteDeck,
+			Execute: a.toolWriteDeck,
 		},
 	}
 }

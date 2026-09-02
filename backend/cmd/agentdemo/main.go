@@ -1,12 +1,15 @@
-// agentdemo：流式输出 + 工具调用 + agent 循环 的最小可运行教学示例。
+// agentdemo（完整版）：流式输出 + 累加器 + 多轮上下文 + 工具调用 + 思考/回答分离。
 //
-// 运行前设置环境变量：
+// 演示的核心数据流（对照 Run 和 step 的注释阅读）：
+//
+//	流式分片 ──AddChunk──▶ 累加器(完整消息) ──ToParam()──▶ messages 历史 ──▶ 下一轮请求
+//
+// 运行前环境变量（在 backend 目录 go run ./cmd/agentdemo）：
 //
 //	LLM_API_KEY（或 OPENAI_API_KEY）—— 模型服务密钥
 //	LLM_BASE_URL（可选）—— 第三方兼容端点，如 https://api.deepseek.com/v1
-//	LLM_MODEL（可选）—— 模型名，默认 deepseek-chat
-//
-// 在 backend 目录执行：go run ./cmd/agentdemo
+//	LLM_MODEL（可选，默认 deepseek-chat；换成 deepseek-reasoner 可看到"思考"流）
+//	LLM_BUDGET（可选，跨轮 token 总预算，默认 200000）
 package main
 
 import (
@@ -16,6 +19,7 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,11 +29,7 @@ import (
 )
 
 // =====================================================================
-// 第 1 部分：工具的"定义"与"执行"分离
-// 模型只能看到 Definition（JSON Schema），永远看不到 Execute。
-// schema 不再手写 map：用参数 struct + invopop/jsonschema 反射生成。
-// 同一个 struct 既是 schema 的来源，又是执行函数 json.Unmarshal 的目标——
-// 单一事实源，字段改名/加校验两处同步，编译期就能发现拼写错误。
+// 第 1 部分：工具——schema 由参数 struct 反射生成，执行函数与 struct 同源
 // =====================================================================
 
 // ToolFunc 执行一个工具：入参是模型生成的 arguments（JSON 字符串），
@@ -42,18 +42,17 @@ type Tool struct {
 }
 
 // ---- 参数 struct：tag 即 schema ----
-//
-// json:"..."            → 属性名（顺带是执行时 Unmarshal 的键名）
-// jsonschema_description:"..." → 属性描述，模型填参的唯一依据，每个字段都要写
-// jsonschema:"required"        → 必填（需配合 Reflector.RequiredFromJSONSchemaTags）
-// jsonschema:"enum=a,enum=b"   → 枚举约束；minLength/maxLength/pattern 等同理
+// json:"..."                   → 属性名
+// jsonschema_description:"..." → 属性描述（模型填参的依据，每个字段都要写）
+// jsonschema:"required"        → 必填（配合 RequiredFromJSONSchemaTags）
+// jsonschema:"enum=a,enum=b"   → 枚举等约束
 
 type WeatherArgs struct {
 	City string `json:"city" jsonschema:"required" jsonschema_description:"城市名，如：北京"`
 }
 
 type NowArgs struct {
-	TZ string `json:"tz" jsonschema_description:"IANA 时区名，如 Asia/Shanghai；省略则用服务器本地时间"` // 没有 required → 可选字段
+	TZ string `json:"tz" jsonschema_description:"IANA 时区名，如 Asia/Shanghai；省略则用服务器本地时间"` // 无 required → 可选
 }
 
 type Slide struct {
@@ -67,23 +66,20 @@ type CreatePresentationArgs struct {
 	Slides []Slide `json:"slides" jsonschema:"required" jsonschema_description:"幻灯片列表，按播放顺序"`
 }
 
-// generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
-// 启动时调用一次并缓存即可，不要放在请求路径上反射。
+// generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema（启动时调用一次并缓存）。
 func generateSchema[T any]() openai.FunctionParameters {
 	reflector := jsonschema.Reflector{
-		RequiredFromJSONSchemaTags: true,  // 必填由 jsonschema:"required" 标签决定（默认规则是"无 omitempty 即必填"，太隐晦）
-		AllowAdditionalProperties:  false, // 生成 additionalProperties:false，配合 strict 拒绝模型幻觉出的字段
-		DoNotReference:             true,  // 嵌套 struct 内联展开，而不是拆到 $defs 再 $ref（模型对 $ref 支持参差）
+		RequiredFromJSONSchemaTags: true,  // 必填由 jsonschema:"required" 标签决定
+		AllowAdditionalProperties:  false, // 生成 additionalProperties:false，拒绝幻觉字段
+		DoNotReference:             true,  // 嵌套 struct 内联展开，不用 $defs/$ref
 	}
 	s := reflector.Reflect(new(T))
 
-	// 只取三件套重建顶层对象，丢掉 $schema/$id 等模型不关心的键
-	// （openai-go 官方 README 的结构化输出示例就是同款做法）
+	// 只取三件套重建顶层，丢掉 $schema/$id 等模型不关心的键（官方 README 同款做法）
 	schema := map[string]any{
-		"type":       "object",
-		"properties": s.Properties, // 有序 map：模型看到的字段顺序和 struct 声明顺序一致
-		// 拒绝 schema 之外的字段；开 strict 时这是硬性要求
-		"additionalProperties": false,
+		"type":                 "object",
+		"properties":           s.Properties, // 有序 map：字段顺序 = struct 声明顺序
+		"additionalProperties": false,        // 开 strict 时的硬性要求
 	}
 	if len(s.Required) > 0 {
 		schema["required"] = s.Required
@@ -99,21 +95,16 @@ func generateSchema[T any]() openai.FunctionParameters {
 	return fp
 }
 
-// ---- 执行函数：和参数 struct 在一起放，改哪个都能一眼看到另一个 ----
-
 func toolWeather(_ context.Context, arguments string) (string, error) {
 	var args WeatherArgs
 	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
 		return "", fmt.Errorf("参数不是合法 JSON: %w", err)
 	}
-	// 真实场景这里去调天气 API。结果建议用 JSON 字符串返回：
-	// 模型对结构化结果的理解比随意格式的文本更稳定。
 	return fmt.Sprintf(`{"city":%q,"weather":"晴","temp_c":26}`, args.City), nil
 }
 
 func toolNow(_ context.Context, arguments string) (string, error) {
-	// 无参/可选参数工具的 arguments 可能是空串，补一个 {} 再解
-	if arguments == "" {
+	if arguments == "" { // 无参/可选参数工具的 arguments 可能是空串
 		arguments = "{}"
 	}
 	var args NowArgs
@@ -123,8 +114,7 @@ func toolNow(_ context.Context, arguments string) (string, error) {
 	return fmt.Sprintf(`{"now":%q}`, time.Now().Format(time.RFC3339)), nil
 }
 
-// toolCreatePresentation 是 demo 里唯一有副作用的工具：真的写出 HTML 文件，
-// 运行后可在 backend 目录找到 demo_presentation.html。
+// 有副作用的工具：真的写出 HTML 文件，运行后在 backend 目录可见。
 func toolCreatePresentation(_ context.Context, arguments string) (string, error) {
 	var args CreatePresentationArgs
 	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
@@ -173,8 +163,7 @@ func buildTools() map[string]Tool {
 				Name:        "create_presentation",
 				Description: openai.String("根据主题和逐页大纲生成一份 HTML 演示文稿并保存为文件。当用户要求制作 PPT/幻灯片/演示文稿时使用"),
 				Parameters:  generateSchema[CreatePresentationArgs](),
-				// Strict: openai.Bool(true), // OpenAI 端可开：服务端保证参数严格符合 schema。
-				// 部分第三方兼容厂商不认这个字段，报错就去掉。
+				// Strict: openai.Bool(true), // OpenAI 端可开；部分第三方厂商不认，报错就去掉
 			}),
 			Execute: toolCreatePresentation,
 		},
@@ -182,21 +171,106 @@ func buildTools() map[string]Tool {
 }
 
 // =====================================================================
-// 第 2 部分：Agent = 消息历史 + [流式请求 → 执行工具 → 回填结果] 的循环
+// 第 2 部分：流式分类——每个分片必属于以下几类之一
+//
+//	思考   delta.reasoning_content（厂商私有字段，从 JSON.ExtraFields 挖）
+//	回答   delta.Content
+//	工具   delta.ToolCalls（碎片，累加器按 index 归并）
+//	结束   choice.FinishReason（收尾分片才有值）
+//	用量   choices 为空的收尾分片（需 IncludeUsage）
 // =====================================================================
 
-const maxTurns = 10 // 防止模型无限调工具
-
-type Agent struct {
-	client   *openai.Client
-	model    string
-	messages []openai.ChatCompletionMessageParamUnion
-	tools    []openai.ChatCompletionToolUnionParam
-	exec     map[string]ToolFunc
+// StreamCallbacks 把增量实时分发给界面。
+// OnDelta / OnReasoning 的分离就是前端"思考折叠区 + 打字机正文"的后端来源。
+type StreamCallbacks struct {
+	OnDelta     func(string) // 回答增量
+	OnReasoning func(string) // 思考增量（OpenAI 官方接口没有思考流，仅部分厂商提供）
 }
 
-func NewAgent(client *openai.Client, model string, tools map[string]Tool) *Agent {
-	a := &Agent{client: client, model: model, exec: map[string]ToolFunc{}}
+// step 发一次流式请求：增量走回调，完整结果走累加器。
+func (a *Agent) step(ctx context.Context, tools []openai.ChatCompletionToolUnionParam, cb StreamCallbacks) (*openai.ChatCompletionAccumulator, error) {
+	params := openai.ChatCompletionNewParams{
+		Model:    openai.ChatModel(a.model),
+		Messages: a.messages,
+		StreamOptions: openai.ChatCompletionStreamOptionsParam{
+			IncludeUsage: openai.Bool(true), // 流式下默认拿不到 usage
+		},
+	}
+	if len(tools) > 0 { // 不带工具 = 普通流式聊天；强制收尾轮也靠传 nil 禁用工具
+		params.Tools = tools
+	}
+
+	stream := a.client.Chat.Completions.NewStreaming(ctx, params)
+	defer stream.Close() // 中途 return 时必须释放连接（正常走完会被自动关闭，重复调无害）
+
+	acc := openai.ChatCompletionAccumulator{}
+	for stream.Next() {
+		chunk := stream.Current()
+		if !acc.AddChunk(chunk) {
+			return nil, errors.New("流式分片累加失败（分片 ID 不一致或超出协议上限）")
+		}
+
+		// 纯 usage 收尾分片：choices 为空（IncludeUsage 开启时的最后一个分片）
+		if len(chunk.Choices) == 0 {
+			continue
+		}
+		d := chunk.Choices[0].Delta
+
+		// 思考增量：reasoning_content 是 DeepSeek/Qwen 等厂商的私有扩展，
+		// 官方 SDK 没这个字段，落到 JSON.ExtraFields；Raw() 是原始 JSON 片段（带引号），要再解一层。
+		// 注意：累加器不收集 ExtraFields，所以思考文本必须在这里逐片取走。
+		if f, ok := d.JSON.ExtraFields["reasoning_content"]; ok {
+			var reasoning string
+			if json.Unmarshal([]byte(f.Raw()), &reasoning) == nil && reasoning != "" && cb.OnReasoning != nil {
+				cb.OnReasoning(reasoning)
+			}
+		}
+		// 回答增量
+		if d.Content != "" && cb.OnDelta != nil {
+			cb.OnDelta(d.Content)
+		}
+
+		// 工具调用碎片已由 AddChunk 按 index 归并，无需手工拼接。
+		// [事件] 行仅调试用——官方警告：并行工具调用时 JustFinishedToolCall 不可依赖，
+		// 正式逻辑以流结束后的 acc.Choices[0].Message.ToolCalls 为准。
+		if tool, ok := acc.JustFinishedToolCall(); ok {
+			fmt.Fprintf(os.Stderr, "[事件] 工具调用接收完毕: %s(%s)\n", tool.Name, tool.Arguments)
+		}
+	}
+	if err := stream.Err(); err != nil {
+		return nil, err // 网络/HTTP/模型端中途错误（*ssestream.StreamError 也在其中）
+	}
+	return &acc, nil
+}
+
+// =====================================================================
+// 第 3 部分：多轮循环——把"流式分片"组装成"下一轮的上下文"
+//
+//	历史只追加不改写；每轮新增：
+//	  user(本轮输入) → assistant(tool_calls) → tool(结果)×N → … → assistant(最终回答)
+// =====================================================================
+
+const (
+	maxTurns  = 25 // 轮数护栏
+	repeatCut = 3  // 连续相同调用的中止阈值
+)
+
+type Agent struct {
+	client      *openai.Client
+	model       string
+	tools       []openai.ChatCompletionToolUnionParam
+	exec        map[string]ToolFunc
+	messages    []openai.ChatCompletionMessageParamUnion // 会话上下文：跨 Run 持续追加
+	usedTokens  int64                                    // 跨轮累计用量（token 预算护栏）
+	tokenBudget int64
+	repeats     map[string]int // 重复调用检测（会话级）
+}
+
+func NewAgent(client *openai.Client, model string, tokenBudget int64, tools map[string]Tool) *Agent {
+	a := &Agent{
+		client: client, model: model, tokenBudget: tokenBudget,
+		exec: map[string]ToolFunc{}, repeats: map[string]int{},
+	}
 	for name, t := range tools {
 		a.tools = append(a.tools, t.Definition)
 		a.exec[name] = t.Execute
@@ -204,109 +278,98 @@ func NewAgent(client *openai.Client, model string, tools map[string]Tool) *Agent
 	return a
 }
 
-// Run 跑一轮完整对话。onDelta 在每收到一小段文本时被调用——
-// 这就是你将来接到 Gin SSE/WebSocket 往前端推的挂载点。
-func (a *Agent) Run(ctx context.Context, userMsg string, onDelta func(string)) (string, error) {
+// Run 跑一轮完整对话（多次调用 Run 共享同一份 messages，即多轮会话）。
+func (a *Agent) Run(ctx context.Context, userMsg string, cb StreamCallbacks) (string, error) {
 	a.messages = append(a.messages, openai.UserMessage(userMsg))
 
-	for turn := 1; turn <= maxTurns; turn++ {
-		acc, err := a.step(ctx, onDelta)
-		if err != nil {
-			return "", fmt.Errorf("第 %d 轮请求失败: %w", turn, err)
+	for turn := 1; ; turn++ {
+		tools := a.tools
+		// 双护栏：轮数或累计 token 任一耗尽 → 注入收尾指令并禁用工具，强制总结（优雅退出）
+		if turn > maxTurns || a.usedTokens >= a.tokenBudget {
+			fmt.Fprintf(os.Stderr, "[护栏] 触发收尾（轮数=%d, 累计tokens=%d）\n", turn-1, a.usedTokens)
+			a.messages = append(a.messages, openai.UserMessage(
+				"调用预算已用完：不要再调用任何工具，直接基于以上已获取的信息给出最终回答。"))
+			tools = nil
+			cb.OnDelta("\n[预算/轮数已达上限，强制收尾]\n")
+
+			acc, err := a.step(ctx, tools, cb)
+			if err != nil {
+				return "", err
+			}
+			if len(acc.Choices) == 0 {
+				return "", errors.New("收尾轮响应不完整")
+			}
+			return acc.Choices[0].Message.Content, nil
 		}
 
-		// 累加器内嵌了完整响应对象 ChatCompletion（streamaccumulator.go:20），
-		// 流结束后 acc.Choices[0] 就是非流式 completion.Choices[0] 的等价物
-		if len(acc.Choices) == 0 {
-			return "", errors.New("响应中没有 choices")
+		acc, err := a.step(ctx, tools, cb)
+		if err != nil {
+			return "", fmt.Errorf("第 %d 轮失败: %w", turn, err)
+		}
+
+		// ★ 健壮性防线：不完整的流绝不能进上下文。
+		// FinishReason 为空 = 没收到收尾分片 = assistant 消息残缺，
+		// 其 tool_calls 参数可能拼了一半，进历史后下一轮必然配对失败。
+		if len(acc.Choices) == 0 || acc.Choices[0].FinishReason == "" {
+			return "", errors.New("流式响应不完整（未收到 finish_reason），本轮不进入上下文")
 		}
 		choice := acc.Choices[0]
-		if choice.FinishReason == "length" {
-			return "", errors.New("输出被 token 上限截断（注意：推理 token 也计入 max_completion_tokens）")
-		}
-		msg := choice.Message
+		a.usedTokens += acc.Usage.TotalTokens // 跨轮记账（token 预算的依据）
+		fmt.Fprintf(os.Stderr, "[第 %d 轮] finish=%s tokens=%d(累计%d)\n",
+			turn, choice.FinishReason, acc.Usage.TotalTokens, a.usedTokens)
 
-		// 没有工具调用 → 模型已经给出最终回答，循环结束
+		msg := choice.Message
+		// 没有工具调用 → 最终回答，进历史后结束循环
 		if len(msg.ToolCalls) == 0 {
 			a.messages = append(a.messages, msg.ToParam())
 			if msg.Content == "" {
-				return "", errors.New("模型返回了空内容（常见原因：输出 token 上限太小，全花在思考上）")
+				return "", errors.New("模型返回空内容（常见原因：输出上限被推理 token 吃掉）")
 			}
 			return msg.Content, nil
 		}
 
-		// 关键规则 1：assistant 消息（含 tool_calls）必须先原样回填历史
+		// 关键规则 1：assistant 消息（含拼好的 tool_calls）先原样进历史
 		a.messages = append(a.messages, msg.ToParam())
 
-		// 关键规则 2：逐个执行工具，用 role:"tool" + tool_call_id 一一对应回填。
-		// 一条 assistant 消息可以并行带多个 tool_calls（比如同时查两个城市）。
+		// 关键规则 2：逐个执行，role:"tool" + tool_call_id 一一对应回填
 		for _, tc := range msg.ToolCalls {
+			// 死循环检测：连续相同 name+arguments 达到阈值 → 中止
+			key := tc.Function.Name + ":" + tc.Function.Arguments
+			a.repeats[key]++
+			if a.repeats[key] >= repeatCut {
+				return "", fmt.Errorf("模型连续 %d 次重复调用 %s，疑似死循环，已中止", repeatCut, tc.Function.Name)
+			}
+
 			result, err := a.callTool(ctx, tc.Function.Name, tc.Function.Arguments)
 			if err != nil {
-				// 工具失败不要中断流程：把错误告诉模型，让它自己决定下一步
+				// 工具失败不中断流程：把错误作为结果回填，让模型自己调整
 				result = fmt.Sprintf(`{"error":%q}`, err.Error())
 			}
 			a.messages = append(a.messages, openai.ToolMessage(result, tc.ID))
 		}
-		// 继续下一轮：模型看到工具结果后，要么继续调工具，要么给出最终回答
+		// 继续下一轮：新上下文 = 全部历史（累加器拼好的消息已在其中）
 	}
-	return "", errors.New("超过最大轮数，模型可能陷入工具调用循环")
-}
-
-// step 发一次流式请求，把 SSE 分片实时转发给 onDelta，同时累加成完整消息。
-func (a *Agent) step(ctx context.Context, onDelta func(string)) (*openai.ChatCompletionAccumulator, error) {
-	params := openai.ChatCompletionNewParams{
-		Model:    openai.ChatModel(a.model),
-		Messages: a.messages,
-		Tools:    a.tools, // 一个工具都没注册时，这就是普通流式聊天
-		StreamOptions: openai.ChatCompletionStreamOptionsParam{
-			IncludeUsage: openai.Bool(true), // 流式下默认拿不到 usage，要显式开
-		},
-	}
-
-	stream := a.client.Chat.Completions.NewStreaming(ctx, params)
-	defer stream.Close()
-
-	acc := openai.ChatCompletionAccumulator{}
-	for stream.Next() {
-		chunk := stream.Current()
-		if !acc.AddChunk(chunk) {
-			return nil, errors.New("流式分片累加失败")
-		}
-		// 文本增量：平时前端"打字机效果"的来源。
-		// 工具调用的 arguments 也是分片下发的（按 index 拼接），
-		// AddChunk 已经帮你拼好了，不用自己处理。
-		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-			onDelta(chunk.Choices[0].Delta.Content)
-		}
-		// 事件钩子：某个工具调用的 name+arguments 刚在流里拼完整。
-		// 官方文档警告：开启并行工具调用时不可依赖此事件（streamaccumulator.go:358），
-		// 所以正式逻辑应以流结束后 acc.Choices[0].Message.ToolCalls 为准，
-		// 这个事件只适合打日志/调试。
-		if tool, ok := acc.JustFinishedToolCall(); ok {
-			fmt.Fprintf(os.Stderr, "[事件] 工具调用接收完毕: %s(%s)\n", tool.Name, tool.Arguments)
-		}
-	}
-	if err := stream.Err(); err != nil {
-		return nil, err // 网络层/HTTP 层错误，调用方用 errors.As(*openai.Error) 细分
-	}
-	if acc.Usage.TotalTokens > 0 {
-		fmt.Fprintf(os.Stderr, "[用量] 输入 %d + 输出 %d = %d tokens\n",
-			acc.Usage.PromptTokens, acc.Usage.CompletionTokens, acc.Usage.TotalTokens)
-	}
-	return &acc, nil
 }
 
 func (a *Agent) callTool(ctx context.Context, name, arguments string) (string, error) {
 	fn, ok := a.exec[name]
 	if !ok {
-		return "", fmt.Errorf("未知工具 %q", name)
+		return "", fmt.Errorf("未知工具 %q", name) // 模型幻觉出的工具名：作为错误结果回填
 	}
-	return fn(ctx, arguments)
+	tctx, cancel := context.WithTimeout(ctx, 30*time.Second) // 单工具超时
+	defer cancel()
+	out, err := fn(tctx, arguments)
+	if err != nil {
+		return "", err
+	}
+	if len(out) > 8192 { // 工具结果截断，防止撑爆上下文
+		out = out[:8192] + "...[结果已截断]"
+	}
+	return out, nil
 }
 
 // =====================================================================
-// 第 3 部分：把零件跑起来——两个场景对比
+// 第 4 部分：main——三个场景
 // =====================================================================
 
 func main() {
@@ -327,46 +390,48 @@ func main() {
 	if model == "" {
 		model = "deepseek-chat"
 	}
+	budget := int64(200000)
+	if v := os.Getenv("LLM_BUDGET"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
+			budget = n
+		}
+	}
 
-	client := openai.NewClient(opts...) // 注意：返回值类型是 openai.Client（值类型）
-	agent := NewAgent(&client, model, buildTools())
+	client := openai.NewClient(opts...) // 值类型
+	agent := NewAgent(&client, model, budget, buildTools())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	// 回调：思考流灰色输出（需终端支持 ANSI，不支持就打到日志），
+	// 回答流原样输出——前端把这两个回调换成两条 SSE 事件即是"思考折叠区"效果。
+	cb := StreamCallbacks{
+		OnDelta:     func(s string) { fmt.Print(s) },
+		OnReasoning: func(s string) { fmt.Print("\033[90m" + s + "\033[0m") },
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	// 场景 1：不涉及工具的普通流式对话（和场景 2 走同一个 Run，只是模型不调工具）
-	fmt.Println("=== 场景 1：普通流式对话 ===")
-	answer, err := agent.Run(ctx, "用两句话介绍一下你自己", func(delta string) {
-		fmt.Print(delta) // 打字机效果
-	})
+	fmt.Println("=== 场景 1：普通流式对话（LLM_MODEL=deepseek-reasoner 时可见灰色思考流） ===")
+	answer, err := agent.Run(ctx, "用两句话介绍一下你自己", cb)
 	if err != nil {
 		fmt.Println("出错:", err)
 	} else {
 		fmt.Printf("\n[最终回答] %s\n\n", answer)
 	}
 
-	// 场景 2：需要工具的问题。注意 stderr 上的 [事件] 行：
-	// 模型会先"说话"（或直接发起并行工具调用，一次查两个城市），
-	// 你的代码执行工具并回填后，模型才基于结果输出最终回答——这就是 agent 循环。
-	fmt.Println("=== 场景 2：工具调用 ===")
-	answer, err = agent.Run(ctx, "北京和上海今天天气怎么样？顺便现在几点了？", func(delta string) {
-		fmt.Print(delta)
-	})
+	fmt.Println("=== 场景 2：并行工具调用（注意 stderr 的 [事件] 与 [第 N 轮] 行） ===")
+	answer, err = agent.Run(ctx, "北京和上海今天天气怎么样？顺便现在几点了？", cb)
 	if err != nil {
 		fmt.Println("出错:", err)
 	} else {
-		fmt.Printf("\n[最终回答] %s\n", answer)
+		fmt.Printf("\n[最终回答] %s\n\n", answer)
 	}
 
-	// 场景 3：struct 反射出的嵌套 schema + 有副作用的工具。
-	// 运行后在 backend 目录找 demo_presentation.html。
 	fmt.Println("=== 场景 3：生成 PPT（嵌套 schema + 副作用工具） ===")
-	answer, err = agent.Run(ctx, "帮我做一份关于 Go 并发编程的 3 页 PPT，主题用 dark", func(delta string) {
-		fmt.Print(delta)
-	})
+	answer, err = agent.Run(ctx, "帮我做一份关于 Go 并发编程的 3 页 PPT，主题用 dark", cb)
 	if err != nil {
 		fmt.Println("出错:", err)
 	} else {
 		fmt.Printf("\n[最终回答] %s\n", answer)
 	}
+	// 场景 3 跑完看 backend/demo_presentation.html
 }
