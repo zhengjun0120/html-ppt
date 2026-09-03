@@ -3,7 +3,8 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	
+	"html-ppt/backend/internal/service/deck"
+
 	"fmt"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 
 const maxTurns = 20 //最大允许调用20轮llm请求
 
-func (as *AgentService) buildMessages(usreContent string) ([]openai.ChatCompletionMessageParamUnion,error){
+func (as *AgentService) buildMessages(usreContent,deckID string) ([]openai.ChatCompletionMessageParamUnion,error){
 	//TODO 从数据库中获取对话记录，如果数据库中没有 则先拼接系统提示词 并新建数据
 
 
@@ -21,15 +22,28 @@ func (as *AgentService) buildMessages(usreContent string) ([]openai.ChatCompleti
 	//TODO 然后拼接用户对话
 
 	// Test
-	messages := make([]openai.ChatCompletionMessageParamUnion,0,0)
-	messages = append(messages, openai.SystemMessage("你是一个专业设计ppt的Ai，你需要帮助用户使用reveal.js构建一个html的演示文稿"))
+	messages := make([]openai.ChatCompletionMessageParamUnion,0)
+	systemMessage := "你是一个专业设计ppt的Ai，你需要帮助用户使用reveal.js构建一个html的演示文稿"
+	if deckID != ""{
+		systemMessage += fmt.Sprintf(`当前用户正在预览的演示文稿是 {"deck_id":"%s"}，涉及它的修改直接用这个 deck_id，不要向用户询问`,deckID)
+	}
+	messages = append(messages, openai.SystemMessage(systemMessage))
 	messages = append(messages, openai.UserMessage(usreContent))
 
 	return messages,nil
 }
 
-func (as *AgentService) StreamChat(ctx context.Context, userContent string, emit func(StreamEvent) error) error {
-	messages,err := as.buildMessages(userContent)
+
+
+func (as *AgentService) StreamChat(ctx context.Context, userContent,deckID string, emit func(StreamEvent) error) error {
+
+	if deckID!="" {
+		if !deck.IsValidID(deckID){
+			return fmt.Errorf("deck_id 不合法")
+		}
+	}
+
+	messages,err := as.buildMessages(userContent,deckID)
 	if err !=nil{
 		return err
 	}

@@ -13,7 +13,12 @@ import (
 // idPattern 是 deck id 的白名单。所有来自外部（URL、LLM 工具调用）的 id
 // 都是"不可信输入"：不校验就拼路径，攻击者可以传 ../../ 绕出数据目录
 // （路径穿越攻击）。白名单正则是这里唯一的安全闸门。
-var idPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+//验证id 防止恶意注入
+var idPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+
+func IsValidID(id string) bool {
+    return idPattern.MatchString(id)
+}
 
 // Meta 是列表接口返回的 deck 摘要。
 type Meta struct {

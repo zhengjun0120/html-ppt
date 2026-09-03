@@ -21,6 +21,7 @@ import (
 type ChatRequest struct {
 	UserContent string 	`json:"user_content"`
 	EnableWebSearch bool `json:"enable_web_search,omitempty"` //预留是否开启联网搜索
+	DeckID string `json:"deck_id,omitempty"`
 }
 
 func (h *Handler) Chat(c *gin.Context) {
@@ -56,7 +57,7 @@ func (h *Handler) Chat(c *gin.Context) {
 			}
 		} ()
 
-		err := h.agent.StreamChat(c.Request.Context(),req.UserContent,func(ev agent.StreamEvent) error{
+		err := h.agent.StreamChat(c.Request.Context(),req.UserContent,req.DeckID,func(ev agent.StreamEvent) error{
 			select{
 			case ch<-ev:
 				return nil
@@ -66,7 +67,7 @@ func (h *Handler) Chat(c *gin.Context) {
 		})
 
 		if err !=nil{
-			log.Printf("agent流式对话失败 err:"+err.Error())
+			log.Printf("agent流式对话失败 err:%v", err)
 			select{
 			case ch<- agent.StreamEvent{Type: agent.EventTypeError,Content: "对话服务暂时不可用，请稍后重试"}:
 			case <- c.Request.Context().Done():

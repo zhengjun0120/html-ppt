@@ -42,6 +42,34 @@ func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string
 		res.DeckID, res.Slides, res.DeckID), nil
 }
 
+type ListSlidesArgs struct {
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=要查看目录的 deck ID，例如 deck-0002"`
+}
+
+func (a *AgentService)toolListSlides(ctx context.Context,arguments string)(string,error){
+	var args ListSlidesArgs
+	if err := json.Unmarshal([]byte(arguments),&args);err !=nil{
+		return "",fmt.Errorf("list_slides 参数不是合法json:%v",err)
+	}
+
+	slides ,err := a.DeckService.ListSlides(args.DeckID)
+	if err !=nil{
+		return "",err
+	}
+
+	if len(slides) == 0{
+		return `{"slides":[]}`,nil
+	}
+
+	res,err := json.Marshal(slides)
+	if err !=nil{
+		return "",fmt.Errorf("json 序列化失败 err:%w",err)
+	}
+
+	return fmt.Sprintf(`{"slides":%s}`,res),nil
+	
+}
+
 // generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
 // 启动时调用一次并缓存即可，不要放在请求路径上反射。
 func generateSchema[T any]() openai.FunctionParameters {
@@ -83,6 +111,14 @@ func (a *AgentService)buildTools () map[string]Tool{
 				Parameters: generateSchema[WriteDeckArgs](),
 			}),
 			Execute: a.toolWriteDeck,
+		},
+		"list_slides":{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "list_slides",
+				Description: openai.String("查看某份 deck 的页面目录（每页的 slide_id 和标题，按页序）。修改任何一页之前必须先用本工具确认准确的 slide_id，禁止凭记忆猜测 ID。"),
+				Parameters: generateSchema[ListSlidesArgs](),
+			}),
+			Execute: a.toolListSlides,
 		},
 	}
 }
