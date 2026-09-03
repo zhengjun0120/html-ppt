@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,7 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/config"
+	"html-ppt/backend/internal/handler"
 	"html-ppt/backend/internal/router"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
@@ -25,6 +28,7 @@ func main() {
 
 func run() error {
 	// —— 1. 配置 ——
+	// Load 内部会向上查找 config.yaml，从任何子目录启动都能找到
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
 		return err
@@ -45,8 +49,17 @@ func run() error {
 		}
 	}
 
+	
+
 	deckSvc := deck.New(cfg.Data.Dir)
-	engine := router.New(cfg, st, deckSvc)
+
+	if err := agent.InitAgentModel(cfg.LLM, deckSvc); err != nil {
+		return fmt.Errorf("初始化 agent: %w", err)
+	}
+	agentSvc := agent.GetAgentService()
+
+	h := handler.New(st, deckSvc,agentSvc)
+	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 
 	// —— 3. 启动 ——

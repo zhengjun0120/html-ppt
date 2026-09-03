@@ -35,7 +35,7 @@ func (s *Service) Create(title,sectionHTML string)(CreateResult,error){
 	//创建唯一的子目录 并返回唯一的id
 	id,err := s.claimDeckDir()
 	if err != nil{
-		return CreateResult{},nil
+		return CreateResult{},err
 	}
 
 	rendered ,err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)),normalized)
@@ -62,7 +62,7 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int ,error){
 
 	//转小写检查是否有不符合的标签
 	lower := strings.ToLower(raw)
-	if strings.Contains(lower,"<!doctype>") || strings.Contains(lower,"<html"){
+	if strings.Contains(lower,"<!doctype") || strings.Contains(lower,"<html"){
 		return "",0,errors.New("sections_html 只能是<section>元素的拼接，不要输出完整的HTML文档（<!DOCTYPE>/<html>/<head>/<body> 都不需要）")
 	}
 
@@ -87,6 +87,8 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int ,error){
 	}
 
 	//强制编号data-id
+
+	var firstErr error
 	var parts []string
 	count := 0
 	sections.Each(func(_ int, sec *goquery.Selection) {
@@ -95,14 +97,17 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int ,error){
 
 		html,err := goquery.OuterHtml(sec);
 		if err !=nil{
+			if firstErr==nil{
+				firstErr = err	
+			}
 			return
 		}
 
 		parts = append(parts, html)
 
 	})
-	if err != nil{
-		return "",0,fmt.Errorf("提取html时 OuterHtml函数出错:%w",err)
+	if firstErr != nil{
+		return "",0,fmt.Errorf("提取html时 OuterHtml函数出错:%w",firstErr)
 	}
 	return strings.Join(parts,"\n"),count,nil
 }

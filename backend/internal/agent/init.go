@@ -1,9 +1,10 @@
 package agent
 
 import (
+	"errors"
+
 	"html-ppt/backend/internal/config"
 	"html-ppt/backend/internal/service/deck"
-	"time"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -23,14 +24,13 @@ var agentServer *AgentService
 func InitAgentModel(cfg config.LLM,deckService *deck.Service) error {
 
 	if cfg.APIKey == "" {
-		panic("默认apiKey为空")
+		return errors.New("LLM api_key 未配置（config.yaml 或环境变量 LLM_API_KEY）")
 	}
 
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
 		option.WithBaseURL(cfg.BaseURL),
 		option.WithMaxRetries(3),
-		option.WithRequestTimeout(30*time.Second),
 	)
 
 	agentServer = &AgentService{
@@ -48,4 +48,8 @@ func InitAgentModel(cfg config.LLM,deckService *deck.Service) error {
 	}
 
 	return nil
+}
+
+func GetAgentService() *AgentService{
+	return agentServer
 }

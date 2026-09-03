@@ -1,7 +1,12 @@
 package handler
 
 import (
-	"net/http"
+	"encoding/json"
+	"fmt"
+	"html-ppt/backend/internal/agent"
+	"html-ppt/backend/internal/response"
+	"io"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,11 +18,70 @@ import (
 //   tool_progress 工具执行进度（如 "正在读取第 3 页…"）
 //   ask_user      结构化提问卡片（问题 + 推荐答案 + 选项），循环暂停等用户作答
 //   done          本轮结束
-func Chat() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error": "chat 未实现（阶段1：最小 agent 循环）",
-			"plan":  "消息 → DeepSeek(带工具定义) → 解析 tool_calls → Go 执行工具 → 结果回填 → 循环；SSE 流式输出",
-		})
+type ChatRequest struct {
+	UserContent string 	`json:"user_content"`
+	EnableWebSearch bool `json:"enable_web_search,omitempty"` //预留是否开启联网搜索
+}
+
+func (h *Handler) Chat(c *gin.Context) {
+
+	var req ChatRequest
+	if err:= c.ShouldBindJSON(&req);err !=nil{
+		response.ParameterErr(c)
+		return
 	}
+
+	if req.UserContent == ""{
+		response.Err(c,400,"用户消息不可为空")
+		return
+	}
+
+	//设置sse响应头
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+
+	ch := make(chan agent.StreamEvent,16)
+
+	go func(){
+		defer close(ch)
+		
+		defer func(){
+			if r := recover();r!=nil{
+				log.Printf("agent 对话触发panic")
+				select{
+				case ch<- agent.StreamEvent{Type: agent.EventTypeError,Content: "服务器内部错误，请稍后重试"}:
+				case <- c.Request.Context().Done():
+				}
+			}
+		} ()
+
+		err := h.agent.StreamChat(c.Request.Context(),req.UserContent,func(ev agent.StreamEvent) error{
+			select{
+			case ch<-ev:
+				return nil
+			case <-c.Request.Context().Done():
+				return c.Request.Context().Err()
+			}
+		})
+
+		if err !=nil{
+			log.Printf("agent流式对话失败 err:"+err.Error())
+			select{
+			case ch<- agent.StreamEvent{Type: agent.EventTypeError,Content: "对话服务暂时不可用，请稍后重试"}:
+			case <- c.Request.Context().Done():
+			}
+		}
+	}()
+
+	// 流式响应
+	c.Stream(func(w io.Writer) bool {
+		ev,ok := <- ch
+		if !ok{
+			return false
+		}
+		data,_:= json.Marshal(ev)
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", ev.Type, data)
+		return true
+	})
 }

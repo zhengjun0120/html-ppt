@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -52,15 +53,30 @@ type LLM struct {
 func Load(path string) (*Config, error) {
 	cfg := defaultConfig()
 
-	data, err := os.ReadFile(path)
+	resolved, err := resolvePath(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return cfg, nil
+		return cfg, nil // 找不到配置文件 → 用默认值跑
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", path, err)
+		return nil, fmt.Errorf("resolve %s: %w", path, err)
+	}
+
+	data, err := os.ReadFile(resolved)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", resolved, err)
 	}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
+		return nil, fmt.Errorf("parse %s: %w", resolved, err)
+	}
+
+	// 契约：配置里的相对路径一律相对 config.yaml 所在目录，与启动时的 cwd 解耦。
+	// 否则从 backend/ 或 cmd/server/ 启动会得到两套 data 目录、assets 404。
+	baseDir := filepath.Dir(resolved)
+	if !filepath.IsAbs(cfg.Data.Dir) {
+		cfg.Data.Dir = filepath.Join(baseDir, cfg.Data.Dir)
+	}
+	if !filepath.IsAbs(cfg.Assets.Dir) {
+		cfg.Assets.Dir = filepath.Join(baseDir, cfg.Assets.Dir)
 	}
 
 	if v := os.Getenv("SERVER_ADDR"); v != "" {
@@ -70,6 +86,33 @@ func Load(path string) (*Config, error) {
 		cfg.LLM.APIKey = v
 	}
 	return cfg, nil
+}
+
+// resolvePath 解析配置文件路径：先用调用方给定的路径（相对 cwd），
+// 找不到时从 cwd 向上逐级查找同名文件——和 git 向上找 .git 是同一个思路。
+// 解决"从 backend/ 启动"和"从 cmd/server/ 启动"时相对路径对不上的问题。
+func resolvePath(name string) (string, error) {
+	if _, err := os.Stat(name); err == nil {
+		return name, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for i := 0; i < 8; i++ { // 最多向上 8 级，防呆
+		candidate := filepath.Join(dir, name)
+		if st, err := os.Stat(candidate); err == nil && !st.IsDir() {
+			return candidate, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break // 已到根目录
+		}
+		dir = parent
+	}
+	return "", os.ErrNotExist
 }
 
 func defaultConfig() *Config {

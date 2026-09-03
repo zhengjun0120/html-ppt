@@ -19,8 +19,8 @@ type Tool struct {
 }
 
 type WriteDeckArgs struct {
-	Title       string `json:"title" jsonschema:"required,type:string,description:演示文稿标题，也是浏览器标签页标题"`
-	SectionHtml string `json:"section_html" jsonschema:"required,type:string,description:所有页面的 <section> HTML，按顺序拼接成一整个字符串"`
+	Title       string `json:"title" jsonschema:"required,type=string,description=演示文稿标题，也是浏览器标签页标题"`
+	SectionHtml string `json:"section_html" jsonschema:"required,type=string,description=所有页面的 <section> HTML，按顺序拼接成一整个字符串"`
 }
 
 func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string,error){
