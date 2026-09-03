@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"html-ppt/backend/internal/service/deck"
 	"strings"
 
 	"encoding/json"
@@ -70,6 +72,64 @@ func (a *AgentService)toolListSlides(ctx context.Context,arguments string)(strin
 	
 }
 
+type ReadSlideArgs struct {
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=目标deck的ID，例如 deck-0002"`
+	SlideID string `json:"slide_id" jsonschema:"required,type=string,description=要读取页的 slide_id (页面data-id)，必须来自 list_slides 的返回，例如 s3"`
+}
+
+type readSlideResult struct{
+	DeckID string `json:"deck_id"`
+	SlideID string `json:"slide_id"`
+	Fingerprint string `json:"fingerprint"`
+	HTML string `json:"html"`
+}
+
+func (a *AgentService)toolReadSlide(ctx context.Context,arguments string)(string,error){
+	var args ReadSlideArgs
+	if err := json.Unmarshal([]byte(arguments),&args);err !=nil{
+		return "",fmt.Errorf("read_slide 参数不是合法json,err:%v",err)
+	}
+
+	if !deck.IsValidID(args.DeckID){
+		return "",fmt.Errorf("deck_id %q 不合法",args.DeckID)
+	}
+	if !deck.IsValidID(args.SlideID){
+		return "",fmt.Errorf("slide_id %q 不合法",args.SlideID)
+	}
+
+	html,fp,err := a.DeckService.ReadSlide(args.DeckID,args.SlideID)
+	if err != nil{
+		return "",err
+	}
+
+	res ,err := marshalNoEscape(readSlideResult{
+		DeckID: args.DeckID,
+		SlideID: args.SlideID,
+		Fingerprint: fp,
+		HTML: html,
+	})
+
+	if err !=nil{
+		return "",fmt.Errorf("结果序列化json失败 err:%w",err)
+	}
+
+	return res,nil
+}
+
+func marshalNoEscape(v any) (string,error){
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+
+	if err := enc.Encode(v);err!=nil{
+		return "",err
+	}
+
+	return strings.TrimSuffix(buf.String(),"\n"),nil
+}
+
+
+
 // generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
 // 启动时调用一次并缓存即可，不要放在请求路径上反射。
 func generateSchema[T any]() openai.FunctionParameters {
@@ -119,6 +179,14 @@ func (a *AgentService)buildTools () map[string]Tool{
 				Parameters: generateSchema[ListSlidesArgs](),
 			}),
 			Execute: a.toolListSlides,
+		},
+		"read_slide":{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "read_slide",
+				Description: openai.String("读取某一页的完整 HTML（整块 <section>）和内容指纹 fingerprint。用户要求查看或修改某一页的具体内容时使用。修改任何一页之前必须先用本工具拿到当前内容，禁止凭记忆修改；拿到的 fingerprint 之后要原样传给 update_slide。先用 list_slides 获取页清单和 slide_id。"),
+				Parameters: generateSchema[ReadSlideArgs](),
+			}),
+			Execute: a.toolReadSlide,
 		},
 	}
 }

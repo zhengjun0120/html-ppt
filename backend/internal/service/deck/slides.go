@@ -1,6 +1,8 @@
 package deck
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -51,4 +53,32 @@ func slideTitle(sec *goquery.Selection) string{
 	}
 
 	return text
+}
+
+func (s *Service) ReadSlide(deckID,slideID string)(string,string,error){
+	raw,err := s.GetHTML(deckID)
+	if err !=nil{
+		return "","",err
+	}
+
+	doc,err := goquery.NewDocumentFromReader(strings.NewReader(raw))
+	if err !=nil{
+		return "","",fmt.Errorf("html解析失败 err:%w",err)
+	}
+
+	sec := doc.Find(".slides > section").FilterFunction(func(_ int, n *goquery.Selection) bool {
+		return n.AttrOr("data-id","") == slideID
+	})
+
+	if sec.Length() == 0{
+		return "","",fmt.Errorf("slide %q 不存在，请先用 list_slides 获取有效slide_id",slideID)
+	}
+
+	outer,err := goquery.OuterHtml(sec.First())
+	if err != nil{
+		return "","",fmt.Errorf("提取 slide html失败 err:%w",err)
+	}
+
+	sum := sha256.Sum256([]byte(outer))
+	return outer,hex.EncodeToString(sum[:])[:12],nil
 }
