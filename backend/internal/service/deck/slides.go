@@ -1,22 +1,22 @@
 package deck
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
-
 	"github.com/PuerkitoBio/goquery"
 )
 
 type SlideMeta struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	Position int    `json:"position"` // 1 起始的当前页序：随插入/删除变化，仅供人/模型定位
+	ID       string `json:"id"`       // 每页的唯一标识（身份证）：永不变化，永不复用
+	Title    string `json:"title"`
 }
 
-func (s *Service) ListSlides(id string) ([]SlideMeta, error) {
-	//读取html
-	html, err := s.GetHTML(id)
+func (s *Service) ListSlides(userID uint, id string) ([]SlideMeta, error) {
+
+
+	//鉴权+读取html（authorize 已过，readRaw 不再做归属校验）
+	html, err := s.readOwned(userID,id)
 	if err != nil {
 		return nil, err
 	}
@@ -29,11 +29,12 @@ func (s *Service) ListSlides(id string) ([]SlideMeta, error) {
 
 	sections := doc.Find(".slides > section")
 
-	out := make([]SlideMeta,0,0)
-	sections.Each(func(_ int, sec *goquery.Selection) {
+	out := make([]SlideMeta,0)
+	sections.Each(func(i int, sec *goquery.Selection) {
 		out = append(out, SlideMeta{
-			ID: sec.AttrOr("data-id",""),
-			Title: slideTitle(sec),
+			Position: i + 1,
+			ID:       sec.AttrOr("data-id",""),
+			Title:    slideTitle(sec),
 		})
 	})
 
@@ -55,8 +56,10 @@ func slideTitle(sec *goquery.Selection) string{
 	return text
 }
 
-func (s *Service) ReadSlide(deckID,slideID string)(string,string,error){
-	raw,err := s.GetHTML(deckID)
+// ReadSlide 返回指定页的完整 HTML 和内容指纹（公开读入口，先过归属校验）。
+func (s *Service) ReadSlide(userID uint, deckID, slideID string) (string, string, error) {
+	// 鉴权+读
+	raw, err := s.readOwned(userID,deckID)
 	if err !=nil{
 		return "","",err
 	}
@@ -79,6 +82,6 @@ func (s *Service) ReadSlide(deckID,slideID string)(string,string,error){
 		return "","",fmt.Errorf("提取 slide html失败 err:%w",err)
 	}
 
-	sum := sha256.Sum256([]byte(outer))
-	return outer,hex.EncodeToString(sum[:])[:12],nil
+	
+	return outer,slideFingerprint(outer),nil
 }

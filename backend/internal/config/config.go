@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,6 +18,10 @@ type Config struct {
 	Assets Assets `yaml:"assets"`
 	DB     DB     `yaml:"db"`
 	LLM    LLM    `yaml:"llm"`
+	Auth   Auth   `yaml:"auth"`
+	SMTP   SMTP   `yaml:"smtp"`
+	Redis  Redis  `yaml:"redis"`
+	Crypto Crypto `yaml:"crypto"`
 }
 
 type Server struct {
@@ -46,6 +51,44 @@ type LLM struct {
 	APIKey  string `yaml:"api_key"`
 	ModelID   string `yaml:"model_id"`
 	MaxToken int64 `yaml:"max_token"`
+}
+
+// Auth 登录态配置。JWTSecret 是会话签名密钥：泄露 = 任何人可伪造登录态，
+// 只放 config.yaml（gitignored）或环境变量，绝不入库存明文。
+type Auth struct {
+	JWTSecret string `yaml:"jwt_secret"`
+	TokenTTL  string `yaml:"token_ttl"` // 如 "72h"；解析失败回落默认值
+}
+
+// SMTP 邮件服务（QQ 邮箱示例）：password 填"授权码"而非邮箱登录密码，
+// 在 QQ 邮箱 设置→账户→POP3/SMTP 服务 里生成。
+type SMTP struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	From     string `yaml:"from"`
+}
+
+type Redis struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+}
+
+// Crypto AESKey 是 API Key 可逆加密的主密钥（base64 编码的 32 字节）。
+// 与 JWTSecret 同级敏感：丢了它库里的密文全部作废，泄露 = 密钥全泄。
+type Crypto struct {
+	AESKey string `yaml:"aes_key"`
+}
+
+// TTL 返回解析后的 token 有效期；配置缺失/写坏时回落 72h（宽松降级，
+// token 过期顶多要重新登录，不值得为此拒绝启动）。
+func (a Auth) TTL() time.Duration {
+	d, err := time.ParseDuration(a.TokenTTL)
+	if err != nil || d <= 0 {
+		return 72 * time.Hour
+	}
+	return d
 }
 
 // Load 读取配置文件。配置文件不存在不是错误（用默认值跑），
@@ -84,6 +127,15 @@ func Load(path string) (*Config, error) {
 	}
 	if v := os.Getenv("LLM_API_KEY"); v != "" {
 		cfg.LLM.APIKey = v
+	}
+	if v := os.Getenv("AUTH_JWT_SECRET"); v != "" {
+		cfg.Auth.JWTSecret = v
+	}
+	if v := os.Getenv("CRYPTO_AES_KEY"); v != "" {
+		cfg.Crypto.AESKey = v
+	}
+	if v := os.Getenv("SMTP_PASSWORD"); v != "" {
+		cfg.SMTP.Password = v
 	}
 	return cfg, nil
 }

@@ -13,6 +13,8 @@ import (
 	texttemplate "text/template"
 
 	"github.com/PuerkitoBio/goquery"
+
+	"html-ppt/backend/internal/store"
 )
 
 var deckIDPattern = regexp.MustCompile(`^deck-(\d{4,})$`)
@@ -22,33 +24,44 @@ type CreateResult struct {
 	Slides int `json:"slides"`
 }
 
-func (s *Service) Create(title,sectionHTML string)(CreateResult,error){
-	normalized,count,err := s.normalizeSections(sectionHTML)
-	if err !=nil {
-		return CreateResult{},err
+func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, error) {
+	if s.st == nil {
+		return CreateResult{}, errStorage
+	}
+
+	normalized, count, err := s.normalizeSections(sectionHTML)
+	if err != nil {
+		return CreateResult{}, err
 	}
 
 	//确保父目录存在
-	if err := os.MkdirAll(s.decksDir,0o755); err !=nil{
-		return CreateResult{},fmt.Errorf("创建文件夹失败 %w",err)
+	if err := os.MkdirAll(s.decksDir, 0o755); err != nil {
+		return CreateResult{}, fmt.Errorf("创建文件夹失败 %w", err)
 	}
 	//创建唯一的子目录 并返回唯一的id
-	id,err := s.claimDeckDir()
-	if err != nil{
-		return CreateResult{},err
+	id, err := s.claimDeckDir()
+	if err != nil {
+		return CreateResult{}, err
 	}
 
-	rendered ,err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)),normalized)
-	if err !=nil{
-		return CreateResult{},err
+	rendered, err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)), normalized)
+	if err != nil {
+		return CreateResult{}, err
 	}
 
-	if err := s.atomicWriteDeck(id,rendered); err !=nil{
-		return CreateResult{},fmt.Errorf("写入数据失败 :%w",err)
+	// 先写文件再登记归属：失败都回收整个目录，保证"列表看得到"和
+	// "文件真实存在"同时成立，也避免失败残留的空目录永久占号
+	if err := s.atomicWriteDeck(id, rendered); err != nil {
+		os.RemoveAll(filepath.Join(s.decksDir, id))
+		return CreateResult{}, fmt.Errorf("写入数据失败 :%w", err)
+	}
+	row := store.Deck{ID: id, UserID: userID, Title: strings.TrimSpace(title)}
+	if err := s.st.DB.Create(&row).Error; err != nil {
+		os.RemoveAll(filepath.Join(s.decksDir, id))
+		return CreateResult{}, fmt.Errorf("登记 deck 归属: %w", err)
 	}
 
-	return CreateResult{DeckID: id,Slides: count},nil
-
+	return CreateResult{DeckID: id, Slides: count}, nil
 }
 
 // 校验llm提交的代码
@@ -77,7 +90,10 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int ,error){
 		return "",0,errors.New("幻灯片不支持 <script> ，请移除后重新提交")
 	}
 	if doc.Find("style").Length()>0{
-		return "",0,errors.New("幻灯片不支持 <style>,请使用组件库 class,请移除后重新提交")
+		return "",0,errors.New("幻灯片不支持 <style>,请使用组件库 class或内联样式,请移除后重新提交")
+	}
+	if doc.Find("section section").Length() > 0{
+		return "",0,errors.New("不支持嵌套 <section> (垂直子页),每页只能是一个独立的顶层 <section>")
 	}
 
 	// 寻找body的子元素 section

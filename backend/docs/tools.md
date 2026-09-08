@@ -7,16 +7,16 @@
 
 | # | 工具 | 阶段 | 一句话功能 | 状态 |
 |---|---|---|---|---|
-| 1 | `write_deck` | 1 | 从零生成整份 deck | ☐ |
+| 1 | `write_deck` | 1 | 从零生成整份 deck | ☑ |
 | 2 | `list_decks` | 2+ | 列出**当前用户**的 deck（依赖会话持久化+用户系统，已推迟） | ☐ |
-| 3 | `list_slides` | 2 | 看目录：每页的 id 和标题 | ☐ |
-| 4 | `read_slide` | 2 | 读单页完整 HTML + 指纹 | ☐ |
-| 5 | `update_slide` | 2 | 整块替换单页 | ☐ |
-| 6 | `insert_slide` | 2 | 在某页后插入新页（后端分配 id） | ☐ |
-| 7 | `delete_slide` | 2 | 删除单页 | ☐ |
+| 3 | `list_slides` | 2 | 看目录：每页的 id 和标题 | ☑ |
+| 4 | `read_slide` | 2 | 读单页完整 HTML + 指纹 | ☑ |
+| 5 | `update_slide` | 2 | 整块替换单页 | ☑ |
+| 6 | `insert_slide` | 2 | 在某页后插入新页（后端分配 id） | ☑ |
+| 7 | `delete_slide` | 2 | 删除单页 | ☑ |
 | 8 | `update_theme` | 2 | 改主题配置（颜色/字体/动画） | ☐ |
 | 9 | `list_templates` | 2 | 列出模板供推荐 | ☐ |
-| 10 | `ask_user` | 2 | 向用户提问（human-in-the-loop，暂停循环） | ☐ |
+| 10 | `ask_user` | 2 | 向用户提问（human-in-the-loop，暂停循环） | ☑ |
 | 11 | `screenshot_slides` | 3 | 截图/程序化检查排版 | ☐ |
 | 12 | `move_slide` | 2+ 可选 | 调整页序 | ☐ |
 
@@ -54,7 +54,9 @@
 ## 3. list_slides
 
 - **参数**：`{ deck_id }`
-- **返回**：`[{id: "s1", title: "封面"}, ...]`——只有 id + 标题，不含正文（token 预算设计）
+- **返回**：`[{position: 1, id: "s1", title: "封面"}, ...]`——只有页序 + id + 标题，
+  不含正文（token 预算设计）。**position 是当前页序（随插删变化），id 是唯一标识
+  （永不变化、删除后编号不复用）**——两者分离，防止模型对 id 数字做位置推断
 - **要点**：goquery 遍历 AGENT-EDITABLE 区顶层 section，取 data-id + 第一个 heading 文本
 
 ## 4. read_slide
@@ -65,10 +67,14 @@
 
 ## 5. update_slide —— 编辑场景最高频，所有写工具的校验模板
 
-- **参数**：`{ deck_id, slide_id, new_html, fingerprint? }`
-- **校验顺序**：id 白名单 → new_html 根元素必须是 `<section>` 且 data-id 与参数一致 →
-  （可选）指纹比对，过期则拒绝并提示重新 read
-- **要点**：goquery 定位旧节点 → `ReplaceWithHTML` → 序列化 → 原子写回；写前快照（阶段4完善）
+- **参数**：`{ deck_id, slide_id, new_html, fingerprint }`（fingerprint **必填**：把
+  "先 read 再改"的工作流做进 schema 硬约束，而不是只靠提示词软约束）
+- **校验顺序**：id 白名单 → slide 存在 → 指纹比对（过期拒绝；错误信息**不回显当前指纹**，
+  否则 LLM 拿到指纹就能跳过 read 绕过闸门）→ new_html 校验（恰好一个根 `<section>`、
+  data-id 与 slide_id 一致、禁 script/style、禁嵌套 section）→ 替换写回
+- **要点**：goquery 定位旧节点 → `ReplaceWithHtml` → 整份文档重序列化 → 原子写回；
+  成功返回刻意不含新指纹（同一页再改必须重新 read，防止"旧内容+新指纹"的二次提交
+  冲掉上一次修改）；写前快照（阶段4完善）
 
 ## 6. insert_slide
 
@@ -94,17 +100,26 @@
 - **返回**：`[{id, name, description, style_tags}]`
 - **要点**：description 写清适用场景，它是 LLM 推荐模板的依据；阶段2读静态 JSON 桩，阶段4动态化
 
-## 10. ask_user —— human-in-the-loop，唯一"结果是一个活人"的工具
+## 10. ask_user —— human-in-the-loop，唯一"结果是一个活人"的工具 ☑
 
-- **参数**：`{ questions: [{question, recommended, options, allow_custom}], blocking? }`
-- **返回**：用户作答后由后端合成 `{"answers": [...]}`；用户跳答时合成
-  `{"note": "用户未直接回答，新指示是..."}`（防止 tool_call 无结果导致的死锁）
-- **要点**：
-  - 后端硬校验：questions 最多 3 个（提示词是软约束，校验是底线）
-  - handler 识别到本工具时**不继续循环**：完整 messages 存 `chat_sessions` 表，
-    SSE 推 `ask_user` 事件；用户答题接口读出 messages → 追加 tool 结果 → 恢复循环
-  - 循环函数需要返回"暂停"信号（如 pendingQuestion 状态）
-  - 复用价值：任何需要用户确认的时刻（如危险操作二次确认）都用它
+- **参数**：`{ questions: [{question, options}] }`——questions 1~6 个（三处一致：
+  schema description / 工具 description / 后端硬校验）；options ≤4 个，
+  **第一个 = 推荐答案**（前端默认高亮，跳答时提示采用）
+- **返回**：用户作答后由后端合成 `{"answers": [{question, answer}]}`；用户跳答时合成
+  `{"note": "用户未作答，请使用推荐答案"}`（防止 tool_call 无结果导致的死锁）
+- **要点**（实现于 agent/agent.go + persist.go + handler/answer.go）：
+  - 主循环在分发前拦截 ask_user：**不执行、不继续循环**——同消息里的其他工具
+    调用合成"未执行"结果（协议要求每个 tool_call 必须有配对结果，否则恢复后
+    回放直接 400），SSE 推 `ask_user` 事件，循环返回 ErrPaused 哨兵（控制信号，
+    类比 io.EOF，不是失败）
+  - 暂停态显式落库：`chat_sessions.pending_ask` 存 `{"tool_call_id"}`，
+    messages 全量 JSON blob 存 `chat_sessions.messages`（每个检查点整体重写）
+  - 恢复端点 `POST /api/chat/answer`：读回 messages → 回填 ask_user 的 tool 结果 →
+    清 pending_ask → 重入循环（可能连环追问再次暂停）
+  - 参数不合法（json 坏 / 数量越界）→ 不暂停，作为普通工具错误反馈给模型，
+    循环继续（错误即反馈）
+  - 会话归属：session_id 越权访问一律 404（与 deck 同款）
+- **复用价值**：任何需要用户确认的时刻（如自定义脚本写入前的二次确认）都用它
 
 ## 11. screenshot_slides
 

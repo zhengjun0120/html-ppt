@@ -2,6 +2,7 @@ package handler
 
 import (
 	"html-ppt/backend/internal/agent"
+	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
 )
@@ -13,8 +14,9 @@ type Handler struct {
 	decks *deck.Service
 	st    *store.Store // 可能为 nil（数据库降级模式），使用处需判空
 	agent *agent.AgentService
+	auth  *auth.Service
 }
 
-func New(st *store.Store, decks *deck.Service,agent *agent.AgentService) *Handler {
-	return &Handler{st: st, decks: decks,agent: agent}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc}
 }

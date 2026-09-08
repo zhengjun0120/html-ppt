@@ -20,6 +20,9 @@
     }
     header button { cursor: pointer; }
     header button:hover { border-color: #5eead4; }
+    #who { color: #5eead4; }
+    main { flex: 1; display: flex; min-height: 0; }   /* min-height:0 让内层滚动生效 */
+    #chatPane { flex: 1 1 56%; display: flex; flex-direction: column; min-width: 0; }
     #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
     .bubble {
       max-width: 85%; padding: 10px 14px; border-radius: 10px;
@@ -31,11 +34,11 @@
                  font-size: 12px; border-left: 2px solid #334155; padding-left: 10px; }
     .tool      { align-self: flex-start; background: #134e4a; font-size: 13px; max-width: 95%; }
     .tool pre  { margin-top: 6px; font-size: 11px; color: #99f6e4; max-height: 120px; overflow: auto; }
-    .tool a    { color: #5eead4; }
     .toolerr   { align-self: flex-start; background: #7f1d1d; font-size: 13px; max-width: 95%; }
     .syserr    { align-self: center; background: #450a0a; color: #fca5a5; font-size: 13px; }
     .done      { align-self: center; background: #052e16; color: #86efac; font-size: 12px; }
     .sys       { align-self: center; color: #64748b; font-size: 12px; }
+    .session   { align-self: center; color: #475569; font-size: 11px; }
     footer { padding: 12px 16px; border-top: 1px solid #1e2a45; display: flex; gap: 8px; }
     textarea {
       flex: 1; resize: none; height: 44px; border-radius: 8px; border: 1px solid #334155;
@@ -48,24 +51,106 @@
     #send:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
     #abort { background: #7f1d1d; color: #fca5a5; display: none; }
     label { align-self: center; font-size: 12px; color: #64748b; cursor: pointer; }
+    /* 右侧预览栏：沙箱 iframe，安全模型的前端半边 */
+    #previewPane { flex: 1 1 44%; display: flex; flex-direction: column;
+                   border-left: 1px solid #1e2a45; min-width: 320px; }
+    .pvbar { padding: 8px 16px; border-bottom: 1px solid #1e2a45; font-size: 12px;
+             display: flex; align-items: center; gap: 10px; }
+    .pvbar button { background: #1a2338; color: #e2e8f0; border: 1px solid #334155;
+                    border-radius: 6px; padding: 2px 8px; font-weight: 400; }
+    .pvbar button:hover { border-color: #5eead4; }
+    #previewFrame { flex: 1; width: 100%; border: 0; background: #0b132b; }
+    /* ask_user 提问卡片 */
+    .ask { align-self: flex-start; background: #3b2f0b; border: 1px solid #a16207;
+           max-width: 95%; font-size: 13px; }
+    .ask .q { margin-top: 8px; }
+    .ask .q .rec { color: #fbbf24; font-size: 12px; }
+    .ask .opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+    .ask .opts button { background: #1a2338; color: #e2e8f0; border: 1px solid #334155;
+                        border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 400; }
+    .ask .opts button:first-child { border-color: #fbbf24; color: #fbbf24; } /* 契约：第一个选项 = 推荐答案 */
+    .ask input { width: 100%; background: #1a2338; border: 1px solid #334155; border-radius: 6px;
+                 color: #e2e8f0; padding: 6px 10px; font-size: 13px; outline: none; }
+    .ask .acts { display: flex; gap: 8px; margin-top: 8px; }
+    .ask .acts button { padding: 4px 14px; font-size: 12px; }
+    .ask .submit { background: #fbbf24; color: #0b132b; }
+    .ask .skip  { background: #1a2338; color: #94a3b8; font-weight: 400; }
+    /* 登录/注册遮罩 */
+    #authMask { position: fixed; inset: 0; background: rgba(2,6,23,.82);
+                display: none; align-items: center; justify-content: center; z-index: 10; }
+    #authCard { background: #101a30; border: 1px solid #334155; border-radius: 12px;
+                padding: 28px; width: 340px; display: flex; flex-direction: column; gap: 10px; }
+    #authCard h2 { color: #5eead4; font-size: 18px; margin-bottom: 4px; }
+    #authCard .tabs { display: flex; gap: 6px; }
+    #authCard .tabs button { flex: 1; background: #1a2338; color: #64748b; padding: 6px 0; font-weight: 400; }
+    #authCard .tabs button.on { color: #5eead4; border: 1px solid #5eead4; }
+    #authCard input { background: #1a2338; border: 1px solid #334155; border-radius: 8px;
+                      color: #e2e8f0; padding: 9px 12px; font-size: 14px; outline: none; width: 100%; }
+    #authCard .row { display: flex; gap: 8px; }
+    #authCard .row input { flex: 1; }
+    #aSendCode { background: #1a2338; color: #99f6e4; border: 1px solid #334155;
+                 padding: 0 12px; font-size: 12px; font-weight: 400; white-space: nowrap; }
+    #aSubmit { background: #5eead4; color: #0b132b; padding: 9px 0; }
+    #aMsg { font-size: 12px; color: #fca5a5; min-height: 16px; }
   </style>
 </head>
 <body>
   <header>
     <span><b>SSE 测试台</b></span>
+    <span class="lbl">会话</span>
+    <span id="sessTag" class="lbl">（新对话）</span>
+    <button id="newChat" title="丢弃当前会话，开始新对话">新对话</button>
     <span class="lbl">工作对象</span>
     <select id="deck"><option value="">（不指定）</option></select>
     <button id="reload" title="刷新列表">↻</button>
-    <button id="preview" title="在新标签页打开所选 deck">预览↗</button>
+    <button id="preview" title="在新标签页打开所选 deck（无沙箱，用于对比测试）">预览↗</button>
     <span class="lbl" id="deckInfo"></span>
+    <span style="flex:1"></span>
+    <span class="lbl">当前用户</span>
+    <span id="who">…</span>
+    <button id="apiKeyBtn" title="设置你自己的 LLM API Key（留空清除，用服务器默认）">API Key</button>
+    <button id="logout">退出</button>
   </header>
-  <div id="log"></div>
-  <footer>
-    <textarea id="input" placeholder="例如：帮我做一份介绍 Go 并发的 PPT（Ctrl+Enter 发送）"></textarea>
-    <button id="send">发送</button>
-    <button id="abort">中断</button>
-    <label><input type="checkbox" id="raw"> 原始帧</label>
-  </footer>
+  <main>
+    <section id="chatPane">
+      <div id="log"></div>
+      <footer>
+        <textarea id="input" placeholder="例如：帮我做一份介绍 Go 并发的 PPT（Ctrl+Enter 发送）"></textarea>
+        <button id="send">发送</button>
+        <button id="abort">中断</button>
+        <label><input type="checkbox" id="raw"> 原始帧</label>
+      </footer>
+    </section>
+    <section id="previewPane">
+      <div class="pvbar">
+        <span class="lbl">预览（沙箱 iframe）</span>
+        <span class="lbl" id="pvId">未选择 deck</span>
+        <button id="pvRefresh" title="重新加载预览（会回到第一页）">↻</button>
+      </div>
+      <!-- 不给 allow-same-origin：iframe 内变成不透明 origin，
+           脚本碰不到本页 DOM/cookie/localStorage；配合后端 CSP 形成完整沙箱 -->
+      <iframe id="previewFrame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
+    </section>
+  </main>
+
+  <!-- 登录/注册遮罩：无 token 或 401 时显示 -->
+  <div id="authMask">
+    <div id="authCard">
+      <h2>html-ppt</h2>
+      <div class="tabs">
+        <button id="tabLogin" class="on">登录</button>
+        <button id="tabReg">注册</button>
+      </div>
+      <input id="aEmail" placeholder="邮箱" autocomplete="username">
+      <div class="row" id="codeRow" style="display:none">
+        <input id="aCode" placeholder="邮箱验证码">
+        <button id="aSendCode">获取验证码</button>
+      </div>
+      <input id="aPassword" type="password" placeholder="密码（8~72 位）" autocomplete="current-password">
+      <button id="aSubmit">登录</button>
+      <div id="aMsg"></div>
+    </div>
+  </div>
 
 <script>
 const log = document.getElementById('log');
@@ -75,11 +160,23 @@ const abortBtn = document.getElementById('abort');
 const rawChk = document.getElementById('raw');
 const deckSel = document.getElementById('deck');
 const deckInfo = document.getElementById('deckInfo');
+const previewFrame = document.getElementById('previewFrame');
+const pvId = document.getElementById('pvId');
+const who = document.getElementById('who');
+const authMask = document.getElementById('authMask');
+const sessTag = document.getElementById('sessTag');
 
+const TOKEN_KEY = 'hpt_token';
+const SESSION_KEY = 'hpt_session';   // 会话 id 持久化：刷新页面可续聊，ask_user 暂停态也不怕刷新
 let streaming = false;
 let controller = null;
 let currentDelta = null;
 let currentThink = null;
+
+const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
+const setToken = t => t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
+const getSession = () => parseInt(localStorage.getItem(SESSION_KEY) || '0', 10) || 0;
+const setSession = id => id > 0 ? localStorage.setItem(SESSION_KEY, String(id)) : localStorage.removeItem(SESSION_KEY);
 
 const scroll = () => { log.scrollTop = log.scrollHeight; };
 
@@ -94,10 +191,127 @@ function bubble(cls, text) {
 
 function resetBubbles() { currentDelta = null; currentThink = null; }
 
+// ---------- 统一 API 封装：自动带 Authorization，401 弹回登录 ----------
+async function api(path, opts = {}) {
+  const headers = Object.assign({}, opts.headers || {});
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  const t = getToken();
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  const resp = await fetch(path, Object.assign({}, opts, { headers }));
+  if (resp.status === 401) {
+    setToken('');
+    showAuth('登录已过期，请重新登录');
+    throw new Error('未登录');
+  }
+  return resp;
+}
+
+async function errText(resp) {
+  try { return (await resp.json()).error || resp.statusText; }
+  catch { return resp.statusText; }
+}
+
+// ---------- 登录 / 注册 ----------
+let authMode = 'login';
+function showAuth(msg) {
+  document.getElementById('aMsg').style.color = '#fca5a5';
+  document.getElementById('aMsg').textContent = msg || '';
+  authMask.style.display = 'flex';
+  setAuthMode('login');
+}
+function setAuthMode(m) {
+  authMode = m;
+  document.getElementById('tabLogin').classList.toggle('on', m === 'login');
+  document.getElementById('tabReg').classList.toggle('on', m === 'reg');
+  document.getElementById('codeRow').style.display = m === 'reg' ? '' : 'none';
+  document.getElementById('aSubmit').textContent = m === 'reg' ? '注册并登录' : '登录';
+}
+document.getElementById('tabLogin').onclick = () => setAuthMode('login');
+document.getElementById('tabReg').onclick = () => setAuthMode('reg');
+
+document.getElementById('aSendCode').onclick = async () => {
+  const email = document.getElementById('aEmail').value.trim();
+  if (!email) { document.getElementById('aMsg').textContent = '先填邮箱'; return; }
+  const btn = document.getElementById('aSendCode');
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/auth/code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!resp.ok) throw new Error(await errText(resp));
+    const msg = document.getElementById('aMsg');
+    msg.style.color = '#86efac';
+    msg.textContent = '验证码已发送，10 分钟内有效';
+    let left = 60;
+    const timer = setInterval(() => {
+      btn.textContent = left-- + 's';
+      if (left < 0) { clearInterval(timer); btn.disabled = false; btn.textContent = '获取验证码'; }
+    }, 1000);
+  } catch (e) {
+    btn.disabled = false;
+    document.getElementById('aMsg').style.color = '#fca5a5';
+    document.getElementById('aMsg').textContent = e.message;
+  }
+};
+
+document.getElementById('aSubmit').onclick = async () => {
+  const email = document.getElementById('aEmail').value.trim();
+  const password = document.getElementById('aPassword').value;
+  const code = document.getElementById('aCode').value.trim();
+  const msg = document.getElementById('aMsg');
+  msg.style.color = '#fca5a5';
+  try {
+    const path = authMode === 'reg' ? '/api/auth/register' : '/api/auth/login';
+    const body = authMode === 'reg' ? { email, code, password } : { email, password };
+    const resp = await fetch(path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || '失败');
+    setToken(data.token);
+    authMask.style.display = 'none';
+    msg.textContent = '';
+    await init();
+  } catch (e) { msg.textContent = e.message; }
+};
+
+document.getElementById('logout').onclick = () => {
+  setToken('');
+  setSession(0);
+  location.reload();
+};
+
+document.getElementById('newChat').onclick = () => {
+  setSession(0);
+  sessTag.textContent = '（新对话）';
+  bubble('sys', '▶ 已开始新对话（旧会话仍保留在服务端，记住 session_id 可随时回来）');
+};
+
+document.getElementById('apiKeyBtn').onclick = async () => {
+  const key = prompt('填入你自己的 LLM API Key（DeepSeek），留空并确定 = 清除，恢复用服务器默认额度：');
+  if (key === null) return;
+  try {
+    const resp = await api('/api/auth/apikey', {
+      method: 'POST', body: JSON.stringify({ api_key: key.trim() }),
+    });
+    if (!resp.ok) throw new Error(await errText(resp));
+    bubble('sys', key.trim() ? '✅ 已保存你自己的 API Key（加密存储，对话将优先使用）' : '✅ 已清除 API Key，恢复使用服务器默认额度');
+    refreshWho();
+  } catch (e) { if (e.message !== '未登录') bubble('syserr', 'API Key 保存失败：' + e.message); }
+};
+
+async function refreshWho() {
+  const resp = await api('/api/auth/me');
+  const data = await resp.json();
+  who.textContent = data.email + (data.has_api_key ? '（BYOK）' : '（额度）');
+}
+
 // ---------- deck 列表：加载 / 刷新 / 选中 ----------
 async function loadDecks() {
   try {
-    const resp = await fetch('/api/decks');
+    const resp = await api('/api/decks');
     if (!resp.ok) return;
     const decks = await resp.json();
     const keep = deckSel.value;                       // 保留当前选择
@@ -110,7 +324,7 @@ async function loadDecks() {
     }
     if ([...deckSel.options].some(o => o.value === keep)) deckSel.value = keep;
     deckInfo.textContent = '共 ' + decks.length + ' 份';
-  } catch { /* 静默：列表加载失败不影响对话 */ }
+  } catch (e) { if (e.message !== '未登录') { /* 静默：列表失败不影响对话 */ } }
 }
 
 function ensureDeckOption(id) {                       // 新建 deck 自动进下拉框
@@ -123,12 +337,45 @@ function ensureDeckOption(id) {                       // 新建 deck 自动进�
   deckSel.value = id;
 }
 
+// ---------- 预览：跟随下拉框选择，写工具完成后自动刷新 ----------
+// iframe/window.open 是浏览器原生导航，带不了 Authorization 头，
+// deck 文件路由接受 ?token= 查询参数兜底（服务端注释里有此妥协的说明）
+function deckFileURL(id) {
+  return '/api/decks/' + id + '/file?token=' + encodeURIComponent(getToken());
+}
+
+function loadPreview() {
+  const id = deckSel.value;
+  pvId.textContent = id || '未选择 deck';
+  // 沙箱 iframe 跨源读不到内部 location.hash，只能重设 src，刷新回到第一页
+  previewFrame.src = id ? deckFileURL(id) : 'about:blank';
+}
+deckSel.addEventListener('change', loadPreview);
+document.getElementById('pvRefresh').onclick = () => { if (deckSel.value) loadPreview(); };
+
 document.getElementById('reload').onclick = loadDecks;
 document.getElementById('preview').onclick = () => {
-  if (deckSel.value) window.open('/api/decks/' + deckSel.value + '/file', '_blank');
+  if (deckSel.value) window.open(deckFileURL(deckSel.value), '_blank');
 };
 
-// ---------- SSE 解析：fetch + ReadableStream（EventSource 不支持 POST） ----------
+// ---------- SSE 消费：chat 与 answer 共用（EventSource 不支持 POST） ----------
+async function consumeSSE(resp) {
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
+      handleFrame(buf.slice(0, idx));
+      buf = buf.slice(idx + 2);
+    }
+  }
+  if (buf.trim()) handleFrame(buf);
+}
+
 async function send() {
   const msg = input.value.trim();
   if (!msg || streaming) return;
@@ -141,37 +388,53 @@ async function send() {
   resetBubbles();
 
   try {
-    const resp = await fetch('/api/chat', {
+    const resp = await api('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        session_id: getSession() || undefined,
         user_content: msg,
         deck_id: deckSel.value || undefined,          // 选了才带，与后端 omitempty 对应
       }),
       signal: controller.signal,
     });
     if (!resp.ok) {
-      const t = await resp.text();
-      bubble('syserr', 'HTTP ' + resp.status + '：' + t);
+      bubble('syserr', 'HTTP ' + resp.status + '：' + await resp.text());
       return;
     }
-
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf('\n\n')) >= 0) {
-        handleFrame(buf.slice(0, idx));
-        buf = buf.slice(idx + 2);
-      }
-    }
-    if (buf.trim()) handleFrame(buf);
+    await consumeSSE(resp);
   } catch (e) {
+    if (e.message === '未登录') return;
     if (e.name === 'AbortError') bubble('sys', '⏹ 已手动中断（服务端 agent 应随之取消）');
+    else bubble('syserr', '连接错误：' + e.message);
+  } finally {
+    streaming = false;
+    sendBtn.disabled = false;
+    abortBtn.style.display = 'none';
+  }
+}
+
+// 提交 ask_user 的回答：第二个 SSE 请求，恢复被暂停的循环
+async function sendAnswer(answers, note) {
+  if (streaming) return;
+  streaming = true;
+  controller = new AbortController();
+  sendBtn.disabled = true;
+  abortBtn.style.display = '';
+  resetBubbles();
+  try {
+    const resp = await api('/api/chat/answer', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: getSession(), answers, note }),
+      signal: controller.signal,
+    });
+    if (!resp.ok) {
+      bubble('syserr', 'HTTP ' + resp.status + '：' + await resp.text());
+      return;
+    }
+    await consumeSSE(resp);
+  } catch (e) {
+    if (e.message === '未登录') return;
+    if (e.name === 'AbortError') bubble('sys', '⏹ 已手动中断');
     else bubble('syserr', '连接错误：' + e.message);
   } finally {
     streaming = false;
@@ -202,16 +465,34 @@ function handleFrame(frame) {
       currentThink.textContent += ev.content ?? '';
       scroll();
       break;
+    case 'session': {
+      const id = parseInt(ev.content, 10) || 0;
+      if (id > 0) {
+        setSession(id);
+        sessTag.textContent = '会话 #' + id;
+      }
+      break;
+    }
+    case 'ask_user': {
+      let qs = [];
+      try { qs = JSON.parse(ev.content).questions || []; } catch { /* 参数非法时后端已拦截，这里兜底 */ }
+      renderAskCard(qs);
+      break;
+    }
     case 'tool_call': {
       const b = bubble('tool', '🛠 调用工具 ' + (ev.tool_name ?? ''));
       b.appendChild(pre(ev.content));
-      // write_deck 成功 → 新 deck 自动进下拉框并选中，"生成→继续编辑"无缝衔接
+      // write_deck 成功 → 新 deck 自动进下拉框并选中，右侧预览跟着加载
       if (ev.tool_name === 'write_deck') {
         try {
           const r = JSON.parse(ev.content);
-          if (r.deck_id) { ensureDeckOption(r.deck_id); loadDecks(); }
+          if (r.deck_id) { ensureDeckOption(r.deck_id); loadDecks(); loadPreview(); }
         } catch { /* 忽略非 JSON 的工具结果 */ }
       }
+      // update_slide 成功 → 文件已落盘，刷新预览看效果
+      if (ev.tool_name === 'update_slide') loadPreview();
+      // insert/delete 改变页数与页序，同样刷新
+      if (ev.tool_name === 'insert_slide' || ev.tool_name === 'delete_slide') loadPreview();
       break;
     }
     case 'tool_error':
@@ -228,6 +509,77 @@ function handleFrame(frame) {
   }
 }
 
+// ask_user 卡片：逐题渲染。契约：options 第一个 = 推荐答案（点击填入输入框）
+function renderAskCard(qs) {
+  const card = bubble('ask', `❓ Agent 想确认（${qs.length} 个问题）：`);
+  const inputs = [];
+
+  qs.forEach((q, i) => {
+    const box = document.createElement('div');
+    box.className = 'q';
+
+    const label = document.createElement('div');
+    label.textContent = (i + 1) + '. ' + (q.question || '');
+    box.appendChild(label);
+
+    const opts = q.options || [];
+    if (opts.length > 0) {
+      const rec = document.createElement('div');
+      rec.className = 'rec';
+      rec.textContent = '推荐：' + opts[0];
+      box.appendChild(rec);
+      const group = document.createElement('div');
+      group.className = 'opts';
+      opts.forEach(o => {
+        const b = document.createElement('button');
+        b.textContent = o;
+        b.onclick = () => { inputs[i].value = o; };
+        group.appendChild(b);
+      });
+      box.appendChild(group);
+    }
+
+    const inp = document.createElement('input');
+    inp.placeholder = '你的回答（留空 = 本题跳过）';
+    box.appendChild(inp);
+    inputs.push(inp);
+    card.appendChild(box);
+  });
+
+  const acts = document.createElement('div');
+  acts.className = 'acts';
+
+  const submit = document.createElement('button');
+  submit.className = 'submit';
+  submit.textContent = '提交回答';
+  submit.onclick = async () => {
+    if (streaming) return;
+    submit.disabled = true;
+    const answers = qs.map((q, i) => ({ question: q.question || '', answer: inputs[i].value.trim() }))
+                      .filter(a => a.answer !== '');
+    inputs.forEach(i => i.disabled = true);
+    card.querySelectorAll('.opts button').forEach(b => b.disabled = true);
+    await sendAnswer(answers, '');
+  };
+
+  const skip = document.createElement('button');
+  skip.className = 'skip';
+  skip.textContent = '跳过（让 Agent 用推荐答案）';
+  skip.onclick = async () => {
+    if (streaming) return;
+    skip.disabled = true;
+    inputs.forEach(i => i.disabled = true);
+    card.querySelectorAll('.opts button').forEach(b => b.disabled = true);
+    // 全跳过 → answers 为空 → 后端走 note 通道，note 提示用推荐答案
+    await sendAnswer([], '');
+  };
+
+  acts.appendChild(submit);
+  acts.appendChild(skip);
+  card.appendChild(acts);
+  scroll();
+}
+
 function pre(text) {
   const p = document.createElement('pre');
   p.textContent = text ?? '';
@@ -240,8 +592,22 @@ input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.ctrlKey) send();
 });
 abortBtn.onclick = () => controller?.abort();
-loadDecks();
-bubble('sys', '就绪。顶部下拉框选择工作对象（deck_id 随每条消息带给 agent）；write_deck 新建的 deck 会自动选中。');
+
+// ---------- 启动：有 token 则进入工作台，否则弹登录 ----------
+async function init() {
+  await refreshWho();
+  await loadDecks();
+  loadPreview();
+  const sid = getSession();
+  if (sid > 0) sessTag.textContent = '会话 #' + sid;
+}
+(async () => {
+  if (!getToken()) { showAuth(''); return; }
+  try {
+    await init();
+    bubble('sys', '就绪。对话按会话持久化（右上角"新对话"开新会话）；ask_user 卡片出现时直接在卡片里回答。');
+  } catch { /* 401 已由 api() 弹回登录 */ }
+})();
 </script>
 </body>
 </html>
