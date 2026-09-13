@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -15,15 +16,58 @@ import (
 // <script type="application/json" id="deck-theme"> 块。
 // 结构层 components.css 只引用 CSS 变量；本结构决定变量的取值。
 // 暴露给 LLM 的只有这些语义字段，不是 CSS 原文——校验做硬、可逆、出错率低。
+//
+// 两处"自由"的边界，刻意分得很清：
+//   - 配色可以完全自由：Vars 让 AI 设计一整套自定义调色板，
+//     但必须写成"一处变量定义"，而不是散落在元素上的字面量。
+//   - 画布不许自由：Canvas 只给比例预设。画布尺寸 + em 尺度是适配兜底、
+//     翻页动画、字号缩放三件事的共同地基，放开绝对尺寸会让它们同时失灵
+//     （deck-0004 那 18 处 font-size:30px 就是这个后果）。
 type Theme struct {
-	Accent       string `json:"accent"`        // 强调色，border/card-bg 由它派生
-	Background   string `json:"background"`    // 页面背景
-	HeadingColor string `json:"heading_color"` // 标题色
-	TextColor    string `json:"text_color"`    // 正文色
-	Font         string `json:"font"`          // 字体方案枚举：sans/serif/mono
-	Radius       string `json:"radius"`        // 卡片圆角
-	Transition   string `json:"transition"`    // 翻页动画枚举，init.js 读走
+	Accent       string            `json:"accent"`        // 强调色，border/card-bg 由它派生
+	Background   string            `json:"background"`    // 页面背景
+	HeadingColor string            `json:"heading_color"` // 标题色
+	TextColor    string            `json:"text_color"`    // 正文色
+	Font         string            `json:"font"`          // 字体方案枚举：sans/serif/mono
+	Radius       string            `json:"radius"`        // 卡片圆角
+	Transition   string            `json:"transition"`    // 翻页动画枚举，init.js 读走
+	Canvas       string            `json:"canvas"`        // 画布比例预设，init.js 读走
+	Vars         map[string]string `json:"vars,omitempty"` // 自定义调色板（变量名 → CSS 值）
 }
+
+// canvasPresets 是画布比例预设：**高度统一 700，只调宽度**。
+//
+// 为什么固定高度：一页能放多少内容由高度决定，宽度只影响排布的宽松度。
+// 高度一动，原本刚好放得下的页面就会被挤爆（触发适配兜底缩小，牺牲可读性）；
+// 固定高度则"换比例"是纯粹的横向增益。
+//
+// 960×700 是 reveal.js 的默认逻辑画布，也是 init.js 里 config() 的兜底值——
+// 三处必须一致：本表、init.js 的 CANVAS 表、reveal 默认值。
+// 有 TestCanvasPresetsMatchInitJS 守着前两处不漂移。
+const (
+	CanvasStandard = "standard" // 通用（1.37:1，在 16:9 屏上左右有黑边）
+	CanvasWide     = "wide"     // 16:9（比例与投屏/录屏一致，没有黑边）
+	CanvasClassic  = "classic"  // 4:3（老投影仪）
+)
+
+var canvasPresets = map[string][2]int{
+	CanvasStandard: {960, 700},
+	CanvasWide:     {1244, 700}, // 700 × 16/9
+	CanvasClassic:  {933, 700},  // 700 × 4/3
+}
+
+// CanvasSize 返回预设对应的逻辑画布尺寸。未识别的预设退回默认（不报错：
+// 这一步在读路径上，坏配置不该让整个 deck 读不出来）。
+func CanvasSize(preset string) (int, int) {
+	if s, ok := canvasPresets[preset]; ok {
+		return s[0], s[1]
+	}
+	s := canvasPresets[CanvasStandard]
+	return s[0], s[1]
+}
+
+// 自定义调色板的容量上限：既是块大小的护栏，也是 token 上限。
+const maxThemeVars = 32
 
 // 默认值必须与 web/assets/theme.css 的 :root 一致（两处耦合，改一处必改另一处，
 // 骨架 deck_skeleton.html 里的默认 JSON 也存了一份，共三处）
@@ -32,6 +76,7 @@ func defaultTheme() Theme {
 		Accent: "#5eead4", Background: "#0b132b",
 		HeadingColor: "#5eead4", TextColor: "#e2e8f0",
 		Font: "sans", Radius: "10px", Transition: "slide",
+		Canvas: CanvasStandard,
 	}
 }
 
@@ -70,6 +115,12 @@ func (t Theme) validate() error {
 	if !transitions[t.Transition] {
 		return fmt.Errorf("transition 只支持 slide/fade/zoom/convex/concave/none，收到 %q", t.Transition)
 	}
+	if _, ok := canvasPresets[t.Canvas]; !ok {
+		return fmt.Errorf("canvas 只支持 standard（960×700，通用）/ wide（16:9，投屏录屏无黑边）/ classic（4:3，老投影仪），收到 %q", t.Canvas)
+	}
+	if err := validateThemeVars(t.Vars); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -97,15 +148,37 @@ func renderThemeCSS(t Theme) string {
 	fmt.Fprintf(&sb, "--card-bg:%s;", hexToRGBA(t.Accent, 0.06))
 	fmt.Fprintf(&sb, "--text-muted:%s;", hexToRGBA(t.TextColor, 0.65))
 	fmt.Fprintf(&sb, "--radius:%s;", t.Radius)
+
+	if len(t.Vars) > 0 {
+		names := make([]string, 0, len(t.Vars))
+		for n := range t.Vars {
+			names = append(names, n)
+		}
+		// 必须排序：map 遍历顺序是随机的，不排的话每次写入产出的 :root 文本都在变，
+		// 历史 diff 会把整块报成"改过"——一堆假改动比没有 diff 更糟
+		sort.Strings(names)
+		for _, n := range names {
+			fmt.Fprintf(&sb, "%s:%s;", n, t.Vars[n])
+		}
+	}
+
 	sb.WriteString("}")
 	return sb.String()
 }
 
 // ThemePatch 是工具层的可选字段集合：nil 表示"不改这项"。
 // 用指针而不是空串，才能区分"没传"和"传了空值"。
+//
+// Vars 的语义与其它字段不同：它是**整体替换**，不是合并。
+// 传了就是"这就是新的整套自定义调色板"（传空 map 等于清空），没传就不动。
+// 选整体替换而不是合并的理由和自定义样式槽一样：一套配色是一个整体，
+// "当前这套配色长什么样"必须只有一个权威来源，不能靠增量拼接累积出意外。
+// 代价是改单个变量也要提交全文——所以配套了 read_theme（先读后写），
+// 和 read_slide/read_custom_css 是同一套路。
 type ThemePatch struct {
 	Accent, Background, HeadingColor, TextColor *string
-	Font, Radius, Transition                    *string
+	Font, Radius, Transition, Canvas            *string
+	Vars                                        *map[string]string
 }
 
 func (p ThemePatch) applyTo(t *Theme) {
@@ -129,6 +202,22 @@ func (p ThemePatch) applyTo(t *Theme) {
 	}
 	if p.Transition != nil {
 		t.Transition = strings.ToLower(strings.TrimSpace(*p.Transition))
+	}
+	if p.Canvas != nil {
+		t.Canvas = strings.ToLower(strings.TrimSpace(*p.Canvas))
+	}
+	if p.Vars != nil {
+		// 整体替换。拷贝一份再存：调用方的 map 不该被存储层持有
+		// （裸赋值会让之后对入参的修改穿透到主题里）
+		if len(*p.Vars) == 0 {
+			t.Vars = nil // 空 map = 清空自定义调色板，别留下一个空壳
+		} else {
+			next := make(map[string]string, len(*p.Vars))
+			for k, v := range *p.Vars {
+				next[strings.TrimSpace(k)] = strings.TrimSpace(v)
+			}
+			t.Vars = next
+		}
 	}
 }
 
@@ -203,6 +292,9 @@ func fillMissing(t *Theme) {
 	if t.Transition == "" {
 		t.Transition = def.Transition
 	}
+	if t.Canvas == "" {
+		t.Canvas = def.Canvas
+	}
 }
 
 // UpdateTheme 读当前配置 → 合并 patch → 全量校验 → 重渲染两块 → 原子写回。
@@ -214,6 +306,13 @@ func (s *Service) UpdateTheme(userID uint, deckID string, patch ThemePatch) (The
 	if err := s.authorize(userID, deckID); err != nil {
 		return Theme{}, err
 	}
+	return s.updateThemeLocked(deckID, patch)
+}
+
+// updateThemeLocked 写入核心（锁内），拆出来为白盒测试——与 updateCustomCSSLocked 同一惯例：
+// "读→合并→全量校验→重渲染→写回"这条链路本身才是最该被测的东西，
+// 而它藏在 authorize 后面，不拆开就只能靠一个需要数据库的集成测试覆盖。
+func (s *Service) updateThemeLocked(deckID string, patch ThemePatch) (Theme, error) {
 	unlock := s.lockDeck(deckID)
 	defer unlock()
 	raw, err := s.readRaw(deckID)
@@ -251,4 +350,30 @@ func (s *Service) UpdateTheme(userID uint, deckID string, patch ThemePatch) (The
 		return Theme{}, fmt.Errorf("写入 deck 失败 err:%w", err)
 	}
 	return theme, nil
+}
+
+// ReadTheme 读当前主题配置（工具 read_theme 用）。
+//
+// 为什么必须有这个读工具：Vars 是整体替换制，AI 改配色前必须先看到当前整套，
+// 否则会拿一份想象中的旧配色覆盖真实配色——和 read_custom_css 存在的理由完全一样。
+// 读路径只解析不落盘：ensureThemeBlocks 对老 deck 会往内存里的 doc 补块，
+// 但这里不写回文件，所以"读"永远是安全的。
+func (s *Service) ReadTheme(userID uint, deckID string) (Theme, error) {
+	if err := s.authorize(userID, deckID); err != nil {
+		return Theme{}, err
+	}
+	return s.readThemeRaw(deckID)
+}
+
+// readThemeRaw 拆出来供白盒测试用（绕开 authorize，st=nil 也能跑）。
+func (s *Service) readThemeRaw(deckID string) (Theme, error) {
+	raw, err := s.readRaw(deckID)
+	if err != nil {
+		return Theme{}, err
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(raw))
+	if err != nil {
+		return Theme{}, fmt.Errorf("解析 deck 失败 err:%w", err)
+	}
+	return ensureThemeBlocks(doc)
 }

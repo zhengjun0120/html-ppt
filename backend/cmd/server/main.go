@@ -88,9 +88,9 @@ func run() error {
 	}
 	authSvc := auth.New(db, rdb, box, cfg.Auth.JWTSecret, cfg.Auth.TTL(), cfg.SMTP)
 
-	deckSvc := deck.New(cfg.Data.Dir, st)
+	deckSvc := deck.New(cfg.Data.Dir, cfg.Assets.Dir, st)
 
-	if err := agent.InitAgentModel(cfg.LLM, st, box, deckSvc, cfg.Features); err != nil {
+	if err := agent.InitAgentModel(cfg.LLM, st, box, deckSvc, cfg.Features, cfg.Assets.Dir); err != nil {
 		return fmt.Errorf("初始化 agent: %w", err)
 	}
 	agentSvc := agent.GetAgentService()

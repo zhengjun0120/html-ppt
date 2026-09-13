@@ -1,17 +1,31 @@
 // deck 初始化脚本：所有 deck 共用这一份（第①层：框架，LLM 不可见不可改）。
 // 将来交互组件（翻转卡片、拖拽排序等）的行为绑定也统一加在这里。
 
-// ---------- 主题与翻页动画 ----------
-// 翻页动画不在 CSS 变量体系里，从 deck 内的主题配置块读取；
-// 配置缺失/损坏时退回默认，框架层永不因配置挂掉
-let transition = 'slide';
+// ---------- 主题、画布与翻页动画 ----------
+// 翻页动画和画布尺寸都不在 CSS 变量体系里（前者是 JS 配置，后者是 reveal 的布局参数），
+// 所以从 deck 内的主题配置块读取；配置缺失/损坏时退回默认，框架层永不因配置挂掉。
+//
+// CANVAS 表必须与后端 internal/service/deck/theme.go 的 canvasPresets 逐字一致，
+// 有 TestCanvasPresetsMatchInitJS 守着不漂移。
+// 高度统一 700、只调宽度：一页能放多少内容由高度决定，宽度只影响排布的宽松度；
+// 高度一动，原本刚好放得下的页面就会被挤爆（触发下面的适配兜底缩小，牺牲可读性）。
+var CANVAS = {
+  standard: { width: 960, height: 700 },   // 通用（reveal.js 默认逻辑画布）
+  wide: { width: 1244, height: 700 },      // 16:9：与投屏/录屏比例一致，没有黑边
+  classic: { width: 933, height: 700 },    // 4:3：老投影仪
+};
+
+var deckTheme = {};
 try {
-  transition = JSON.parse(document.getElementById('deck-theme').textContent).transition || transition;
+  deckTheme = JSON.parse(document.getElementById('deck-theme').textContent) || {};
 } catch (e) {}
+var canvas = CANVAS[deckTheme.canvas] || CANVAS.standard;
 
 Reveal.initialize({
   hash: true,       // URL 带 #/2 页码：刷新不丢位置，截图也能精确定位到某页
-  transition: transition,
+  transition: deckTheme.transition || 'slide',
+  width: canvas.width,
+  height: canvas.height,
   controls: true,
   progress: true,
 });

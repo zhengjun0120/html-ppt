@@ -81,6 +81,12 @@ func (s *Service) UpdateSlide(userID uint, deckID, slideID, newHTML, fingerprint
 		return "",err
 	}
 
+	// 回声校验：内联 style 里引用的变量必须真有元素消费（或已在主题块/本 deck 里定义），
+	// 否则这处样式注定不生效——拒绝比"写进去了但没反应"诚实
+	if err := s.checkInlineStyleVars(replacement, raw); err != nil {
+		return "", err
+	}
+
 	// 替换HTML
 	sec.First().ReplaceWithHtml(replacement)
 

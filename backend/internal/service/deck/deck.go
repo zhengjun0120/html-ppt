@@ -2,6 +2,7 @@ package deck
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,12 +31,42 @@ type Meta struct {
 // 归属的权威在 decks 表：文件系统只是内容存储，"这个 deck 是谁的"只认 DB。
 type Service struct {
 	decksDir string
-	st       *store.Store // nil = 数据库降级模式：所有操作返回不可用
+	// assetsDir 共享静态资源目录（web/assets）：回声校验从这里现扫变量契约。
+	// 只读——组件库对 AI 和对后端都是只读的（护栏）。
+	assetsDir string
+	st        *store.Store // nil = 数据库降级模式：所有操作返回不可用
 	deckLocks sync.Map
 }
 
-func New(dataDir string, st *store.Store) *Service {
-	return &Service{decksDir: filepath.Join(dataDir, "decks"), st: st}
+func New(dataDir, assetsDir string, st *store.Store) *Service {
+	return &Service{decksDir: filepath.Join(dataDir, "decks"), assetsDir: assetsDir, st: st}
+}
+
+// variableContract 取"被框架 CSS 消费过"的变量清单（详见 variable_contract.go）。
+// 拿不到契约时返回 nil 并跳过回声校验（fail-open）：这项检查防的是"静默无效的样式"，
+// 不是安全问题——宁可漏判，也不能因为资源目录没配好就把所有写入都卡死。
+func (s *Service) variableContract() map[string]bool {
+	known, err := loadVariableContract(s.assetsDir)
+	if err != nil {
+		log.Printf("[warn] 读取 CSS 变量契约失败，本次跳过回声校验: %v", err)
+		return nil
+	}
+	return known
+}
+
+// checkInlineStyleVars 校验页面内容里内联 style 用到的变量是否都有效。
+// known 之外还要加上该 deck 自己在样式块里定义过的变量——否则"自定义槽里定义变量、
+// 页面里 var() 使用"这种正常写法会被误判成无效。
+func (s *Service) checkInlineStyleVars(sectionHTML, deckHTML string) error {
+	known := s.variableContract()
+	if known == nil {
+		return nil
+	}
+	defined := definedVariables(deckStyleBlocks(deckHTML))
+	if unknown := unknownVariables(collectInlineStyleVars(sectionHTML), known, defined); len(unknown) > 0 {
+		return unknownVarErr(unknown, known)
+	}
+	return nil
 }
 
 var errStorage = fmt.Errorf("数据库不可用")

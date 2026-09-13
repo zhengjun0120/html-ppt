@@ -22,7 +22,8 @@ var deckIDPattern = regexp.MustCompile(`^deck-(\d{4,})$`)
 type CreateResult struct {
 	DeckID string `json:"deck_id"`
 	Slides int    `json:"slides"`
-	// Warning 消毒提示（如"已移除 N 处内联事件属性"），空串表示无违规
+	// Warning 给模型的回报，空串表示无违规。两类内容：
+	// 消毒（"已移除 N 处内联事件属性"）与样式体检（见 stylelint.go）
 	Warning string `json:"warning,omitempty"`
 }
 
@@ -33,6 +34,11 @@ func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, 
 
 	normalized, count, warning, err := s.normalizeSections(sectionHTML)
 	if err != nil {
+		return CreateResult{}, err
+	}
+	// 回声校验：内联 style 里引用的变量必须真有元素消费。
+	// 新建时 deck 还不存在，所以"已知变量"只有框架契约本身（没有主题块可借）。
+	if err := s.checkInlineStyleVars(normalized, ""); err != nil {
 		return CreateResult{}, err
 	}
 
@@ -102,10 +108,14 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int,string,error){
 	var firstErr error
 	var parts []string
 	var merged sanitizeReport
+	// 样式体检用同一个累加器跨页统计：页码、讲次提头这类"页面家具"每页只写一次，
+	// 逐页看不出重复，只有整份一起数才知道"同一串 177 字符抄了 8 遍"
+	lint := newStyleLinter()
 	count := 0
 	sections.Each(func(_ int, sec *goquery.Selection) {
 		count++;
 		merged.merge(sanitizeSlide(sec))
+		lint.add(sec)
 		sec.SetAttr("data-id",fmt.Sprintf("s%d",count))
 
 		html,err := goquery.OuterHtml(sec);
@@ -126,7 +136,7 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int,string,error){
 	if err := merged.RejectErr(); err != nil{
 		return "",0,"",err
 	}
-	return strings.Join(parts,"\n"),count,merged.Warning(),nil
+	return strings.Join(parts,"\n"),count,joinWarnings(merged.Warning(), lint.report().Warning()),nil
 }
 
 //计算出候选编号

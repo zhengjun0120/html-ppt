@@ -51,7 +51,12 @@ func parseSlideFragment(newHTML string) (*goquery.Selection, string, error) {
 		return nil, "", err
 	}
 
-	return sec, rep.Warning(), nil
+	// 样式体检与消毒走同一条回报通道：都不阻塞写入，但必须让模型知道
+	// （它以为内联样式是"省事"，实际是把这套 deck 的样式钉死了）
+	lint := newStyleLinter()
+	lint.add(sec)
+
+	return sec, joinWarnings(rep.Warning(), lint.report().Warning()), nil
 }
 
 var slideIDPattern = regexp.MustCompile(`^s(\d+)$`)
@@ -103,6 +108,11 @@ func (s *Service) InsertSlide(userID uint, deckID, afterSlideID, newHTML string)
 	canonical, err := goquery.OuterHtml(sec)
 	if err != nil {
 		return "", "", fmt.Errorf("序列化新页失败 err:%w", err)
+	}
+	// 回声校验（与 update_slide 同一道闸门）：内联 style 里引用的变量必须真有元素消费，
+	// 否则那处样式注定不生效——拒绝比"写进去了但没反应"诚实
+	if err := s.checkInlineStyleVars(canonical, raw); err != nil {
+		return "", "", err
 	}
 
 	if afterSlideID == "end" {

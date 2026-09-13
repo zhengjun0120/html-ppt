@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>组件集 v2 验收</title>
+  <link rel="stylesheet" href="/assets/reveal.css">
+  <link rel="stylesheet" href="/assets/moon.css">
+  <link rel="stylesheet" href="/assets/theme.css">
+  <link rel="stylesheet" href="/assets/components.css">
+  <script type="application/json" id="deck-theme">{"accent":"#5eead4","background":"#0b132b","heading_color":"#5eead4","text_color":"#e2e8f0","font":"sans","radius":"10px","transition":"slide"}</script>
+</head>
+<body>
+  <div class="reveal"><div class="slides">
+
+    <section class="center">
+      <div class="rule"></div>
+      <span class="tag">组件集 v2 验收</span>
+      <h1>页面家具与行清单</h1>
+      <p class="muted">全部用 class 搭，一处内联样式都没有</p>
+    </section>
+
+    <section>
+      <span class="page-no">02</span>
+      <h2><span class="kicker">第二講</span>行清单（横向）</h2>
+      <div class="rows">
+        <div class="row line">
+          <div class="key">
+            <p class="term">～おかげで</p>
+            <p class="sub">多亏…｜好结局向</p>
+          </div>
+          <p class="quote">「仲間たちのおかげで、魔王を倒せた。」</p>
+        </div>
+        <div class="row line">
+          <div class="key">
+            <p class="term">～せいで</p>
+            <p class="sub">都怪…｜坏结局向</p>
+          </div>
+          <p class="quote">「二度寝したせいで、遅刻して廊下に立たされた。」</p>
+        </div>
+        <div class="row line">
+          <div class="key">
+            <p class="term">～ばかりに</p>
+            <p class="sub">就因为…｜坏结局向</p>
+          </div>
+          <p class="quote">「魔法が使えないばかりに、パーティーを追放された。」</p>
+        </div>
+        <div class="row line">
+          <div class="key">
+            <p class="term">～とあって</p>
+            <p class="sub">因为是…｜特殊状况</p>
+          </div>
+          <p class="quote">「人気声優のライブとあって、会場は超満員だった。」</p>
+        </div>
+      </div>
+      <p class="footnote">好结局（HE）配 おかげで，坏结局（BE）配 せいで——结局决定选词</p>
+    </section>
+
+    <section>
+      <span class="page-no">03</span>
+      <h2><span class="kicker">第三講</span>行清单（竖向）与序号</h2>
+      <div class="rows">
+        <div class="row line top">
+          <span class="num">01</span>
+          <div>
+            <p class="label">時間・場面</p>
+            <p class="sub">～次第、～たびに</p>
+          </div>
+        </div>
+        <div class="row line top">
+          <span class="num">02</span>
+          <div>
+            <p class="label">原因・理由</p>
+            <p class="sub">～おかげで、～ばかりに</p>
+          </div>
+        </div>
+        <div class="row">
+          <p class="label">条件・仮定</p>
+          <p class="sub">～ものなら、～ないことには</p>
+        </div>
+      </div>
+      <p class="footnote">最后一行没有虚线分隔——.row:last-child 自动去掉</p>
+    </section>
+
+    <section>
+      <span class="page-no">04</span>
+      <h2><span class="kicker">第四講</span>hero 数字与网格</h2>
+      <div class="grid-3">
+        <div class="card">
+          <p class="stat">105<span class="unit">分</span></p>
+          <p class="sub">语言知识・阅读 同卷</p>
+        </div>
+        <div class="card">
+          <p class="stat">50<span class="unit">分</span></p>
+          <p class="sub">听力 单独计时</p>
+        </div>
+        <div class="card">
+          <p class="stat">約200<span class="unit">句型</span></p>
+          <p class="sub">N2 大纲句型总量</p>
+        </div>
+      </div>
+      <div class="grid-4">
+        <div class="card"><h3>一</h3><p>四列网格</p></div>
+        <div class="card"><h3>二</h3><p>四列网格</p></div>
+        <div class="card"><h3>三</h3><p>四列网格</p></div>
+        <div class="card"><h3>四</h3><p>四列网格</p></div>
+      </div>
+    </section>
+
+    <section>
+      <span class="page-no outline">05</span>
+      <h2><span class="kicker">第五講</span>描边页码 + 徽章 + 强调条</h2>
+      <div class="rule"></div>
+      <div class="rows">
+        <div class="row line top">
+          <div class="key"><span class="badge">～わけがない</span></div>
+          <div>
+            <p class="sub">不可能…｜从道理上否定</p>
+            <p class="quote">「あのツンデレが素直に告白するわけがない。」</p>
+          </div>
+        </div>
+        <div class="row line top">
+          <div class="key"><span class="badge">～わけではない</span></div>
+          <div>
+            <p class="sub">并非…｜部分否定</p>
+            <p class="quote">「アニメ好きでも、新作を全部見ているわけではない。」</p>
+          </div>
+        </div>
+      </div>
+      <p class="footnote">.page-no.outline 是空心描边数字，深色背景上比实心更轻</p>
+    </section>
+
+    <!-- 对照页：下半部分用 deck-0014 的原始内联写法，上半部分用组件。
+         两边应当长得一模一样——这是"组件是否忠实还原"的直接验证。 -->
+    <section>
+      <h2>对照：组件 vs 原始内联</h2>
+      <div class="rows">
+        <div class="row line">
+          <div class="key">
+            <p class="term">～ものの（组件）</p>
+            <p class="sub">虽然…但是｜偏书面</p>
+          </div>
+          <p class="quote">「魔王を倒したものの、世界はまだ平和にならない。」</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:var(--space-lg); padding:.32em 0; border-bottom:1px dashed var(--border)">
+        <div style="flex:0 0 9.5em">
+          <p style="margin:0; font-size:.64em; font-weight:800; color:var(--accent); letter-spacing:.04em">～ものの（内联）</p>
+          <p class="muted" style="margin:.16em 0 0; font-size:.52em">虽然…但是｜偏书面</p>
+        </div>
+        <p class="quote" style="flex:1; margin:0; font-size:.56em">「魔王を倒したものの、世界はまだ平和にならない。」</p>
+      </div>
+      <p class="footnote">上面两行若完全对齐，说明组件忠实还原了内联写法</p>
+    </section>
+
+  </div></div>
+  <script src="/assets/reveal.js"></script>
+  <script src="/assets/init.js"></script>
+</body>
+</html>

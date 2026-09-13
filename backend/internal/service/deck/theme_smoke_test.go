@@ -6,6 +6,7 @@ package deck
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -36,7 +37,8 @@ func TestThemeFlow(t *testing.T) {
 	if doc.Find("#deck-theme").Length() != 1 || doc.Find("#deck-theme-override").Length() != 1 {
 		t.Fatalf("主题块未自动补齐")
 	}
-	if theme != defaultTheme() {
+	// Theme 现在含 map 字段（自定义调色板），不能用 == 比较
+	if !reflect.DeepEqual(theme, defaultTheme()) {
 		t.Fatalf("老 deck 应得到默认主题: %+v", theme)
 	}
 
@@ -83,7 +85,7 @@ func TestThemeFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if theme3 != defaultTheme() {
+	if !reflect.DeepEqual(theme3, defaultTheme()) {
 		t.Fatalf("损坏配置未回退默认: %+v", theme3)
 	}
 

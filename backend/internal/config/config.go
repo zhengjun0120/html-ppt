@@ -133,6 +133,15 @@ func Load(path string) (*Config, error) {
 	if !filepath.IsAbs(cfg.Assets.Dir) {
 		cfg.Assets.Dir = filepath.Join(baseDir, cfg.Assets.Dir)
 	}
+	// 再取一次绝对路径：当 config.yaml 本身是用相对路径加载时，上面的 baseDir 是 "."，
+	// Join 出来仍是相对路径——那"与 cwd 解耦"的契约就没真正成立（换个目录启动就找不到
+	// 文件了：静态资源 404、read_component 读不到组件库）。这里补实这个契约。
+	if abs, err := filepath.Abs(cfg.Data.Dir); err == nil {
+		cfg.Data.Dir = abs
+	}
+	if abs, err := filepath.Abs(cfg.Assets.Dir); err == nil {
+		cfg.Assets.Dir = abs
+	}
 
 	if v := os.Getenv("SERVER_ADDR"); v != "" {
 		cfg.Server.Addr = v

@@ -14,37 +14,66 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+// testContract 模拟"被框架 CSS 消费过"的变量集合（真实契约由 loadVariableContract 现扫）。
+var testContract = map[string]bool{
+	"--accent": true, "--border": true, "--card-bg": true, "--text-muted": true,
+	"--radius": true, "--space-md": true, "--space-lg": true,
+	"--r-main-color": true, "--r-heading-color": true, "--r-background-color": true,
+}
+
 func TestValidateCustomCSS(t *testing.T) {
-	reject := []struct{ name, css, wantWord string }{
-		{"@import", `@import url("/x.css"); .card{}`, "@import"},
-		{"@IMPORT 大写", `@IMPORT "/x.css";`, "@import"},
-		{"url()", `.card{background:url(https://evil.com/x.png)}`, "url()"},
-		{"URL( 大写", `.card{background:URL(/a.png)}`, "url()"},
-		{"结尾标签", `/* </style><script>alert(1)</script> */`, "</style"},
-		{"expression", `.card{width:expression(alert(1))}`, "expression("},
+	type rejectCase struct {
+		name     string
+		css      string
+		wantWord string
+		// 只有"重定义契约变量"这一类的错误信息才需要把模型引到 update_theme 上；
+		// 通道类违规（@import/url 等）应该讲它自己的正确做法，不该被塞进无关指引
+		wantUpdateTheme bool
+	}
+	reject := []rejectCase{
+		{name: "@import", css: `@import url("/x.css"); .card{}`, wantWord: "@import"},
+		{name: "@IMPORT 大写", css: `@IMPORT "/x.css";`, wantWord: "@import"},
+		{name: "url()", css: `.card{background:url(https://evil.com/x.png)}`, wantWord: "url()"},
+		{name: "URL( 大写", css: `.card{background:URL(/a.png)}`, wantWord: "url()"},
+		{name: "结尾标签", css: `/* </style><script>alert(1)</script> */`, wantWord: "</style"},
+		{name: "expression", css: `.card{width:expression(alert(1))}`, wantWord: "expression("},
+		// 契约变量不许在这里重定义：槽排在主题块之后、同级选择器靠后者取胜，
+		// 写在这里会静默盖住 update_theme（用户换配色时页面不动，最难查的一类假成功）
+		{name: "重定义 --accent", css: `:root{--accent:#ff8800}`, wantWord: "--accent", wantUpdateTheme: true},
+		{name: "重定义 --radius", css: `:root{ --radius : 14px }`, wantWord: "--radius", wantUpdateTheme: true},
+		{name: "重定义 reveal 变量", css: `:root{--r-main-color:#fff}`, wantWord: "--r-main-color", wantUpdateTheme: true},
+		{name: "重定义 --space-md", css: `.reveal{--space-md:1em}`, wantWord: "--space-md", wantUpdateTheme: true},
 	}
 	for _, c := range reject {
 		t.Run("拒绝_"+c.name, func(t *testing.T) {
-			_, err := validateCustomCSS(c.css)
+			_, err := validateCustomCSS(c.css, testContract, nil)
 			if err == nil {
 				t.Fatalf("应被拒绝: %s", c.css)
 			}
 			if !strings.Contains(err.Error(), c.wantWord) {
 				t.Errorf("错误信息应点明原因 %q，实际: %s", c.wantWord, err.Error())
 			}
+			// 重定义类违规必须把模型引到正确做法上，否则它会反复重试同一个写法
+			if c.wantUpdateTheme && !strings.Contains(err.Error(), "update_theme") {
+				t.Errorf("错误信息应指向 update_theme，实际: %s", err.Error())
+			}
 		})
 	}
 
 	accept := []struct{ name, css string }{
 		{"正常覆盖", `.reveal .card{border-color:var(--accent);}`},
-		{"变量重定义", `:root{--accent:#ff8800;--radius:14px;}`},
+		{"引用主题变量", `.reveal .card{border-color:var(--accent);background:var(--card-bg)}`},
+		// 自定义调色板走 update_theme 的 vars；在槽里定义**新**变量是合法的
+		// （槽自己的样式消费它，不碰主题契约）
+		{"定义新变量", `:root{--brand-ink:#ff8800;--brand-soft:rgba(255,136,0,.2)}`},
+		{"注释里提到契约变量", `/* 别在这里写 --accent: 值，那是主题的地盘 */ .card{border:0}`},
 		{"渐变与阴影", `.hero{background:linear-gradient(135deg,#123,#456);box-shadow:0 8px 30px rgba(0,0,0,.4);}`},
 		{"带引号与实体", `.quote::before{content:"> 引用 <";} .a[data-x="1"]{color:#fff}`},
 		{"空串=清空", `   `},
 	}
 	for _, c := range accept {
 		t.Run("接受_"+c.name, func(t *testing.T) {
-			out, err := validateCustomCSS(c.css)
+			out, err := validateCustomCSS(c.css, testContract, nil)
 			if err != nil {
 				t.Fatalf("不该拒绝: %v", err)
 			}
@@ -60,7 +89,7 @@ func TestValidateCustomCSS(t *testing.T) {
 
 func TestValidateCustomCSSSizeCap(t *testing.T) {
 	big := ".x{color:#fff}\n" + strings.Repeat("/* pad */\n", maxCustomCSSBytes/10)
-	if _, err := validateCustomCSS(big); err == nil {
+	if _, err := validateCustomCSS(big, testContract, nil); err == nil {
 		t.Fatal("超过容量上限应被拒绝")
 	}
 }
@@ -121,7 +150,7 @@ func TestCustomCSSRoundTrip(t *testing.T) {
 	css := ".reveal .card{border-color:var(--accent)}\n" +
 		".quote::before{content:\"> 引用 <\"}\n" +
 		"/* 中文注释与 & 符号 */\n" +
-		":root{--accent:#ff8800}"
+		":root{--brand-ink:#ff8800}"
 
 	got, err := s.updateCustomCSSLocked("deck-9101", css)
 	if err != nil {

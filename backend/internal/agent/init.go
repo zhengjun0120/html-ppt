@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sort"
+	"strings"
 
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/config"
@@ -25,13 +27,15 @@ type AgentService struct {
 	Exec        map[string]ToolFunc
 	st          *store.Store // BYOK：查用户密钥密文
 	box         *cryptox.Box // BYOK：解密；nil = BYOK 关闭
-	// CustomCSS = features.custom_css：关闭时 buildTools 不挂载两个自定义样式工具
+	// CustomCSS = features.custom_css：关闭时 buildTools 不挂载自定义样式三件套
 	CustomCSS bool
+	// AssetsDir 共享静态资源目录（web/assets）：read_component 从这里读组件库，只读
+	AssetsDir string
 }
 
 var agentServer *AgentService
 
-func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckService *deck.Service, features config.Features) error {
+func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckService *deck.Service, features config.Features, assetsDir string) error {
 
 	if cfg.APIKey == "" {
 		return errors.New("LLM api_key 未配置（config.yaml 或环境变量 LLM_API_KEY）")
@@ -53,6 +57,7 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 		st:          st,
 		box:         box,
 		CustomCSS:   features.CustomCSS,
+		AssetsDir:   assetsDir,
 	}
 
 	tools := agentServer.buildTools()
@@ -60,6 +65,15 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 		agentServer.Tools = append(agentServer.Tools, t.Definition)
 		agentServer.Exec[name] = t.Execute
 	}
+	// 启动时把挂载了哪些工具打出来：features 开关的效果要可见
+	//（关掉 custom_css 后这里就不该再有 read/update_custom_css 和 read_component）
+	names := make([]string, 0, len(tools))
+	for name := range tools {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	log.Printf("[info] agent 挂载 %d 个工具: %s", len(names), strings.Join(names, " "))
+	log.Printf("[info] 组件库目录（read_component 只读）: %s", assetsDir)
 
 	return nil
 }

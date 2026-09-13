@@ -3,11 +3,14 @@
    规则：
    1. 禁止写死颜色/圆角/间距，一律引用 theme.css 里的变量
    2. LLM 生成的 section 只允许使用这里的 class 搭页面
-   3. 组件集 v1：.center .grid-2 .card .quote .steps .badge .tag .footer .muted
+   3. 字号一律用 em：适配兜底靠缩放 section 的 font-size 工作，
+      写 px 的页面不会跟着缩，装不下时就会被裁掉
    ============================================================ */
 
 .reveal .slides section { text-align: left; }
 .reveal .slides section.center { text-align: center; }
+
+/* ---- 组件集 v1：容器与块 ---- */
 
 /* 封面/结尾页装饰标签 */
 .reveal .tag {
@@ -33,8 +36,22 @@
   border-radius: var(--radius);
   padding: var(--space-md) var(--space-lg);
 }
-.reveal .card h3 { color: var(--accent); margin: 0 0 0.3em; font-size: 0.8em; }
-.reveal .card p  { margin: 0; font-size: 0.62em; color: var(--text-muted); }
+/* 注意这个 :where(:not(...))：`.reveal .card p`(0,2,1) 比文本角色类 `.reveal .stat`(0,2,0)
+   高一级，会把卡内角色类的字号/颜色整块盖掉——"hero 数字放进卡片"渲染成一个普通灰段落，
+   不报错、只是不对。用 :where() 把角色类从这条规则里排除掉；:where() 特异性为零，
+   所以这条规则的优先级和加守卫之前完全一样（不会连带影响已有 deck 和自定义槽的覆盖）。
+   新增文本角色类时，记得同步加进这个排除名单。 */
+.reveal .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
+.reveal .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+  color: var(--accent);
+  margin: 0 0 0.3em;
+  font-size: 0.8em;
+}
+.reveal .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+  margin: 0;
+  font-size: 0.62em;
+  color: var(--text-muted);
+}
 
 /* 引用块 */
 .reveal .quote {
@@ -68,3 +85,153 @@
   font-size: 0.42em;
   color: var(--text-muted);
 }
+
+/* ============================================================
+   组件集 v2 —— 页面家具 + 行清单 + 行内文本角色
+
+   为什么有 v2：v1 的 9 个 class 表达不了"页码、讲次提头、行清单、
+   术语词"这些每页都出现的结构，模型只能手写内联样式补上——实测三份
+   手写型 deck 里，可编辑区 43%~51% 的字符是逐字重复的内联样式，
+   其中最典型的一条（页码角标，177 字符）在 8 页里一字不差抄了 8 遍。
+   能用组件表达的，就不该写内联：每多一个缺失的组件，就会在每一页
+   被重新手写一次，既费 token，又让 8 页之间慢慢长歪。
+   ============================================================ */
+
+/* ---- 页面家具（每页都要有、且必须长得一模一样的东西）---- */
+
+/* 页码/章节角标：section 的第一个子元素，绝对定位在右上角 */
+.reveal .page-no {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 1.2em;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+/* 空心描边变体：视觉更轻，深色背景上尤其好看 */
+.reveal .page-no.outline {
+  color: transparent;
+  -webkit-text-stroke: 1.6px var(--accent);
+  opacity: 0.42;
+}
+
+/* 讲次/章节提头：放在 h2 内部的行首小字 */
+.reveal .kicker {
+  display: block;
+  font-size: 0.34em;
+  font-weight: 700;
+  letter-spacing: 0.45em;
+  color: var(--accent);
+  margin-bottom: 0.55em;
+}
+
+/* 短强调条：标题下方的装饰横线（em 宽度，跟着主题字号缩放） */
+.reveal .rule {
+  width: 3em;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin: 0.7em 0 1.4em;
+}
+.reveal section.center .rule { margin-left: auto; margin-right: auto; }
+
+/* ---- 行清单 ---- */
+
+.reveal .rows { margin-top: var(--space-md); }
+
+/* 一行。默认竖向堆叠（行标题 + 行说明），虚线分隔 */
+.reveal .row {
+  padding: 0.34em 0;
+  border-bottom: 1px dashed var(--border);
+}
+.reveal .row:last-child { border-bottom: none; }
+
+/* 横向一行：左侧标签/序号 + 右侧内容 */
+.reveal .row.line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+/* 右侧内容比左侧高时用，避免标签被居中对齐到尴尬位置 */
+.reveal .row.line.top { align-items: flex-start; }
+
+/* 行内的固定宽度标签列（左） */
+.reveal .row .key { flex: 0 0 9.5em; }
+/* 行内的序号（左），强调色加粗 */
+.reveal .row .num {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 900;
+  line-height: 1;
+  margin-right: 0.9em;
+}
+/* 行清单里的台词条：撑满右侧剩余宽度，去掉与外层重复的边距 */
+.reveal .rows .quote {
+  flex: 1;
+  margin: 0;
+  font-size: 0.56em;
+}
+
+/* ---- 行内文本角色 ---- */
+
+/* 术语词：句型、专有名词等需要被一眼看到的关键词 */
+.reveal .term {
+  margin: 0;
+  font-size: 0.64em;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+/* 行主文：一行里的小标题 */
+.reveal .label {
+  margin: 0;
+  font-size: 0.62em;
+  font-weight: 700;
+  color: var(--r-heading-color);
+  letter-spacing: 0.06em;
+}
+
+/* 行说明：紧跟在主文/术语下方的次要文字，自带弱化色 */
+.reveal .sub {
+  margin: 0.16em 0 0;
+  font-size: 0.52em;
+  color: var(--text-muted);
+}
+
+/* 页脚注：整页的补充说明，放 section 末尾。
+   写成 margin 简写而不是 margin-top：在 .card 内部时 .card p 的 margin:0 会被
+   上面的守卫排除掉，只设 margin-top 会露出浏览器默认的 1em 下边距，两边不一致 */
+.reveal .footnote {
+  margin: var(--space-md) 0 0;
+  font-size: 0.54em;
+  color: var(--text-muted);
+}
+
+/* 主数字（hero 数字）+ 单位 */
+.reveal .stat {
+  margin: 0;
+  font-size: 1.15em;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent);
+}
+.reveal .unit {
+  font-size: 0.42em;
+  font-weight: 700;
+  margin-left: 0.25em;
+}
+
+/* ---- 网格扩展到 3 / 4 列 ---- */
+
+.reveal .grid-3,
+.reveal .grid-4 {
+  display: grid;
+  gap: var(--space-md) var(--space-lg);
+  margin-top: var(--space-lg);
+}
+.reveal .grid-3 { grid-template-columns: repeat(3, 1fr); }
+.reveal .grid-4 { grid-template-columns: repeat(4, 1fr); }

@@ -40,7 +40,9 @@ type WriteDeckArgs struct {
 
 // deckWriteResult 写类工具（write_deck / update_slide / insert_slide）的统一返回结构。
 // Warning 不是装饰：消毒剥掉的属性必须让模型知道——它以为 onclick 生效、实际被移除，
-// 却向用户汇报"已加上点击交互"，这是最典型的静默失败。无违规时 omitempty 自动省略。
+// 却向用户汇报"已加上点击交互"，这是最典型的静默失败。
+// 同一个字段也承载样式体检的提示（写死颜色、px 字号、重复内联等，见 service/deck/stylelint.go）。
+// 无违规时 omitempty 自动省略。
 type deckWriteResult struct {
 	DeckID  string `json:"deck_id,omitempty"`
 	SlideID string `json:"slide_id,omitempty"`
@@ -277,6 +279,36 @@ type UpdateThemeArgs struct {
 	Font         *string `json:"font,omitempty" jsonschema:"type=string,enum=sans,enum=serif,enum=mono,description=字体方案"`
 	Radius       *string `json:"radius,omitempty" jsonschema:"type=string,description=卡片圆角（带单位的长度值，如 10px）"`
 	Transition   *string `json:"transition,omitempty" jsonschema:"type=string,enum=slide,enum=fade,enum=zoom,enum=convex,enum=concave,enum=none,description=翻页动画"`
+	Canvas       *string `json:"canvas,omitempty" jsonschema:"type=string,enum=standard,enum=wide,enum=classic,description=画布比例预设（高度统一 700、只变宽度）：standard=960×700 通用；wide=16:9（与投屏/录屏比例一致、没有黑边、横向更宽松）；classic=4:3（老投影仪）。需要更宽或更密的版面时用它，不要在页面里写 width:1100px 之类的绝对尺寸"`
+	Vars         *map[string]string `json:"vars,omitempty" jsonschema:"type=object,description=自定义调色板（整体替换制）：键是变量名（-- 开头）值是 CSS 值。用于设计一整套自有配色；这些变量在页面里用 var(--xxx) 引用。不能定义主题契约变量（--accent / --border / --card-bg / --text-muted / --radius / --space-* / --r-*），那些改对应字段即可。传空对象等于清空整套。改之前先 read_theme 拿到当前整套——它会整体替换掉原有配色"`
+}
+
+// ReadThemeArgs read_theme 的入参：只要 deck_id。
+type ReadThemeArgs struct {
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=要读取主题的 deck ID，例如 deck-0002"`
+}
+
+func (a *AgentService) toolReadTheme(ctx context.Context, arguments string) (string, error) {
+	uid, err := toolUID(ctx)
+	if err != nil {
+		return "", err
+	}
+	var args ReadThemeArgs
+	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
+		return "", fmt.Errorf("read_theme 参数不是合法json:%v", err)
+	}
+	if !deck.IsValidID(args.DeckID) {
+		return "", fmt.Errorf("deck_id %q 不合法", args.DeckID)
+	}
+	theme, err := a.DeckService.ReadTheme(uid, args.DeckID)
+	if err != nil {
+		return "", err
+	}
+	res, err := marshalNoEscape(theme)
+	if err != nil {
+		return "", fmt.Errorf("结果序列化json失败 err:%w", err)
+	}
+	return fmt.Sprintf(`{"deck_id":%q,"theme":%s}`, args.DeckID, res), nil
 }
 
 func (a *AgentService) toolUpdateTheme(ctx context.Context,arguments string)(string,error){
@@ -302,6 +334,8 @@ func (a *AgentService) toolUpdateTheme(ctx context.Context,arguments string)(str
 		Font:         args.Font,
 		Radius:       args.Radius,
 		Transition:   args.Transition,
+		Canvas:       args.Canvas,
+		Vars:         args.Vars,
 	})
 	if err !=nil{
 		return "",err
@@ -517,7 +551,51 @@ func (a *AgentService) toolUpdateCustomCSS(ctx context.Context, arguments string
 	})
 }
 
-// generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
+// ---------- 组件库只读视图 ----------
+// 写覆盖样式之前先看清"现在长什么样"，否则选择器和属性全靠猜。
+
+type ReadComponentArgs struct {
+	Name string `json:"name,omitempty" jsonschema:"type=string,description=组件类名（不含点号），如 card、grid-2、quote。不传 = 返回组件库全文与可用类名清单"`
+}
+
+type componentResult struct {
+	CSS     string   `json:"components_css,omitempty"` // 全文模式
+	Classes []string `json:"classes,omitempty"`        // 全文模式：可用类名
+	Name    string   `json:"name,omitempty"`           // 指定类名模式
+	Rules   string   `json:"rules,omitempty"`          // 指定类名模式：匹配到的规则原文
+	Note    string   `json:"note"`
+}
+
+func (a *AgentService) toolReadComponent(ctx context.Context, arguments string) (string, error) {
+	if _, err := toolUID(ctx); err != nil {
+		return "", err
+	}
+	var args ReadComponentArgs
+	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
+		return "", fmt.Errorf("read_component 参数不是合法json err：%w", err)
+	}
+
+	css, err := loadComponentCSS(a.AssetsDir)
+	if err != nil {
+		return "", err
+	}
+
+	if strings.TrimSpace(args.Name) == "" {
+		return marshalNoEscape(componentResult{
+			CSS:     css,
+			Classes: extractClassNames(css),
+			Note:    specificityNote + "组件库对你是只读的：不要试图改它，只能在自己的页面里用它，或在自定义样式槽里覆盖它。",
+		})
+	}
+
+	rules, err := extractRules(css, args.Name)
+	if err != nil {
+		return "", err // 错误里带可用类名清单，模型据此自纠
+	}
+	return marshalNoEscape(componentResult{Name: args.Name, Rules: rules, Note: specificityNote})
+}
+
+
 // 启动时调用一次并缓存即可，不要放在请求路径上反射。
 func generateSchema[T any]() openai.FunctionParameters {
 	reflector := jsonschema.Reflector{
@@ -602,10 +680,18 @@ func (a *AgentService)buildTools () map[string]Tool{
 		"update_theme":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "update_theme",
-				Description: openai.String("修改 deck 的全局主题：强调色、背景、标题色、正文色、字体、卡片圆角、翻页动画。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用。本工具改的是主题变量，页面内容不受影响；新增装饰效果等结构性样式改动不在本工具能力内，不要许诺。"),
+				Description: openai.String("修改 deck 的全局主题：强调色、背景、标题色、正文色、字体、卡片圆角、翻页动画、画布比例、自定义调色板(vars)。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用；用户要'一套专门的配色'也用它——把整套颜色写进 vars（形如 {\"--surface\":\"#1e1836\",\"--positive\":\"#4ade80\"}），而不是在页面元素上写死颜色。本工具改的是主题变量，页面内容不受影响。改 vars 前先 read_theme：vars 是整体替换制。"),
 				Parameters: generateSchema[UpdateThemeArgs](),
 			}),
 			Execute: a.toolUpdateTheme,
+		},
+		"read_theme":{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "read_theme",
+				Description: openai.String("读取该 deck 当前的主题配置（颜色、字体、圆角、翻页动画、画布比例、自定义调色板 vars）。用户在问'现在用的是什么配色/主题'时用它；以及改 vars 之前必须先读——update_theme 的 vars 是整体替换制，不先读就会拿想象的旧配色覆盖真实配色。本工具只读。"),
+				Parameters: generateSchema[ReadThemeArgs](),
+			}),
+			Execute: a.toolReadTheme,
 		},
 		"ask_user":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
@@ -647,10 +733,18 @@ func (a *AgentService)buildTools () map[string]Tool{
 		tools["update_custom_css"] = Tool{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "update_custom_css",
-				Description: openai.String("整体替换该 deck 的自定义 CSS。用法：① 先用 read_custom_css 拿到当前内容；② 在它基础上改；③ 提交全文（不是只提交改动片段）；空字符串 = 清空。只写 CSS，不要 @import / url() / </style>。三条硬规矩：优先改主题变量（var(--accent) 等）而不是写死颜色，否则 update_theme 会失效；不要用选择器动 reveal 的框架类（.reveal/.slides/.controls/.progress），会破坏翻页和演示控件；页面逐个元素的小改动用 update_slide 的内联 style 更合适，这个槽是给'整套视觉风格'用的。第一次给某份 deck 写自定义样式前，先用 ask_user 跟用户确认一次意图。"),
+				Description: openai.String("整体替换该 deck 的自定义 CSS。用法：① 先用 read_custom_css 拿到当前内容；② 在它基础上改；③ 提交全文（不是只提交改动片段）；空字符串 = 清空。只写 CSS，不要 @import / url() / </style>。四条硬规矩：① 引用主题变量用 var(--accent) 这种写法，不要写死颜色——写死的地方在用户换配色时不会跟着变；② **不许在这里重定义主题变量本身**（:root{--accent:...} 之类会被直接拒收，因为自定义槽排在主题块之后、会静默盖住 update_theme；要改配色请用 update_theme，包括它的 vars 自定义调色板）；③ 不要用选择器动 reveal 的框架类（.reveal/.slides/.controls/.progress），会破坏翻页和演示控件；④ 页面逐个元素的小改动用 update_slide 的内联 style 更合适，这个槽是给'整套视觉风格'用的。第一次给某份 deck 写自定义样式前，先用 ask_user 跟用户确认一次意图。"),
 				Parameters: generateSchema[UpdateCustomCSSArgs](),
 			}),
 			Execute: a.toolUpdateCustomCSS,
+		}
+		tools["read_component"] = Tool{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "read_component",
+				Description: openai.String("读共享组件库的实现（只读）：不传 name 返回组件库全文与可用类名清单；传 name（如 card）只返回该类相关的规则原文。什么时候用：① 要写 update_custom_css 覆盖某个组件之前，先看清它现在的样式；② 不确定某个类的确切名字或它内部结构时。注意组件库对你是只读的，不能改它。"),
+				Parameters: generateSchema[ReadComponentArgs](),
+			}),
+			Execute: a.toolReadComponent,
 		}
 	}
 

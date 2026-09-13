@@ -23,10 +23,13 @@
 | 14 | `list_history` | 4 | 版本历史列表，取版本号（只读，分页） | ☑ |
 | 15 | `read_custom_css` | 4 | 读 deck 级自定义样式槽（只读） | ☑ |
 | 16 | `update_custom_css` | 4 | 整体替换自定义样式（清洗规则 + 可回滚） | ☑ |
+| 17 | `read_component` | 4 | 读共享组件库实现（只读，按类名或全文） | ☑ |
+| 18 | `read_theme` | 4 | 读当前主题配置（只读；`update_theme` 的 `vars` 是整体替换制，改前必读） | ☑ |
+| — | 样式体检（非工具） | 4 | 三个写工具结果里的 `warning`：写死颜色/px 字号/section 级覆盖/重复内联 | ☑ |
 
-实现顺序：1 → 3/4/5 → 6/7 → 8/9 → 10 →（阶段3）11 → 12 →（阶段4 版本控制）13/14 →（阶段4 样式槽）15/16。
+实现顺序：1 → 3/4/5 → 6/7 → 8/9 → 10 →（阶段3）11 → 12 →（阶段4 版本控制）13/14 →（阶段4 样式槽）15/16/17 → 18（含 §19 样式体检）。
 
-> 15/16 由 `features.custom_css` 开关控制（见 config.go 的 Features）：**关掉时连工具都不挂载**，
+> 15/16/17 由 `features.custom_css` 开关统一控制（见 config.go 的 Features）：**关掉时连工具都不挂载**，
 > 而不是"看得到但一律拒绝"——后者只会让模型浪费轮次去试。
 
 ## 通用实现骨架
@@ -42,7 +45,23 @@
   所有写路径（write_deck / update_slide / insert_slide）共用。
   为什么不静默剥除：模型以为 `onclick` 生效、实际被移除却向用户汇报"已加上交互"，是典型的静默失败。
   CSP 保护的是**预览**，消毒保护的是**导出的单文件**（导出后没有任何浏览器策略兜底），两者不可互替
+- **样式体检（与消毒同一条回报通道）**：写死颜色、px 字号、`<section>` 级主题覆盖、大面积重复内联——
+  这些不危险，但会让这份 deck 再也换不了风格（`update_theme` 静默失效），同样走 `warning` 提示
+  而不阻塞写入。判定在 `service/deck/stylelint.go`，见 §18
+- **回声校验（变量合法性，与上面两类不同：这条走拒收）**：把框架 CSS 里**被 `var()` 真正消费过**的
+  变量名扫成契约（`service/deck/variable_contract.go`，每次现扫不缓存，新加变量立刻生效）。
+  页面内联 style 与自定义 CSS 里引用到的变量逐个校验，**契约外且本处未定义的变量直接拒收**。
+  防的是 `var(--acent)`（拼错）、`var(--my-accent)`（凭空造）——页面不报错、结构也没坏，
+  只是那处样式不生效，而 AI 会汇报"已改好"，是最难自查的一类假成功。
+  豁免：同一份提交里定义过、或该 deck 主题块（`vars` 调色板）里定义过的变量都算已知——
+  少了这条，"vars 里定义、页面里引用"这种正常写法会被误判（误拒比漏判更糟）。
+  契约读不到时跳过校验（fail-open）：它防的是静默无效，不是安全问题，不能把写入全卡死
 - 防工具混乱三件套：description 写清"什么时候不用我"；system prompt 里给标准工作流；按场景分组渐进挂载（阶段2末）
+- **工具参数的 `description` 里不能出现半角逗号**：`invopop/jsonschema` 的标签解析按半角逗号切键值对，
+  不认引号也不认转义——`description` 里有一个半角逗号，从那里往后整段描述**静默丢失**。
+  实测在 `vars` 的描述里放了个 JSON 示例，模型收到的描述就断在 `如 {"--surface":"#1e1836"`，
+  恰好把最关键的用法说明吃掉。一律用全角逗号/顿号/分号，且 `description` 必须是标签最后一项；
+  `TestSchemaDescriptionsHaveNoASCIIComma` 守着这条（这类"给模型的文档悄悄少一半"联调时发现不了）
 
 ---
 
@@ -102,14 +121,58 @@
 - **参数**：`{ deck_id, slide_id }`
 - **要点**：定位 → Remove → 写回；拒绝删空整个 deck（至少留一页）
 
-## 8. update_theme ☑
+## 8. update_theme ☑ / 8b. read_theme ☑
 
-- **参数**：`{ deck_id, accent?, background?, heading_color?, text_color?, font?, radius?, transition? }`
-  （只传要改的；`font` 枚举 sans/serif/mono，`transition` 枚举 slide/fade/zoom/convex/concave/none）
+- **参数**：`{ deck_id, accent?, background?, heading_color?, text_color?, font?, radius?, transition?, canvas?, vars? }`
+  （只传要改的；`font` 枚举 sans/serif/mono，`transition` 枚举 slide/fade/zoom/convex/concave/none，
+  `canvas` 枚举 standard/wide/classic）
 - **要点**：参数是语义化字段而非 CSS；真身是 deck.html 里的
   `<script type="application/json" id="deck-theme">` 配置块，读 JSON → 合并 → 写回 → 同步 CSS 变量；
-  校验颜色格式正则 + 枚举；派生变量（border/card-bg/text-muted）集中计算，
-  **旋钮越少模型的选择面越小、观感越不容易崩**
+  校验颜色格式正则 + 枚举；派生变量（border/card-bg/text-muted）集中计算。
+  `read_theme` 是配对只读工具，返回同一份配置。
+
+### 配色自由度：`vars` —— 让 AI 设计一整套配色，但只有一个权威源
+
+用户要"一套最合适的配色"是真的需求，`vars` 就是它的通道：一组
+`变量名 → CSS 值`，渲染进 `#deck-theme-override`，页面里用 `var(--surface)` 引用。
+
+**为什么必须走变量而不是允许就地写死颜色**：可再修改（用户说"主色再暖一点"改一处即可，
+写死就得重写整个 deck）、不重复（省 token）、一处权威（"现在什么配色"永远答得出来）。
+这不是洁癖，是把"自由"和"还能改"同时拿住。
+
+**`vars` 是整体替换制**（不是合并），理由与自定义样式槽一致：一套配色是一个整体，
+不能靠增量拼接累积出意外。代价是改一个变量也要提交全文——所以配了 `read_theme` 作为前置读，
+和 `read_slide` / `read_custom_css` 是同一套路。
+
+**校验**（`theme_vars.go`）：名字必须是 `--` 开头的合法新变量；值里不许出现
+`; { } < > \` `@import` `url(` `expression(`（变量值会拼进 `:root{}`，一个 `}` 就能提前收尾）；
+上限 32 个变量、单值 200 字节。
+
+**契约变量不许重定义**：`--accent` `--border` `--card-bg` `--text-muted` `--radius`
+`--space-*` `--r-*` 只由结构化字段派生。这不只是洁癖，是堵一个静默失效：
+
+> `#deck-theme-override` 和 `#deck-custom` 都是 `:root{}`（优先级相同），而自定义槽排在主题块
+> **之后**——同级靠后者取胜。所以在槽里写 `:root{--accent:#ff8800}` 会静默盖住主题：
+> 用户之后说"换个配色"，`update_theme` 会成功返回、页面一动不动。
+> 级联顺序本身是对的（槽本来就该能覆盖主题做局部视觉），错的是"让槽重定义契约变量"。
+
+所以 `validateCustomCSS` 现在直接拒绝重定义契约变量，错误信息把模型引到 `update_theme`
+（含 `vars`）。判定前先剥注释——否则一句 `/* 别在这里写 --accent: 值 */` 会被误杀，
+而那条注释恰恰是对的。反过来，在槽里定义**新**变量（`:root{--brand-ink:…}`）仍然允许。
+
+### 画布自由度：`canvas` —— 只给比例预设，不放开绝对尺寸
+
+`standard`（960×700，reveal 默认）/ `wide`（1244×700，16:9，投屏录屏无黑边）/
+`classic`（933×700，4:3 老投影仪）。**高度统一 700，只调宽度**：一页能放多少内容由高度决定，
+宽度只影响排布宽松度；高度一动，原本刚好放得下的页面就会被挤爆（触发适配兜底缩小）。
+
+为什么不放开绝对尺寸（deck-0004 写了 `width:1100px` 和 18 处 `font-size:30px`）：
+画布尺寸 + em 尺度是**适配兜底、翻页动画、字号缩放**三件事的共同地基，绝对尺寸会让三者同时失灵。
+
+预设表在 Go（`theme.go` 的 `canvasPresets`）和 `init.js`（`CANVAS`）各存一份——
+前端必须在 `Reveal.initialize` 之前拿到尺寸，没法从后端要。`TestCanvasPresetsMatchInitJS`
+守两份不漂移；适配兜底的 `config()` 读的是 `Reveal.getConfig()`，天然与所设尺寸同源。
+
 
 ## 9. list_templates
 
@@ -218,6 +281,9 @@ override 之后。它是"框架层给 AI 开的一个洞"——页面内容区�
   - `@import` 拒绝（外部样式表 = 外部依赖 + 数据外发通道）
   - `url()` 拒绝（会发起外部请求；图片走 `<img>`，字体内嵌留给字体功能）
   - `expression(` 拒绝（可执行代码的老写法）
+  - 花括号不配对拒绝（漏一个 `}` 会让这之后的**所有规则**一起失效，见表头的 `checkCSSBalance`）
+  - 重定义主题契约变量拒绝（见 `theme_vars.go`：会静默盖住 `update_theme`）
+  - 引用契约外且本处未定义的变量拒绝（回声校验，见下方通用骨架里的说明）
   - 32KB 上限（同时是 token 护栏）
   - 风格偏离**不校验**：由用户看着预览决定，不满意就回滚历史
 - **刻意不做指纹校验**：槽只有一个写入者（agent），且历史快照兜底，冲突代价低——同 `update_theme`
@@ -228,6 +294,80 @@ override 之后。它是"框架层给 AI 开的一个洞"——页面内容区�
 - **老 deck 迁移**：骨架只在 `write_deck` 时固化一次，所以老 deck 没有这个块——
   首次写入时按需补出来（`ensureCustomCSSBlock`），和 `ensureThemeBlocks` 同一套路，
   不写独立迁移脚本
+
+---
+
+## 17. read_component —— 共享组件库的只读视图 ☑
+
+**为什么需要**：AI 要写 `update_custom_css` 覆盖 `.card`/`.quote`，就得先知道它们现在长什么样。
+不给它这个视图，它只能凭想象写选择器和属性，覆盖出来的效果全靠运气。
+
+- **参数**：`{ name? }`——类名（不含点号，如 `card`）。不传 = 返回组件库全文 + 可用类名清单
+- **返回（全文模式）**：`{ components_css, classes[], note }`
+- **返回（指定类名）**：`{ name, rules, note }`——该类相关的规则原文（含 `.card h3` 这类后代规则）
+- **找不到类名时**：报错并附可用类名清单（"错误即反馈"，模型据此改名）
+- **`note` 里固定带一句优先级提醒**：组件库的选择器都带 `.reveal` 前缀（`.reveal .card`，两个类），
+  自定义槽里写裸的 `.card` 会**因优先级不足被盖掉**（无论级联顺序如何）。这是"写了 CSS 却没生效"
+  最常见的原因，必须让模型知道，否则它会一直以为自己写对了。
+
+**要点**：
+- 纯只读：工具只读文件，组件库也永远不进任何写工具的目标列表（护栏）
+- 每次调用重新读盘（文件 ~2KB）：开发期改了 `components.css`，AI 立刻看到新版本，不做缓存
+- 解析用"按 `}` 切块 + 类名 token 边界匹配"（`-`/`_`/字母/数字为边界，所以 `.card` 不会命中 `.card-x`），
+  切块前先剥注释（注释里的 `}` 会把块切歪）。组件库是平铺规则、无嵌套 at-rule，够用；
+  将来真出现 `@media` 嵌套再换正经解析
+- **契约测试**：`TestRealComponentLibraryContract` 会拿真实 `components.css` 校验
+  "prompt 承诺的组件类（v1 九个 + v2 页面家具/行清单/行内角色）都真实存在"
+  ——文档与实现漂移是最难在联调中发现的一类 bug。
+  prompt 里每新增一个 class，这个测试就得跟着加一条
+
+**组件集 v1 → v2 的由来**：v1 只有 9 个 class，表达不了"页码、讲次提头、行清单、术语词"
+这些每页都出现的结构，模型只能手写内联补齐。实测三份手写型 deck，可编辑区
+**43%~51% 的字符是逐字重复的内联样式**（同一串 177 字符的页码角标在 8 页里一字不差抄了 8 遍）。
+v2 把这些高频模式固化成 class：`.page-no` `.kicker` `.rule` `.rows`/`.row`/`.row.line`
+`.key` `.num` `.term` `.label` `.sub` `.footnote` `.stat` `.unit` `.grid-3`/`.grid-4`。
+每缺一个组件，就会在每一页被重新手写一次——既费 token，又让 8 页之间慢慢长歪。
+
+---
+
+## 19. 写入时的样式体检（不是工具，是写工具的 `warning`）☑
+
+**为什么需要**：消毒闸门只拦得住"危险"的东西，拦不住"合法但会让整套 deck 烂掉"的东西。
+写死颜色、px 字号、在 `<section>` 上覆盖 `background`/`color`/`font-family`、以及大面积
+重复内联——全都不报错、导出也正常，只是这份 deck 从此刻起无法再换风格（`update_theme` 静默失效）。
+
+判定在 `service/deck/stylelint.go`，与消毒走**同一条回报通道**（`warning` 字段），
+由 `parseSlideFragment`（update/insert 共用）与 `normalizeSections`（write_deck）各自调用一次。
+
+**四项检测**：
+
+| 检测 | 阈值 | 为什么是问题 |
+|---|---|---|
+| `<section>` 上写主题级属性 | ≥1 | 整页覆盖主题；`font-size` 还会被适配兜底直接覆盖掉 |
+| 写死的颜色值（hex / `rgb()` / `hsl()`） | ≥3 处 | `update_theme` 失效，用户换配色时这里不变 |
+| px 字号 | ≥3 处 | 适配兜底靠缩放 section 的 font-size，px 不跟着缩，装不下就被裁 |
+| 同一串 style 值重复 | ≥3 次 | 该是个组件，不该是内联 |
+
+**三个关键设计决定**：
+
+1. **跨页聚合**（`styleLinter` 是个累加器，不是纯函数）：页码角标这类"页面家具"在每一页只出现
+   一次，逐页检测**永远是"不重复"的**——只有把整份提交放一起数，才看得见"同一串抄了 8 遍"。
+   这是这个功能唯一真正的技术含量所在。
+2. **归一化后再比**：声明顺序与空白差异不影响判定（模型手写的重复往往就差一个空格）。
+3. **只提示、不改写**：不做"自动把重复内联提成 class"——模型下一次 `read_slide` 会读到一份
+   它没写过的 HTML，"我写的 = 我读到的"这个自洽性一破，fingerprint 比对和增量修改都会
+   开始出现无法解释的差异。代价远高于收益。
+
+**阈值刻意偏保守**：1~2 处写死颜色往往是用户明确要求的刻意偏离（prompt 允许），
+只有"成规模"才说明模型抛弃了主题体系。纯组件页面必须完全静默，否则模型很快学会忽略这段提示。
+`TestStyleLintSilentOnComponentBasedPage` 和 `TestRealHandWrittenDeckIsFlagged` 一正一反守住这条线。
+
+**手工回归夹具**（浏览器打开即可，不经过 agent）：
+
+- `/assets/components-test.html` —— 组件集 v2 全量渲染验收。最有用的是最后一页
+  "对照：组件 vs 原始内联"：同一行内容分别用新组件和 deck-0014 的原始内联写法渲染，
+  两边必须完全对齐——这是"组件忠实还原了原效果"的直接判据。
+- `/assets/fit-test.html` —— 适配兜底（超载页面等比缩放）的验收页。
 
 ---
 

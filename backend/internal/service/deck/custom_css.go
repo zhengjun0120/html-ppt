@@ -28,10 +28,16 @@ const customCSSBlockHTML = `<style id="deck-custom"></style>`
 
 // validateCustomCSS 清洗并校验 AI 提交的自定义 CSS。
 //
-// 这里挡的是"通道"而不是"风格"：可以改配色、间距、圆角、字体大小，
-// 但不允许通过 CSS 再开一条加载/执行/外发的路。风格偏离由用户看着预览决定
-// （不满意就回滚历史），不属于清洗该管的事。
-func validateCustomCSS(css string) (string, error) {
+// 这里挡的是"通道""无效写法"和"没主的变量"，不是"风格"：可以改配色、间距、圆角、字号；
+// 但不允许通过 CSS 再开一条加载/执行/外发的路（@import/url()/</style>），
+// 也不允许写注定不生效的东西——花括号不配对（会让后面所有规则一起失效）、
+// 重定义契约变量（会静默盖住 update_theme）、引用没人消费的变量名（拼错/凭空造，静默无效）。
+// 风格偏离由用户看着预览决定（不满意就回滚历史），不属于清洗该管的事。
+//
+// known = 被框架 CSS 消费过的变量；preDefined = 该 deck 主题块里已定义过的变量。
+// known 为 nil 表示契约不可得，跳过回声校验（fail-open：这项检查防的是"静默无效"，
+// 不是安全问题，不能因为资源目录没配好就把所有写入卡死）。
+func validateCustomCSS(css string, known, preDefined map[string]bool) (string, error) {
 	clean := strings.TrimSpace(css)
 	if clean == "" {
 		return "", nil // 空 = 清空自定义样式，合法
@@ -54,6 +60,29 @@ func validateCustomCSS(css string) (string, error) {
 	}
 	if strings.Contains(lower, "expression(") {
 		return "", errors.New("不支持 expression()：这是可执行代码的老写法，请移除")
+	}
+	// 语法底线：花括号不配对会让后面所有规则一起失效，是最值得拦的语法错误
+	if err := checkCSSBalance(clean); err != nil {
+		return "", err
+	}
+	// 契约变量不许重定义：自定义槽排在主题块之后、同级选择器靠后者取胜，
+	// 在这里定义会静默盖掉 update_theme（详见 theme_vars.go 的说明）。
+	// 这不是风格问题而是"谁的权威"问题，所以走拒绝而不是剥除——
+	// 悄悄删掉这个变量会让 AI 精心写的整套配色缺一块，页面反而更坏，
+	// 不如直接报错让它换 update_theme 的 vars 重写。
+	if name := findReservedVarRedefinition(clean); name != "" {
+		return "", reservedVarRedefinitionErr(name)
+	}
+	// 回声校验：引用的变量必须真的有元素消费它（或在同一份 CSS / 主题块里定义过）。
+	// 拒绝而不是提示：那处样式注定不生效，放行就是"写了 CSS 却没反应"的假成功。
+	if known != nil {
+		defined := definedVariables(clean)
+		for k := range preDefined {
+			defined[k] = true
+		}
+		if unknown := unknownVariables(clean, known, defined); len(unknown) > 0 {
+			return "", unknownVarErr(unknown, known)
+		}
 	}
 	return clean, nil
 }
@@ -114,11 +143,6 @@ func (s *Service) UpdateCustomCSS(userID uint, deckID, css string) (string, erro
 
 // updateCustomCSSLocked 写入核心（锁内），拆出来同样为白盒测试。
 func (s *Service) updateCustomCSSLocked(deckID, css string) (string, error) {
-	clean, err := validateCustomCSS(css)
-	if err != nil {
-		return "", err
-	}
-
 	unlock := s.lockDeck(deckID)
 	defer unlock()
 
@@ -126,6 +150,19 @@ func (s *Service) updateCustomCSSLocked(deckID, css string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// 回声校验的"已知变量"= 框架契约（被组件库/reveal 消费过的）
+	//                        ∪ 该 deck 主题块里定义过的（即 update_theme 的 vars 调色板）
+	// 第二项不能少：AI 在 vars 里定义了 --surface、再在槽里 var(--surface) 是正常用法，
+	// 漏了它就会把正常写法误判成"消费不到的变量"。
+	known := s.variableContract()
+	preDefined := definedVariables(deckStyleBlocks(raw))
+
+	clean, err := validateCustomCSS(css, known, preDefined)
+	if err != nil {
+		return "", err
+	}
+
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(raw))
 	if err != nil {
 		return "", fmt.Errorf("解析 deck 失败 err:%w", err)
