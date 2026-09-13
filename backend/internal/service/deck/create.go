@@ -21,7 +21,9 @@ var deckIDPattern = regexp.MustCompile(`^deck-(\d{4,})$`)
 
 type CreateResult struct {
 	DeckID string `json:"deck_id"`
-	Slides int `json:"slides"`
+	Slides int    `json:"slides"`
+	// Warning 消毒提示（如"已移除 N 处内联事件属性"），空串表示无违规
+	Warning string `json:"warning,omitempty"`
 }
 
 func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, error) {
@@ -29,7 +31,7 @@ func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, 
 		return CreateResult{}, errStorage
 	}
 
-	normalized, count, err := s.normalizeSections(sectionHTML)
+	normalized, count, warning, err := s.normalizeSections(sectionHTML)
 	if err != nil {
 		return CreateResult{}, err
 	}
@@ -61,54 +63,49 @@ func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, 
 		return CreateResult{}, fmt.Errorf("登记 deck 归属: %w", err)
 	}
 
-	return CreateResult{DeckID: id, Slides: count}, nil
+	return CreateResult{DeckID: id, Slides: count, Warning: warning}, nil
 }
 
-// 校验llm提交的代码
-func(s *Service) normalizeSections(sectionHTML string)(string,int ,error){
+// 校验llm提交的代码。返回归一化后的 sections、页数、消毒警告（可能为空串）。
+func(s *Service) normalizeSections(sectionHTML string)(string,int,string,error){
 	var err error
 	//空值检查
 	raw := strings.TrimSpace(sectionHTML)
 	if raw == ""{
-		return "",0,errors.New("sections_html 不能为空")
+		return "",0,"",errors.New("sections_html 不能为空")
 	}
 
 	//转小写检查是否有不符合的标签
 	lower := strings.ToLower(raw)
 	if strings.Contains(lower,"<!doctype") || strings.Contains(lower,"<html"){
-		return "",0,errors.New("sections_html 只能是<section>元素的拼接，不要输出完整的HTML文档（<!DOCTYPE>/<html>/<head>/<body> 都不需要）")
+		return "",0,"",errors.New("sections_html 只能是<section>元素的拼接，不要输出完整的HTML文档（<!DOCTYPE>/<html>/<head>/<body> 都不需要）")
 	}
 
 	// 解析html片段
 	doc,err := goquery.NewDocumentFromReader(strings.NewReader(raw))
 	if err!=nil{
-		return "",0,fmt.Errorf("解析 sections_html 失败 :%w",err)
+		return "",0,"",fmt.Errorf("解析 sections_html 失败 :%w",err)
 	}
 
-	// 拒绝脚本和样式
-	if doc.Find("script").Length() > 0{
-		return "",0,errors.New("幻灯片不支持 <script> ，请移除后重新提交")
-	}
-	if doc.Find("style").Length()>0{
-		return "",0,errors.New("幻灯片不支持 <style>,请使用组件库 class或内联样式,请移除后重新提交")
-	}
 	if doc.Find("section section").Length() > 0{
-		return "",0,errors.New("不支持嵌套 <section> (垂直子页),每页只能是一个独立的顶层 <section>")
+		return "",0,"",errors.New("不支持嵌套 <section> (垂直子页),每页只能是一个独立的顶层 <section>")
 	}
 
 	// 寻找body的子元素 section
 	sections := doc.Find("body").Children().Filter("section")
 	if sections.Length() == 0{
-		return "",0,errors.New("未找到顶层<section>,请直接拼接<section>元素，不要用容器包裹")
+		return "",0,"",errors.New("未找到顶层<section>,请直接拼接<section>元素，不要用容器包裹")
 	}
 
 	//强制编号data-id
-
+	// 消毒与编号在同一趟里做：先清理再序列化，剥掉的属性不会进入 parts
 	var firstErr error
 	var parts []string
+	var merged sanitizeReport
 	count := 0
 	sections.Each(func(_ int, sec *goquery.Selection) {
 		count++;
+		merged.merge(sanitizeSlide(sec))
 		sec.SetAttr("data-id",fmt.Sprintf("s%d",count))
 
 		html,err := goquery.OuterHtml(sec);
@@ -123,9 +120,13 @@ func(s *Service) normalizeSections(sectionHTML string)(string,int ,error){
 
 	})
 	if firstErr != nil{
-		return "",0,fmt.Errorf("提取html时 OuterHtml函数出错:%w",firstErr)
+		return "",0,"",fmt.Errorf("提取html时 OuterHtml函数出错:%w",firstErr)
 	}
-	return strings.Join(parts,"\n"),count,nil
+	// 结构性违规（危险标签）整份拒绝；属性级违规已剥除，警告随结果回给模型
+	if err := merged.RejectErr(); err != nil{
+		return "",0,"",err
+	}
+	return strings.Join(parts,"\n"),count,merged.Warning(),nil
 }
 
 //计算出候选编号

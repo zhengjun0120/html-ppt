@@ -14,13 +14,15 @@
 | 5 | `update_slide` | 2 | 整块替换单页 | ☑ |
 | 6 | `insert_slide` | 2 | 在某页后插入新页（后端分配 id） | ☑ |
 | 7 | `delete_slide` | 2 | 删除单页 | ☑ |
-| 8 | `update_theme` | 2 | 改主题配置（颜色/字体/动画） | ☐ |
+| 8 | `update_theme` | 2 | 改主题配置（颜色/字体/动画） | ☑ |
 | 9 | `list_templates` | 2 | 列出模板供推荐 | ☐ |
 | 10 | `ask_user` | 2 | 向用户提问（human-in-the-loop，暂停循环） | ☑ |
 | 11 | `screenshot_slides` | 3 | 截图/程序化检查排版 | ☐ |
 | 12 | `move_slide` | 2+ 可选 | 调整页序 | ☐ |
+| 13 | `read_history_diff` | 4 | 对比两份状态，看清某一轮改了什么（只读） | ☑ |
+| 14 | `list_history` | 4 | 版本历史列表，取版本号（只读，分页） | ☑ |
 
-实现顺序：1 → 3/4/5 → 6/7 → 8/9 → 10 →（阶段3）11 → 12。
+实现顺序：1 → 3/4/5 → 6/7 → 8/9 → 10 →（阶段3）11 → 12 →（阶段4 版本控制）13/14。
 
 ## 通用实现骨架
 
@@ -29,6 +31,12 @@
 - **错误即反馈**：校验失败时返回人类可读的错误说明，LLM 会照着自我修正，不算失败
 - 校验永远先行：id 白名单 → 结构合法性 → 业务规则
 - 读工具尽量省 token（list/read 分开），写工具尽量严格（校验 + 原子写）
+- **输入消毒（分级处置）**：危险标签（`script`/`style`/`iframe`/`frame`/`frameset`/`object`/`embed`/`applet`/`form`/`base`/`meta`/`link`）
+  整页拒绝并报错；属性级违规（`on*` 事件属性、`javascript:`/`vbscript:`/`data:text/html` 协议）**剥除**
+  并在工具结果里附 `warning` 字段告知模型。判定集中在 `service/deck/sanitize.go`，
+  所有写路径（write_deck / update_slide / insert_slide）共用。
+  为什么不静默剥除：模型以为 `onclick` 生效、实际被移除却向用户汇报"已加上交互"，是典型的静默失败。
+  CSP 保护的是**预览**，消毒保护的是**导出的单文件**（导出后没有任何浏览器策略兜底），两者不可互替
 - 防工具混乱三件套：description 写清"什么时候不用我"；system prompt 里给标准工作流；按场景分组渐进挂载（阶段2末）
 
 ---
@@ -71,10 +79,12 @@
   "先 read 再改"的工作流做进 schema 硬约束，而不是只靠提示词软约束）
 - **校验顺序**：id 白名单 → slide 存在 → 指纹比对（过期拒绝；错误信息**不回显当前指纹**，
   否则 LLM 拿到指纹就能跳过 read 绕过闸门）→ new_html 校验（恰好一个根 `<section>`、
-  data-id 与 slide_id 一致、禁 script/style、禁嵌套 section）→ 替换写回
+  data-id 与 slide_id 一致、禁 doctype/嵌套、消毒闸门：危险标签拒绝 + 属性级剥除）→ 替换写回
+- **返回**：`{"slide_id": "s2"}`，若本轮剥除过违规属性则多一个 `warning` 字段（模型据此知道自己的写法没生效）
 - **要点**：goquery 定位旧节点 → `ReplaceWithHtml` → 整份文档重序列化 → 原子写回；
   成功返回刻意不含新指纹（同一页再改必须重新 read，防止"旧内容+新指纹"的二次提交
-  冲掉上一次修改）；写前快照（阶段4完善）
+  冲掉上一次修改）；写路径统一持 per-deck 互斥锁（锁覆盖"读-改-写"全程，防并发丢更新），
+  版本快照不在这里做——记档统一在 run 结束后进行，见 §13/§14
 
 ## 6. insert_slide
 
@@ -87,12 +97,14 @@
 - **参数**：`{ deck_id, slide_id }`
 - **要点**：定位 → Remove → 写回；拒绝删空整个 deck（至少留一页）
 
-## 8. update_theme
+## 8. update_theme ☑
 
-- **参数**：`{ deck_id, primary_color?, background_color?, transition?, font? }`（只传要改的）
+- **参数**：`{ deck_id, accent?, background?, heading_color?, text_color?, font?, radius?, transition? }`
+  （只传要改的；`font` 枚举 sans/serif/mono，`transition` 枚举 slide/fade/zoom/convex/concave/none）
 - **要点**：参数是语义化字段而非 CSS；真身是 deck.html 里的
   `<script type="application/json" id="deck-theme">` 配置块，读 JSON → 合并 → 写回 → 同步 CSS 变量；
-  校验颜色格式正则 + transition 枚举（slide/fade/zoom/convex/concave）
+  校验颜色格式正则 + 枚举；派生变量（border/card-bg/text-muted）集中计算，
+  **旋钮越少模型的选择面越小、观感越不容易崩**
 
 ## 9. list_templates
 
@@ -133,3 +145,73 @@
 
 - **参数**：`{ deck_id, slide_id, after_slide_id }`
 - **要点**：insert + delete 的组合操作
+
+---
+
+## 13. read_history_diff —— 对比两份状态看清改了什么（只读，版本控制）☑
+
+- **参数**：`{ deck_id, from_version?, to_version? }`
+  - `from_version` 不传 = 最新记档版本；`to_version` 不传 = 当前使用中的内容
+  - **`"current"` 不是可传入的取值**：空值即"当前"，`"current"` 只作为**输出标签**出现
+    （输入约定与输出标签解耦，避免两边分支打架）
+- **返回**：`{ deck_id, from, to, to_detail, changed, added[], removed[], modified[], unchanged }`
+  - `added` / `removed` 每项 `{slide_id, title, change}`；`modified` 每项额外带 `diff` + `truncated`
+  - `changed=false` = 两份完全一致（新一轮开始时、以及 run 记档后都会是 false，都是正常状态）
+- **语义（同一次比较，区别只在基线选谁）**：
+  - 都不传 = 最新记档版本 vs 当前内容 = **本轮已做的修改**。因为记档发生在 run 结束，
+    最新版本就是上一轮的终点，两者之差恰好是本轮在途改动 → 模型改完几页后**自查**用它
+  - 只传 `from_version` = 从该版本到现在的**累计差异**。快照是全量的，不需要沿版本链累加，
+    直接比两份就是累计结果（类比 `git diff <ref>..工作区`）
+  - 两个都传 = 两个历史版本之间（"上一轮改了啥" = 上一条 vs 最新一条，版本号先用 §14 查）
+- **要点**：
+  - 按 `data-id` 对齐两份 deck，两侧都用 goquery 重新解析 + 重新序列化后再比较
+    （归一化，避免格式差异误报成 modified）
+  - diff 用 `sergi/go-diff` 的行级模式（`DiffLinesToChars → DiffMain → DiffCharsToLines`）
+    + 自渲染 unified 格式；选它的原因之一是容错匹配：LLM 生成的 HTML 常有少量错位，
+    比纯 LCS 更不容易把"挪了一行"渲染成大片红绿
+  - **token 上限（硬约束）**：单页 diff ≤ 80 行（超出截断并在末尾补 `...`）、最多 6 页给完整
+    diff，其余修改页只报"改了"；`@@` 头的行数按**截断后**的可见内容统计，避免头与正文数字矛盾
+  - 只读工具，不参与 run 记档（`runRecorder` 只记会改 deck 的五个写工具）
+
+## 14. list_history —— 版本历史列表（只读，版本控制）☑
+
+- **参数**：`{ deck_id, limit?, offset? }`——`limit` 默认 15、最大 50，`offset` 用于翻页看更早的
+- **返回**：`{ deck_id, total, returned, has_more, oldest_version, oldest_time_str, versions[] }`
+  - 每条：`{version, time, operation, detail, slides, time_str}`
+- **要点**：
+  - **默认截断是硬要求，不是优化**：工具结果常驻对话上下文、之后每一轮请求都要重发，
+    200 条全量约 1 万 token 且被反复计费。`total` / `has_more` / `oldest_*` 让模型不翻页
+    就能回答"一共有多少版""最早能回到哪"
+  - `time_str` 是本地时间格式化（模型判断"多久以前"比读 unix 秒直观）；存储层仍是 unix 秒
+  - `version`（如 `v000003`）就是 §13 的 `from_version` / `to_version` 取值——两个工具闭环
+  - 只读；**没有 restore 工具**：恢复由用户在界面上操作（防模型误恢复），
+    工具 description 里明确告知模型"引导用户去界面操作"
+
+---
+
+## 附：版本控制 REST 接口（非 agent 工具）
+
+工具层刻意不暴露恢复能力，恢复与历史管理走 HTTP，由界面调用：
+
+| 方法 | 路径 | 作用 |
+| --- | --- | --- |
+| GET | `/api/decks/:id/history` | 版本列表（新→旧） |
+| POST | `/api/decks/:id/history/:version/restore` | 恢复到某版本（**恢复本身也记一条版本，可再撤销**） |
+| DELETE | `/api/decks/:id/history/:version` | 删除某条历史（快照互相独立，删中间不影响其他） |
+| DELETE | `/api/decks/:id/history` | 清空全部历史（`NextSeq` 不清零，编号永不复用） |
+
+**存储**：`data/decks/<id>/history/<version>.html`（整份 deck.html 快照）+ `index.json`
+（版本元信息 + `NextSeq`）。快照含主题块，所以**恢复会连主题一起回滚**（设计使然）。
+
+**版本粒度**：一轮 agent run 一条（一轮用户消息 = 一条版本），`Detail` 由 agent 层
+`runRecorder` 汇总本轮工具调用生成（"修改了 s2、调整主题"）。工具级的中间态不入历史，
+撤销一轮 = 恢复上一条版本。
+
+**记档时机**：run 成功结束或 `ask_user` 暂停时（失败的 run 不记档，历史只留"成功产出过的状态"）；
+另加每次 restore 操作即时记档。写路径本身不含记档逻辑。
+
+**保留策略**：最近 7 天全留，更早的每天留最后一条，总数上限 200；由记档时顺手裁剪，无定时器。
+
+**并发**：`Service.deckLocks` 每份 deck 一把 `sync.Mutex`，锁覆盖"读-改-写"全程；
+**锁内只调用不带锁的原语（`readRaw` / `atomicWriteDeck`），绝不在已持锁路径里调用会自己加锁的函数**
+（`sync.Mutex` 不可重入，重入即死锁）。

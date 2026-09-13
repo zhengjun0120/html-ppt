@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 
 	"html-ppt/backend/internal/store"
 )
@@ -30,6 +31,7 @@ type Meta struct {
 type Service struct {
 	decksDir string
 	st       *store.Store // nil = 数据库降级模式：所有操作返回不可用
+	deckLocks sync.Map
 }
 
 func New(dataDir string, st *store.Store) *Service {
@@ -110,7 +112,7 @@ func (s *Service) readRaw(id string) (string, error) {
 	return string(data), nil
 }
 
-// 鉴权+读文件
+//  鉴权+锁内读文件
 func (s *Service) readOwned(userID uint,id string)(string,error){
 	err := s.authorize(userID,id)
 	if err !=nil{
@@ -118,4 +120,11 @@ func (s *Service) readOwned(userID uint,id string)(string,error){
 	}
 
 	return s.readRaw(id)
+}
+
+func(s *Service) lockDeck(deckID string) func(){
+	v,_ := s.deckLocks.LoadOrStore(deckID,&sync.Mutex{})
+	mu := v.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
 }

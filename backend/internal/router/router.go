@@ -38,6 +38,11 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer",h.AskUser)
+
+			guarded.GET("/decks/:id/history",h.ListDeckHistory)
+			guarded.POST("/decks/:id/history/:version/restore",h.RestoreDeckVersion)
+			guarded.DELETE("/decks/:id/history/:version",h.DeleteDeckVersion)
+			guarded.DELETE("/decks/:id/history",h.ClearDeckHistory)
 		}
 	}
 

@@ -7,6 +7,7 @@ import (
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
+	"log"
 	"strconv"
 
 	"fmt"
@@ -314,7 +315,14 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	return sess.ID, nil
 }
 
-func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error) (bool, error) {
+func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error) (paused bool, err error) {
+	rr := newRunRecorder()
+	defer func(){
+		if err == nil{
+			as.recordRunVersions(ctx,rr)
+		}
+	}()
+
 	opt := as.setChatOpts()
 	opt.Messages = messages
 	opt.StreamOptions = openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)}
@@ -340,9 +348,9 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				return false, err
 			}
 		}
-		msg, usage, err := as.streamOnce(ctx, client, opt, &fullText, emit)
-		if err != nil {
-			return false, err
+		msg, usage, streamErr := as.streamOnce(ctx, client, opt, &fullText, emit)
+		if streamErr != nil {
+			return false, streamErr
 		}
 
 		promptTokens += usage.PromptTokens
@@ -410,7 +418,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				return true, nil
 			}
 			//普通工具调用
-			result, execErr := as.execTool(ctx, tool, emit)
+			result, execErr := as.execTool(ctx, tool, emit,rr)
 			if execErr != nil {
 				return false, execErr
 			}
@@ -424,7 +432,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 	}
 }
 
-func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error) (string, error) {
+func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error,rr *runRecorder) (string, error) {
 	var result string
 	if t, ok := as.Exec[tool.Function.Name]; !ok {
 		result = "未知工具"
@@ -438,9 +446,12 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 		}
 	} else {
 		result = res
+		rr.noteToolCall(tool.Function.Name,tool.Function.Arguments,res) //只记录成功的
 		if emitErr := emit(StreamEvent{Type: EventTypeToolCall, Content: result, ToolName: tool.Function.Name}); emitErr != nil {
 			return result, err
 		}
+
+		
 	}
 
 	return result, nil
@@ -494,4 +505,16 @@ func (as *AgentService) setChatOpts() openai.ChatCompletionNewParams {
 		ReasoningEffort: shared.ReasoningEffortMax,
 	}
 	return opt
+}
+
+func (as *AgentService) recordRunVersions(ctx context.Context,rr *runRecorder){
+	uid,ok := authctx.UserID(ctx)
+	if !ok {
+		return
+	}
+	for _,deckID := range rr.deckIDs() {
+			if err := as.DeckService.RecordRunVersion(uid,deckID,rr.detail(deckID));err != nil{
+			log.Printf("[warn] deck %s 记录历史版本失败 err: %v",deckID,err)
+		}		
+	}
 }

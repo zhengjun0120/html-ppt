@@ -7,6 +7,7 @@ import (
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/service/deck"
 	"strings"
+	"time"
 
 	"encoding/json"
 	"fmt"
@@ -37,6 +38,17 @@ type WriteDeckArgs struct {
 	SectionHtml string `json:"section_html" jsonschema:"required,type=string,description=所有页面的 <section> HTML，按顺序拼接成一整个字符串"`
 }
 
+// deckWriteResult 写类工具（write_deck / update_slide / insert_slide）的统一返回结构。
+// Warning 不是装饰：消毒剥掉的属性必须让模型知道——它以为 onclick 生效、实际被移除，
+// 却向用户汇报"已加上点击交互"，这是最典型的静默失败。无违规时 omitempty 自动省略。
+type deckWriteResult struct {
+	DeckID  string `json:"deck_id,omitempty"`
+	SlideID string `json:"slide_id,omitempty"`
+	Slides  int    `json:"slides,omitempty"`
+	URL     string `json:"url,omitempty"`
+	Warning string `json:"warning,omitempty"`
+}
+
 //创建新的deck
 func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string,error){
 	uid, err := toolUID(ctx)
@@ -58,8 +70,12 @@ func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string
 		return "",err
 	}
 
-	return fmt.Sprintf(`{"deck_id":%q,"slides":%d,"url":"/api/decks/%s/file"}`,
-		res.DeckID, res.Slides, res.DeckID), nil
+	return marshalNoEscape(deckWriteResult{
+		DeckID: res.DeckID,
+		Slides: res.Slides,
+		URL:    "/api/decks/" + res.DeckID + "/file",
+		Warning: res.Warning,
+	})
 }
 
 type ListSlidesArgs struct {
@@ -181,11 +197,12 @@ func (a *AgentService) toolUpdateSlide(ctx context.Context,arguments string)(str
 		return "",fmt.Errorf("slide_id %q 不合法",args.SlideID)
 	}
 
-	if err := a.DeckService.UpdateSlide(uid, args.DeckID, args.SlideID, args.NewHTML, args.Fingerprint);err !=nil{
+	warning,err := a.DeckService.UpdateSlide(uid, args.DeckID, args.SlideID, args.NewHTML, args.Fingerprint)
+	if err !=nil{
 		return "",err
 	}
 
-	return fmt.Sprintf(`{"slide_id":%q}`,args.SlideID),nil
+	return marshalNoEscape(deckWriteResult{SlideID: args.SlideID, Warning: warning})
 }
 
 type InsertSlideArgs struct {
@@ -212,13 +229,13 @@ func (a *AgentService) toolInsertSlide(ctx context.Context,arguments string)(str
 		return "",fmt.Errorf("after_slide_id %q 不合法",args.AfterSlideID)
 	}
 
-	slideID,err := a.DeckService.InsertSlide(uid,args.DeckID,args.AfterSlideID,args.NewHTML)
+	slideID,warning,err := a.DeckService.InsertSlide(uid,args.DeckID,args.AfterSlideID,args.NewHTML)
 	if err !=nil{
 		return "",err
 	}
 
 	// 返回新页的 slide_id：LLM 后续 read_slide/update_slide 这一页时用得上
-	return fmt.Sprintf(`{"slide_id":%q}`,slideID),nil
+	return marshalNoEscape(deckWriteResult{SlideID: slideID, Warning: warning})
 }
 
 type DeleteSlideArgs struct {
@@ -251,6 +268,54 @@ func (a *AgentService) toolDeleteSlide(ctx context.Context,arguments string)(str
 	return fmt.Sprintf(`{"slide_id":%q}`,args.SlideID),nil
 }
 
+type UpdateThemeArgs struct {
+	DeckID       string  `json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
+	Accent       *string `json:"accent,omitempty" jsonschema:"type=string,description=强调色（6位十六进制，如 #5eead4），卡片边框和底色自动随之变化"`
+	Background   *string `json:"background,omitempty" jsonschema:"type=string,description=页面背景色（6位十六进制）"`
+	HeadingColor *string `json:"heading_color,omitempty" jsonschema:"type=string,description=标题颜色（6位十六进制）"`
+	TextColor    *string `json:"text_color,omitempty" jsonschema:"type=string,description=正文颜色（6位十六进制）"`
+	Font         *string `json:"font,omitempty" jsonschema:"type=string,enum=sans,enum=serif,enum=mono,description=字体方案"`
+	Radius       *string `json:"radius,omitempty" jsonschema:"type=string,description=卡片圆角（带单位的长度值，如 10px）"`
+	Transition   *string `json:"transition,omitempty" jsonschema:"type=string,enum=slide,enum=fade,enum=zoom,enum=convex,enum=concave,enum=none,description=翻页动画"`
+}
+
+func (a *AgentService) toolUpdateTheme(ctx context.Context,arguments string)(string,error){
+	uid, err := toolUID(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	var args UpdateThemeArgs
+	if err := json.Unmarshal([]byte(arguments),&args);err !=nil{
+		return "",fmt.Errorf("update_theme 参数不是合法json:%v",err)
+	}
+
+	if !deck.IsValidID(args.DeckID){
+		return "",fmt.Errorf("deck_id %q 不合法",args.DeckID)
+	}
+
+	theme,err := a.DeckService.UpdateTheme(uid,args.DeckID,deck.ThemePatch{
+		Accent:       args.Accent,
+		Background:   args.Background,
+		HeadingColor: args.HeadingColor,
+		TextColor:    args.TextColor,
+		Font:         args.Font,
+		Radius:       args.Radius,
+		Transition:   args.Transition,
+	})
+	if err !=nil{
+		return "",err
+	}
+
+	// 返回改后的完整主题：LLM 可以据此向用户确认改成了什么
+	res,err := marshalNoEscape(theme)
+	if err !=nil{
+		return "",fmt.Errorf("结果序列化json失败 err:%w",err)
+	}
+
+	return fmt.Sprintf(`{"deck_id":%q,"theme":%s}`,args.DeckID,res),nil
+}
+
 type AskQuestion struct {
 	Question string `json:"question" jsonschema:"required,type=string,description=问题本身，一句话说清要确认什么"`
 	Options []string `json:"options,omitempty" jsonschema:"type=array,description=候选项，最多4个，把你最推荐的回答放在第一个"`
@@ -262,6 +327,132 @@ type AskUserArgs struct {
 
 func (a *AgentService) toolAskUser(ctx context.Context,arguments string)(string,error){
 	return "",errors.New("ask_user 应由循环拦截暂停，不应执行到这里")
+}
+
+type ReadHistoryDiffArgs struct {
+	DeckID string 	`json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
+	FromVersion string `json:"from_version,omitempty" jsonschema:"type=string,description=基线版本号；不传 = 最新记档版本"`
+	ToVersion string `json:"to_version,omitempty" jsonschema:"type=string,description=目标版本号；不传 = 当前使用中的内容。"`
+}
+
+func(a *AgentService) toolReadHistorydiff(ctx context.Context,arguments string)(string,error){
+	uid ,err := toolUID(ctx)
+	if err != nil{
+		return "",err
+	}
+	var args ReadHistoryDiffArgs
+	if err := json.Unmarshal([]byte(arguments),&args);err != nil{
+		return "",fmt.Errorf("read_history_diff 参数不是合法json err：%w",err)
+	}
+	diff,err := a.DeckService.ReadVersionDiff(uid,args.DeckID,args.FromVersion,args.ToVersion)
+	if err != nil{
+		return "",err
+	}
+	res,err := marshalNoEscape(diff)
+	if err !=nil{
+		return "",fmt.Errorf("结果序列化json失败 err: %w",err)
+	}
+	return res,nil
+}
+
+type ListHistoryArgs struct {
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"type=integer,description=返回条数上限，默认 15，最大 50"`
+	Offset int    `json:"offset,omitempty" jsonschema:"type=integer,description=跳过最近 N 条，用于翻页查看更早的版本，默认 0"`
+}
+
+const (
+	historyDefaultLimit = 15
+	historyMaxLimit     = 50
+)
+
+// historyVersion 是给模型看的版本条目：在存储元信息上补一个本地时间字符串。
+// 模型判断"这是多久以前改的"读 "2026-09-10 14:30" 比读 unix 秒直观得多。
+type historyVersion struct {
+	deck.VersionMeta
+	TimeStr string `json:"time_str"`
+}
+
+// historyResult 带分页元信息：工具结果会常驻对话上下文、之后每轮都要重发，
+// 所以列表类工具一律默认截断，把"总量/是否还有更早的/最早是哪版"用字段表达，
+// 让模型不必为了回答"一共有多少版"把全部条目拉出来。
+type historyResult struct {
+	DeckID        string           `json:"deck_id"`
+	Total         int              `json:"total"`
+	Returned      int              `json:"returned"`
+	HasMore       bool             `json:"has_more"`                 // true = 还有更早的没返回，用 offset 翻页
+	OldestVersion string           `json:"oldest_version,omitempty"` // 整份历史最早的一版
+	OldestTimeStr string           `json:"oldest_time_str,omitempty"`
+	Versions      []historyVersion `json:"versions"`
+}
+
+func(a *AgentService) toolListHistory(ctx context.Context,arguments string)(string,error){
+	uid,err := toolUID(ctx)
+	if err !=nil{
+		return "",err
+	}
+
+	var args ListHistoryArgs
+	if err := json.Unmarshal([]byte(arguments),&args);err !=nil{
+		return "",fmt.Errorf("list_history 参数不是合法json err：%w",err)
+	}
+
+	limit := args.Limit
+	if limit <= 0{
+		limit = historyDefaultLimit
+	}
+	if limit > historyMaxLimit{
+		limit = historyMaxLimit
+	}
+	offset := args.Offset
+	if offset < 0{
+		offset = 0
+	}
+
+	// ListVersions 返回"新→旧"，空历史是空切片（JSON 出来是 []）
+	versions,err := a.DeckService.ListVersions(uid,args.DeckID)
+	if err !=nil{
+		return "",err
+	}
+	total := len(versions)
+
+	if offset > total{
+		offset = total
+	}
+	end := offset + limit
+	if end > total{
+		end = total
+	}
+
+	out := make([]historyVersion,0,end-offset)
+	for _,v := range versions[offset:end]{
+		out = append(out,historyVersion{VersionMeta: v,TimeStr: fmtUnixTime(v.Time)})
+	}
+
+	res := historyResult{
+		DeckID: args.DeckID,
+		Total: total,
+		Returned: len(out),
+		HasMore: end < total,
+		Versions: out,
+	}
+	if total > 0{
+		oldest := versions[total-1]
+		res.OldestVersion = oldest.Version
+		res.OldestTimeStr = fmtUnixTime(oldest.Time)
+	}
+
+	raw,err := marshalNoEscape(res)
+	if err !=nil{
+		return "",fmt.Errorf("结果序列化json失败 err: %w",err)
+	}
+
+	return raw,nil
+}
+
+// fmtUnixTime 把 unix 秒格式化成模型好读的本地时间
+func fmtUnixTime(unix int64) string{
+	return time.Unix(unix,0).Format("2006-01-02 15:04")
 }
 
 // generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
@@ -346,6 +537,14 @@ func (a *AgentService)buildTools () map[string]Tool{
 			}),
 			Execute: a.toolDeleteSlide,
 		},
+		"update_theme":{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "update_theme",
+				Description: openai.String("修改 deck 的全局主题：强调色、背景、标题色、正文色、字体、卡片圆角、翻页动画。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用。本工具改的是主题变量，页面内容不受影响；新增装饰效果等结构性样式改动不在本工具能力内，不要许诺。"),
+				Parameters: generateSchema[UpdateThemeArgs](),
+			}),
+			Execute: a.toolUpdateTheme,
+		},
 		"ask_user":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name:"ask_user",
@@ -353,6 +552,22 @@ func (a *AgentService)buildTools () map[string]Tool{
 				Parameters: generateSchema[AskUserArgs](),
 			}),
 			Execute: a.toolAskUser,
+		},
+		"read_history_diff":{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "read_history_diff",
+				Description: openai.String("比较两份状态的具体页面差距：哪些页新增/删除/修改，修改页有逐行diff，三个常用法：1. 不传版本号 = 最新记档版本与当前内容对比，即'这一轮已经做的修改'，完成几页修改后可调用本工具自查；2.只传 from_version = 从该版本到现在的累计差异，用户问'从某某版本到现在改了什么'时用；3.from_version 和 to_version 都传 = 比较两个历史版本（如上一轮的改动 = 上一条 vs 最新一条，版本号先用 list_history 查）。 changed=false 表示两份内容完全一致。本工具只读。"),
+				Parameters: generateSchema[ReadHistoryDiffArgs](),
+			}),
+			Execute: a.toolReadHistorydiff,
+		},
+		"list_history":{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "list_history",
+				Description: openai.String("查看某份 deck 的版本历史（新→旧，含版本号、时间、本轮操作说明、当时页数）。默认只返回最近 15 条，更早的用 offset 翻页（limit 最大 50）；结果里的 total/has_more/oldest_version 足以回答'一共有多少版''最早是哪版'，不需要翻页。用途：用户问'有哪些历史版本''之前改过什么'时；以及需要版本号时——read_history_diff 的 from_version/to_version 就用这里返回的 version 字段（如 v000003）。本工具只读；恢复某个版本请引导用户在界面上操作，你没有恢复工具。"),
+				Parameters: generateSchema[ListHistoryArgs](),
+			}),
+			Execute: a.toolListHistory,
 		},
 	}
 }

@@ -50,9 +50,114 @@ func deckPageHeaders(c *gin.Context) {
 			"style-src 'self' 'unsafe-inline'; "+
 			"img-src 'self' data:; "+
 			"connect-src 'none'; "+
+			// form-action 不受 connect-src 管辖（表单提交是导航不是 fetch），
+			// 不限的话隐藏表单自动提交外站是一条数据渗出通道
+			"form-action 'none'; "+
 			"object-src 'none'; "+
 			"base-uri 'self'; "+
 			"frame-ancestors 'self'")
+	// ?token= 走 URL 的妥协（见 auth.go）：no-referrer 保证任何外发导航
+	// 都不会把带 token 的完整 URL 泄给第三方
+	c.Header("Referrer-Policy", "no-referrer")
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("Cache-Control", "no-store")
+}
+
+func (h *Handler) DeleteDeckVersion(c *gin.Context) {
+	uid,ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c,http.StatusUnauthorized,"未登录")
+		return
+	}
+
+	deckID := c.Param("id")
+	version := c.Param("version")
+	if deckID == "" || version == ""{
+		response.ParameterErr(c)
+		return
+	}
+
+	if err := h.decks.EnsureOwner(uid,deckID);err !=nil{
+		response.Err(c,http.StatusNotFound,"deck 不存在")
+		return
+	}
+	if err := h.decks.DeleteVersion(uid,deckID,version); err !=nil{
+		response.Err(c,http.StatusBadRequest,err.Error())
+		return
+	}
+	response.OK(c,nil)
+}
+
+func (h *Handler) ClearDeckHistory(c *gin.Context) {
+	uid,ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c,http.StatusUnauthorized,"未登录")
+		return
+	}
+	deckID := c.Param("id")
+	if deckID == ""{
+		response.ParameterErr(c)
+		return
+	}
+
+	if err := h.decks.EnsureOwner(uid,deckID); err !=nil{
+		response.Err(c,http.StatusNotFound,"deck 不存在 err:"+err.Error())
+		return
+	}
+	n,err := h.decks.ClearHistory(uid,deckID)
+	if err !=nil {
+		response.Err(c,http.StatusInternalServerError,err.Error())
+		return
+	}
+	response.OK(c,gin.H{"deleted":n})
+}
+
+func (h *Handler) ListDeckHistory(c *gin.Context){
+	uid,ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c,http.StatusUnauthorized,"未登录")
+		return
+	}
+
+	deckID := c.Param("id")
+	if deckID == ""{
+		response.ParameterErr(c)
+		return
+	}
+
+	if err := h.decks.EnsureOwner(uid,deckID);err !=nil{
+		response.Err(c,http.StatusNotFound,"deck 不存在 err:"+err.Error())
+		return
+	}
+
+	versions,err := h.decks.ListVersions(uid,deckID)
+	if err !=nil{
+		response.Err(c,http.StatusInternalServerError,err.Error())
+		return
+	}
+	response.OK(c,versions)
+}
+
+func (h *Handler) RestoreDeckVersion(c *gin.Context){
+	uid,ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c,http.StatusUnauthorized,"未登录")
+		return
+	}
+	deckID:= c.Param("id")
+	version := c.Param("version")
+	if deckID == "" || version == ""{
+		response.ParameterErr(c)
+		return
+	}
+
+	if err := h.decks.EnsureOwner(uid,deckID); err !=nil{
+		response.Err(c,http.StatusNotFound,"deck 不存在 err:" +err.Error())
+		return
+	}
+	if err := h.decks.RestoreVersion(uid,deckID,version);err !=nil{
+		response.Err(c,http.StatusBadRequest,err.Error())
+		return
+	}
+	response.OK(c,gin.H{"restored":version})
 }

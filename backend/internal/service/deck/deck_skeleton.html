@@ -12,6 +12,11 @@
   <link rel="stylesheet" href="/assets/theme.css">
   <!-- 第②层：组件库（LLM 只可使用 class，不可修改定义） -->
   <link rel="stylesheet" href="/assets/components.css">
+  <!-- 主题配置：JSON 是 update_theme 的操作真身；override 块由后端渲染，
+       必须位于所有 <link> 之后（级联覆盖 theme.css 的默认值）。
+       默认值与 theme.css 的 :root 保持一致，改默认主题两处一起改 -->
+  <script type="application/json" id="deck-theme">{"accent":"#5eead4","background":"#0b132b","heading_color":"#5eead4","text_color":"#e2e8f0","font":"sans","radius":"10px","transition":"slide"}</script>
+  <style id="deck-theme-override"></style>
 </head>
 <body>
   <div class="reveal">

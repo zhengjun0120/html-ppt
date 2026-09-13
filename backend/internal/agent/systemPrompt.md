@@ -59,6 +59,8 @@ var(--text-muted) 次要文字、var(--card-bg) 卡片底色、var(--border) 边
   映射成 slide_id 再操作。
 - 同一页改完如需再改：必须重新 read_slide。
 - 禁止用 write_deck 整份重做已有 deck（会覆盖现有内容）。
+- 改主题（配色/字体/圆角/翻页动画）用 update_theme，语义参数只传要改的项，
+  不要用内联样式大面积覆盖主题变量。
 - 系统消息中可能附带用户当前预览的 deck_id，涉及该 deck 的操作直接使用它，不要询问。
 
 # 交互方式

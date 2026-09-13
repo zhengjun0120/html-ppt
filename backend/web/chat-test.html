@@ -30,8 +30,17 @@
     }
     .user      { align-self: flex-end; background: #1d4ed8; }
     .delta     { align-self: flex-start; background: #1a2338; }
-    .think     { align-self: flex-start; background: transparent; color: #64748b;
-                 font-size: 12px; border-left: 2px solid #334155; padding-left: 10px; }
+    /* 思考内容：装进 <details>。闭合时子树不参与布局——推理链再长也不产生排版开销，
+       展开时才按节流把正文写进 DOM（见 JS 的 flushStream） */
+    details.think { align-self: flex-start; background: transparent; color: #64748b;
+                    font-size: 12px; border-left: 2px solid #334155; padding-left: 10px;
+                    max-width: 95%; }
+    details.think > summary { cursor: pointer; outline: none; }
+    details.think > summary:hover { color: #94a3b8; }
+    details.think .tbody { white-space: pre-wrap; word-break: break-word;
+                           max-height: 320px; overflow-y: auto; margin-top: 4px; }
+    /* 渲染上限提示：超长产出只计数不写 DOM */
+    .capnote { color: #475569; font-size: 11px; margin-top: 6px; }
     .tool      { align-self: flex-start; background: #134e4a; font-size: 13px; max-width: 95%; }
     .tool pre  { margin-top: 6px; font-size: 11px; color: #99f6e4; max-height: 120px; overflow: auto; }
     .toolerr   { align-self: flex-start; background: #7f1d1d; font-size: 13px; max-width: 95%; }
@@ -60,6 +69,36 @@
                     border-radius: 6px; padding: 2px 8px; font-weight: 400; }
     .pvbar button:hover { border-color: #5eead4; }
     #previewFrame { flex: 1; width: 100%; border: 0; background: #0b132b; }
+    /* 全屏预览遮罩：盖住整页看排版效果，iframe 与右侧预览同款沙箱配置 */
+    #fsMask { position: fixed; inset: 0; background: #0b132b; display: none;
+              flex-direction: column; z-index: 20; }
+    #fsMask .fsbar { padding: 6px 14px; border-bottom: 1px solid #1e2a45; font-size: 12px;
+                     display: flex; align-items: center; gap: 10px; }
+    #fsMask button { background: #1a2338; color: #e2e8f0; border: 1px solid #334155;
+                     border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 400;
+                     cursor: pointer; }
+    #fsMask button:hover { border-color: #5eead4; }
+    #fsFrame { flex: 1; width: 100%; border: 0; background: #0b132b; }
+    /* 版本历史面板：折叠在预览栏下方，用于测试版本控制 REST 接口 */
+    #histPanel { display: none; max-height: 42%; overflow-y: auto;
+                 border-bottom: 1px solid #1e2a45; background: #0d1730; }
+    #histPanel.open { display: block; }
+    .hist-row { display: flex; align-items: center; gap: 8px; padding: 5px 16px;
+                border-bottom: 1px solid #16223c; font-size: 12px; }
+    .hist-row:hover { background: #101c36; }
+    .hist-row .v  { color: #5eead4; font-family: Consolas, monospace; }
+    .hist-row .t  { color: #64748b; white-space: nowrap; }
+    .hist-row .op { color: #94a3b8; }
+    .hist-row .dt { color: #cbd5e1; flex: 1; overflow: hidden;
+                    text-overflow: ellipsis; white-space: nowrap; }
+    .hist-row .pg { color: #475569; white-space: nowrap; }
+    .hist-row button { background: #1a2338; color: #e2e8f0; border: 1px solid #334155;
+                       border-radius: 5px; padding: 1px 7px; font-size: 11px;
+                       font-weight: 400; cursor: pointer; }
+    .hist-row button:hover { border-color: #5eead4; }
+    .hist-row button.danger:hover { border-color: #fca5a5; color: #fca5a5; }
+    .hist-row.restore-op .op { color: #fbbf24; }   /* 恢复类版本高亮，便于辨认可撤销点 */
+    #histMsg { color: #64748b; }
     /* ask_user 提问卡片 */
     .ask { align-self: flex-start; background: #3b2f0b; border: 1px solid #a16207;
            max-width: 95%; font-size: 13px; }
@@ -77,7 +116,8 @@
     .ask .skip  { background: #1a2338; color: #94a3b8; font-weight: 400; }
     /* 登录/注册遮罩 */
     #authMask { position: fixed; inset: 0; background: rgba(2,6,23,.82);
-                display: none; align-items: center; justify-content: center; z-index: 10; }
+                display: none; align-items: center; justify-content: center; z-index: 30; }
+                /* z-index 高于全屏预览遮罩：会话过期弹登录时要能盖住它 */
     #authCard { background: #101a30; border: 1px solid #334155; border-radius: 12px;
                 padding: 28px; width: 340px; display: flex; flex-direction: column; gap: 10px; }
     #authCard h2 { color: #5eead4; font-size: 18px; margin-bottom: 4px; }
@@ -126,12 +166,38 @@
         <span class="lbl">预览（沙箱 iframe）</span>
         <span class="lbl" id="pvId">未选择 deck</span>
         <button id="pvRefresh" title="重新加载预览（会回到第一页）">↻</button>
+        <button id="pvFullscreen" title="全屏预览当前 deck">⛶ 全屏</button>
+        <button id="pvNewTab" title="在新标签页打开当前 deck">↗ 新标签页</button>
+      </div>
+      <!-- 版本历史：run 结束后自动记档，这里直接操作 REST 接口做端到端测试 -->
+      <div class="pvbar">
+        <span class="lbl">历史</span>
+        <span class="lbl" id="histCount">—</span>
+        <button id="histToggle" title="展开/收起版本列表">展开</button>
+        <button id="histReload" title="重新拉取历史列表">↻</button>
+        <button id="histClear" title="清空该 deck 的全部历史（不影响当前内容）">清空</button>
+        <span class="lbl" id="histMsg"></span>
+      </div>
+      <div id="histPanel">
+        <div id="histList"></div>
       </div>
       <!-- 不给 allow-same-origin：iframe 内变成不透明 origin，
            脚本碰不到本页 DOM/cookie/localStorage；配合后端 CSP 形成完整沙箱 -->
       <iframe id="previewFrame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
     </section>
   </main>
+
+  <!-- 全屏预览遮罩：盖住整页看真实放映效果；iframe 与右侧预览同款沙箱 -->
+  <div id="fsMask">
+    <div class="fsbar">
+      <span class="lbl" id="fsId">未选择 deck</span>
+      <span style="flex:1"></span>
+      <button id="fsFull" title="调用浏览器真全屏（Esc 先退真全屏，再按一次 Esc 关闭预览）">真全屏</button>
+      <button id="fsNewTab" title="在新标签页打开">新标签页↗</button>
+      <button id="fsClose" title="关闭全屏预览（Esc）">×</button>
+    </div>
+    <iframe id="fsFrame" sandbox="allow-scripts allow-popups allow-forms" title="全屏预览"></iframe>
+  </div>
 
   <!-- 登录/注册遮罩：无 token 或 401 时显示 -->
   <div id="authMask">
@@ -170,15 +236,21 @@ const TOKEN_KEY = 'hpt_token';
 const SESSION_KEY = 'hpt_session';   // 会话 id 持久化：刷新页面可续聊，ask_user 暂停态也不怕刷新
 let streaming = false;
 let controller = null;
-let currentDelta = null;
-let currentThink = null;
+// 流式渲染状态集中在 stream 对象里（见"流式渲染"一节），这里不再单独持有 delta/think 节点
 
 const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
 const setToken = t => t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
 const getSession = () => parseInt(localStorage.getItem(SESSION_KEY) || '0', 10) || 0;
 const setSession = id => id > 0 ? localStorage.setItem(SESSION_KEY, String(id)) : localStorage.removeItem(SESSION_KEY);
 
-const scroll = () => { log.scrollTop = log.scrollHeight; };
+// 自动滚动改为"粘底"：用户上滚查看历史时不再被抢滚动，
+// 且只在 flush 时读一次 scrollHeight（读它会强制重排）
+let stickyBottom = true;
+log.addEventListener('scroll', () => {
+  stickyBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+}, { passive: true });
+
+const scroll = () => { if (stickyBottom) log.scrollTop = log.scrollHeight; };
 
 function bubble(cls, text) {
   const d = document.createElement('div');
@@ -189,7 +261,128 @@ function bubble(cls, text) {
   return d;
 }
 
-function resetBubbles() { currentDelta = null; currentThink = null; }
+// ---------- 流式渲染：抗高速 token 与超长思考 ----------
+// 模型 token 流速可以远超屏幕刷新率，推理链还可能极长。三条措施：
+//   1) rAF 合并：收到的内容先进缓冲，每帧最多写一次 DOM（原实现是每个 SSE 帧写一次）
+//   2) 文本节点 appendData 追加增量，替代 el.textContent +=
+//      （后者每次替换全部子节点、重建整段文本，长文下累计是 O(n²)）
+//   3) 思考内容装进闭合的 <details>：子树不参与布局，推理再长也不产生排版开销；
+//      展开时才按 THINK_MS 节流写入正文
+const RENDER_CAP = 20000;   // 单个气泡最多渲染的字数，超出只计数不写 DOM
+const THINK_MS = 200;       // 思考正文展开时的写入节流间隔
+
+const stream = {
+  dEl: null, dNode: null, dShown: 0, bufD: '',
+  tEl: null, tNode: null, tCnt: null, tShown: 0, tTotal: 0, bufT: '', tOpen: false, tLast: 0,
+  rawEl: null, rawNode: null, rawShown: 0, bufRaw: '',
+  scheduled: false,
+};
+
+function resetBubbles() {
+  stream.dEl = stream.dNode = null; stream.dShown = 0; stream.bufD = '';
+  stream.tEl = stream.tNode = stream.tCnt = null;
+  stream.tShown = stream.tTotal = 0; stream.bufT = ''; stream.tOpen = false; stream.tLast = 0;
+  stream.rawEl = stream.rawNode = null; stream.rawShown = 0; stream.bufRaw = '';
+  stream.scheduled = false;
+}
+
+function onDelta(chunk) { stream.bufD += chunk; scheduleFlush(); }
+function onThink(chunk) {
+  stream.bufT += chunk;
+  stream.tTotal += chunk.length;   // 计数按"已收到"算，和渲染上限无关
+  scheduleFlush();
+}
+function onRaw(frame) { stream.bufRaw += frame.replaceAll('\n', ' ⏎ ') + '\n'; scheduleFlush(); }
+
+function scheduleFlush() {
+  if (stream.scheduled) return;
+  stream.scheduled = true;
+  requestAnimationFrame(flushStream);
+}
+
+// appendChunk 只往一个文本节点追加增量；到上限后不再写 DOM，仅由调用方补提示
+function appendChunk(node, chunk, shown) {
+  if (shown >= RENDER_CAP) return shown;
+  const part = chunk.slice(0, RENDER_CAP - shown);
+  node.appendData(part);
+  return shown + part.length;
+}
+
+function capNote(el) {
+  const d = document.createElement('div');
+  d.className = 'capnote';
+  d.textContent = '… 已达 ' + RENDER_CAP + ' 字渲染上限，后续增量不再显示（完整文本仍在会话上下文里）';
+  el.appendChild(d);
+}
+
+function ensureThinkEl() {
+  const el = document.createElement('details');
+  el.className = 'bubble think';
+  const sum = document.createElement('summary');
+  sum.textContent = '💭 思考中… 0 字';
+  const body = document.createElement('div');
+  body.className = 'tbody';
+  const node = document.createTextNode('');
+  body.appendChild(node);
+  el.append(sum, body);
+  el.addEventListener('toggle', () => { stream.tOpen = el.open; });
+  log.appendChild(el);
+  scroll();
+  stream.tEl = el; stream.tCnt = sum; stream.tNode = node;
+}
+
+function flushStream() {
+  stream.scheduled = false;
+
+  // 正文：每帧写一次
+  if (stream.bufD) {
+    if (!stream.dEl) {
+      stream.dEl = bubble('delta', '');
+      stream.dNode = document.createTextNode('');
+      stream.dEl.appendChild(stream.dNode);
+    }
+    stream.dShown = appendChunk(stream.dNode, stream.bufD, stream.dShown);
+    stream.bufD = '';
+    if (stream.dShown >= RENDER_CAP) capNote(stream.dEl);
+  }
+
+  // 思考：标题计数跟手更新；正文折叠时不写（无布局成本），展开时按 THINK_MS 节流
+  if (stream.tTotal > 0) {
+    if (!stream.tEl) ensureThinkEl();
+    if (stream.bufT) {
+      const now = performance.now();
+      if (!stream.tOpen || now - stream.tLast >= THINK_MS) {
+        stream.tLast = now;
+        stream.tShown = appendChunk(stream.tNode, stream.bufT, stream.tShown);
+        stream.bufT = '';
+      }
+    }
+    stream.tCnt.textContent = '💭 思考中… ' + stream.tTotal + ' 字';
+  }
+
+  // 原始帧（调试开关）：合并进单个气泡，避免高速流下每秒新建几十个节点
+  if (stream.bufRaw) {
+    if (!stream.rawEl) {
+      stream.rawEl = bubble('sys', 'RAW ← ');
+      stream.rawNode = document.createTextNode('');
+      stream.rawEl.appendChild(stream.rawNode);
+    }
+    stream.rawShown = appendChunk(stream.rawNode, stream.bufRaw, stream.rawShown);
+    stream.bufRaw = '';
+    if (stream.rawShown >= RENDER_CAP) capNote(stream.rawEl);
+  }
+
+  scroll();
+}
+
+// 一轮结束：把缓冲写尽，思考标题从"思考中"改成"已思考"
+function finishStream() {
+  flushStream();
+  if (stream.tEl) {
+    stream.tCnt.textContent = '💭 已思考 ' + stream.tTotal + ' 字（点击展开）';
+  }
+  scroll();
+}
 
 // ---------- 统一 API 封装：自动带 Authorization，401 弹回登录 ----------
 async function api(path, opts = {}) {
@@ -350,12 +543,181 @@ function loadPreview() {
   // 沙箱 iframe 跨源读不到内部 location.hash，只能重设 src，刷新回到第一页
   previewFrame.src = id ? deckFileURL(id) : 'about:blank';
 }
-deckSel.addEventListener('change', loadPreview);
+deckSel.addEventListener('change', () => { histSay(''); loadPreview(); loadHistory(); });
 document.getElementById('pvRefresh').onclick = () => { if (deckSel.value) loadPreview(); };
 
+const newTab = () => { if (deckSel.value) window.open(deckFileURL(deckSel.value), '_blank'); };
 document.getElementById('reload').onclick = loadDecks;
-document.getElementById('preview').onclick = () => {
-  if (deckSel.value) window.open(deckFileURL(deckSel.value), '_blank');
+document.getElementById('preview').onclick = newTab;
+
+// ---------- 全屏预览：整页遮罩 + 与右侧预览同款沙箱 ----------
+const fsMask = document.getElementById('fsMask');
+const fsFrame = document.getElementById('fsFrame');
+const fsId = document.getElementById('fsId');
+
+function openFullscreen() {
+  const id = deckSel.value;
+  if (!id) { bubble('sys', '⚠ 先在下拉框选一份 deck，再全屏预览'); return; }
+  fsId.textContent = id;
+  fsFrame.src = deckFileURL(id);   // 每次打开重设 src：总是加载最新落盘内容
+  fsMask.style.display = 'flex';
+}
+function closeFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  fsMask.style.display = 'none';
+  fsFrame.src = 'about:blank';     // 顺手停掉 reveal 的键盘监听，避免它偷走按键
+}
+document.getElementById('pvFullscreen').onclick = openFullscreen;
+document.getElementById('fsClose').onclick = closeFullscreen;
+document.getElementById('pvNewTab').onclick = newTab;
+document.getElementById('fsNewTab').onclick = newTab;
+document.getElementById('fsFull').onclick = () => {
+  if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+  fsMask.requestFullscreen?.().catch(() => {});   // 浏览器不支持时遮罩仍在，不影响使用
+};
+
+// Esc 关闭遮罩；浏览器真全屏时第一次 Esc 归浏览器（退出真全屏），那次不关
+let justExitedFS = false;
+document.addEventListener('fullscreenchange', () => {
+  justExitedFS = !document.fullscreenElement;
+  setTimeout(() => { justExitedFS = false; }, 300);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || document.fullscreenElement || justExitedFS) return;
+  if (fsMask.style.display !== 'none') closeFullscreen();
+});
+
+// ---------- 版本历史：端到端测试版本控制（列表 / 恢复 / 删除 / 清空） ----------
+// 记档时机是"一轮 run 结束"，所以列表在 done 事件、切换 deck、恢复之后刷新，
+// 而不是每次写工具之后（run 中途还没记档，刷了也不会变）。
+const histPanel = document.getElementById('histPanel');
+const histList = document.getElementById('histList');
+const histCount = document.getElementById('histCount');
+const histMsg = document.getElementById('histMsg');
+const histToggle = document.getElementById('histToggle');
+
+function histSay(text, isErr) {
+  histMsg.textContent = text || '';
+  histMsg.style.color = isErr ? '#fca5a5' : '#86efac';
+}
+
+histToggle.onclick = () => {
+  const open = histPanel.classList.toggle('open');
+  histToggle.textContent = open ? '收起' : '展开';
+  if (open) loadHistory();
+};
+document.getElementById('histReload').onclick = () => { histSay(''); loadHistory(); };
+
+async function loadHistory() {
+  const id = deckSel.value;
+  if (!id) { histList.innerHTML = ''; histCount.textContent = '（未选 deck）'; return; }
+  histCount.textContent = '加载中…';
+  try {
+    const resp = await api('/api/decks/' + id + '/history');
+    if (!resp.ok) throw new Error(await errText(resp));
+    const versions = await resp.json();
+    renderHistory(versions || []);
+    histCount.textContent = (versions ? versions.length : 0) + ' 条';
+  } catch (e) {
+    if (e.message === '未登录') return;
+    histCount.textContent = '加载失败';
+    histSay('历史加载失败：' + e.message, true);
+  }
+}
+
+function renderHistory(versions) {
+  histList.innerHTML = '';
+  if (!versions.length) {
+    const d = document.createElement('div');
+    d.className = 'hist-row';
+    const s = document.createElement('span');
+    s.className = 't';
+    s.textContent = '（还没有历史版本：跑一轮对话，run 结束后会自动记一条）';
+    d.appendChild(s);
+    histList.appendChild(d);
+    return;
+  }
+  for (const v of versions) {
+    const row = document.createElement('div');
+    row.className = 'hist-row' + (v.operation === 'restore' ? ' restore-op' : '');
+
+    const mk = (cls, text, title) => {
+      const s = document.createElement('span');
+      s.className = cls; s.textContent = text;
+      if (title) s.title = title;
+      return s;
+    };
+    const rBtn = document.createElement('button');
+    rBtn.textContent = '恢复';
+    rBtn.title = '恢复到这一版：立即重载预览。恢复动作本身也记一条历史，所以可以再撤销';
+    rBtn.onclick = () => restoreVersion(v.version);
+
+    const dBtn = document.createElement('button');
+    dBtn.textContent = '删';
+    dBtn.className = 'danger';
+    dBtn.title = '删除这一条历史（快照互相独立，删中间不影响其他版本的恢复）';
+    dBtn.onclick = () => deleteVersion(v.version);
+
+    row.append(
+      mk('v', v.version),
+      mk('t', new Date(v.time * 1000).toLocaleString('zh-CN', { hour12: false })),
+      mk('op', v.operation),
+      mk('dt', v.detail || '', v.detail || ''),
+      mk('pg', v.slides + '页'),
+      rBtn, dBtn,
+    );
+    histList.appendChild(row);
+  }
+}
+
+async function restoreVersion(version) {
+  const id = deckSel.value;
+  if (!id) return;
+  if (!confirm('恢复到 ' + version + '？\n\nrestore 本身也会记一条新历史，所以这一步可以被再撤销。')) return;
+  histSay('恢复中…');
+  try {
+    const resp = await api('/api/decks/' + id + '/history/' + version + '/restore', { method: 'POST' });
+    if (!resp.ok) throw new Error(await errText(resp));
+    histSay('✅ 已恢复到 ' + version + '（可再撤销）');
+    loadPreview();          // 文件已换，重载沙箱预览
+    loadHistory();
+  } catch (e) {
+    if (e.message === '未登录') return;
+    histSay('恢复失败：' + e.message, true);
+  }
+}
+
+async function deleteVersion(version) {
+  const id = deckSel.value;
+  if (!id) return;
+  if (!confirm('删除历史 ' + version + '？\n\n只删这一条快照，不影响 deck 当前内容，也不影响其他版本恢复。')) return;
+  histSay('删除中…');
+  try {
+    const resp = await api('/api/decks/' + id + '/history/' + version, { method: 'DELETE' });
+    if (!resp.ok) throw new Error(await errText(resp));
+    histSay('✅ 已删除 ' + version);
+    loadHistory();
+  } catch (e) {
+    if (e.message === '未登录') return;
+    histSay('删除失败：' + e.message, true);
+  }
+}
+
+document.getElementById('histClear').onclick = async () => {
+  const id = deckSel.value;
+  if (!id) return;
+  if (!confirm('清空 ' + id + ' 的全部历史？\n\ndeck 当前内容不受影响；版本编号不会复用（清空后从 v 序号继续）。')) return;
+  histSay('清空中…');
+  try {
+    const resp = await api('/api/decks/' + id + '/history', { method: 'DELETE' });
+    if (!resp.ok) throw new Error(await errText(resp));
+    const data = await resp.json().catch(() => ({}));
+    histSay('✅ 已清空 ' + (data.deleted ?? '?') + ' 条历史');
+    loadHistory();
+  } catch (e) {
+    if (e.message === '未登录') return;
+    histSay('清空失败：' + e.message, true);
+  }
 };
 
 // ---------- SSE 消费：chat 与 answer 共用（EventSource 不支持 POST） ----------
@@ -444,7 +806,7 @@ async function sendAnswer(answers, note) {
 }
 
 function handleFrame(frame) {
-  if (rawChk.checked) bubble('sys', 'RAW ← ' + frame.replaceAll('\n', ' ⏎ '));
+  if (rawChk.checked) onRaw(frame);   // 原始帧也走缓冲，高速流下不会每帧建节点
   let type = 'message', data = null;
   for (const line of frame.split('\n')) {
     if (line.startsWith('event:')) type = line.slice(6).trim();
@@ -456,14 +818,10 @@ function handleFrame(frame) {
 
   switch (type) {
     case 'delta':
-      if (!currentDelta) currentDelta = bubble('delta', '');
-      currentDelta.textContent += ev.content ?? '';
-      scroll();
+      onDelta(ev.content ?? '');     // 只入缓冲，由 rAF 合并写入
       break;
     case 'think':
-      if (!currentThink) currentThink = bubble('think', '');
-      currentThink.textContent += ev.content ?? '';
-      scroll();
+      onThink(ev.content ?? '');     // 同上；折叠显示，正文不参与布局
       break;
     case 'session': {
       const id = parseInt(ev.content, 10) || 0;
@@ -499,7 +857,10 @@ function handleFrame(frame) {
       bubble('toolerr', '⚠️ 工具失败 ' + (ev.tool_name ?? '')).appendChild(pre(ev.content));
       break;
     case 'done':
+      finishStream();                // 写尽缓冲 + 把思考标题切成"已思考"
       bubble('done', `✅ 完成 · prompt=${ev.prompt_tokens ?? '-'} · completion=${ev.completion_tokens ?? '-'} · total=${ev.total_tokens ?? '-'} · cached=${ev.cached_tokens ?? '-'}`);
+      // run 结束 = 记档时刻（成功或 ask_user 暂停都会记），刷新历史列表
+      loadHistory();
       break;
     case 'error':
       bubble('syserr', '❌ ' + (ev.content ?? '未知错误'));
@@ -598,6 +959,7 @@ async function init() {
   await refreshWho();
   await loadDecks();
   loadPreview();
+  loadHistory();          // 顶部就能看到已有多少版本，不用先展开面板
   const sid = getSession();
   if (sid > 0) sessTag.textContent = '会话 #' + sid;
 }
