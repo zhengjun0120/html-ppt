@@ -22,6 +22,18 @@ type Config struct {
 	SMTP   SMTP   `yaml:"smtp"`
 	Redis  Redis  `yaml:"redis"`
 	Crypto Crypto `yaml:"crypto"`
+	// Features 功能开关。零值 = 全关（托管部署不配就是安全默认）；本地开发在
+	// config.yaml 里显式打开。
+	Features Features `yaml:"features"`
+}
+
+// Features 控制"能力型"功能的挂载。关掉某项 = agent 连对应工具都看不到，
+// 而不是"看得到但一律拒绝"——后者只会让模型浪费轮次去试。
+type Features struct {
+	// CustomCSS 允许 agent 用 update_custom_css / read_custom_css 操作该 deck 的
+	// 自定义样式槽（<style id="deck-custom">）。写入是"整体替换 + 清洗"，
+	// 且整份 deck 的历史快照覆盖它——写坏了能回滚。
+	CustomCSS bool `yaml:"custom_css"`
 }
 
 type Server struct {

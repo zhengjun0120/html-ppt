@@ -161,7 +161,14 @@ func ensureThemeBlocks(doc *goquery.Document) (Theme, error) {
 		js = doc.Find(`#deck-theme`)
 	}
 	if doc.Find(`#deck-theme-override`).Length() == 0 {
-		doc.Find("head").AppendHtml(`<style id="deck-theme-override"></style>`)
+		// 级联顺序不变量：override 必须排在自定义样式槽之前（否则自定义样式会被
+		// 主题派生变量盖掉）。槽可能已经被 ensureCustomCSSBlock 补出来，所以
+		// 有槽时插在它前面，而不是无脑 append 到 head 末尾。
+		if custom := doc.Find("#" + customCSSBlockID); custom.Length() > 0 {
+			custom.First().BeforeHtml(`<style id="deck-theme-override"></style>`)
+		} else {
+			doc.Find("head").AppendHtml(`<style id="deck-theme-override"></style>`)
+		}
 	}
 
 	theme := defaultTheme()

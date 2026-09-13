@@ -17,6 +17,9 @@
        默认值与 theme.css 的 :root 保持一致，改默认主题两处一起改 -->
   <script type="application/json" id="deck-theme">{"accent":"#5eead4","background":"#0b132b","heading_color":"#5eead4","text_color":"#e2e8f0","font":"sans","radius":"10px","transition":"slide"}</script>
   <style id="deck-theme-override"></style>
+  <!-- 第②.5层：deck 自定义样式槽（由 update_custom_css 整体替换，级联在组件库之后）。
+       老 deck 没有这个块，读写路径上会按需补出来，见 ensureCustomCSSBlock -->
+  <style id="deck-custom"></style>
 </head>
 <body>
   <div class="reveal">

@@ -455,6 +455,68 @@ func fmtUnixTime(unix int64) string{
 	return time.Unix(unix,0).Format("2006-01-02 15:04")
 }
 
+// ---------- deck 自定义样式槽（features.custom_css 打开时才挂载）----------
+// 整体替换制：改之前必须先 read，提交的内容就是该 deck 的全部自定义样式。
+
+type ReadCustomCSSArgs struct {
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
+}
+
+type customCSSResult struct {
+	DeckID  string `json:"deck_id"`
+	CSS     string `json:"css"`
+	Bytes   int    `json:"bytes"`
+	Cleared bool   `json:"cleared,omitempty"` // 仅 update 返回：true = 本次已清空
+}
+
+func (a *AgentService) toolReadCustomCSS(ctx context.Context, arguments string) (string, error) {
+	uid, err := toolUID(ctx)
+	if err != nil {
+		return "", err
+	}
+	var args ReadCustomCSSArgs
+	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
+		return "", fmt.Errorf("read_custom_css 参数不是合法json err：%w", err)
+	}
+	if !deck.IsValidID(args.DeckID) {
+		return "", fmt.Errorf("deck_id %q 不合法", args.DeckID)
+	}
+	css, err := a.DeckService.ReadCustomCSS(uid, args.DeckID)
+	if err != nil {
+		return "", err
+	}
+	return marshalNoEscape(customCSSResult{DeckID: args.DeckID, CSS: css, Bytes: len(css)})
+}
+
+type UpdateCustomCSSArgs struct {
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
+	CSS    string `json:"css" jsonschema:"required,type=string,description=该 deck 的完整自定义 CSS。整体替换：本次提交就是全部自定义样式，不是追加。空字符串 = 清空全部自定义样式。"`
+}
+
+func (a *AgentService) toolUpdateCustomCSS(ctx context.Context, arguments string) (string, error) {
+	uid, err := toolUID(ctx)
+	if err != nil {
+		return "", err
+	}
+	var args UpdateCustomCSSArgs
+	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
+		return "", fmt.Errorf("update_custom_css 参数不是合法json err：%w", err)
+	}
+	if !deck.IsValidID(args.DeckID) {
+		return "", fmt.Errorf("deck_id %q 不合法", args.DeckID)
+	}
+	clean, err := a.DeckService.UpdateCustomCSS(uid, args.DeckID, args.CSS)
+	if err != nil {
+		return "", err
+	}
+	return marshalNoEscape(customCSSResult{
+		DeckID:  args.DeckID,
+		CSS:     clean,
+		Bytes:   len(clean),
+		Cleared: clean == "",
+	})
+}
+
 // generateSchema 把 Go struct 反射成 OpenAI 工具参数 schema。
 // 启动时调用一次并缓存即可，不要放在请求路径上反射。
 func generateSchema[T any]() openai.FunctionParameters {
@@ -488,7 +550,7 @@ func generateSchema[T any]() openai.FunctionParameters {
 }
 
 func (a *AgentService)buildTools () map[string]Tool{
-	return map[string]Tool{
+	tools := map[string]Tool{
 		"write_deck":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "write_deck",
@@ -570,4 +632,27 @@ func (a *AgentService)buildTools () map[string]Tool{
 			Execute: a.toolListHistory,
 		},
 	}
+
+	// 自定义样式槽：关掉开关时连工具都不挂载（不是"看得到但一律拒绝"，
+	// 那只会让模型浪费轮次去试），见 config.Features。
+	if a.CustomCSS {
+		tools["read_custom_css"] = Tool{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "read_custom_css",
+				Description: openai.String("读取该 deck 当前的自定义 CSS（deck 级样式槽，级联在组件库之后）。修改自定义样式之前必须先读：update_custom_css 是整体替换制，不先读就会拿想象的旧内容覆盖真实内容。"),
+				Parameters: generateSchema[ReadCustomCSSArgs](),
+			}),
+			Execute: a.toolReadCustomCSS,
+		}
+		tools["update_custom_css"] = Tool{
+			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name: "update_custom_css",
+				Description: openai.String("整体替换该 deck 的自定义 CSS。用法：① 先用 read_custom_css 拿到当前内容；② 在它基础上改；③ 提交全文（不是只提交改动片段）；空字符串 = 清空。只写 CSS，不要 @import / url() / </style>。三条硬规矩：优先改主题变量（var(--accent) 等）而不是写死颜色，否则 update_theme 会失效；不要用选择器动 reveal 的框架类（.reveal/.slides/.controls/.progress），会破坏翻页和演示控件；页面逐个元素的小改动用 update_slide 的内联 style 更合适，这个槽是给'整套视觉风格'用的。第一次给某份 deck 写自定义样式前，先用 ask_user 跟用户确认一次意图。"),
+				Parameters: generateSchema[UpdateCustomCSSArgs](),
+			}),
+			Execute: a.toolUpdateCustomCSS,
+		}
+	}
+
+	return tools
 }

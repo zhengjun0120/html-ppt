@@ -21,8 +21,13 @@
 | 12 | `move_slide` | 2+ 可选 | 调整页序 | ☐ |
 | 13 | `read_history_diff` | 4 | 对比两份状态，看清某一轮改了什么（只读） | ☑ |
 | 14 | `list_history` | 4 | 版本历史列表，取版本号（只读，分页） | ☑ |
+| 15 | `read_custom_css` | 4 | 读 deck 级自定义样式槽（只读） | ☑ |
+| 16 | `update_custom_css` | 4 | 整体替换自定义样式（清洗规则 + 可回滚） | ☑ |
 
-实现顺序：1 → 3/4/5 → 6/7 → 8/9 → 10 →（阶段3）11 → 12 →（阶段4 版本控制）13/14。
+实现顺序：1 → 3/4/5 → 6/7 → 8/9 → 10 →（阶段3）11 → 12 →（阶段4 版本控制）13/14 →（阶段4 样式槽）15/16。
+
+> 15/16 由 `features.custom_css` 开关控制（见 config.go 的 Features）：**关掉时连工具都不挂载**，
+> 而不是"看得到但一律拒绝"——后者只会让模型浪费轮次去试。
 
 ## 通用实现骨架
 
@@ -186,6 +191,43 @@
   - `version`（如 `v000003`）就是 §13 的 `from_version` / `to_version` 取值——两个工具闭环
   - 只读；**没有 restore 工具**：恢复由用户在界面上操作（防模型误恢复），
     工具 description 里明确告知模型"引导用户去界面操作"
+
+---
+
+## 15. read_custom_css / 16. update_custom_css —— deck 级自定义样式槽 ☑
+
+**槽是什么**：deck.html 的 `<head>` 里一个 `<style id="deck-custom">`，级联在组件库与主题
+override 之后。它是"框架层给 AI 开的一个洞"——页面内容区仍然禁 `<style>`，这个洞单独收口。
+
+**为什么放在 deck 里而不是单独文件**：
+- 整份 deck 的历史快照覆盖它 → 写坏了能一键回滚（这是放开这份自由度的前提）；
+- 导出成单文件时天然在内，不需要额外处理；
+- `update_theme` 的真身（JSON 块 + override 块）本来就在这儿，字体槽将来也放这里，
+  一个 deck 的视觉配置只在一个地方。
+
+**15. read_custom_css**
+- **参数**：`{ deck_id }`
+- **返回**：`{ deck_id, css, bytes }`——老 deck 还没槽时返回空串
+
+**16. update_custom_css**
+- **参数**：`{ deck_id, css }`——`css` 是**该 deck 的全部自定义样式**（整体替换，不是追加）；
+  空字符串 = 清空。所以工作流是：`read_custom_css` → 改 → 提交全文
+- **返回**：`{ deck_id, css, bytes, cleared }`
+- **校验（清洗规则）**——挡的是"通道"而不是"风格"：
+  - `</style` 拒绝（会提前终止 raw-text 样式块，破坏整份文档）
+  - `@import` 拒绝（外部样式表 = 外部依赖 + 数据外发通道）
+  - `url()` 拒绝（会发起外部请求；图片走 `<img>`，字体内嵌留给字体功能）
+  - `expression(` 拒绝（可执行代码的老写法）
+  - 32KB 上限（同时是 token 护栏）
+  - 风格偏离**不校验**：由用户看着预览决定，不满意就回滚历史
+- **刻意不做指纹校验**：槽只有一个写入者（agent），且历史快照兜底，冲突代价低——同 `update_theme`
+- **级联不变量**：`#deck-theme-override` 必须在 `#deck-custom` 之前。两条补块路径都要守住
+  （先建槽再建主题块 / 反过来），否则自定义样式会被主题派生变量盖掉——这种 bug 在页面上
+  表现为"我写了 CSS 但没生效"，最难排查。回归测试在 `custom_css_test.go` 的
+  `TestCustomCSSBlockPlacement`
+- **老 deck 迁移**：骨架只在 `write_deck` 时固化一次，所以老 deck 没有这个块——
+  首次写入时按需补出来（`ensureCustomCSSBlock`），和 `ensureThemeBlocks` 同一套路，
+  不写独立迁移脚本
 
 ---
 

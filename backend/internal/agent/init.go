@@ -25,11 +25,13 @@ type AgentService struct {
 	Exec        map[string]ToolFunc
 	st          *store.Store // BYOK：查用户密钥密文
 	box         *cryptox.Box // BYOK：解密；nil = BYOK 关闭
+	// CustomCSS = features.custom_css：关闭时 buildTools 不挂载两个自定义样式工具
+	CustomCSS bool
 }
 
 var agentServer *AgentService
 
-func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckService *deck.Service) error {
+func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckService *deck.Service, features config.Features) error {
 
 	if cfg.APIKey == "" {
 		return errors.New("LLM api_key 未配置（config.yaml 或环境变量 LLM_API_KEY）")
@@ -50,6 +52,7 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 		Exec:        make(map[string]ToolFunc),
 		st:          st,
 		box:         box,
+		CustomCSS:   features.CustomCSS,
 	}
 
 	tools := agentServer.buildTools()

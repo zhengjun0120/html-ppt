@@ -72,6 +72,55 @@ var(--text-muted) 次要文字、var(--card-bg) 卡片底色、var(--border) 边
   <p class="muted">结论：用户数据一律走方案 B</p>
 </section>
 
+# 样式自由度：四层，从窄到宽，不要跳层
+
+1. **组件库 class**（首选）——`.card` `.grid-2` `.quote` `.steps` `.badge` `.tag` `.muted` `.footer`。
+   能用组件表达的，就用组件。
+2. **内联 style + 主题变量**——单个元素/单页的微调。例：`style="color:var(--accent)"`。
+3. **`update_theme`**——整套观感（强调色、背景、标题色、正文色、字体、圆角、翻页动画）。
+   用户说"换个风格/换配色/换字体/换个感觉"时用这个，不要用样式槽去逐个覆盖。
+4. **`update_custom_css`**（最后手段）——deck 级自定义样式槽，用于组件库表达不了的视觉语言
+   （特殊的渐变、阴影、动效质感、给某类卡片换一套皮肤）。**它会影响整套 deck，且是整体替换制**，
+   所以：改动前先用 `read_custom_css` 拿到当前内容；第一次给某份 deck 用它之前，先用 `ask_user` 跟用户确认意图。
+
+元素级的小改（这一页的标题换个色、这个卡片宽一点）走第 2 层（`update_slide` 的内联 style），
+不要为一个小改动动用第 4 层——那会让整套 deck 背上全局样式。
+
+## 可用变量白名单（只允许用这些）
+
+```
+--accent          强调色（边框/卡片底色由它派生）
+--border          边框色（accent 的 25% 透明版本）
+--card-bg         卡片底色
+--text-muted      次要文字
+--radius          卡片圆角
+--space-md / --space-lg   间距
+--r-background-color  页面背景
+--r-main-color        正文色
+--r-heading-color     标题色
+--r-link-color        链接色
+--r-main-font / --r-heading-font   字体栈
+--r-code-font         代码字体
+```
+
+**写白名单以外的变量名不会有任何效果**（没有元素消费它）——那是最难自查的一类失败。
+需要新变量时，改用上面白名单里的变量组合出效果。
+
+## 偏离主题的规则
+
+- 用户**没有**明确要求偏离时：一律用 `var(--xxx)`，不要写死颜色值。
+  写死颜色会让 `update_theme` 失效（用户之后换配色，那些硬编码的地方不会变）。
+- 用户**明确**要求时（"这页要深紫渐变""标题用金色"）：可以直接写值，
+  但只在那处写，不要把整套 deck 带偏。
+
+## 自定义样式槽的三条硬规矩（`update_custom_css`）
+
+- 只写 CSS。不要 `@import`、不要 `url()`、不要 `</style>`——这些会被直接拒收。
+- 不要用选择器动 reveal 的框架类（`.reveal` / `.slides` / `.controls` / `.progress`）：
+  会破坏翻页和演示控件。
+- 优先改**变量**（`:root{--accent:#ff8800}`）而不是逐个类去覆盖——改变量能自动带动所有派生效果
+  （边框、卡片底色、强调元素），覆盖面大得多，也更容易与 `update_theme` 共存。
+
 # 标准工作流
 
 - 新建 deck：用 write_deck 一次性提交全部 <section>（按页序拼接），先想好大纲再动手。
