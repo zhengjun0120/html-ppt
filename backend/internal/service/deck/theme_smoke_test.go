@@ -46,7 +46,9 @@ func TestThemeFlow(t *testing.T) {
 	accent := "#E8734A"
 	transition := "fade"
 	patch := ThemePatch{Accent: &accent, Transition: &transition}
-	patch.applyTo(&theme)
+	if err := patch.applyTo(&theme); err != nil {
+		t.Fatal(err)
+	}
 	if err := theme.validate(); err != nil {
 		t.Fatal(err)
 	}
@@ -58,11 +60,18 @@ func TestThemeFlow(t *testing.T) {
 	if !strings.Contains(css, "--accent:#e8734a;") {
 		t.Fatalf("accent 未生效: %s", css)
 	}
-	if !strings.Contains(css, "--border:rgba(232, 115, 74, 0.25);") {
-		t.Fatalf("border 派生失败: %s", css)
+	// 面板色与边框色现在是**显式字段**（默认纸感给了明确取值：中性纸面 + 墨色发丝线），
+	// 所以只改 accent 不该把它们一起换掉——派生只在字段留空时兜底。
+	// 这一条同时守住"老 deck 的观感不被新默认值改写"（老 deck 没这两个字段 → 仍走派生）。
+	if !strings.Contains(css, "--border:"+defaultTheme().BorderColor+";") {
+		t.Fatalf("border 是显式字段，不该被 accent 改写: %s", css)
 	}
-	if !strings.Contains(css, "--card-bg:rgba(232, 115, 74, 0.06);") {
-		t.Fatalf("card-bg 派生失败: %s", css)
+	if !strings.Contains(css, "--card-bg:"+defaultTheme().Surface+";") {
+		t.Fatalf("card-bg 是显式字段，不该被 accent 改写: %s", css)
+	}
+	// 强调色改了，跟着它走的派生量必须跟着变
+	if !strings.Contains(css, "--accent-soft:rgba(232, 115, 74, 0.14);") {
+		t.Fatalf("accent-soft 应随 accent 派生: %s", css)
 	}
 
 	// 3. 模拟下一次 update_theme 的读回：改过的值必须原样回来

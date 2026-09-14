@@ -48,23 +48,26 @@ func TestCanvasPresetsMatchInitJS(t *testing.T) {
 		}
 	}
 
-	// 兜底必须与 standard 一致：主题块缺失/损坏时两边各自退回默认，退到不同值就会错位
-	def := canvasPresets[CanvasStandard]
+	// 兜底必须与 DefaultCanvas 一致：主题块缺失/损坏时前端按一个尺寸摆、后端按另一个存，
+	// 两边就会错位——页面看起来"没坏"，只是位置全不对，最难查。
 	fallbackRe := regexp.MustCompile(`CANVAS\[deckTheme\.canvas\]\s*\|\|\s*CANVAS\.(\w+)`)
 	if m := fallbackRe.FindStringSubmatch(src); m == nil {
 		t.Error("init.js 里找不到画布兜底表达式（CANVAS[deckTheme.canvas] || CANVAS.xxx）")
-	} else if m[1] != CanvasStandard {
-		t.Errorf("init.js 的兜底预设是 %q，应与 CanvasStandard=%q 一致", m[1], CanvasStandard)
+	} else if m[1] != DefaultCanvas {
+		t.Errorf("init.js 的兜底预设是 %q，应与 DefaultCanvas=%q 一致", m[1], DefaultCanvas)
 	}
-	if !strings.Contains(src, "width: "+strconv.Itoa(def[0])) && !strings.Contains(src, "width: "+strconv.Itoa(def[0])+",") {
-		t.Errorf("init.js 里应出现 standard 的宽度 %d", def[0])
+	// DefaultCanvas 是"新建 deck 用哪个画布"的唯一出处：defaultTheme 与 init.js 的兜底
+	// 都得从它来，否则改了常量却漏改一处，就又回到上面那种错位
+	if got := defaultTheme().Canvas; got != DefaultCanvas {
+		t.Errorf("defaultTheme().Canvas=%q 与 DefaultCanvas=%q 不一致", got, DefaultCanvas)
 	}
 }
 
 func TestCanvasSizeFallsBackToDefault(t *testing.T) {
+	want := canvasPresets[DefaultCanvas]
 	w, h := CanvasSize("nonsense")
-	if w != 960 || h != 700 {
-		t.Fatalf("未知预设应退回 960×700，实际 %dx%d", w, h)
+	if w != want[0] || h != want[1] {
+		t.Fatalf("未知预设应退回默认画布 %dx%d，实际 %dx%d", want[0], want[1], w, h)
 	}
 	// 高度必须恒为 700：容量由高度决定，换比例不该改变一页能放多少内容
 	for name, size := range canvasPresets {
@@ -159,8 +162,15 @@ func TestRenderThemeCSSIsDeterministic(t *testing.T) {
 	if !(iAlpha < iMid && iMid < iZeta) {
 		t.Errorf("自定义变量应按名字排序渲染: alpha@%d mid@%d zeta@%d", iAlpha, iMid, iZeta)
 	}
-	// 派生变量仍然在位（自定义调色板不该挤掉它们）
-	for _, want := range []string{"--accent:#5eead4", "--border:", "--card-bg:", "--radius:10px"} {
+	// 派生变量仍然在位（自定义调色板不该挤掉它们）。
+	// 期望值从 defaultTheme() 现取而不是硬编码：默认主题是一份会被调整的设计决定，
+	// 把它的取值抄进测试，改一次默认配色就要来修一次测试——测试该守的是"派生变量没丢"，
+	// 不是"默认色号是某个特定值"。
+	def := defaultTheme()
+	for _, want := range []string{
+		"--accent:" + def.Accent + ";", "--border:", "--card-bg:",
+		"--accent-soft:", "--on-accent:", "--radius:" + def.Radius + ";",
+	} {
 		if !strings.Contains(first, want) {
 			t.Errorf("派生变量 %q 丢了: %s", want, first)
 		}

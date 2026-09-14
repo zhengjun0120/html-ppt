@@ -5,9 +5,12 @@ package agent
 // 只会让模型反复尝试、浪费轮次。
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+
+	"html-ppt/backend/internal/service/deck"
 )
 
 func TestBuildToolsFeatureGating(t *testing.T) {
@@ -92,6 +95,83 @@ func TestSchemaDescriptionsHaveNoASCIIComma(t *testing.T) {
 			if strings.TrimSpace(desc) == "" {
 				t.Errorf("%s.%s 的 description 是空的", typ.Name(), f.Name)
 			}
+		}
+	}
+}
+
+// schemaEnum 从生成的工具 schema 里取某个字段的 enum 取值。
+// 直接拿真实 schema 而不是手写的期望值：这个测试要守的正是"模型看到的那份 schema"。
+func schemaEnum(t *testing.T, field string) []string {
+	t.Helper()
+	raw, err := json.Marshal(generateSchema[UpdateThemeArgs]())
+	if err != nil {
+		t.Fatalf("序列化 schema 失败: %v", err)
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatalf("反序列化 schema 失败: %v", err)
+	}
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("schema 里没有 properties: %v", schema)
+	}
+	prop, ok := props[field].(map[string]any)
+	if !ok {
+		t.Fatalf("schema 里没有字段 %s", field)
+	}
+	list, ok := prop["enum"].([]any)
+	if !ok {
+		t.Fatalf("字段 %s 没有 enum（模型会以为可以随便传值）: %v", field, prop)
+	}
+	out := make([]string, 0, len(list))
+	for _, v := range list {
+		s, _ := v.(string)
+		out = append(out, s)
+	}
+	return out
+}
+
+// TestThemeSchemaEnumsMatchCodeTables 守一条只能靠测试维持的一致性：
+// 枚举取值同时存在于两处——struct tag 里的 enum（模型看到的）与 deck 包里的表
+// （校验与渲染真正认的）。jsonschema 库不支持动态枚举，所以两处无法合成一处，
+// 只能测。漂移的后果是"模型写得出、却被校验拒掉"，而且报错看起来毫无道理。
+func TestThemeSchemaEnumsMatchCodeTables(t *testing.T) {
+	for _, c := range []struct {
+		field string
+		want  []string
+	}{
+		{"preset", deck.PresetNames()},
+		{"font", deck.FontNames()},
+		{"texture", deck.TextureNames()},
+		{"canvas", deck.CanvasNames()},
+		{"transition", deck.TransitionNames()},
+	} {
+		got := schemaEnum(t, c.field)
+		if strings.Join(got, ",") != strings.Join(c.want, ",") {
+			t.Errorf("update_theme 的 %s 枚举与代码里的表不一致：\n  模型看到的=%v\n  代码实际认的=%v",
+				c.field, got, c.want)
+		}
+	}
+}
+
+// 预设清单必须真的出现在 update_theme 的工具说明里：模型选预设靠的就是这段文字，
+// 而它由 deck.PresetSummary() 生成（不在 prompt 里另抄一份，否则迟早只说一半）。
+func TestPresetSummaryReachesToolDescription(t *testing.T) {
+	svc := &AgentService{}
+	tool, ok := svc.buildTools()["update_theme"]
+	if !ok {
+		t.Fatal("没有 update_theme 工具")
+	}
+	desc := tool.Definition.OfFunction.Function.Description.Value
+	if desc == "" {
+		t.Fatal("update_theme 没有 description")
+	}
+	for _, p := range deck.Presets() {
+		if !strings.Contains(desc, p.Name) {
+			t.Errorf("工具说明里缺少预设 %s：模型没有机会选它", p.Name)
+		}
+		if !strings.Contains(desc, p.About) {
+			t.Errorf("工具说明里缺少预设 %s 的适用场合说明", p.Name)
 		}
 	}
 }

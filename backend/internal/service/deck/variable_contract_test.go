@@ -205,7 +205,8 @@ func TestRealVariableContract(t *testing.T) {
 	// 与 systemPrompt.md 的「可用变量白名单」一一对应
 	promptWhitelist := []string{
 		"--accent", "--border", "--card-bg", "--text-muted", "--radius",
-		"--space-md", "--space-lg",
+		"--accent-soft", "--on-accent", "--hairline",
+		"--space-2xs", "--space-xs", "--space-sm", "--space-md", "--space-lg",
 		"--r-background-color", "--r-main-color", "--r-heading-color", "--r-link-color",
 		"--r-main-font", "--r-heading-font", "--r-code-font",
 	}

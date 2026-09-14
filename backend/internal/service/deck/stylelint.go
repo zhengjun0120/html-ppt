@@ -25,9 +25,12 @@ import (
 const (
 	lintHardColorLimit = 3 // 写死的颜色值达到这个数才提示（1~2 处往往是刻意的偏离）
 	lintPxFontLimit    = 3 // 同上，px 字号
-	lintDupLimit       = 3 // 同一串 style 值出现到这个数才提示
-	lintMaxSamples     = 2 // 提示里最多举几个例子
-	lintSampleRunes    = 46
+	// 内联字号是"一次就够"：组件库的字号是六档阶梯，任何手写的字号都会插进两档之间，
+	// 而且 prompt 里是明令禁止的（见"字号不要自己定"一节），所以 1 处就提示。
+	lintInlineFontLimit = 1
+	lintDupLimit        = 3 // 同一串 style 值出现到这个数才提示
+	lintMaxSamples      = 2 // 提示里最多举几个例子
+	lintSampleRunes     = 46
 )
 
 var (
@@ -49,11 +52,12 @@ var themeLevelProps = map[string]bool{
 }
 
 type styleReport struct {
-	HardColors   int      // 内联样式里写死的颜色值数量
-	PxFontSizes  int      // 内联样式里的 px 字号数量
-	DupStyles    int      // 落在"重复值"上的内联样式总条数
-	DupSamples   []string // 重复值样本（形如 "display:flex; …" ×4）
-	SectionProps []string // 直接写在 <section> 上的主题级属性名
+	HardColors     int      // 内联样式里写死的颜色值数量
+	PxFontSizes    int      // 内联样式里的 px 字号数量
+	InlineFontSize int      // 内联样式里自己定的字号（不论单位）——插进阶梯两档之间
+	DupStyles      int      // 落在"重复值"上的内联样式总条数
+	DupSamples     []string // 重复值样本（形如 "display:flex; …" ×4）
+	SectionProps   []string // 直接写在 <section> 上的主题级属性名
 }
 
 // styleLinter 是跨页累加器。必须跨页统计：页码角标、讲次提头这类"页面家具"
@@ -88,8 +92,13 @@ func (l *styleLinter) scan(style string, isSection bool) {
 		if hardColorRe.MatchString(d.value) {
 			l.rep.HardColors++
 		}
-		if isPxFontSize(d.prop, d.value) {
+		// px 字号与"自己定字号"互斥：一条声明只报一次，报的是更要紧的那个问题。
+		// （px 字号两个毛病都占：不随适配兜底缩放，也不在阶梯上。）
+		switch {
+		case isPxFontSize(d.prop, d.value):
 			l.rep.PxFontSizes++
+		case !isSection && isFontSizeProp(d.prop):
+			l.rep.InlineFontSize++
 		}
 		if isSection && themeLevelProps[d.prop] {
 			l.rep.SectionProps = appendUnique(l.rep.SectionProps, d.prop)
@@ -149,6 +158,12 @@ func (r styleReport) Warning() string {
 		parts = append(parts, fmt.Sprintf(
 			"%d 处 px 字号，不随适配兜底等比缩放（装不下时会被裁掉），改用 em", r.PxFontSizes))
 	}
+	if r.InlineFontSize >= lintInlineFontLimit {
+		parts = append(parts, fmt.Sprintf(
+			"%d 处内联 font-size：组件库的字号是固定阶梯（0.7 / 0.92 / 1.1 / 1.32 / 1.6 / 2.4 倍基准），"+
+				"手写的字号会插进两档之间，让人读不出哪一层更重要。要突出就用角色类（.stat / .term / .label / .band），"+
+				"或把它单独放一页用 .bleed；整份 deck 字太小请调 update_theme 的 canvas", r.InlineFontSize))
+	}
 	if r.DupStyles > 0 {
 		parts = append(parts, fmt.Sprintf(
 			"有 %d 处内联样式落在重复值上（%s）——同一个 style 值出现第 2 次就该改用组件库 class，先 read_component 看有哪些可用",
@@ -195,10 +210,15 @@ func canonicalStyle(decls []styleDecl) string {
 }
 
 func isPxFontSize(prop, value string) bool {
-	if prop != "font-size" && prop != "font" {
+	if !isFontSizeProp(prop) {
 		return false
 	}
 	return strings.Contains(strings.ToLower(value), "px")
+}
+
+// isFontSizeProp 判断这条声明是不是在设字号（简写 font 也算）。
+func isFontSizeProp(prop string) bool {
+	return prop == "font-size" || prop == "font"
 }
 
 func appendUnique(list []string, v string) []string {

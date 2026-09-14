@@ -3,26 +3,86 @@
    换主题 = 换一份这样的变量定义。变量契约 v1：
    - 组件结构层只引用这些变量，不定义颜色
    - 加载顺序：reveal.css → moon.css(兜底) → theme.css(本文件，最后加载优先)
-   骨架阶段手写默认值；阶段4接 update_theme 时由后端把 JSON 配置渲染进这里。
+   这里的 :root 是**兜底皮肤**（deck 主题块缺失/损坏时生效），取值必须与
+   internal/service/deck/theme.go 的 defaultTheme() 一致——两处耦合，改一处必改另一处。
+   正常路径下每个 deck 都有自己的主题块，它排在所有 <link> 之后、盖过本文件。
+
+   下面两组"阶梯"（字号 / 间距）不属于主题：它们是组件库的结构常数，任何主题都一样，
+   所以只在这里定义一次、组件库只引用，不进主题块。
    ============================================================ */
 :root {
-  /* reveal.js 官方变量 */
-  --r-background-color: #0b132b;
-  --r-main-color: #e2e8f0;
-  --r-heading-color: #5eead4;
-  --r-link-color: #2dd4bf;
-  --r-main-font: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --r-heading-font: var(--r-main-font);
+  /* ---------- reveal.js 官方变量 ---------- */
+  --r-background-color: #f6f2e9;
+  --r-main-color: #2b2723;
+  --r-heading-color: #1c1a17;
+  --r-link-color: #b23a2e;
+  /* 字体是**配对**而不是一套栈：标题衬线、正文无衬线，是中文编辑风的经典组合。
+     两边都用同一套栈（"随便挑一个不会出错的字体"）是模板感最稳定的来源之一。 */
+  --r-main-font: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --r-heading-font: "Songti SC", "SimSun", Georgia, "Times New Roman", serif;
   --r-code-font: Consolas, "JetBrains Mono", monospace;
 
-  /* 组件库引用的业务变量 */
-  --accent: #5eead4;
-  --border: rgba(94, 234, 212, 0.25);
-  --card-bg: rgba(94, 234, 212, 0.06);
-  --text-muted: #94a3b8;
-  --radius: 10px;
-  --space-md: 0.6em;
-  --space-lg: 1.2em;
+  /* ---------- 字号阶梯 ----------
+     正文 = 1.1em = 37px ≈ 29pt（投射到 16:9 屏上；1 canvas px ≈ 0.77pt）。
+     三条约束决定了这套取值：
+       1. **投影可读下限 = 24pt ≈ 31px ≈ 0.92em**。任何要读的文字都不许低于它，
+          这就是 --fs-small 为什么停在 0.92 而不是更小。
+       2. **相邻档的比例 ≥1.2**。第一版是 0.92/1/1.1/1.55/2.4，量出来
+          小字端三档的比例只有 1.09（27.7/30.1/33.1px）——在视觉上仍是一个字号。
+          所以砍掉中间那档（0.92 → 1.1 直接相接，比例 1.2），正文顺带进了
+          推荐带 28~32pt（原方案是 26pt，卡在下限上）。
+       3. **一个版面 ≤5 档**。原来组件库有 8 档，其中五档挤在 4px 带宽里，
+          于是"层级"只剩标题和其余、中间是空的——这是排版显得业余最常见的原因，
+          也是最难自己看出来的那一种（靠眼睛看只能得到"说不上哪里怪"）。
+     辅色（--text-muted）负责剩下那一档区分：0.92em + 弱化色，读起来才是一个"次要"层。*/
+  --fs-label: 0.7em;      /* 24px 18pt  只给标记：提头、徽章、标签、页脚 */
+  --fs-small: 0.92em;     /* 31px 24pt  次要说明：.sub / .footnote / .note（投影下限）*/
+  --fs-body: 1.1em;       /* 37px 29pt  正文、清单行、引用、卡片正文 */
+  --fs-title: 1.32em;     /* 45px 35pt  块内小标题：卡片 h3/h4、.term、.label */
+  --fs-h3: 1.6em;         /* 54px 42pt  页面内三级标题 */
+  --fs-display: 2.4em;    /* 82px 63pt  视觉焦点：hero 数字、一章一句话 */
+  /* 页面标题（h2）是 reveal 的 2.11em = 72px = 55pt，由 moon.css 的
+     --r-heading2-size 提供。含它共 7 档，但一个页面通常只用 4 档。*/
+  --r-heading3-size: var(--fs-h3);
+
+  /* ---------- 间距阶梯（8px 基准）----------
+     8/16/24/32/48px。为什么不写 px：适配兜底缩放的是 section 的 font-size，
+     px 不跟着缩，装不下时勾不出正确的收缩比例。投影关系是 1px ≈ 0.77pt，所以
+     8px ≈ 0.24em。至少三档是硬要求——只有两档时，"组内"和"组间"必然撞在同一个值上
+     （原来 --space-md=0.6em / --space-lg=1.2em 就只有两档，于是卡片之间的距离
+     正好等于卡片自己的内边距，三张卡片读起来是一条带子而不是三个块）。*/
+  --space-2xs: 0.24em;    /*  8px  组内最小间隔：标题与它的正文 */
+  --space-xs: 0.47em;     /* 16px  同一块内的段落之间 */
+  --space-sm: 0.7em;      /* 24px  块内容器的内边距 */
+  --space-md: 0.94em;     /* 32px  并列块之间 */
+  --space-lg: 1.41em;     /* 48px  不同分组之间 */
+
+  /* ---------- 画布安全边距 ----------
+     内容不许贴边：这是所有排版规范里最基础的一条，也是原来缺得最狠的一条
+     （section 的 padding 是 0，标题、清单全部顶着画布左右边缘）。
+     6% 是"均衡型版面"的通行值（极简页 10%+、数据密集页 5~8%）；投影仪还会把
+     边缘裁掉最多 5%，贴边等于把内容送进裁刀。滚动兜底按内容高度算，会自动让出这块。
+
+     取值按**默认画布**（wide，1244×700）的 6% 折算：横向 75px、纵向 41px。
+     三个预设共用同一组 em，所以换成 standard(960)/classic(933) 时横向变成 7.8%/8%，
+     仍在通行区间内——成本是多让出一点版面，好处是"边距会不会不够"不用按预设分别想。*/
+  --slide-pad-x: 2.2em;   /*  75px ≈ 6% × 1244 */
+  --slide-pad-y: 1.2em;   /*  41px ≈ 6% × 700 */
+
+  /* ---------- 组件库引用的业务变量 ---------- */
+  --accent: #b23a2e;
+  /* surface / border_color 由主题字段给定；留空时由 accent 派生（见 renderThemeCSS）。
+     兜底皮肤这里是明确的纸感取值：中性面板 + 墨色发丝线 */
+  --border: #ded4c3;
+  --card-bg: #fffdf8;
+  /* 发丝线：**组内**的分隔（清单行、旁注顶线）。它比 --border 淡得多——
+     规范里"分组靠间距、不靠描边"的落点：组间用留白分开，组内才需要一根几乎看不见的线。
+     由正文色派生（不是强调色），所以深浅主题上都成立。*/
+  --hairline: rgba(43, 39, 35, 0.12);
+  --accent-soft: rgba(178, 58, 46, 0.14);
+  --on-accent: #ffffff;
+  --text-muted: #6f665c;
+  --radius: 2px;
 }
 
 .reveal {

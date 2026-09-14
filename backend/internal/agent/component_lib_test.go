@@ -154,11 +154,49 @@ func TestRealComponentLibraryContract(t *testing.T) {
 		"term", "label", "sub", "footnote", "stat", "unit",
 		// v2 网格扩展
 		"grid-3", "grid-4",
+		// v3 结构性版式（版式目录就是靠这些 class 落地的，缺一个就有一页没得选）
+		"split", "flip", "middle", "bleed", "plate", "timeline", "band", "marginal", "note",
 	}
 	for _, w := range want {
 		if !hasClassToken(names, w) {
 			t.Errorf("prompt 承诺的 .%s 在真实组件库里找不到（文档与实现漂移了）", w)
 		}
+	}
+
+	// v3 的每个版式类都必须带 .reveal 前缀：它们是"整块版式"，最可能被自定义槽或
+	// 页面内联样式覆盖，前缀不齐就会重演"写了 CSS 却没生效"
+	for _, w := range []string{"split", "bleed", "plate", "timeline", "band", "marginal"} {
+		rules, err := extractRules(string(css), w)
+		if err != nil {
+			t.Errorf("抽 .%s 失败: %v", w, err)
+			continue
+		}
+		if !strings.Contains(rules, ".reveal ."+w) {
+			t.Errorf(".%s 的规则应带 .reveal 前缀:\n%s", w, rules)
+		}
+	}
+
+	// v3 的宽容器要把文本角色类排除掉：`.reveal .bleed p`(0,2,1) 比 `.reveal .stat`(0,2,0)
+	// 高一级，"一页一个大数字"会被渲染成一坨普通大段落——不报错，只是不对。
+	// 这也正是 .card 那条守卫踩过的坑。
+	for _, w := range []string{"bleed", "band"} {
+		rules, err := extractRules(string(css), w)
+		if err != nil {
+			t.Fatalf("抽 .%s 失败: %v", w, err)
+		}
+		if len(guardRe.FindAllStringSubmatch(rules, -1)) == 0 {
+			t.Errorf(".%s 的 p 规则缺少 :where(:not(...)) 守卫：里面的角色类会静默失效", w)
+		}
+	}
+
+	// 组件库自己不许生产"左侧粗竖条"：一个彩色侧边条是模板感最容易被一眼认出来的
+	// 标记（也是"AI 生成界面"清单上排第一的那条）。 .quote 是唯一的例外——它真的是引用块。
+	if i := strings.Index(string(css), "组件集 v3"); i >= 0 {
+		if strings.Contains(string(css)[i:], "border-left") {
+			t.Error("v3 版式里出现了 border-left：左侧粗竖条是最典型的模板感标记，不要往组件库里再加")
+		}
+	} else {
+		t.Error("组件库里找不到「组件集 v3」分段标记")
 	}
 
 	// 真实文件里 .card 必须能抽到规则，且规则带 .reveal 前缀

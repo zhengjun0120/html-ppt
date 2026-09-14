@@ -2,6 +2,7 @@ package deck
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template" // 只为了 HTMLEscapeString；模板渲染在下面用 text/template
@@ -189,14 +190,23 @@ var skeletonSrc string
 
 var skeletonTmpl = texttemplate.Must(texttemplate.New("deck_skeleton").Parse(skeletonSrc))
 
-func renderSkeleton(escapedTitle,sections string) (string,error){
-	var sb strings.Builder
-	err := skeletonTmpl.Execute(&sb,struct{Title,Sections string}{escapedTitle,sections})
-
-	if err !=nil{
-		return "",fmt.Errorf("render skeleton: %w", err)
+// renderSkeleton 渲染骨架。ThemeJSON 从 defaultTheme() 现渲染而不是在骨架里手抄一份：
+// 手抄的那份没有任何机制保证它与 defaultTheme() 一致，而骨架真的会用到它
+// （新建的 deck 在第一次 update_theme 之前的主题就是它）——这类"两份真相"迟早漂移。
+func renderSkeleton(escapedTitle, sections string) (string, error) {
+	themeJSON, err := json.Marshal(defaultTheme())
+	if err != nil {
+		return "", fmt.Errorf("序列化默认主题: %w", err)
 	}
-	return sb.String(),nil
+	var sb strings.Builder
+	err = skeletonTmpl.Execute(&sb, struct{ Title, Sections, ThemeJSON string }{
+		escapedTitle, sections, string(themeJSON),
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("render skeleton: %w", err)
+	}
+	return sb.String(), nil
 }
 
 func (s *Service) atomicWriteDeck(id,content string) error{

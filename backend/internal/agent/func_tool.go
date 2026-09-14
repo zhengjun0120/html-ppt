@@ -271,16 +271,23 @@ func (a *AgentService) toolDeleteSlide(ctx context.Context,arguments string)(str
 }
 
 type UpdateThemeArgs struct {
-	DeckID       string  `json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
-	Accent       *string `json:"accent,omitempty" jsonschema:"type=string,description=强调色（6位十六进制，如 #5eead4），卡片边框和底色自动随之变化"`
+	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=目标 deck 的ID，例如 deck-0002"`
+	// 注意：description 里不能出现半角逗号（invopop/jsonschema 按半角逗号切键值对，
+	// 出现一个就会把后半段描述静默丢掉）。这里的清单由 deck.PresetSummary() 生成到
+	// 工具级 Description 里，字段级只留一句指引。
+	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
+	Accent       *string `json:"accent,omitempty" jsonschema:"type=string,description=强调色（6位十六进制，如 #b23a2e），卡片边框和底色默认随之派生"`
 	Background   *string `json:"background,omitempty" jsonschema:"type=string,description=页面背景色（6位十六进制）"`
 	HeadingColor *string `json:"heading_color,omitempty" jsonschema:"type=string,description=标题颜色（6位十六进制）"`
 	TextColor    *string `json:"text_color,omitempty" jsonschema:"type=string,description=正文颜色（6位十六进制）"`
-	Font         *string `json:"font,omitempty" jsonschema:"type=string,enum=sans,enum=serif,enum=mono,description=字体方案"`
-	Radius       *string `json:"radius,omitempty" jsonschema:"type=string,description=卡片圆角（带单位的长度值，如 10px）"`
+	Surface      *string `json:"surface,omitempty" jsonschema:"type=string,description=面板与卡片底色（6位十六进制）。留空 = 由 accent 派生一层淡染（暗底主题的发光面板就是这么来的）。浅色主题下要让卡片呈中性的纸面、而不是强调色的粉调时传它"`
+	BorderColor  *string `json:"border_color,omitempty" jsonschema:"type=string,description=边框与分隔线的颜色（6位十六进制）。留空 = 由 accent 派生。浅色主题下想要墨色发丝线而不是彩色线时传它"`
+	Font         *string `json:"font,omitempty" jsonschema:"type=string,enum=sans,enum=serif,enum=editorial,enum=modern,enum=mono,description=字体配对：sans 全无衬线 / serif 全衬线 / editorial 衬线标题+无衬线正文（中文杂志的经典组合）/ modern 几何无衬线 / mono 等宽"`
+	Radius       *string `json:"radius,omitempty" jsonschema:"type=string,description=卡片圆角（带单位的长度值，如 10px。0px = 直角——圆角卡片是最容易一眼认出的模板特征之一）"`
+	Texture      *string `json:"texture,omitempty" jsonschema:"type=string,enum=none,enum=grid,enum=dots,enum=rule,description=页面背景纹理：none 无 / grid 细网格（稿纸）/ dots 网点（印刷感）/ rule 横线（稿纸、终端扫描线）"`
 	Transition   *string `json:"transition,omitempty" jsonschema:"type=string,enum=slide,enum=fade,enum=zoom,enum=convex,enum=concave,enum=none,description=翻页动画"`
-	Canvas       *string `json:"canvas,omitempty" jsonschema:"type=string,enum=standard,enum=wide,enum=classic,description=画布比例预设（高度统一 700、只变宽度）：standard=960×700 通用；wide=16:9（与投屏/录屏比例一致、没有黑边、横向更宽松）；classic=4:3（老投影仪）。需要更宽或更密的版面时用它，不要在页面里写 width:1100px 之类的绝对尺寸"`
-	Vars         *map[string]string `json:"vars,omitempty" jsonschema:"type=object,description=自定义调色板（整体替换制）：键是变量名（-- 开头）值是 CSS 值。用于设计一整套自有配色；这些变量在页面里用 var(--xxx) 引用。不能定义主题契约变量（--accent / --border / --card-bg / --text-muted / --radius / --space-* / --r-*），那些改对应字段即可。传空对象等于清空整套。改之前先 read_theme 拿到当前整套——它会整体替换掉原有配色"`
+	Canvas       *string `json:"canvas,omitempty" jsonschema:"type=string,enum=standard,enum=wide,enum=classic,description=画布比例预设（高度统一 700、只变宽度）：wide=1244×700 是默认值（16:9、与投屏录屏比例一致没有黑边、横向最宽松）；standard=960×700 更紧凑；classic=933×700 用于 4:3 老投影仪。要整套调整版面的宽松度时用它，不要在页面里写 width:1100px 之类的绝对尺寸"`
+	Vars         *map[string]string `json:"vars,omitempty" jsonschema:"type=object,description=自定义调色板（整体替换制）：键是变量名（-- 开头）值是 CSS 值。用于设计一整套自有配色；这些变量在页面里用 var(--xxx) 引用。预设已经预置了 --accent-2 / --positive / --warn 三个语义色，需要区分正负或做双色对比时直接引用它们、不要重复定义。不能定义主题契约变量（--accent / --border / --card-bg / --on-accent / --accent-soft / --text-muted / --radius / --space-* / --r-*）——那些改对应字段即可。传空对象等于清空整套。改之前先 read_theme 拿到当前整套——它会整体替换掉原有配色"`
 }
 
 // ReadThemeArgs read_theme 的入参：只要 deck_id。
@@ -327,12 +334,16 @@ func (a *AgentService) toolUpdateTheme(ctx context.Context,arguments string)(str
 	}
 
 	theme,err := a.DeckService.UpdateTheme(uid,args.DeckID,deck.ThemePatch{
+		Preset:       args.Preset,
 		Accent:       args.Accent,
 		Background:   args.Background,
 		HeadingColor: args.HeadingColor,
 		TextColor:    args.TextColor,
+		Surface:      args.Surface,
+		BorderColor:  args.BorderColor,
 		Font:         args.Font,
 		Radius:       args.Radius,
+		Texture:      args.Texture,
 		Transition:   args.Transition,
 		Canvas:       args.Canvas,
 		Vars:         args.Vars,
@@ -680,7 +691,10 @@ func (a *AgentService)buildTools () map[string]Tool{
 		"update_theme":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "update_theme",
-				Description: openai.String("修改 deck 的全局主题：强调色、背景、标题色、正文色、字体、卡片圆角、翻页动画、画布比例、自定义调色板(vars)。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用；用户要'一套专门的配色'也用它——把整套颜色写进 vars（形如 {\"--surface\":\"#1e1836\",\"--positive\":\"#4ade80\"}），而不是在页面元素上写死颜色。本工具改的是主题变量，页面内容不受影响。改 vars 前先 read_theme：vars 是整体替换制。"),
+				Description: openai.String("修改 deck 的全局主题：风格预设、强调色、背景、标题色、正文色、面板色、边框色、字体配对、卡片圆角、页面纹理、翻页动画、画布比例、自定义调色板(vars)。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用；用户要'一套专门的配色'也用它——把整套颜色写进 vars（形如 {\"--surface\":\"#1e1836\",\"--positive\":\"#4ade80\"}），而不是在页面元素上写死颜色。本工具改的是主题变量，页面内容不受影响。改 vars 前先 read_theme：vars 是整体替换制。" +
+					"\n\n可用的风格预设（preset 参数，一个名字就是一整套观感，含配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）：\n" +
+					deck.PresetSummary() +
+					"\n\n用户说'换个风格''好看一点''专业一点'、或者从零开始做一份 deck 而用户没有明确视觉要求时：先选一个预设，这一步比逐个调颜色省事得多，也最不容易做出撞衫的东西。选完还可以在同一调用里传 accent / font 之类的单项做微调（预设是底子，显式字段优先）。反过来，没有明确要求时不要选 tech——它是'现代网页的最大公约数'，也就是最容易一眼看出是生成的那一套。"),
 				Parameters: generateSchema[UpdateThemeArgs](),
 			}),
 			Execute: a.toolUpdateTheme,

@@ -187,8 +187,13 @@ func TestRealHandWrittenDeckIsFlagged(t *testing.T) {
 	if w := rep.Warning(); !strings.Contains(w, "组件库 class") {
 		t.Fatalf("提示里应引导改用组件库 class: %s", w)
 	}
-	t.Logf("deck-0014 体检结果: 重复 %d 条 / 写死颜色 %d 处 / px 字号 %d 处 / section 级覆盖 %v",
-		rep.DupStyles, rep.HardColors, rep.PxFontSizes, rep.SectionProps)
+	// 这份 deck 里同一串页码样式抄了 8 遍，每遍都带一个手写的 font-size——
+	// 内联字号检测在真实产物上必须也报得出来
+	if rep.InlineFontSize == 0 {
+		t.Error("deck-0014 里有多处手写 font-size，一处都没报说明检测没接上")
+	}
+	t.Logf("deck-0014 体检结果: 重复 %d 条 / 写死颜色 %d 处 / px 字号 %d 处 / 内联字号 %d 处 / section 级覆盖 %v",
+		rep.DupStyles, rep.HardColors, rep.PxFontSizes, rep.InlineFontSize, rep.SectionProps)
 	t.Logf("样例: %v", rep.DupSamples)
 }
 
@@ -199,4 +204,43 @@ func containsStr(list []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// 内联字号：组件库的字号是固定阶梯（0.7 / 0.92 / 1.1 / 1.32 / 1.6 / 2.4 倍基准），
+// 手写的字号会插进两档之间，让"哪一层更重要"读不出来。
+// 与写死颜色不同，这里**1 处就提示**：颜色的偶尔偏离可以是刻意的设计，
+// 字号偏离则是把刚立起来的梯子拆掉，没有"偶尔"这回事。
+func TestStyleLintFlagsInlineFontSize(t *testing.T) {
+	html := `<section>
+	  <h2>标题</h2>
+	  <p style="font-size:1.3em">手动放大的一句</p>
+	  <p>正常的一句</p>
+	</section>`
+	rep := lintHTML(t, html)
+	if rep.InlineFontSize != 1 {
+		t.Fatalf("应报 1 处内联字号，实际 %d（%+v）", rep.InlineFontSize, rep)
+	}
+	// 提示语必须给出正确做法，否则模型只会把 1.3em 改成 1.2em 再试一次
+	w := rep.Warning()
+	for _, want := range []string{"font-size", "阶梯", ".bleed"} {
+		if !strings.Contains(w, want) {
+			t.Errorf("提示语里应出现 %q，实际: %s", want, w)
+		}
+	}
+
+	// font 简写也算；px 字号只算一次，报的是更要紧的那条（不随适配兜底缩放）
+	rep2 := lintHTML(t, `<section>
+	  <p style="font: 20px/1.5 sans-serif">a</p>
+	  <p style="font-size:1.1em">b</p>
+	</section>`)
+	if rep2.PxFontSizes != 1 || rep2.InlineFontSize != 1 {
+		t.Fatalf("px 与内联字号应各算一次且互斥，实际 px=%d inline=%d（%+v）",
+			rep2.PxFontSizes, rep2.InlineFontSize, rep2)
+	}
+
+	// 没写内联字号时一个字都不该提（warning 占的是模型的注意力，不能白占）
+	clean := lintHTML(t, `<section><h2>标题</h2><div class="card"><p>正文</p></div></section>`)
+	if strings.Contains(clean.Warning(), "font-size") {
+		t.Fatalf("没有内联字号不该提这件事: %s", clean.Warning())
+	}
 }

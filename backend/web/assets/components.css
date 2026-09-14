@@ -3,38 +3,88 @@
    规则：
    1. 禁止写死颜色/圆角/间距，一律引用 theme.css 里的变量
    2. LLM 生成的 section 只允许使用这里的 class 搭页面
-   3. 字号一律用 em：适配兜底靠缩放 section 的 font-size 工作，
-      写 px 的页面不会跟着缩，装不下时就会被裁掉
+   3. 字号只能取 --fs-* 阶梯上的值（见 theme.css），**不许手挑**：
+      一个版面超过 5 档、或出现 17px/21px 这种差 4px 的相邻档，层级就散成了噪音
+   4. 尺寸一律用 em：适配兜底靠缩放 section 的 font-size 工作，
+      写 px 的尺寸不跟着缩，装不下时会被直接裁掉
+   （例外：1px 的发丝线和描边保持 px——它们本来就该永远是 1px；
+     其余装饰性线宽用 em，因为它们表达层级、要跟着字号走）
    ============================================================ */
 
-.reveal .slides section { text-align: left; }
+/* ---- 画布安全边距 ----
+   内容贴边是所有排版规范里最基础的一条禁令，而原来这里根本没有：
+   section 的 padding 是 0，标题、清单、脚注全部顶着 960×700 画布的边缘。
+   6% 是"均衡型版面"的通行值。投影仪还会把画面边缘裁掉最多 5%，
+   贴边等于把内容送进裁刀。
+
+   必须显式写 box-sizing：reveal.css 里没有全局 *{box-sizing:border-box}，
+   而 section 的宽度是画布的 100%，用默认的 content-box 加 padding 会直接撑成
+   1076px → 横向溢出 → 适配兜底把整页缩小。reveal 自己的 .page/.cube 模式
+   给 section 加 padding 时也带着这个声明。 */
+.reveal .slides section {
+  padding: var(--slide-pad-y) var(--slide-pad-x);
+  box-sizing: border-box;
+  text-align: left;
+}
 .reveal .slides section.center { text-align: center; }
+
+/* 裸元素也落在阶梯上：任何没有角色类的 p / li 就是"正文"那一档
+   （`.split` 的 div、`.marginal` 的左栏里都是裸 p，不覆盖它们就会停在 1em，
+   比卡片正文小一档，同一页里出现两个"正文尺寸"）。
+   为什么用 :where() 包住前缀：把特异性压到 (0,0,1)。组件库自己的规则都是两个类起步
+   （`.reveal .card p` / `.reveal .bleed p` / `.reveal .timeline li` …），
+   于是它们永远压得住这条兜底，**不依赖源码顺序**。
+   反例：写成 `.reveal .slides section > ul > li` 是 (0,2,3)，会静默盖掉
+   `.reveal .timeline li`(0,2,1) 的 --fs-small——时间轴单元会悄悄变成正文大小。
+   加角色类时把名字同步进排除名单。 */
+:where(.reveal .slides section) p:where(:not(.stat, .term, .label, .sub, .footnote,
+    .note, .kicker, .num, .quote, .unit)),
+:where(.reveal .slides section) li:where(:not(.stat, .term, .label, .sub, .footnote,
+    .note, .kicker, .num, .quote, .unit)) {
+  font-size: var(--fs-body);
+}
+
+/* PDF 导出模式（html.reveal-print）里 reveal 会把 section 的 padding 强制清零
+   ——它要让每一页铺满一张纸。安全边距会跟着消失、内容重新贴边，
+   所以这里按同样的选择器把边距加回来（同优先级、本文件在后面加载即生效）。 */
+@media print {
+  html.reveal-print .reveal .slides section {
+    padding: var(--slide-pad-y) var(--slide-pad-x) !important;
+  }
+}
 
 /* ---- 组件集 v1：容器与块 ---- */
 
-/* 封面/结尾页装饰标签 */
+/* 封面/结尾页装饰标签。圆角跟主题的 --radius 走而不是写成药丸形：
+   纸感/双色印刷的圆角是 0~2px，一个药丸形标签会立刻和整套圆角语言打架。 */
 .reveal .tag {
   display: inline-block;
-  margin-top: 1.2em;
-  padding: 0.25em 1em;
+  margin-top: var(--space-md);
+  padding: 0.3em 1em;
   border: 1px solid var(--accent);
-  border-radius: 999px;
+  border-radius: var(--radius);
   color: var(--accent);
-  font-size: 0.6em;
+  font-size: var(--fs-label);
 }
 
-/* 卡片网格 */
+/* 卡片网格。
+   **能装句子的多列版式只有 .grid-2**：默认画布 wide 的内容区宽约 1094px，
+   两列每格约 467px 文字宽（37px 字号下约 12 个汉字/行）。三、四列每格只剩 276/181px，
+   也就是 7/5 个字一行——那里只放得下数字、序号、短标签，放句子会碎成一根竖条。
+   这不是保守：画布宽度是固定的，字号抬到投影可读下限之后，这就是算术结果。 */
 .reveal .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md) var(--space-lg);
-  margin-top: var(--space-lg);
+  margin-top: var(--space-md);
 }
 .reveal .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-md) var(--space-lg);
+  /* 内边距明显小于网格间距（24/32 对 32/48）：邻近性原则要求"组外 > 组内"，
+     两者相等时几张卡片会连成一条带子，读不出它们是三个独立的块 */
+  padding: var(--space-sm) var(--space-md);
 }
 /* 注意这个 :where(:not(...))：`.reveal .card p`(0,2,1) 比文本角色类 `.reveal .stat`(0,2,0)
    高一级，会把卡内角色类的字号/颜色整块盖掉——"hero 数字放进卡片"渲染成一个普通灰段落，
@@ -44,34 +94,41 @@
 .reveal .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
 .reveal .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
   color: var(--accent);
-  margin: 0 0 0.3em;
-  font-size: 0.8em;
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--fs-title);
 }
+/* 卡片正文用正文色，不用弱化色：它是卡片的主体内容，不是次要说明。
+   弱化色只留给真正的次要层（.sub/.footnote/.note/.muted）——
+   投影场景下"什么都要弱化"等于什么都不突出。 */
 .reveal .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
   margin: 0;
-  font-size: 0.62em;
-  color: var(--text-muted);
+  font-size: var(--fs-body);
+  color: var(--r-main-color);
 }
 
-/* 引用块 */
+/* 引用块。只在真的引用原话时用——一条彩色竖条是"模板感"最容易被一眼认出的标记，
+   所以它不该出现在别处（.band 用的是上下发丝线，不是侧边条）。 */
 .reveal .quote {
-  border-left: 4px solid var(--accent);
-  padding-left: 1em;
-  color: var(--text-muted);
+  border-left: 0.12em solid var(--accent);
+  padding-left: var(--space-sm);
+  color: var(--r-main-color);
   font-style: normal;
 }
 
 /* 分步列表（li 上配 reveal 的 fragment 类） */
-.reveal .steps li { margin-bottom: 0.4em; }
+.reveal .steps li { margin-bottom: var(--space-xs); }
 
 /* 徽章 */
 .reveal .badge {
   display: inline-block;
   background: var(--accent);
-  color: #0b132b;
-  border-radius: 5px;
+  /* --on-accent：按强调色的亮度算出的"压在上面读得清"的字色。
+     原来这里写死 #0b132b，只在"强调色一定是亮色"的时候成立——
+     编辑风预设的强调色是黑，写死就成了黑底黑字。 */
+  color: var(--on-accent);
+  border-radius: var(--radius);
   padding: 0 0.4em;
-  font-size: 0.65em;
+  font-size: var(--fs-label);
   font-weight: 700;
   vertical-align: middle;
 }
@@ -80,9 +137,10 @@
 .reveal .muted { color: var(--text-muted); }
 .reveal .footer {
   position: absolute;
-  bottom: -2.2em;
-  left: 0;
-  font-size: 0.42em;
+  /* 纵向 -1em 补偿 section 的下内边距：视觉位置和加边距之前一致 */
+  bottom: -1em;
+  left: var(--slide-pad-x);
+  font-size: var(--fs-small);
   color: var(--text-muted);
 }
 
@@ -97,14 +155,14 @@
    被重新手写一次，既费 token，又让 8 页之间慢慢长歪。
    ============================================================ */
 
-/* ---- 页面家具（每页都要有、且必须长得一模一样的东西）---- */
+/* ---- 页面家具（**可选**，不是每页都要上）---- */
 
-/* 页码/章节角标：section 的第一个子元素，绝对定位在右上角 */
+/* 页码/章节角标：section 的第一个子元素，绝对定位在内容区的右上角 */
 .reveal .page-no {
   position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 1.2em;
+  top: var(--slide-pad-y);
+  right: var(--slide-pad-x);
+  font-size: var(--fs-h3);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.03em;
@@ -114,27 +172,31 @@
 /* 空心描边变体：视觉更轻，深色背景上尤其好看 */
 .reveal .page-no.outline {
   color: transparent;
-  -webkit-text-stroke: 1.6px var(--accent);
+  -webkit-text-stroke: 0.045em var(--accent);
   opacity: 0.42;
 }
 
-/* 讲次/章节提头：放在 h2 内部的行首小字 */
+/* 讲次/章节提头：放在 h2 内部的行首小字。
+   字距 0.25em 而不是更大的值：0.45em 那种"散开的字母"是落地页的常见做法，
+   在讲稿里既费横向空间，也让提头比标题更抢眼。 */
 .reveal .kicker {
   display: block;
-  font-size: 0.34em;
+  font-size: var(--fs-label);
   font-weight: 700;
-  letter-spacing: 0.45em;
+  letter-spacing: 0.25em;
   color: var(--accent);
-  margin-bottom: 0.55em;
+  margin-bottom: 0.4em;
 }
 
-/* 短强调条：标题下方的装饰横线（em 宽度，跟着主题字号缩放） */
+/* 短强调条：标题下方的装饰横线（em 宽度与线宽，跟着主题字号缩放） */
 .reveal .rule {
   width: 3em;
-  height: 3px;
+  height: 0.1em;
   background: var(--accent);
-  border-radius: 2px;
-  margin: 0.7em 0 1.4em;
+  border-radius: 0.05em;
+  /* 下边距给得小：接下来的内容块自己带 margin-top，两者是相邻兄弟、会折叠，
+     实际间距取较大的那个（32px），不会叠成一大块空白 */
+  margin: 0.6em 0 var(--space-2xs);
 }
 .reveal section.center .rule { margin-left: auto; margin-right: auto; }
 
@@ -142,10 +204,12 @@
 
 .reveal .rows { margin-top: var(--space-md); }
 
-/* 一行。默认竖向堆叠（行标题 + 行说明），虚线分隔 */
+/* 一行。默认竖向堆叠（行标题 + 行说明），发丝线分隔。
+   用 --hairline 而不是 --border，也不是原来的虚线：分组靠间距、描边只是辅助，
+   一根几乎看不见的实线足够；虚线是"表格感"的来源，也是低质模板的常见特征。 */
 .reveal .row {
-  padding: 0.34em 0;
-  border-bottom: 1px dashed var(--border);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--hairline);
 }
 .reveal .row:last-child { border-bottom: none; }
 
@@ -166,13 +230,13 @@
   color: var(--accent);
   font-weight: 900;
   line-height: 1;
-  margin-right: 0.9em;
+  margin-right: var(--space-sm);
 }
 /* 行清单里的台词条：撑满右侧剩余宽度，去掉与外层重复的边距 */
 .reveal .rows .quote {
   flex: 1;
   margin: 0;
-  font-size: 0.56em;
+  font-size: var(--fs-body);
 }
 
 /* ---- 行内文本角色 ---- */
@@ -180,25 +244,26 @@
 /* 术语词：句型、专有名词等需要被一眼看到的关键词 */
 .reveal .term {
   margin: 0;
-  font-size: 0.64em;
+  font-size: var(--fs-title);
   font-weight: 800;
   color: var(--accent);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 /* 行主文：一行里的小标题 */
 .reveal .label {
   margin: 0;
-  font-size: 0.62em;
+  font-size: var(--fs-title);
   font-weight: 700;
   color: var(--r-heading-color);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
 }
 
-/* 行说明：紧跟在主文/术语下方的次要文字，自带弱化色 */
+/* 行说明：紧跟在主文/术语下方的次要文字，自带弱化色。
+   0.92em 是投影可读下限（24pt）——"次要"只允许靠色阶和行距表达，不许靠继续缩字号。 */
 .reveal .sub {
-  margin: 0.16em 0 0;
-  font-size: 0.52em;
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--fs-small);
   color: var(--text-muted);
 }
 
@@ -207,31 +272,147 @@
    上面的守卫排除掉，只设 margin-top 会露出浏览器默认的 1em 下边距，两边不一致 */
 .reveal .footnote {
   margin: var(--space-md) 0 0;
-  font-size: 0.54em;
+  font-size: var(--fs-small);
   color: var(--text-muted);
 }
 
 /* 主数字（hero 数字）+ 单位 */
 .reveal .stat {
   margin: 0;
-  font-size: 1.15em;
+  font-size: var(--fs-h3);
   font-weight: 900;
   line-height: 1;
   color: var(--accent);
 }
+/* 单位：**刻意不在字号阶梯上**。它不是独立的一档文字，而是数字的一部分，
+   所以按数字自身字号的比例走（1.55em 的数字配 0.45em 单位，2.4em 的焦点数字
+   配出来的单位自然更大），这样"数字带单位"在任何位置都成比例。 */
 .reveal .unit {
-  font-size: 0.42em;
+  font-size: 0.45em;
   font-weight: 700;
-  margin-left: 0.25em;
+  margin-left: 0.2em;
 }
 
-/* ---- 网格扩展到 3 / 4 列 ---- */
+/* ---- 网格扩展到 3 / 4 列（只放数字与短标签）---- */
 
 .reveal .grid-3,
 .reveal .grid-4 {
   display: grid;
   gap: var(--space-md) var(--space-lg);
-  margin-top: var(--space-lg);
+  margin-top: var(--space-md);
 }
 .reveal .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .reveal .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ============================================================
+   组件集 v3 —— 结构性版式
+
+   为什么 v1+v2 二十多个 class 之后，产出还是"千页一面"：
+   它们的形状只有两种——"等分格子"和"竖排行清单"。形状一样，剩下的就只有配色和
+   文字在变，于是每页的轮廓都相同，每份 deck 也都相同。
+   版式多样性不是靠"更多 class"，而是靠**轮廓本身不同**。
+
+   所以这 6 个的挑选标准是"画出来的矩形完全不同"：
+     .split     不等宽分栏（有主次。等分网格表达不了主次）
+     .bleed     一页一句话（整页大留白，是对"信息要塞满"的反向操作）
+     .plate     章节过渡页（大编号 + 章节名）
+     .timeline  横向序列（有方向感；.rows 是竖排的，表达不了先后）
+     .band      横向色带（打破"什么都要装进圆角卡片"）
+     .marginal  正文 + 右侧旁注（编辑风的标志性排布）
+
+   共同的克制：只引用主题变量、只用 em 尺寸（适配兜底靠缩放 font-size 工作，
+   写 px 的页面不跟着缩），且**一律不用左侧粗竖条**——那是"模板感"最容易被
+   一眼认出来的标记，组件库自己不该生产它。
+   ============================================================ */
+
+/* ---- .split：不等宽分栏 ---- */
+.reveal .split {
+  display: grid;
+  /* 1.55 : 1 —— 主内容侧约 636px（17 字/行），次内容侧约 411px（11 字/行） */
+  grid-template-columns: 1.55fr 1fr;
+  gap: var(--space-md) var(--space-lg);
+  align-items: start;
+  margin-top: var(--space-md);
+}
+.reveal .split.flip { grid-template-columns: 1fr 1.55fr; }  /* 主内容在右 */
+.reveal .split.middle { align-items: center; }
+
+/* ---- .bleed：一页一句话 ---- */
+.reveal .bleed { padding: var(--space-sm) 0 var(--space-xs); }
+/* 用 :where(:not(...)) 把文本角色类排除掉，理由同 .card 的守卫：
+   这条规则比角色类高一级，不排除的话 .bleed 里的 .stat 会变成一坨普通大段落
+   ——不报错，只是不对。新增角色类记得同步进名单。 */
+.reveal .bleed p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+  margin: 0;
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--r-heading-color);
+}
+/* 一页一个大数字：和上面那句陈述句同档（都是"这一页只有一件事"） */
+.reveal .bleed .stat { font-size: var(--fs-display); letter-spacing: -0.02em; }
+
+/* ---- .plate：章节过渡页 ---- */
+.reveal .plate { padding: var(--space-sm) 0 0; }
+.reveal .plate .stat { font-size: var(--fs-display); letter-spacing: -0.02em; }
+.reveal .plate h2 { margin: var(--space-2xs) 0 0; }
+.reveal .plate .sub { margin-top: var(--space-xs); }
+
+/* ---- .timeline：横向序列（写成 ul.timeline > li）----
+   每格 ≤ 8 字、≤ 4 格：格子宽是等分的，四格时每格约 238px，
+   只放得下"一个词 + 一个数字"。要写句子请改用 .rows（竖排）或 .steps。 */
+.reveal .timeline {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-lg);
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.reveal .timeline li {
+  border-top: 0.09em solid var(--accent);
+  padding: var(--space-xs) 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+.reveal .timeline .num {
+  display: block;
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--fs-title);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent);
+}
+
+/* ---- .band：横向色带（必须被记住的那一句）---- */
+.reveal .band {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--accent-soft);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.reveal .band p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--r-heading-color);
+}
+
+/* ---- .marginal：正文 + 右侧旁注 ---- */
+.reveal .marginal {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+  margin-top: var(--space-md);
+}
+.reveal .marginal .note {
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--text-muted);
+}

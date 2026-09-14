@@ -23,21 +23,36 @@ import (
 // 不限长的话一个变量就能把主题块撑成一大坨（也是 token 上限）。
 const maxVarValueBytes = 200
 
-// reservedVars 是 Theme 的结构化字段派生出来的变量名。
-// 这些名字只能由 renderThemeCSS 计算产生，不接受外部传入。
+// reservedVars 是 Theme 的结构化字段派生出来的变量名，外加**框架层的结构常数**
+// （字号阶梯、间距阶梯、安全边距——它们同样只有一处定义，在 theme.css 里）。
+// 这些名字只能由 renderThemeCSS / theme.css 产生，不接受外部传入。
 var reservedVars = map[string]bool{
-	"--accent":     true,
-	"--border":     true,
-	"--card-bg":    true,
-	"--text-muted": true,
-	"--radius":     true,
-	"--space-md":   true,
-	"--space-lg":   true,
+	"--accent":      true,
+	"--border":      true,
+	"--hairline":    true,
+	"--card-bg":     true,
+	"--accent-soft": true,
+	"--on-accent":   true,
+	"--text-muted":  true,
+	"--radius":      true,
 }
 
-// reservedVarNames 是给报错信息用的稳定顺序清单（map 遍历是随机的）。
-var reservedVarNames = []string{
-	"--accent", "--border", "--card-bg", "--radius", "--space-lg", "--space-md", "--text-muted",
+// reservedVarPrefixes 按前缀拦一类名字。用前缀而不是把每个名字列出来：
+// 阶梯是可扩展的（加一档字号不该要求同步改这张表），而漏改这一处就会让
+// "自定义槽静默盖住框架常数"的坑重新打开。
+var reservedVarPrefixes = []string{"--r-", "--space-", "--fs-", "--slide-pad-"}
+
+// isReservedVarName 判断一个变量名是否归框架所有（主题字段 + 结构常数）。
+func isReservedVarName(name string) bool {
+	if reservedVars[name] {
+		return true
+	}
+	for _, p := range reservedVarPrefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
 }
 
 // customVarNamePattern 合法的自定义变量名：-- 开头、字母打头、只含字母数字连字符。
@@ -81,9 +96,11 @@ func validateVarName(name string) error {
 	if !customVarNamePattern.MatchString(name) {
 		return fmt.Errorf("自定义变量名 %q 不合法：要写成 --xxx（两个连字符开头、字母打头，可含数字和连字符）", name)
 	}
-	if reservedVars[name] || strings.HasPrefix(name, "--r-") {
-		return fmt.Errorf("%s 是主题契约变量，不能通过 vars 定义——它由 accent/background/heading_color/text_color/radius 这些字段统一派生，"+
-			"你要改它就直接传对应字段。两处定义同名变量时谁生效取决于渲染顺序，正是'改了没反应'的经典来源", name)
+	if isReservedVarName(name) {
+		return fmt.Errorf("%s 是框架契约变量，不能通过 vars 定义——"+
+			"颜色类由 accent/background/heading_color/text_color/surface/border_color 这些字段统一派生，"+
+			"字号/间距/边距是组件库的结构常数（--fs-* / --space-* / --slide-pad-*），"+
+			"你要改观感就直接传对应字段。两处定义同名变量时谁生效取决于渲染顺序，正是'改了没反应'的经典来源", name)
 	}
 	return nil
 }
@@ -110,9 +127,12 @@ func validateVarValue(name, val string) error {
 var cssCommentRe = regexp.MustCompile(`(?s)/\*.*?\*/`)
 
 // reservedVarDeclRe 匹配"重定义契约变量"的声明（后跟冒号才算声明）。
+// 与 isReservedVarName 覆盖同一批名字：颜色类逐个列（数量固定），
+// 阶梯类按**前缀**匹配（--space-*/--fs-*/--slide-pad-*），加一档字号不用来这里同步。
 // --r- 前缀是 reveal.js 自己的变量，同样归主题字段所有，一并纳入。
 var reservedVarDeclRe = regexp.MustCompile(
-	`--(?:accent|border|card-bg|radius|space-md|space-lg|text-muted|r-[a-z0-9-]+)\s*:`)
+	`--(?:accent|border|hairline|card-bg|accent-soft|on-accent|text-muted|radius` +
+		`|space-[a-z0-9]+|fs-[a-z0-9]+|slide-pad-[a-z]+|r-[a-z0-9-]+)\s*:`)
 
 // findReservedVarRedefinition 在自定义 CSS 里找出第一个被重定义的契约变量，
 // 返回变量名（含 --）。没找到返回空串。

@@ -14,8 +14,9 @@
   <link rel="stylesheet" href="/assets/components.css">
   <!-- 主题配置：JSON 是 update_theme 的操作真身；override 块由后端渲染，
        必须位于所有 <link> 之后（级联覆盖 theme.css 的默认值）。
-       默认值与 theme.css 的 :root 保持一致，改默认主题两处一起改 -->
-  <script type="application/json" id="deck-theme">{"accent":"#5eead4","background":"#0b132b","heading_color":"#5eead4","text_color":"#e2e8f0","font":"sans","radius":"10px","transition":"slide"}</script>
+       初始 JSON 由 Go 从 defaultTheme() 渲染（不再是手抄的第三份拷贝），
+       所以"默认主题"只有两处需要同步：theme.go 与 theme.css -->
+  <script type="application/json" id="deck-theme">{{.ThemeJSON}}</script>
   <style id="deck-theme-override"></style>
   <!-- 第②.5层：deck 自定义样式槽（由 update_custom_css 整体替换，级联在组件库之后）。
        老 deck 没有这个块，读写路径上会按需补出来，见 ensureCustomCSSBlock -->

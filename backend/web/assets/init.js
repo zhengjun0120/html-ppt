@@ -19,7 +19,9 @@ var deckTheme = {};
 try {
   deckTheme = JSON.parse(document.getElementById('deck-theme').textContent) || {};
 } catch (e) {}
-var canvas = CANVAS[deckTheme.canvas] || CANVAS.standard;
+// 兜底必须是 wide——它等于后端 defaultTheme() 的 Canvas（DefaultCanvas）。
+// 主题块缺失或 canvas 值不认识时，前端按 standard 摆、后端按 wide 写，就会错位。
+var canvas = CANVAS[deckTheme.canvas] || CANVAS.wide;
 
 Reveal.initialize({
   hash: true,       // URL 带 #/2 页码：刷新不丢位置，截图也能精确定位到某页
@@ -46,14 +48,19 @@ Reveal.initialize({
   var FIT_STEP = 0.94;     // 每步收缩比例
   var FIT_TOL = 1.02;      // 2% 容差，避免浮点误差误判为溢出
   var FIT_MAX_STEPS = 16;
-  var FIT_MARGIN = 32;     // 画布四周留的安全余量（px）：正好塞满 700 高会显得很挤
+  // 只留一点点浮点余量：**视觉呼吸空间已经由 section 自己的安全边距提供了**
+  // （components.css 的 --slide-pad-y，上下各 41px）。原来是 32px，那是在
+  // section 还没有边距的年代"替"它留的余量；两处都留等于白扣 5% 的可用高度。
+  var FIT_MARGIN = 8;
 
   function config(key) {
     try {
       var cfg = Reveal.getConfig() || {};
-      return (key === 'h' ? cfg.height : cfg.width) || (key === 'h' ? 700 : 960);
+      // 这两个兜底只在 Reveal.getConfig() 抛错时走到（退化路径）。宽度兜底与
+      // DefaultCanvas 的宽度保持一致；真正参与溢出判定的是高度，两者都是 700。
+      return (key === 'h' ? cfg.height : cfg.width) || (key === 'h' ? 700 : 1244);
     } catch (e) {
-      return key === 'h' ? 700 : 960;
+      return key === 'h' ? 700 : 1244;
     }
   }
 
