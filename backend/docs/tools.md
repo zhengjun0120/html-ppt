@@ -67,6 +67,22 @@
   实测在 `vars` 的描述里放了个 JSON 示例，模型收到的描述就断在 `如 {"--surface":"#1e1836"`，
   恰好把最关键的用法说明吃掉。一律用全角逗号/顿号/分号，且 `description` 必须是标签最后一项；
   `TestSchemaDescriptionsHaveNoASCIIComma` 守着这条（这类"给模型的文档悄悄少一半"联调时发现不了）
+- **系统提示词里的动态内容一律追加在最后**（现在是日期与 `deck_id`）：前缀缓存要求"完整匹配一个
+  已持久化的前缀单元"，所以变化的内容越靠后、被打断的部分越少。实测（约 2000 token 静态前缀 +
+  末尾日期）：把末尾日期改一天，`cached_tokens` 只从 2560/2696 掉到 2432/2696（前面照样命中）；
+  换成把日期放开头，就是第一个 token 分叉、整段重算。日期由 `buildSystemMessage` 用 `time.Now()`
+  现算，**不写进 `systemPrompt.md`**——那份文件是 `//go:embed` 编译进二进制的，写死一个日期等于
+  "发布即过期"，而且没有任何东西会报出来。想验证这条纪律没被破坏，直接记
+  `CompletionUsage.PromptTokensDetails.CachedTokens / PromptTokens` 这个比值
+  （DeepSeek 会把命中数填进 OpenAI 风格的 `usage.prompt_tokens_details.cached_tokens`）；
+  `prompt_test.go` 守着"日期在最后"和"内嵌文件里没有日期"两件事
+- **内嵌的提示词必须把行尾归一化成 LF**（`prompt.go` 里 `strings.ReplaceAll(…, "\r\n", "\n")`）：
+  `//go:embed` 原样嵌文件字节，而这个仓库是 CRLF，于是模型收到的是带 `\r` 的版本。
+  实测（同一份内容、只差行尾，各发一次 `max_tokens=1` 的请求读 `usage.prompt_tokens`）：
+  **LF 7003 token、CRLF 7794 token**——433 个 `\r` 让每行多花约 1.8 个 token，
+  白交 11% 的输入费用，而且每次请求都要交一遍。
+  归一化放在入口而不是去改文件的保存格式：仓库整体是 CRLF，编辑器和 git 的 autocrlf
+  都会把文件改回来，改文件只对当次有效。`prompt_test.go` 守着"发给模型的提示词里没有 `\r`"
 
 ---
 

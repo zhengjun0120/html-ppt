@@ -12,6 +12,7 @@ import (
 
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/shared"
@@ -233,11 +234,32 @@ const maxTurns = 20 //最大允许调用20轮llm请求
 // 	}
 // }
 
+// weekdayCN 给日期配一个中文星期：不配的话「上周末」「这周三」这类说法模型算不出来。
+// 数组下标直接就是 time.Weekday（周日=0），不需要转换。
+var weekdayCN = [...]string{"周日", "周一", "周二", "周三", "周四", "周五", "周六"}
+
 func (as *AgentService) buildSystemMessage(deckID string) string {
 	msg := systemPrompt
 	if deckID != "" && deck.IsValidID(deckID) {
 		msg += fmt.Sprintf(`当前用户正在预览的演示文稿是 {"deck_id":"%s"},涉及它的修改直接使用这个 deck_id, 不要向用户询问`, deckID)
 	}
+
+	// 当前日期追加在**整个系统提示词的最后**，这个位置是刻意的，不要往前挪：
+	// 前缀缓存要求"完整匹配一个已持久化的前缀单元"，所以变化的内容越靠后，被打断的部分越少。
+	// 实测（约 2000 token 的静态前缀 + 末尾日期）：把末尾日期改一天，cached_tokens 从
+	// 2560/2696 只掉到 2432/2696——前面那 2560 token 照样命中。反过来把日期放开头，
+	// 就是第一个 token 就分叉、后面全部重算。
+	//
+	// 这也是它不写进 systemPrompt.md 的原因：那个文件是 //go:embed 编译进二进制的，
+	// 写死一个日期等于"发布即过期"，而且没有任何东西会报出来。
+	//
+	// 最后那句"不要为了确认日期去联网搜索"不是客套：没有明确授权时模型会在 thinking 里
+	// 纠结"我的知识截止 2024-06、不能访问实时网络"，实测它会真的发起一次计费搜索去问今天几号。
+	now := time.Now()
+	msg += fmt.Sprintf("\n\n当前日期：%s（%s）。涉及「今天」「本月」「最近」这类时间说法时以它为准——"+
+		"你的训练数据有截止时间，不要按它推断当前时间，也不要为了确认日期去联网搜索。",
+		now.Format("2006-01-02"), weekdayCN[int(now.Weekday())])
+
 	return msg
 }
 
