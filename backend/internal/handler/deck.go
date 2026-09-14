@@ -48,6 +48,12 @@ func deckPageHeaders(c *gin.Context) {
 		"default-src 'self'; "+
 			"script-src 'self'; "+
 			"style-src 'self' 'unsafe-inline'; "+
+			// font-src 只允许同源：字体必须自托管（web/assets/fonts/）。
+			// 严格说它是 default-src 'self' 的复述，写出来是为了让"字体不走 CDN"
+			// 这条决定出现在强制执行它的地方——将来谁想往 <head> 里加一行
+			// Google Fonts，撞上的第一堵墙就是这里（而且它会顺便把访问者的 IP
+			// 送给第三方，对一个本地工具没有理由）。
+			"font-src 'self'; "+
 			"img-src 'self' data:; "+
 			"connect-src 'none'; "+
 			// form-action 不受 connect-src 管辖（表单提交是导航不是 fetch），

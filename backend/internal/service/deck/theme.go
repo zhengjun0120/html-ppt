@@ -126,6 +126,13 @@ const (
 // 默认是"纸感"而不是深底发光色：默认值决定大多数结果——用户多数时候不会说"换个配色"，
 // 于是默认那一套就是这份工具的观感。深底 + 发光强调色 + 圆角卡片是最容易撞衫的一类，
 // 把它降级成可选预设（tech），而不是让它当门面。
+//
+// Vars 从 paper 预设拷过来，而不是留空：这份主题标着 `Preset: PresetPaper`，
+// 而纸感预设的 Vars 里就有那三个语义色（--accent-2/--positive/--warn）。
+// 留空等于"自称是纸感，却少了纸感的一部分"——具体后果不是观感问题而是**拒收**：
+// 回声校验只认"deck 自己的样式块定义过"的变量，缺了这三个，模型照着提示词
+// （"预设已经预置了它们，直接 var() 引用，不要重复定义"）写下来就会被拒，
+// 而提示词又明确叫它别自己定义，等于把模型送进死胡同。
 func defaultTheme() Theme {
 	return Theme{
 		Preset:       PresetPaper,
@@ -134,6 +141,7 @@ func defaultTheme() Theme {
 		Surface:      "#fffdf8", BorderColor: "#ded4c3",
 		Font:         FontEditorial, Radius: "2px", Texture: TextureGrid,
 		Transition:   "slide", Canvas: DefaultCanvas,
+		Vars: copyVars(presets[PresetPaper].Theme.Vars),
 	}
 }
 
@@ -143,6 +151,12 @@ var (
 	// fontPairs 把"字体"从三档系统栈升级成**配对**：标题和正文用同一套栈，
 	// 是"没有做过字体决策"的默认结果；而"衬线标题 + 无衬线正文"这一对，
 	// 光是换上去就能让页面从"AI 生成的网页"变成"有人排过版的读物"。
+	//
+	// 五对里只有 mono 这一对引用了**随附字体**（web/assets/fonts、theme.css 里的
+	// @font-face）。为什么只在这一档破例：拉丁等宽字体到处都有，中日文等宽字体却没有
+	// ——Consolas 的"等宽"只覆盖拉丁，中文落到系统黑体后步进宽度和拉丁对不上，
+	// 于是这一档的整个观感取决于机器上恰好装了什么。中日文等宽是"必须自带才成立"的
+	// 那一档；其余四对靠系统字体栈就能得到可预期的结果，不值得各背一份几 MB 的字体。
 	fontPairs = map[string][2]string{
 		FontSans:  {`"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif`, `"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif`},
 		FontSerif: {`Georgia, "Times New Roman", "Songti SC", SimSun, serif`, `Georgia, "Times New Roman", "Songti SC", SimSun, serif`},
@@ -151,7 +165,7 @@ var (
 			`"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif`,
 		},
 		FontModern: {`"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif`, `"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif`},
-		FontMono:   {`Consolas, "JetBrains Mono", "Courier New", monospace`, `Consolas, "JetBrains Mono", "Courier New", monospace`},
+		FontMono:   {`"JetBrains Maple Mono", Consolas, "Courier New", monospace`, `"JetBrains Maple Mono", Consolas, "Courier New", monospace`},
 	}
 	// fontNames 给报错信息与 schema 契约测试用的稳定顺序清单（map 遍历是随机的）
 	fontNames = []string{FontSans, FontSerif, FontEditorial, FontModern, FontMono}

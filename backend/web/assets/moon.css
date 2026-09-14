@@ -2,8 +2,13 @@
  * Solarized Dark theme for reveal.js.
  * Author: Achim Staebler
  */
-@import url(./fonts/league-gothic/league-gothic.css);
-@import url(https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic);
+/* 本地改动（vendor 时的偏离，重新拉取上游时别把这行盖回来）：上游这两行 @import 已删除。
+   - ./fonts/league-gothic/league-gothic.css：我们没随附这个目录，本地必然 404，
+     每打开一个 deck 就白发一次请求；League Gothic 也永远用不上——所有 deck 都会显式
+     给出 --r-heading-font（theme.css 兜底 + 主题 override 各一层）。
+   - fonts.googleapis.com 的 Lato：就算能通也会被 CSP 的 style-src 'self' 挡掉，
+     只在控制台留一条报错；而且它把每个打开 deck 的人的 IP 送给第三方。
+   两行都属于"发一个注定失败的请求"，删掉不改变任何渲染结果。 */
 /**
  * Solarized colors by Ethan Schoonover
  */

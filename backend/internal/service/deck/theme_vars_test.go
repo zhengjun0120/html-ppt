@@ -26,10 +26,16 @@ import (
 // 漂移的后果很难查：后端换了尺寸、前端还用旧的，适配兜底按新高度算、reveal 按旧高度摆，
 // 页面会莫名其妙地被判成溢出或留出空白。
 func TestCanvasPresetsMatchInitJS(t *testing.T) {
-	p := filepath.Join("..", "..", "web", "assets", "init.js")
+	// 从 internal/service/deck 到 backend/web/assets 是**三层**（同包的
+	// variable_contract_test.go 用的就是这个深度）。这里原来写的是两层，
+	// 指到了 internal/web/assets——文件不存在 → 被 t.Skipf 兜住 → 这条契约测试
+	// 一直静默跳过（报 PASS，其实一条都没验）。路径深度的错法不会报错，
+	// 只会让测试悄悄失效，所以读不到时改成 Fatal：它是一次构建布局的问题，
+	// 不该被当成"环境不支持"放过去。
+	p := filepath.Join("..", "..", "..", "web", "assets", "init.js")
 	js, err := os.ReadFile(p)
 	if err != nil {
-		t.Skipf("读不到 %s，跳过契约检查: %v", p, err)
+		t.Fatalf("读不到 %s（路径深度写错了？这条契约测试不该静默跳过）: %v", p, err)
 	}
 	src := string(js)
 

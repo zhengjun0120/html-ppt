@@ -56,6 +56,56 @@ func TestBuildToolsFeatureGating(t *testing.T) {
 			t.Errorf("%s 缺少 Execute", name)
 		}
 	}
+
+	// features.web_search：同一个套路，但关掉它的理由更硬——每一次搜索都计费，
+	// 挂着一个关掉的工具不只是浪费轮次，是白花钱。
+	svc2 := &AgentService{}
+	off2 := svc2.buildTools()
+	if _, ok := off2["web_search"]; ok {
+		t.Error("web_search 关闭时不该挂载")
+	}
+	svc2.WebSearch = true
+	on2 := svc2.buildTools()
+	ws, ok := on2["web_search"]
+	if !ok {
+		t.Fatal("web_search 打开后应挂载")
+	}
+	if len(on2) != len(off2)+1 {
+		t.Errorf("打开 web_search 应只多 1 个工具：off=%d on=%d", len(off2), len(on2))
+	}
+	// 两个开关互不影响：custom_css 仍关着时，不该因为 web_search 打开就冒出样式三件套
+	for _, name := range []string{"read_custom_css", "update_custom_css", "read_component"} {
+		if _, ok := on2[name]; ok {
+			t.Errorf("custom_css 仍关着，不该挂载 %s", name)
+		}
+	}
+	if ws.Definition.OfFunction == nil || ws.Execute == nil {
+		t.Fatal("web_search 的 Definition/Execute 不完整")
+	}
+	// Execute 必须接在搜索实现上：接错了工具，模型一调用就会走到别的地方去，
+	// 而这类错在"工具能挂上、schema 也对"的假象下很难被发现
+	if got, want := reflect.ValueOf(ws.Execute).Pointer(), reflect.ValueOf(svc2.toolWebSearch).Pointer(); got != want {
+		t.Error("web_search 的 Execute 没有接上 toolWebSearch")
+	}
+	// 参数契约：query 必填、max_uses 可选。写反了模型就会漏传 query（搜索无从进行），
+	// 或者把可选的次数当必填（白多一次往返）
+	rawArgs, err := json.Marshal(generateSchema[webSearchArgs]())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var argSchema struct {
+		Required   []string       `json:"required"`
+		Properties map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal(rawArgs, &argSchema); err != nil {
+		t.Fatal(err)
+	}
+	if len(argSchema.Required) != 1 || argSchema.Required[0] != "query" {
+		t.Errorf("web_search 只该把 query 标为必填，实际 required=%v", argSchema.Required)
+	}
+	if _, ok := argSchema.Properties["max_uses"]; !ok {
+		t.Error("web_search 的 schema 里没有 max_uses 字段（模型无从控制搜索次数）")
+	}
 }
 
 // TestSchemaDescriptionsHaveNoASCIIComma 守一个很容易踩、而且完全不报错的坑：
@@ -73,6 +123,7 @@ func TestSchemaDescriptionsHaveNoASCIIComma(t *testing.T) {
 		InsertSlideArgs{}, DeleteSlideArgs{}, UpdateThemeArgs{}, ReadThemeArgs{},
 		AskUserArgs{}, ReadHistoryDiffArgs{}, ListHistoryArgs{},
 		ReadCustomCSSArgs{}, UpdateCustomCSSArgs{}, ReadComponentArgs{},
+		webSearchArgs{}, // 新工具的参数结构体要加进这份清单，否则这条守卫对它完全没生效
 	}
 	for _, v := range argTypes {
 		typ := reflect.TypeOf(v)

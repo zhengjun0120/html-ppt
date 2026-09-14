@@ -10,6 +10,52 @@
    下面两组"阶梯"（字号 / 间距）不属于主题：它们是组件库的结构常数，任何主题都一样，
    所以只在这里定义一次、组件库只引用，不进主题块。
    ============================================================ */
+
+/* ---------- 自带字体（vendor 资源，第①层）----------
+   为什么要有随附字体：字体栈全是系统字体时，"这份 deck 长什么样"取决于打开它的
+   那台机器装了什么。最要命的是等宽那一档——Consolas 没有中日文，中文会落到系统
+   黑体上，于是中文的步进宽度和拉丁字符对不齐，"终端"预设的等宽观感当场散掉
+   （一份日语文法讲义正好踩在这上面）。带一套中日文等宽字体，这一档才是确定的。
+
+   字体：JetBrains Maple Mono（拉丁取自 JetBrains Mono，中日韩取自 Maple Mono），
+   OFL-1.1 授权，随附授权文本见 fonts/jetbrains-maple-mono/OFL.txt。
+   名字里带 "JetBrains" 是上游合并版的取名，与 JetBrains 官方字体是两个东西。
+
+   为什么写在 theme.css 而不是新开一个 <link>：骨架只在 write_deck 时固化一次，
+   新增的 <link> 标签对**已经存在的 deck** 无效——theme.css 是所有 deck 都已经在引的。
+
+   为什么声明三档不会让每份 deck 都背上 20MB：浏览器只在排版真的用到某个 @font-face
+   时才去下载那个文件。没用到 mono、也没写 <code> 的 deck 一个字节都不下载。
+
+   font-display: swap（先用兜底字体显示、加载完再换）而不是 block：block 会让文字
+   最多 3 秒不可见，对演示工具是更差的一种失败。swap 的代价是换字体后行高变了、
+   溢出兜底的判定会过时——init.js 已经在 document.fonts.ready 之后重跑 fitAll()，
+   正是为这件事准备的。
+
+   已知欠缺：这套字体只有 400/700 两档，组件库用到的 800/900 会由 700 合成加粗
+   （浏览器自己处理，不影响结构）。中文也没有真正的斜体，Italic 提供的是拉丁斜体。 */
+@font-face {
+  font-family: "JetBrains Maple Mono";
+  src: url(./fonts/jetbrains-maple-mono/JetBrainsMapleMono-Regular.woff2) format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Maple Mono";
+  src: url(./fonts/jetbrains-maple-mono/JetBrainsMapleMono-Bold.woff2) format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Maple Mono";
+  src: url(./fonts/jetbrains-maple-mono/JetBrainsMapleMono-Italic.woff2) format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   /* ---------- reveal.js 官方变量 ---------- */
   --r-background-color: #f6f2e9;
@@ -20,7 +66,7 @@
      两边都用同一套栈（"随便挑一个不会出错的字体"）是模板感最稳定的来源之一。 */
   --r-main-font: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
   --r-heading-font: "Songti SC", "SimSun", Georgia, "Times New Roman", serif;
-  --r-code-font: Consolas, "JetBrains Mono", monospace;
+  --r-code-font: "JetBrains Maple Mono", Consolas, "Courier New", monospace;
 
   /* ---------- 字号阶梯 ----------
      正文 = 1.1em = 37px ≈ 29pt（投射到 16:9 屏上；1 canvas px ≈ 0.77pt）。

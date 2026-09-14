@@ -34,6 +34,9 @@ type Features struct {
 	// 自定义样式槽（<style id="deck-custom">）。写入是"整体替换 + 清洗"，
 	// 且整份 deck 的历史快照覆盖它——写坏了能回滚。
 	CustomCSS bool `yaml:"custom_css"`
+
+	// 联网搜索
+	WebSearch bool `yaml:"web_search"`
 }
 
 type Server struct {
@@ -63,6 +66,8 @@ type LLM struct {
 	APIKey  string `yaml:"api_key"`
 	ModelID   string `yaml:"model_id"`
 	MaxToken int64 `yaml:"max_token"`
+
+	AnthropicBaseURL string `yaml:"anthropic_base_url"`
 }
 
 // Auth 登录态配置。JWTSecret 是会话签名密钥：泄露 = 任何人可伪造登录态，
@@ -148,6 +153,10 @@ func Load(path string) (*Config, error) {
 	}
 	if v := os.Getenv("LLM_API_KEY"); v != "" {
 		cfg.LLM.APIKey = v
+	}
+	// 联网搜索走的是 Anthropic 兼容入口，基址可以单独覆盖（自己前面挂网关时用）
+	if v := os.Getenv("LLM_ANTHROPIC_BASE_URL"); v != "" {
+		cfg.LLM.AnthropicBaseURL = v
 	}
 	if v := os.Getenv("AUTH_JWT_SECRET"); v != "" {
 		cfg.Auth.JWTSecret = v

@@ -37,9 +37,19 @@ func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, 
 	if err != nil {
 		return CreateResult{}, err
 	}
-	// 回声校验：内联 style 里引用的变量必须真有元素消费。
-	// 新建时 deck 还不存在，所以"已知变量"只有框架契约本身（没有主题块可借）。
-	if err := s.checkInlineStyleVars(normalized, ""); err != nil {
+
+	// 骨架先渲染出来：它是纯函数（无副作用），而底下的回声校验要用它。
+	rendered, err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)), normalized)
+	if err != nil {
+		return CreateResult{}, err
+	}
+
+	// 回声校验：内联 style 里引用的变量必须真有元素消费、或在这份 deck 自己的样式块里
+	// 定义过。校验对象是**即将落盘的那份 HTML**（含新建时就渲染好的主题 override 块）——
+	// 原来这里传的是空串，等于"新建的 deck 没有任何样式块"，于是预设预置的
+	// --accent-2/--positive/--warn 会被判成无效，而提示词恰恰叫模型直接用它们。
+	// 校验放在建目录之前：不合格的提交不该留下任何痕迹（连占号都不该占）。
+	if err := s.checkInlineStyleVars(normalized, rendered); err != nil {
 		return CreateResult{}, err
 	}
 
@@ -49,11 +59,6 @@ func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, 
 	}
 	//创建唯一的子目录 并返回唯一的id
 	id, err := s.claimDeckDir()
-	if err != nil {
-		return CreateResult{}, err
-	}
-
-	rendered, err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)), normalized)
 	if err != nil {
 		return CreateResult{}, err
 	}
@@ -190,17 +195,19 @@ var skeletonSrc string
 
 var skeletonTmpl = texttemplate.Must(texttemplate.New("deck_skeleton").Parse(skeletonSrc))
 
-// renderSkeleton 渲染骨架。ThemeJSON 从 defaultTheme() 现渲染而不是在骨架里手抄一份：
-// 手抄的那份没有任何机制保证它与 defaultTheme() 一致，而骨架真的会用到它
-// （新建的 deck 在第一次 update_theme 之前的主题就是它）——这类"两份真相"迟早漂移。
+// renderSkeleton 渲染骨架。ThemeJSON / ThemeCSS 都从 defaultTheme() 现渲染，
+// 而不是在骨架里手抄一份：手抄的那份没有任何机制保证它与 defaultTheme() 一致，
+// 而骨架真的会用到它们（新建的 deck 在第一次 update_theme 之前的主题就是它）——
+// 这类"两份真相"迟早漂移。
 func renderSkeleton(escapedTitle, sections string) (string, error) {
-	themeJSON, err := json.Marshal(defaultTheme())
+	theme := defaultTheme()
+	themeJSON, err := json.Marshal(theme)
 	if err != nil {
 		return "", fmt.Errorf("序列化默认主题: %w", err)
 	}
 	var sb strings.Builder
-	err = skeletonTmpl.Execute(&sb, struct{ Title, Sections, ThemeJSON string }{
-		escapedTitle, sections, string(themeJSON),
+	err = skeletonTmpl.Execute(&sb, struct{ Title, Sections, ThemeJSON, ThemeCSS string }{
+		escapedTitle, sections, string(themeJSON), renderThemeCSS(theme),
 	})
 
 	if err != nil {

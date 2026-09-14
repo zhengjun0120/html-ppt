@@ -120,6 +120,19 @@
       </div>
     </section>
 
+    <!-- 自带字体验收页。<code> 用的是 --r-code-font（theme.css 里指向随附字体），
+         与当前选中的 font 配对无关，所以这一页在任何预设下测的都是同一件事。
+         判定标准是可量的：中日文步进宽度应当是拉丁的**整数倍 2 倍**，
+         于是"16 个拉丁字符"与"8 个中文字"渲染出来必须一样宽。
+         三行的左边缘对齐只是表象，行宽相等才是等宽成立。 -->
+    <section>
+      <h2>自带字体：等宽对齐</h2>
+      <p><code id="monoLatin">0123456789abcdef</code></p>
+      <p><code id="monoCJK">容器重建回归测试</code></p>
+      <p><code id="monoKana">コンテナを再作成</code></p>
+      <p class="footnote">地址栏加 ?preset=terminal 可以看这套字体铺满整页的样子</p>
+    </section>
+
   </div></div>
   <script src="/assets/reveal.js"></script>
   <!-- 预设对比：?preset=noir 就能看那一套的实际观感。
@@ -140,7 +153,7 @@
       editorial: `:root{--r-background-color:#ffffff;--r-main-color:#1f1f1f;--r-heading-color:#0d0d0d;--r-link-color:#111111;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#111111;--border:#e2e2e2;--card-bg:#f7f7f7;--accent-soft:rgba(17, 17, 17, 0.14);--on-accent:#ffffff;--text-muted:rgba(31, 31, 31, 0.65);--hairline:rgba(31, 31, 31, 0.12);--radius:0px;--accent-2:#e8590c;--positive:#1a7f4b;--warn:#b8860b;}.reveal .progress{color:var(--accent)}`,
       noir: `:root{--r-background-color:#0e0e11;--r-main-color:#cfcbc2;--r-heading-color:#f4efe6;--r-link-color:#d9a441;--r-main-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--r-heading-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--accent:#d9a441;--border:#2e2e36;--card-bg:#17171c;--accent-soft:rgba(217, 164, 65, 0.14);--on-accent:#12100e;--text-muted:rgba(207, 203, 194, 0.65);--hairline:rgba(207, 203, 194, 0.12);--radius:0px;--accent-2:#8a93a6;--positive:#7fa650;--warn:#c9762c;}.reveal .progress{color:var(--accent)}`,
       duotone: `:root{--r-background-color:#f4efe3;--r-main-color:#2b3a4d;--r-heading-color:#12233d;--r-link-color:#ff5a36;--r-main-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--r-heading-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--accent:#ff5a36;--border:#12233d;--card-bg:#fbf7ec;--accent-soft:rgba(255, 90, 54, 0.14);--on-accent:#12100e;--text-muted:rgba(43, 58, 77, 0.65);--hairline:rgba(43, 58, 77, 0.12);--radius:0px;--accent-2:#12233d;--positive:#2f6b4f;--warn:#e0a020;}.reveal-viewport{background-image:radial-gradient(rgba(43, 58, 77, 0.07) 1.2px,transparent 1.2px);background-size:22px 22px}.reveal .progress{color:var(--accent)}`,
-      terminal: `:root{--r-background-color:#080c0a;--r-main-color:#a9d6b0;--r-heading-color:#5cff9d;--r-link-color:#39ff7a;--r-main-font:Consolas, "JetBrains Mono", "Courier New", monospace;--r-heading-font:Consolas, "JetBrains Mono", "Courier New", monospace;--accent:#39ff7a;--border:#1f3527;--card-bg:#0f1512;--accent-soft:rgba(57, 255, 122, 0.14);--on-accent:#12100e;--text-muted:rgba(169, 214, 176, 0.65);--hairline:rgba(169, 214, 176, 0.12);--radius:0px;--accent-2:#62d0ff;--positive:#7dffb0;--warn:#ffd166;}.reveal-viewport{background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(169, 214, 176, 0.07) 33px 34px)}.reveal .progress{color:var(--accent)}`,
+      terminal: `:root{--r-background-color:#080c0a;--r-main-color:#a9d6b0;--r-heading-color:#5cff9d;--r-link-color:#39ff7a;--r-main-font:"JetBrains Maple Mono", Consolas, "Courier New", monospace;--r-heading-font:"JetBrains Maple Mono", Consolas, "Courier New", monospace;--accent:#39ff7a;--border:#1f3527;--card-bg:#0f1512;--accent-soft:rgba(57, 255, 122, 0.14);--on-accent:#12100e;--text-muted:rgba(169, 214, 176, 0.65);--hairline:rgba(169, 214, 176, 0.12);--radius:0px;--accent-2:#62d0ff;--positive:#7dffb0;--warn:#ffd166;}.reveal-viewport{background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(169, 214, 176, 0.07) 33px 34px)}.reveal .progress{color:var(--accent)}`,
       tech: `:root{--r-background-color:#0b132b;--r-main-color:#e2e8f0;--r-heading-color:#5eead4;--r-link-color:#5eead4;--r-main-font:"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--r-heading-font:"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--accent:#5eead4;--border:rgba(94, 234, 212, 0.25);--card-bg:rgba(94, 234, 212, 0.06);--accent-soft:rgba(94, 234, 212, 0.14);--on-accent:#12100e;--text-muted:rgba(226, 232, 240, 0.65);--hairline:rgba(226, 232, 240, 0.12);--radius:10px;--accent-2:#818cf8;--positive:#4ade80;--warn:#fbbf24;}.reveal .progress{color:var(--accent)}`,
     };
     // 注意：变量名不能叫 name——脚本是经典脚本、作用域即 window，

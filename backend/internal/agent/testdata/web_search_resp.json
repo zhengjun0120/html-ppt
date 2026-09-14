@@ -1,0 +1,21 @@
+{
+  "id": "msg_websearch_fixture",
+  "type": "message",
+  "role": "assistant",
+  "model": "deepseek-flash",
+  "stop_reason": "max_tokens",
+  "content": [
+    {"type": "thinking", "thinking": "我应该先搜索一下"},
+    {"type": "text", "text": "I'll search for that."},
+    {"type": "server_tool_use", "id": "call_a", "name": "web_search", "input": {"query": "q1"}},
+    {"type": "web_search_tool_result", "tool_use_id": "call_a", "content": [
+      {"type": "web_search_result", "title": "标题A", "url": "https://a.example", "encrypted_content": "zz", "page_age": null},
+      {"type": "web_search_result", "url": "https://b.example", "encrypted_content": "zz"},
+      {"type": "web_search_result", "title": "标题A 的重复项", "url": "https://a.example", "encrypted_content": "zz"}
+    ]},
+    {"type": "server_tool_use", "id": "call_b", "name": "web_search", "input": {"query": "q2"}},
+    {"type": "web_search_tool_result", "tool_use_id": "call_b", "content": {"type": "web_search_tool_result_error", "error_code": "max_uses_exceeded"}},
+    {"type": "text", "text": "答案正文"}
+  ],
+  "usage": {"input_tokens": 10, "output_tokens": 20, "server_tool_use": {"web_search_requests": 2}}
+}

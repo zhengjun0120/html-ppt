@@ -12,7 +12,10 @@ package deck
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -73,6 +76,11 @@ func TestDefaultThemeIsPaperPreset(t *testing.T) {
 		if c.got != c.want {
 			t.Errorf("默认主题的 %s 应与 %s 预设一致：默认=%q 预设=%q", c.name, PresetPaper, c.got, c.want)
 		}
+	}
+	// 语义色也要算在内。少了这三个，默认主题就是"自称纸感、却没有纸感那三种语义色"
+	// 的半份预设（后果见 defaultTheme 的注释：模型引用它们会被回声校验拒收）。
+	if !reflect.DeepEqual(def.Vars, paper.Theme.Vars) {
+		t.Errorf("默认主题的语义色应与 %s 预设一致：默认=%v 预设=%v", PresetPaper, def.Vars, paper.Theme.Vars)
 	}
 }
 
@@ -279,6 +287,64 @@ func TestFontPairsRenderBothStacks(t *testing.T) {
 	}
 }
 
+// 手工验收页 layouts-test.html 里的观感是 renderThemeCSS 输出的**逐字快照**
+// （页面注释就是这么写的：它们是数据快照、不是第二份实现）。快照会漂：改了预设表
+// 或 fontPairs，Go 的输出变了、验收页还显示旧观感——于是"看图验收"验的是一个
+// 已经不存在的页面，而这件事从截图上看不出来。这条测试把两边钉死。
+//
+// 判定基准是"页面自己那份 deck-theme JSON"而不是 defaultTheme()：页面 head 里的
+// 主题块带 paper 预设的语义色（--accent-2/--positive/--warn），而 defaultTheme()
+// 目前**不带** Vars（见 defaultTheme 的定义）。拿 defaultTheme() 当基准会把
+// "页面多写了三个变量"报成漂移，而真正要守的是"Go 照着这份 JSON 渲染，会得到这份 CSS"。
+func TestLayoutsFixtureMatchesRenderer(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "assets", "layouts-test.html"))
+	if err != nil {
+		t.Fatalf("读取验收页失败（本包到 web/assets 是三层）: %v", err)
+	}
+	page := string(raw)
+
+	themeJSON := regexp.MustCompile(`(?s)<script type="application/json" id="deck-theme">(.*?)</script>`).
+		FindStringSubmatch(page)
+	if themeJSON == nil {
+		t.Fatal("验收页里找不到 #deck-theme JSON 块")
+	}
+	var pageTheme Theme
+	if err := json.Unmarshal([]byte(themeJSON[1]), &pageTheme); err != nil {
+		t.Fatalf("验收页的主题 JSON 不能解析: %v", err)
+	}
+
+	t.Run("head 里的 override 块", func(t *testing.T) {
+		m := regexp.MustCompile(`(?s)<style id="deck-theme-override">(.*?)</style>`).FindStringSubmatch(page)
+		if m == nil {
+			t.Fatal("验收页里找不到 #deck-theme-override 块")
+		}
+		if want := renderThemeCSS(pageTheme); m[1] != want {
+			t.Errorf("override 块与 renderThemeCSS(页面主题) 不一致\n got=%s\nwant=%s", m[1], want)
+		}
+	})
+
+	t.Run("六个预设的 CSS 快照", func(t *testing.T) {
+		got := map[string]string{}
+		for _, m := range regexp.MustCompile("(\\w+):\\s*`([^`]*)`").FindAllStringSubmatch(page, -1) {
+			got[m[1]] = m[2]
+		}
+		if len(got) != len(PresetNames()) {
+			t.Fatalf("快照数量与预设数量不一致：快照 %d 个，预设 %d 个（正则也可能抓到了别的模板字符串）",
+				len(got), len(PresetNames()))
+		}
+		for _, p := range Presets() {
+			snap, ok := got[p.Name]
+			if !ok {
+				t.Errorf("验收页缺少预设 %s 的快照", p.Name)
+				continue
+			}
+			if want := renderThemeCSS(p.Theme); snap != want {
+				t.Errorf("验收页里 %s 的快照过期（改了预设没同步这个页面）\n got=%s\nwant=%s", p.Name, snap, want)
+			}
+		}
+	})
+}
+
 // 预设清单出现在工具说明里（每轮都要重发），取值必须来自预设表而不是 prompt 里再抄一份。
 func TestPresetVarsAreNotReservedVars(t *testing.T) {
 	for _, p := range Presets() {
@@ -315,8 +381,57 @@ func TestRenderSkeletonEmbedsDefaultTheme(t *testing.T) {
 	if !reflect.DeepEqual(got, defaultTheme()) {
 		t.Errorf("骨架里的初始主题应与 defaultTheme() 一致：\n got=%+v\nwant=%+v", got, defaultTheme())
 	}
+	// override 块也必须是渲染出来的，而不是空的：它是"这份 deck 定义了哪些变量"的
+	// 权威（回声校验认的就是它），空块等于新建的 deck 少了预设预置的那三个语义色
+	css := regexp.MustCompile(`(?s)<style id="deck-theme-override">(.*?)</style>`).FindStringSubmatch(html)
+	if css == nil {
+		t.Fatal("骨架里没有 deck-theme-override 块")
+	}
+	if want := renderThemeCSS(defaultTheme()); css[1] != want {
+		t.Errorf("骨架的 override 块应是 renderThemeCSS(defaultTheme())：\n got=%s\nwant=%s", css[1], want)
+	}
 	// 占位符没被替换会留下字面的 {{.ThemeJSON}}
 	if strings.Contains(html, "{{") {
 		t.Error("骨架里还有未替换的模板占位符")
+	}
+}
+
+// 提示词无条件地告诉模型："预设已经预置了 --accent-2（第二强调色）/--positive/--warn
+// 三个语义色，需要区分正负时直接 var() 引用，不要重复定义它们。"
+// 新建的 deck 必须真的能用它们——这条测试守的就是这个承诺。
+//
+// 为什么值得单独守：这三个变量刻意**不被组件库消费**（没带预设的 deck 上会渲染成
+// 不可见），所以它们不在变量契约里，只能靠"deck 自己的样式块定义过"这一条通过校验。
+// 一旦 override 块没渲染出来（或者 defaultTheme 少了 Vars），模型照着提示词写就会吃到
+// "这些变量没有任何样式消费它们"的拒收，而提示词又禁止它自己定义 —— 死胡同。
+func TestFreshDeckAcceptsPresetSemanticVars(t *testing.T) {
+	assets := filepath.Join("..", "..", "..", "web", "assets")
+	if _, err := os.Stat(assets); err != nil {
+		t.Fatalf("读不到真实资源目录（本包到 web/assets 是三层）: %v", err)
+	}
+	html, err := renderSkeleton("测试", `<section><h1>hi</h1></section>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 前提：这三个变量必须真的被渲染进 deck 的样式块（只写在主题 JSON 里不算——
+	// 回声校验不认 JSON，浏览器也不认）
+	for _, v := range []string{"--accent-2", "--positive", "--warn"} {
+		if !strings.Contains(html, v+":") {
+			t.Errorf("新建 deck 的 override 块里没有定义 %s，模型引用它会被拒收", v)
+		}
+	}
+
+	s := &Service{assetsDir: assets}
+	for _, v := range []string{"--accent-2", "--positive", "--warn", "--accent", "--hairline"} {
+		if err := s.checkInlineStyleVars(`<p style="color:var(--`+strings.TrimPrefix(v, "--")+`)">x</p>`, html); err != nil {
+			t.Errorf("新建 deck 里 %s 应当可用，却被拒: %v", v, err)
+		}
+	}
+
+	// 反向断言：确认这道闸门本身还活着。少了它，上面几条就算"校验被整个关掉"
+	// 也会全绿——那种绿说明不了任何事。
+	if err := s.checkInlineStyleVars(`<p style="color:var(--nope)">x</p>`, html); err == nil {
+		t.Error("不存在的变量必须仍被拒收，否则上面的通过不构成证据")
 	}
 }

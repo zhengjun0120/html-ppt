@@ -29,6 +29,7 @@ func TestDeckPageHeaders(t *testing.T) {
 		"default-src 'self'",
 		"script-src 'self'",                // 挡内联 <script> 与内联事件处理器
 		"style-src 'self' 'unsafe-inline'", // 内联样式是允许的：AI 靠它排版
+		"font-src 'self'",                  // 字体只许同源：随附字体在 /assets/fonts/，不许走 CDN
 		"img-src 'self' data:",             // 只允许同源与内联图片
 		"connect-src 'none'",               // 挡 fetch/XHR/WebSocket 外发
 		"form-action 'none'",               // 表单提交是导航不是 fetch，不受 connect-src 管辖
