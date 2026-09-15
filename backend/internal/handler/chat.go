@@ -148,8 +148,15 @@ func serveAgentSSE(c *gin.Context,run func(emit func(agent.StreamEvent) error) (
 
 		if err != nil && !errors.Is(err,agent.ErrPaused){
 			log.Printf("agent 流式流程失败 err:%v",err)
+			// 错误文案要分清"用户的待办"和"服务故障"：上一条提问没回答不是故障，
+			// 说成"服务不可用"会让用户一直重试一个永远不会成功的请求
+			//（每次都会被 agent 那道闸门拦住）。
+			msg := "对话服务暂时不可用，请稍后重试"
+			if errors.Is(err, agent.ErrPendingAsk) {
+				msg = "上一条提问还没有回答：请先回答上面的问题，或点「新对话」重新开始"
+			}
 			select{
-			case ch<- agent.StreamEvent{Type: agent.EventTypeError,Content: "对话服务暂时不可用，请稍后重试"}:
+			case ch<- agent.StreamEvent{Type: agent.EventTypeError,Content: msg}:
 			case <- c.Request.Context().Done():
 			}
 		}

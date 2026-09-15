@@ -294,6 +294,42 @@ function resetBubbles() {
   stream.scheduled = false;
 }
 
+// ---------- 提问待答状态 ----------
+// agent 在 ask_user 处暂停时，消息数组结尾是一条**悬空的 tool_calls**（ask_user 的
+// 应答要等用户回答才补上）。此时后端只接受"回答"：直接发新消息会被闸门拦下，
+// 因为那会破坏 "tool_calls 后面必须紧跟 tool 消息" 这条协议不变式（API 直接 400，
+// 而且坏形状会被持久化、把这个会话永久弄坏）。
+//
+// 所以这里把入口锁上，别让用户白点一次。
+let pendingAsk = false;
+
+function setPendingAsk(on) {
+  pendingAsk = on;
+  input.disabled = on;
+  sendBtn.disabled = on;
+  input.placeholder = on
+    ? '请先回答上面的提问（或点右上角「新对话」重新开始）'
+    : '例如：帮我做一份介绍 Go 并发的 PPT（Ctrl+Enter 发送）';
+}
+
+// restorePendingAsk 页面刷新后把丢掉的提问卡片重建出来。
+// 没有它的话，刷新一次这个会话就永远答不上了：卡片没了（不知道问的是什么），
+// 新消息又被闸门拦着——用户只能把整个会话弃掉。
+async function restorePendingAsk(sid) {
+  let data;
+  try {
+    const resp = await api('/api/chat/pending?session_id=' + sid);
+    if (!resp.ok) return;
+    data = await resp.json();
+  } catch { return; }
+  if (!data.questions) return;
+  let qs = [];
+  try { qs = JSON.parse(data.questions).questions || []; } catch { return; }
+  if (!qs.length) return;
+  bubble('sys', '⚠️ 这个会话有一条待回答的提问（刷新前的卡片已恢复）');
+  renderAskCard(qs);
+}
+
 function onDelta(chunk) { stream.bufD += chunk; scheduleFlush(); }
 function onThink(chunk) {
   stream.bufT += chunk;
@@ -487,6 +523,7 @@ document.getElementById('logout').onclick = () => {
 document.getElementById('newChat').onclick = () => {
   setSession(0);
   sessTag.textContent = '（新对话）';
+  setPendingAsk(false);   // 新会话没有待答提问，闸门也随之失效
   bubble('sys', '▶ 已开始新对话（旧会话仍保留在服务端，记住 session_id 可随时回来）');
 };
 
@@ -748,7 +785,7 @@ async function consumeSSE(resp) {
 
 async function send() {
   const msg = input.value.trim();
-  if (!msg || streaming) return;
+  if (!msg || streaming || pendingAsk) return;   // pendingAsk：先回答提问，别白跑一次
   streaming = true;
   controller = new AbortController();
   sendBtn.disabled = true;
@@ -778,7 +815,9 @@ async function send() {
     else bubble('syserr', '连接错误：' + e.message);
   } finally {
     streaming = false;
-    sendBtn.disabled = false;
+    // 尊重待答状态：流里可能刚渲染了一张提问卡片（renderAskCard 会锁上它），
+    // 这里无条件打开的话"提问待答时不能发新消息"就失效了
+    sendBtn.disabled = pendingAsk;
     abortBtn.style.display = 'none';
   }
 }
@@ -808,7 +847,9 @@ async function sendAnswer(answers, note) {
     else bubble('syserr', '连接错误：' + e.message);
   } finally {
     streaming = false;
-    sendBtn.disabled = false;
+    // 尊重待答状态：流里可能刚渲染了一张提问卡片（renderAskCard 会锁上它），
+    // 这里无条件打开的话"提问待答时不能发新消息"就失效了
+    sendBtn.disabled = pendingAsk;
     abortBtn.style.display = 'none';
   }
 }
@@ -837,6 +878,10 @@ function handleFrame(frame) {
         setSession(id);
         sessTag.textContent = '会话 #' + id;
       }
+      // 收到 session 事件 = 服务端**已经接受**了这次请求并开始跑循环。
+      // 这是"暂停态已解除"的可靠信号：后端在闸门之后才发这个事件
+      //（见 NewStreamChat：先 guardNewMessage，再 persist，最后 emit session）。
+      setPendingAsk(false);
       break;
     }
     case 'ask_user': {
@@ -891,6 +936,11 @@ function handleFrame(frame) {
     }
     case 'error':
       bubble('syserr', '❌ ' + (ev.content ?? '未知错误'));
+      // 被闸门拦下的那种：前端和服务器状态不同步了（例如卡片重建时那次请求失败）。
+      // 去把卡片找回来并锁上输入框，否则用户会一直重复一个注定失败的点击。
+      if ((ev.content ?? '').includes('提问还没有回答')) {
+        restorePendingAsk(getSession());
+      }
       break;
     default:
       bubble('sys', '未知事件类型 ' + type);
@@ -948,6 +998,7 @@ const clipS = (s, n) => { s = String(s == null ? '' : s).replace(/\s+/g, ' '); r
 
 // ask_user 卡片：逐题渲染。契约：options 第一个 = 推荐答案（点击填入输入框）
 function renderAskCard(qs) {
+  setPendingAsk(true);   // 锁住输入框：此时发新消息会被后端闸门拦下
   const card = bubble('ask', `❓ Agent 想确认（${qs.length} 个问题）：`);
   const inputs = [];
 
@@ -1037,7 +1088,10 @@ async function init() {
   loadPreview();
   loadHistory();          // 顶部就能看到已有多少版本，不用先展开面板
   const sid = getSession();
-  if (sid > 0) sessTag.textContent = '会话 #' + sid;
+  if (sid > 0) {
+    sessTag.textContent = '会话 #' + sid;
+    await restorePendingAsk(sid);   // 刷新后把丢掉的提问卡片找回来
+  }
 }
 (async () => {
   if (!getToken()) { showAuth(''); return; }

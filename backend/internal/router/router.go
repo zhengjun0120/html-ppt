@@ -45,6 +45,8 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer", h.AskUser)
+			// 暂停中的提问（页面刷新后重建提问卡片用；没有则 questions 为空串）
+			guarded.GET("/chat/pending", h.PendingAsk)
 
 			guarded.GET("/decks/:id/history", h.ListDeckHistory)
 			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)

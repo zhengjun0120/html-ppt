@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html-ppt/backend/internal/store"
+	"log"
 	"strings"
 
 	"github.com/openai/openai-go/v3"
@@ -14,6 +15,9 @@ import (
 
 // 控制信号，循环在ask_user处暂停
 var ErrPaused = errors.New("agent paused: waiting for user answer")
+
+// ErrPendingAsk（会话在等 ask_user 的回答，此时不接受新的用户消息）定义在 toolcalls.go，
+// 它和那条协议不变式是一套东西。
 
 // 续轮读回历史，首轮新建会话
 func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID uint,userContent,deckID string) (*store.ChatSession,[]openai.ChatCompletionMessageParamUnion,error){
@@ -37,6 +41,20 @@ func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID
 			if err := json.Unmarshal([]byte(sess.Messages),&messages);err !=nil{
 				return nil,nil,fmt.Errorf("会话消息损坏 err:%w",err)
 			}
+		}
+
+		// 自愈：把历史上被"提问没回答就发新消息"那个 bug 弄坏的会话修回来。
+		//
+		// 那个 bug 留下的形状（assistant 的 tool_calls 与 tool 应答之间夹了别的角色）
+		// 会让 API 对**之后每一次**请求都回 400，连正常回答也发不出去——
+		// 这类会话不会自己好，必须在这里修。
+		//
+		// 只在内存里修、不在这里写回：本次请求往下走本来就会 persistSession，
+		// 由它统一落盘。在这里偷偷多写一次库，会让"读路径"带上副作用——
+		// 以后有人为了排查问题调一次加载就把线上数据改了。
+		if repaired, n := repairToolCalls(messages, parsePendingAsk(&sess).ToolCallID); n > 0 {
+			log.Printf("[warn] 会话 %d 的消息里工具调用不成对，已在内存中修复 %d 处（历史 bug 遗留，本次请求结束时会写回）", sess.ID, n)
+			messages = repaired
 		}
 		return &sess,messages,nil
 	}

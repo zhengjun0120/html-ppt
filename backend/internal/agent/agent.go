@@ -273,6 +273,20 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		return 0, err
 	}
 
+	// 闸门：上一条提问还没回答时，不接受新的用户消息。
+	//
+	// 不拦的后果比"这一轮报错"严重得多：暂停态的消息数组结尾是一条带 tool_calls 的
+	// assistant 消息（ask_user 的应答要等用户回答才补上）。此时追加用户消息就破坏了
+	// "tool_calls 后面必须紧跟 tool 消息"这条协议不变式，API 回
+	//   400 An assistant message with 'tool_calls' must be followed by tool messages…
+	// 而这轮的用户消息**已经被下面的 persistSession 写进库了**，于是这个会话之后
+	// 每次请求都带着坏形状 400，连正常回答都救不回来（AnswerChat 把答案追加到末尾，
+	// 仍然不是紧跟 tool_calls 的位置）。所以这里一律拒绝：用户要么把提问答完，
+	// 要么开新对话。
+	if err := guardNewMessage(sess); err != nil {
+		return sess.ID, err
+	}
+
 	//首轮构建系统提示词
 	if sessionID == 0 {
 		messages = append(messages, openai.SystemMessage(as.buildSystemMessage(deckID)))
@@ -312,19 +326,16 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	if sess.PendingAsk == "" {
 		return sess.ID, errors.New("会话不在等待回答状态")
 	}
-	var pending struct {
-		ToolCallID string `json:"tool_call_id"`
-		RunID      string `json:"run_id"` // 被暂停的那个 run；老数据里没有，空值也能用
-	}
-	if err := json.Unmarshal([]byte(sess.PendingAsk), &pending); err != nil || pending.ToolCallID == "" {
-		if err != nil {
-			return sess.ID, fmt.Errorf("暂停态损坏 err:%w", err)
-		} else {
-			return sess.ID, fmt.Errorf("暂停态损坏 err: tool_call_id 为空")
-		}
+	pending := parsePendingAsk(sess)
+	if pending.ToolCallID == "" {
+		return sess.ID, errors.New("暂停态损坏 err: tool_call_id 为空")
 	}
 
-	messages = append(messages, openai.ToolMessage(answersJSON, pending.ToolCallID))
+	// 用"设置答案"而不是"追加一条 tool 消息"：加载时已经修复过，
+	// 所以这个 tool_call_id 必然已经**有一条**应答（正常路径下是修复补的兜底说明，
+	// 被历史 bug 弄坏过的会话里则是上一次回答留下的内容）。追加会让同一个 id
+	// 出现两条应答，API 同样会拒。
+	messages = setToolAnswer(messages, pending.ToolCallID, answersJSON)
 	sess.PendingAsk = ""
 	if err := as.persistSession(sess, messages); err != nil {
 		return sess.ID, err
@@ -503,9 +514,11 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				}
 				opt.Messages = messages
 				// run_id 一起存进暂停态：恢复时作为 parent_run_id 带回来，
-				// 观测页才能把被打断的这次对话和一个 run 串起来
-				pending, _ := json.Marshal(map[string]string{"tool_call_id": tool.ID, "run_id": rec.RunID()})
-				sess.PendingAsk = string(pending)
+				// 观测页才能把被打断的这次对话和一个 run 串起来。
+				// 注意这条 assistant 消息的 tool_calls 里，ask_user 那个**故意**没有应答
+				//（正在等用户回答）——所以此时的 messages 是不满足协议不变式的，
+				// 它不能直接发给模型。这就是 NewStreamChat 要设闸门的原因。
+				sess.PendingAsk = encodePendingAsk(pendingAsk{ToolCallID: tool.ID, RunID: rec.RunID()})
 				if err := as.persistSession(sess, messages); err != nil {
 					return false, err
 				}
