@@ -37,6 +37,9 @@ type Features struct {
 
 	// 联网搜索
 	WebSearch bool `yaml:"web_search"`
+
+	//视觉审查
+	Vision bool `yaml:"vision"`
 }
 
 type Server struct {
@@ -96,6 +99,10 @@ type Redis struct {
 // 与 JWTSecret 同级敏感：丢了它库里的密文全部作废，泄露 = 密钥全泄。
 type Crypto struct {
 	AESKey string `yaml:"aes_key"`
+}
+
+type Vision struct {
+	ChromePate string `yaml:"chrome_path"`
 }
 
 // TTL 返回解析后的 token 有效期；配置缺失/写坏时回落 72h（宽松降级，

@@ -12,6 +12,7 @@ import (
 	"html-ppt/backend/internal/cryptox"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/vision"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -35,6 +36,11 @@ type AgentService struct {
 	serverKey string  // 服务器默认apiKey
 	WebSearch bool // 是否开启联网搜索
 	AnthropicBaseURL string // deepseek 只支持 anthropic格式的联网搜索
+
+	Vision bool
+	ChromePath string
+	VisionBaseURL string
+	VisionGrants *vision.Grants
 }
 
 var agentServer *AgentService
@@ -65,6 +71,8 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 		serverKey: cfg.APIKey,
 		WebSearch: features.WebSearch,
 		AnthropicBaseURL: cfg.AnthropicBaseURL,
+		Vision: features.Vision,
+		// ChromePath: ,
 	}
 
 	tools := agentServer.buildTools()

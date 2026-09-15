@@ -5,6 +5,7 @@ import (
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/vision"
 )
 
 // Handler 持有所有路由处理函数需要的依赖（struct-based handler 模式）。
@@ -15,8 +16,9 @@ type Handler struct {
 	st    *store.Store // 可能为 nil（数据库降级模式），使用处需判空
 	agent *agent.AgentService
 	auth  *auth.Service
+	renderGrants *vision.Grants
 }
 
-func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service) *Handler {
-	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service,renderGrantsSvc *vision.Grants) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc,renderGrants: renderGrantsSvc}
 }
