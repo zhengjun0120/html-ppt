@@ -26,6 +26,11 @@ const (
 	PresetDuotone   = "duotone"
 	PresetTerminal  = "terminal"
 	PresetTech      = "tech"
+	// 后四套是按"题材"补的（来历见 presets 表里那段注释），不是又加了四个配色
+	PresetIndigo = "indigo"
+	PresetPine   = "pine"
+	PresetKraft  = "kraft"
+	PresetDune   = "dune"
 )
 
 // Preset 是一套预设的公开描述。Name 是工具参数里的取值，
@@ -131,11 +136,88 @@ var presets = map[string]Preset{
 			},
 		},
 	},
+	// 下面四套补的是"题材缺口"，不是"再多几个配色"：上面六套里浅色的三套（纸感/编辑风/双色印刷）
+	// 全偏暖，于是科研数据、自然可持续、人文历史、艺术设计这四个常见题材没有对应的观感可选，
+	// 模型只能把内容往"暖纸 + 印泥红"或"深蓝发光"上塞——同一个题材换个题目会得到几乎一样的页面。
+	//
+	// 调性分组参考了外部 html-ppt skill 按题材给主题的思路（那个项目是 AGPL-3.0，所以只取
+	// "题材 → 调性"这个想法，**取值全部按我们自己的约束重定**，没有搬它的色板）：它一套主题
+	// 只给 ink/paper 两色，而我们的预设要铺满 accent/surface/border/字体/圆角/纹理/语义色一整套，
+	// 且每套都要过正文与强调色的对比度下限（见 theme_presets_test.go 的对比度测试）。
+	PresetIndigo: {
+		Name: PresetIndigo, Label: "靛蓝",
+		About: "瓷白底 + 深靛蓝 + 一点朱砂，衬线标题，细网格纹理。研究报告、数据汇报、技术方案，需要「像学术期刊」的场合",
+		Theme: Theme{
+			Accent: "#1b4a86", Background: "#f1f3f5",
+			HeadingColor: "#0a1f3d", TextColor: "#26384f",
+			// 面板是纯瓷白而不是强调色的淡染：浅色主题上淡染会让每张卡片泛一层蓝
+			Surface: "#ffffff", BorderColor: "#d5dde7",
+			Font: FontEditorial, Radius: "2px", Texture: TextureGrid,
+			Vars: map[string]string{
+				"--accent-2": "#c2453a", // 朱砂：只用在对比页/图表的第二色上，像瓷器上的那一笔记号
+				"--positive": "#2f6b4f",
+				"--warn":     "#a8721f",
+			},
+		},
+	},
+	PresetPine: {
+		Name: PresetPine, Label: "松墨",
+		About: "象牙底 + 深松绿 + 赭石，全衬线，零纹理零圆角。自然、可持续、文化纪实、非虚构，需要「旧杂志内页」的场合",
+		Theme: Theme{
+			Accent: "#2f5d3a", Background: "#f5f1e8",
+			HeadingColor: "#1a2e1f", TextColor: "#34422e",
+			Surface: "#fdfbf5", BorderColor: "#dcd5c2",
+			Font: FontSerif, Radius: "0px", Texture: TextureNone,
+			Vars: map[string]string{
+				"--accent-2": "#8a6a2f",
+				"--positive": "#3f7d4f",
+				"--warn":     "#b06a1f",
+			},
+		},
+	},
+	PresetKraft: {
+		Name: PresetKraft, Label: "牛皮纸",
+		About: "牛皮纸底 + 深赭 + 横格信纸线，衬线标题。人文、历史、文学、独立杂志，需要年代感的场合",
+		Theme: Theme{
+			Accent: "#8f4520", Background: "#eedfc7",
+			HeadingColor: "#2a1e13", TextColor: "#4a3826",
+			Surface: "#f7ecd8", BorderColor: "#d3bf9d",
+			// 横线纹理 = 老笔记本/信纸：这套调性里唯一能把"纸"讲清楚的那一种
+			Font: FontEditorial, Radius: "2px", Texture: TextureRule,
+			Vars: map[string]string{
+				"--accent-2": "#4a6fa5",
+				"--positive": "#2f6b4f",
+				"--warn":     "#a8721f",
+			},
+		},
+	},
+	PresetDune: {
+		Name: PresetDune, Label: "沙丘",
+		About: "沙色底 + 炭灰 + 几何无衬线 + 大圆角，没有彩色强调。艺术、设计、画廊手册，审美优先、不想被配色抢戏的场合",
+		Theme: Theme{
+			Accent: "#2b241b", Background: "#f0e6d2",
+			HeadingColor: "#1f1a14", TextColor: "#4a4238",
+			Surface: "#faf4e8", BorderColor: "#ddd0b6",
+			// 唯一一套"强调色不带彩"的预设。编辑风也是黑强调，但那套是纯白底 + 直角 + 现代无衬线；
+			// 这套是沙色底 + 8px 圆角，落在"画廊手册 / 建筑图册"那一档
+			Font: FontModern, Radius: "8px", Texture: TextureNone,
+			Vars: map[string]string{
+				"--accent-2": "#8a7a5c",
+				"--positive": "#4f6b46",
+				"--warn":     "#a8721f",
+			},
+		},
+	},
 }
 
 // presetOrder 是稳定顺序：map 遍历随机，而它出现在工具说明与报错信息里，
 // 顺序变了 diff 与文档就跟着抖。
-var presetOrder = []string{PresetPaper, PresetEditorial, PresetNoir, PresetDuotone, PresetTerminal, PresetTech}
+// 新增的四套排在六套之后：顺序决定了工具说明里清单的排布，插在中间会让已有 deck 的
+// "第一眼看哪个"发生变化，而它们本来就是补充项。
+var presetOrder = []string{
+	PresetPaper, PresetEditorial, PresetNoir, PresetDuotone, PresetTerminal, PresetTech,
+	PresetIndigo, PresetPine, PresetKraft, PresetDune,
+}
 
 // Presets 按稳定顺序返回全部预设（工具说明、文档、测试用）。
 func Presets() []Preset {

@@ -38,9 +38,9 @@
    `.reveal .timeline li`(0,2,1) 的 --fs-small——时间轴单元会悄悄变成正文大小。
    加角色类时把名字同步进排除名单。 */
 :where(.reveal .slides section) p:where(:not(.stat, .term, .label, .sub, .footnote,
-    .note, .kicker, .num, .quote, .unit)),
+    .note, .kicker, .num, .quote, .unit, .val)),
 :where(.reveal .slides section) li:where(:not(.stat, .term, .label, .sub, .footnote,
-    .note, .kicker, .num, .quote, .unit)) {
+    .note, .kicker, .num, .quote, .unit, .val)) {
   font-size: var(--fs-body);
 }
 
@@ -69,9 +69,14 @@
 
 /* 卡片网格。
    **能装句子的多列版式只有 .grid-2**：默认画布 wide 的内容区宽约 1094px，
-   两列每格约 467px 文字宽（37px 字号下约 12 个汉字/行）。三、四列每格只剩 276/181px，
-   也就是 7/5 个字一行——那里只放得下数字、序号、短标签，放句子会碎成一根竖条。
-   这不是保守：画布宽度是固定的，字号抬到投影可读下限之后，这就是算术结果。 */
+   两列每格约 467px 文字宽（37px 字号下约 12 个汉字/行）。三、四列每格只剩 269/173px，
+   也就是 7/4.6 个字一行——那里放句子会碎成一根竖条。
+   这不是保守：画布宽度是固定的，字号抬到投影可读下限之后，这就是算术结果。
+
+   但"放不下句子"不等于"只能放数字"：三、四列放得下**等权概念卡**
+   （短标题 + 一行说明，即外部 skill 的 S13「三个对等概念」/ S19「四张等权卡」那种形状），
+   前提是卡内文字按列宽降一档——见下面那条规则。原来这里是一刀切"只放数字与短标签"，
+   把这一类版式整个排除了。 */
 .reveal .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -239,6 +244,62 @@
   font-size: var(--fs-body);
 }
 
+/* ---- .bars：量级对比（柱长表示相对大小） ----
+   为什么需要它：这个库能表达"一个数字"（.stat）和"三个数字并排"（.grid-3），
+   但**表达不了数字之间的大小关系**——而"谁比谁大多少"正是数据类内容的核心。
+   缺了它，排名只能写成文字清单，或者用"显著高于"这类描述糊过去（图比字更权威，
+   所以这句话也更容易骗到人）。
+
+   与文件头那条"不用左侧粗竖条"禁令的区别：卡片左侧那条彩条是**装饰**，长度与内容无关；
+   这里的柱长由数据算出来写在行内，是一条有刻度的坐标轴，换成空轨道就什么都读不出来。
+
+   结构：.bars > .bar >（名称 p）+（.track > .fill），右侧 .val 放数值。 */
+
+.reveal .bars {
+  display: grid;
+  /* 三列定死：名称 9.5em（与 .row .key 同一档，两栏并排时才对得齐）、轨道吃剩下的、
+     数值按内容宽右对齐。
+
+     关键在**三列属于同一个网格**（.bar 用 display:contents 参与父网格），
+     于是"数值列"的宽度取五行里最宽的那个，五条轨道的左右端点才会完全对齐。
+     若让每个 .bar 各自成一个网格，数值文字长短不同就会让轨道长度不同——
+     实测"40 小时 / 12 小时"两行差 17.5px，而轴不一样长的柱状图是读不出来的。 */
+  grid-template-columns: 9.5em 1fr auto;
+  align-items: center;
+  /* 行距比 .rows 紧一档：柱子之间靠长度和底色区分，不需要再用发丝线切一刀 */
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+/* 不生成盒子：三个格子直接参与 .bars 的网格（见上面的对齐说明） */
+.reveal .bar { display: contents; }
+
+/* 容器自己管间距，去掉 p 的块级外边距（同 .rows .quote 的理由） */
+.reveal .bar > p { margin: 0; }
+
+/* 轨道：一条发丝线做底。没有它柱长就没有参照物——"72%"是相对谁说的？ */
+.reveal .bar .track {
+  height: 0.5em;
+  background: var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* 柱体：宽度由页面按"这一项占最大值的百分比"写在行内（见 prompt 的组件库目录） */
+.reveal .bar .fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* 数值：等宽数字，位数不同的数字也能右对齐；尺寸走次要说明那一档
+   （柱长已经表达了大小，这里的数字是精确值） */
+.reveal .bar .val {
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ---- 行内文本角色 ---- */
 
 /* 术语词：句型、专有名词等需要被一眼看到的关键词 */
@@ -303,6 +364,26 @@
 }
 .reveal .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .reveal .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* 三、四列里的卡片降一档：标题 --fs-title→--fs-body，正文 --fs-body→--fs-small。
+   为什么必须降：列宽是算术结果，而字号已经抬到投影可读下限了——四列里 37px 的正文
+   只有 4.6 字/行、44.9px 的标题只有 3.8 字/行，"数据驱动"这种四字标题会断成 3+1。
+   降完是 4.6 字（标题 37px）/ 5.5 字（说明 31px）：刚好够一张概念卡，且都仍在
+   投影下限之上（--fs-small 0.92em 就是为投影定的那一档）。
+   为什么放在 CSS 而不是提示词里：模型本来就不许自己定字号（stylelint 会拦），
+   让它去记"窄列要小一档"只会得到插在阶梯缝隙里的手写值。
+   只影响裸段落与 h3/h4：.stat/.sub/.label 这些角色类被 :where() 排除在外——
+   不排除的话，.grid-3 里那张"105 分"的数字卡会被缩成小字（那是它现在的用途之一）。 */
+.reveal .grid-3 .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
+.reveal .grid-4 .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
+.reveal .grid-3 .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
+.reveal .grid-4 .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+  font-size: var(--fs-body);
+}
+.reveal .grid-3 .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
+.reveal .grid-4 .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+  font-size: var(--fs-small);
+}
 
 /* ============================================================
    组件集 v3 —— 结构性版式

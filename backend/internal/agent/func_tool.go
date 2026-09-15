@@ -275,7 +275,7 @@ type UpdateThemeArgs struct {
 	// 注意：description 里不能出现半角逗号（invopop/jsonschema 按半角逗号切键值对，
 	// 出现一个就会把后半段描述静默丢掉）。这里的清单由 deck.PresetSummary() 生成到
 	// 工具级 Description 里，字段级只留一句指引。
-	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
+	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,enum=indigo,enum=pine,enum=kraft,enum=dune,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
 	Accent       *string `json:"accent,omitempty" jsonschema:"type=string,description=强调色（6位十六进制，如 #b23a2e），卡片边框和底色默认随之派生"`
 	Background   *string `json:"background,omitempty" jsonschema:"type=string,description=页面背景色（6位十六进制）"`
 	HeadingColor *string `json:"heading_color,omitempty" jsonschema:"type=string,description=标题颜色（6位十六进制）"`

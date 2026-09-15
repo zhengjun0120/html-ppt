@@ -12,10 +12,12 @@ package deck
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -218,6 +220,66 @@ func TestOnAccentColorPicksReadableForeground(t *testing.T) {
 	}
 }
 
+// 每个预设都要过对比度下限。加预设最省事的做法是"挑几个好看的颜色"，
+// 那样产出的是"屏幕上看漂亮、投影上读不出来"的页面——而且这种错在验收页上看不出来
+// （验收页是在显示器上近距离看的），只有坐远了才发现。
+//
+// 下限取 7:1（WCAG AAA 的正文档）：幻灯片比网页更远、环境光更强，AA 的 4.5 不够。
+// 强调色上的字（.badge 那种，白字压在色块上）取 4.5 就够——它总是短标签或大字号。
+// 实测十套的正文/底色比值：最低 dune 7.97、kraft 8.50，最高 editorial 16.48——
+// 新增的四套都落在原有区间内（原来最低的是 duotone 10.08，dune 刻意更"闷"一档但仍过线）。
+func TestPresetContrastMeetsFloor(t *testing.T) {
+	for _, p := range Presets() {
+		th := p.Theme
+		surface := th.Surface
+		if surface == "" {
+			surface = th.Background // 留空 = 由 accent 派生，对比度只能按底色估
+		}
+		for _, c := range []struct {
+			name, fg, bg string
+			floor        float64
+		}{
+			{"正文/底色", th.TextColor, th.Background, 7},
+			{"标题/底色", th.HeadingColor, th.Background, 7},
+			{"正文/面板底", th.TextColor, surface, 7},
+			{"强调色上的字", onAccentColor(th.Accent), th.Accent, 4.5},
+		} {
+			if got := contrastRatio(c.fg, c.bg); got < c.floor {
+				t.Errorf("预设 %s 的 %s 只有 %.2f:1（下限 %.1f:1）——投屏上会读不清",
+					p.Name, c.name, got, c.floor)
+			}
+		}
+	}
+}
+
+// contrastRatio 算 WCAG 2.x 的相对亮度对比度（1:1 ~ 21:1）。
+// 用相对亮度而不是"感觉深浅"：预设表里同时有 #f6f2e9 这种暖白和 #080c0a 这种近黑，
+// 靠肉眼估不出 7:1 和 5:1 的差别，而这正是"投屏能不能读"的分界。
+func contrastRatio(a, b string) float64 {
+	l1, l2 := relativeLuminance(a), relativeLuminance(b)
+	if l1 < l2 {
+		l1, l2 = l2, l1
+	}
+	return (l1 + 0.05) / (l2 + 0.05)
+}
+
+func relativeLuminance(hex string) float64 {
+	v, err := strconv.ParseInt(strings.TrimPrefix(hex, "#"), 16, 64)
+	if err != nil {
+		return 0 // 非法值不该在这里报错：validate() 已经拦过一遍，这里只求不炸
+	}
+	lin := func(c float64) float64 {
+		if c <= 0.03928 {
+			return c / 12.92
+		}
+		return math.Pow((c+0.055)/1.055, 2.4)
+	}
+	r := float64(v>>16&0xff) / 255
+	g := float64(v>>8&0xff) / 255
+	b := float64(v&0xff) / 255
+	return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)
+}
+
 func TestTextureCSS(t *testing.T) {
 	theme := defaultTheme()
 
@@ -323,7 +385,7 @@ func TestLayoutsFixtureMatchesRenderer(t *testing.T) {
 		}
 	})
 
-	t.Run("六个预设的 CSS 快照", func(t *testing.T) {
+	t.Run("预设的 CSS 快照", func(t *testing.T) {
 		got := map[string]string{}
 		for _, m := range regexp.MustCompile("(\\w+):\\s*`([^`]*)`").FindAllStringSubmatch(page, -1) {
 			got[m[1]] = m[2]

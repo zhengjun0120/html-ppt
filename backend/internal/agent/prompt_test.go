@@ -10,7 +10,7 @@ package agent
 //  2. 日期本身要正确、且**不是**写死在 systemPrompt.md 里的（那个文件是 //go:embed
 //     编译进二进制的，写死等于发布即过期）。
 //
-// 末尾三条是**压缩提示词时的守卫**：压缩真正会造成的损伤不是"话变少了"，
+// 末尾几条是**压缩提示词时的守卫**：压缩真正会造成的损伤不是"话变少了"，
 // 而是悄悄少掉一条信息——某个组件类不再被提及、某个数字和代码对不上、容量预算被删。
 // 它们都从**源头派生**期望值（组件库文件、deck 包的画布表），所以不需要人工维护清单：
 // 代码改了而提示词没跟上，测试就会红。
@@ -159,6 +159,61 @@ func TestPromptKeepsCapacityBudget(t *testing.T) {
 			t.Errorf("提示词里找不到容量预算的关键数字 %q——它被压缩掉了？", s)
 		}
 	}
+}
+
+// 跨页节奏的四条规则。它们读起来最像"劝告式的话"，压缩时最容易被当成废话删掉，
+// 但每条都对应一个在真实 deck 上量到的缺口（量法与完整数字见 docs/tools.md「通用实现骨架」）：
+//   - 16 份真实 deck 里 0 份把最后一页做成收尾页（`.center`），多数停在最后一个知识点上
+//   - `.bleed`/`.plate`/`.band` 这三个整页低密度版式，16 份里 13 份一次都没用过
+//   - deck-0015 里用了提头的 5 页**全部**是标题的复述
+//   - 大纲层面只有 deck-0016/0017 看得出钩子与收束，其余是"整体思路 → 各部分 → 小结"的话题清单
+//
+// 删掉它们，产出就会退回"每页都是标题 + 等分卡片"。
+func TestPromptKeepsRhythmRules(t *testing.T) {
+	// 分节断言，而不是整份文件里搜一次就算数："叙事弧"在标准工作流那行里也出现过，
+	// 只搜全文的话，把决定一里的定义整段删掉，测试仍然是绿的——
+	// 和组件库那条守卫同一个坑（那里是限定在"组件库"一节里搜）。
+	upfront := promptRegion(t, "# 动手写之前", "\n# 单页容量预算")
+	catalog := promptRegion(t, "# 组件库", "\n# 文案纪律")
+
+	// 决定一的大纲骨架 + 决定三的密度落差
+	for _, s := range []string{"叙事弧", "钩子", "收束", "每 3~4 页"} {
+		if !strings.Contains(upfront, s) {
+			t.Errorf("「动手写之前」那几节里找不到 %q——它被压缩掉了？", s)
+		}
+	}
+	// 三个整页低密度版式必须点在"动手写之前"里（而不是只在组件库目录里躺着）：
+	// 16 份真实 deck 里 13 份一次都没用过它们，规则不在决策处就没人会用
+	for _, c := range []string{"bleed", "plate", "band"} {
+		if !hasClassToken(upfront, "."+c) {
+			t.Errorf("「动手写之前」里没有 .%s：三个低密度版式少一个，密度节奏就只剩一档", c)
+		}
+	}
+	// 版式目录的结尾页 + 页面家具的提头规则
+	for _, s := range []string{"封面 / 结尾页", "不能是标题的缩写或复述"} {
+		if !strings.Contains(catalog, s) {
+			t.Errorf("组件库那节里找不到 %q——它被压缩掉了？", s)
+		}
+	}
+}
+
+// promptRegion 取提示词里从 start 到 end 之间的一段（end 传空串则取到文件末尾）。
+// 用来把断言限定在某一节里，避免"别处顺口提过一次"造成的假通过。
+func promptRegion(t *testing.T, start, end string) string {
+	t.Helper()
+	i := strings.Index(systemPrompt, start)
+	if i < 0 {
+		t.Fatalf("提示词里没有 %q 这一节（改标题了？）", start)
+	}
+	rest := systemPrompt[i:]
+	if end == "" {
+		return rest
+	}
+	j := strings.Index(rest, end)
+	if j < 0 {
+		t.Fatalf("提示词里 %q 之后找不到 %q（节被删或改名了）", start, end)
+	}
+	return rest[:j]
 }
 
 // 发给模型的提示词不能带 \r。这条守的是一个看不见的浪费：
