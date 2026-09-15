@@ -5,6 +5,7 @@ import (
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
 )
 
@@ -12,13 +13,17 @@ import (
 // 装配点唯一：新增依赖只改这里和 New，路由注册一行不用动。
 // 规矩：结构体里只放依赖，且 handler 只调 service，不越层摸 store / 文件系统。
 type Handler struct {
-	decks *deck.Service
-	st    *store.Store // 可能为 nil（数据库降级模式），使用处需判空
-	agent *agent.AgentService
-	auth  *auth.Service
+	decks        *deck.Service
+	st           *store.Store // 可能为 nil（数据库降级模式），使用处需判空
+	agent        *agent.AgentService
+	auth         *auth.Service
 	renderGrants *vision.Grants
+	// traces 观测记录的读取端（写端在 agent 里）。**不受 features.trace 影响也要装配**：
+	// 关掉的是"继续记录"，已经落盘的记录应该照样能看，
+	// 否则调一次开关就会把之前跑出来的东西变成读不到的孤儿文件。
+	traces *trace.Store
 }
 
-func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service,renderGrantsSvc *vision.Grants) *Handler {
-	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc,renderGrants: renderGrantsSvc}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces}
 }

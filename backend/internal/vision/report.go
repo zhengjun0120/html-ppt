@@ -21,7 +21,7 @@ func HardFindings(d *Deck) []string {
 	for _, s := range d.Slides {
 		var why []string
 		if s.EffScale < fitWarnScale {
-			why = append(why, fmt.Sprintf("被适配兜底缩到 %.2f (投屏上明显偏小)",s.EffScale))
+			why = append(why, fmt.Sprintf("被适配兜底缩到 %.2f（投屏上明显偏小）", s.EffScale))
 		}
 		if s.MinFontPx < floorFontPx {
 			why = append(why, fmt.Sprintf("最小字号 %.0fpx 低于 24pt 投影下限", s.MinFontPx))
@@ -42,21 +42,21 @@ func HardFindings(d *Deck) []string {
 
 	pages := map[string][]int{}
 	order := []string{}
-	for _,s := range d.Slides{
-		if _,seen := pages[s.Layout]; !seen{
+	for _, s := range d.Slides {
+		if _, seen := pages[s.Layout]; !seen {
 			order = append(order, s.Layout)
 		}
 		pages[s.Layout] = append(pages[s.Layout], s.Index+1)
 	}
-	sort.SliceStable(order,func(i,j int) bool {return len(pages[order[i]]) > len(pages[order[j]])})
-	for _,l := range order {
-		if len(pages[l]) > layoutRepeatMax{
-			out = append(out, fmt.Sprintf("版式重复：%s 用了 %d 次（第 %v 页，规则 <= %d）",clip(l,40),len(pages[l]),pages[l],layoutRepeatMax))
+	sort.SliceStable(order, func(i, j int) bool { return len(pages[order[i]]) > len(pages[order[j]]) })
+	for _, l := range order {
+		if len(pages[l]) > layoutRepeatMax {
+			out = append(out, fmt.Sprintf("版式重复：%s 用了 %d 次（第 %v 页，规则 ≤%d）", clip(l, 40), len(pages[l]), pages[l], layoutRepeatMax))
 		}
 	}
-	for i:=1;i<len(d.Slides);i++{
-		if d.Slides[i].Layout == d.Slides[i-1].Layout{
-			out = append(out, fmt.Sprintf("连续两页同一版式：第 %d 页与第 %d 页",i,i+1))
+	for i := 1; i < len(d.Slides); i++ {
+		if d.Slides[i].Layout == d.Slides[i-1].Layout {
+			out = append(out, fmt.Sprintf("连续两页同一版式：第 %d 页与第 %d 页", i, i+1))
 		}
 	}
 	return out
@@ -65,35 +65,34 @@ func HardFindings(d *Deck) []string {
 // 给模型看的每一页的摘要
 func Digest(d *Deck) string {
 	var b strings.Builder
-	for _,s := range d.Slides{
-		fmt.Fprintf(&b,"第 %d 页：fit=%.2f 最小字号=%.0fpx 溢出=%.2f 子元素=%d 字数=%d",s.Index+1,s.EffScale,s.MinFontPx,s.Overflow,s.Children,s.Chars)
-		if s.Title != ""{
-			fmt.Fprintf(&b," 标题=%q",s.Title)
+	for _, s := range d.Slides {
+		fmt.Fprintf(&b, "第 %d 页：fit=%.2f 最小字号=%.0fpx 溢出=%.2f 子元素=%d 字数=%d", s.Index+1, s.EffScale, s.MinFontPx, s.Overflow, s.Children, s.Chars)
+		if s.Title != "" {
+			fmt.Fprintf(&b, " 标题=%q", s.Title)
 		}
 		b.WriteString("\n")
 	}
-	return strings.TrimRight(b.String(),"\n")
+	return strings.TrimRight(b.String(), "\n")
 }
 
 // 给人看的摘要
-func(d *Deck) Text() string {
+func (d *Deck) Text() string {
 	var b strings.Builder
-	fmt.Fprintf(&b,"共 %d 页，画布 %d*%d\n",len(d.Slides),d.CanvasW,d.CanvasH)
+	fmt.Fprintf(&b, "共 %d 页，画布 %d*%d\n", len(d.Slides), d.CanvasW, d.CanvasH)
 	b.WriteString(Digest(d))
-	if f:= HardFindings(d); len(f) > 0{
-		tmpString := strings.Join(f,"\n ")
+	if f := HardFindings(d); len(f) > 0 {
 		b.WriteString("\n硬判定：\n  ")
-		b.WriteString(tmpString)
-	}else{
+		b.WriteString(strings.Join(f, "\n  "))
+	} else {
 		b.WriteString("\n硬判定: 无")
 	}
 	return b.String()
 }
 
-func clip (s string,n int) string {
+func clip(s string, n int) string {
 	r := []rune(s)
 	if len(r) <= n {
 		return s
 	}
-	return string(r[:n])+"..."
+	return string(r[:n]) + "..."
 }

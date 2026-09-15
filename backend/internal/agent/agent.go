@@ -7,6 +7,7 @@ import (
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 	"log"
 	"strconv"
 
@@ -285,7 +286,11 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		return sess.ID, fmt.Errorf("事件推送失败: %w", emitErr)
 	}
 
-	paused, err := as.runLoop(ctx, client, sess, messages, emit)
+	paused, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+		UserID:      userID,
+		DeckID:      deckID,
+		UserContent: userContent,
+	})
 	if paused {
 		return sess.ID, ErrPaused
 	}
@@ -309,6 +314,7 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	}
 	var pending struct {
 		ToolCallID string `json:"tool_call_id"`
+		RunID      string `json:"run_id"` // 被暂停的那个 run；老数据里没有，空值也能用
 	}
 	if err := json.Unmarshal([]byte(sess.PendingAsk), &pending); err != nil || pending.ToolCallID == "" {
 		if err != nil {
@@ -327,7 +333,14 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 		return sess.ID, fmt.Errorf("事件推送失败 err:%w", emitErr)
 	}
 
-	paused, err := as.runLoop(ctx, client, sess, messages, emit)
+	// 恢复也算一次新的 run（消息数组继续用，但 run 的边界是"一次循环执行"）。
+	// parent_run_id 指回被暂停的那次，观测页据此把被打断的对话串起来看
+	paused, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+		UserID:      userID,
+		DeckID:      sess.DeckID,
+		UserContent: "(用户回答了 ask_user 的提问)",
+		ParentRunID: pending.RunID,
+	})
 	if paused {
 		return sess.ID, ErrPaused
 	}
@@ -337,12 +350,46 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	return sess.ID, nil
 }
 
-func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error) (paused bool, err error) {
+func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error, info runTraceInfo) (paused bool, err error) {
 	rr := newRunRecorder()
-	defer func(){
-		if err == nil{
-			as.recordRunVersions(ctx,rr)
+	defer func() {
+		if err == nil {
+			as.recordRunVersions(ctx, rr)
 		}
+	}()
+
+	// —— 观测（trace）——
+	// 顺序很重要：先声明 Close、后声明下面那个 run_end 兜底。defer 是后进先出，
+	// 所以兜底会先执行、再关文件。反过来写的话，中途出错那一轮的 run_end 会落进
+	// 一个已经关闭的文件（writeLocked 直接丢弃），观测页上那次运行就永远停在
+	// "运行中"并一直轮询——而真实情况是它早就挂了。
+	info.SessionID = sess.ID
+	if uid, ok := authctx.UserID(ctx); ok {
+		info.UserID = uid
+	}
+	rec := as.openTraceRecorder(info, emit)
+	defer rec.Close()
+	ctx = trace.With(ctx, rec)
+
+	ended := false
+	endRun := func(status string) {
+		if ended {
+			return
+		}
+		ended = true
+		s := rec.Summary()
+		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Status: status, Summary: &s})
+	}
+	defer func() {
+		if ended {
+			return
+		}
+		// 走到这里说明是"中途返回了错误"（流断了、写库失败、事件推不动）。
+		// 错误原因必须进 trace：服务端日志会被滚动冲掉，而这条记录是要长期回看的
+		if err != nil {
+			trace.Emit(ctx, trace.Event{Kind: trace.KindError, Error: err.Error()})
+		}
+		endRun(trace.StatusError)
 	}()
 
 	opt := as.setChatOpts()
@@ -360,6 +407,9 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 	)
 
 	for i := 0; ; i++ {
+		// 这一轮的所有事件（请求、工具、子过程）都归到 turn=i 下。
+		// 工具调用从 turnCtx 派生自己的工具作用域，兄弟工具之间不会互相污染
+		turnCtx := trace.WithTurn(ctx, i)
 		//预算花完了
 		if i > maxTurns {
 			messages = append(messages, openai.UserMessage("工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"))
@@ -370,7 +420,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				return false, err
 			}
 		}
-		msg, usage, streamErr := as.streamOnce(ctx, client, opt, &fullText, emit)
+		msg, usage, streamErr := as.streamOnce(turnCtx, client, opt, &fullText, emit)
 		if streamErr != nil {
 			return false, streamErr
 		}
@@ -380,16 +430,25 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		totalTokens += usage.TotalTokens
 		cachedTokens += usage.PromptTokensDetails.CachedTokens
 
+		// 分项用量：主循环这一次调用单独记一笔。过去这里只把四个数字累加起来
+		// 最后发一次，既看不出"第 3 轮花了多少"，也把视觉/联网那两个子调用的
+		// 用量整个漏掉了（它们是分开计费的另外几次 API 调用）。
+		trace.Usage(turnCtx, trace.CompMain, usagePartFrom(usage))
+
 		if len(msg.ToolCalls) == 0 {
 			messages = append(messages, msg.ToParam())
 			opt.Messages = messages
 			err := as.persistSession(sess, messages)
-			if err !=nil{
-				return false,err
+			if err != nil {
+				return false, err
 			}
-			if emitErr := emit(StreamEvent{Type: EventTypeDone, Content: fullText.String(), PromptTokens: promptTokens, CompletionTokens: completionTokens, TotalTokens: totalTokens, CachedTokens: cachedTokens}); emitErr != nil {
+			// 汇总带上分项：扁平那四个字段保持"主循环口径"不动（前端契约），
+			// 真实总成本看 Usage.Total
+			summary := rec.Summary()
+			if emitErr := emit(StreamEvent{Type: EventTypeDone, Content: fullText.String(), PromptTokens: promptTokens, CompletionTokens: completionTokens, TotalTokens: totalTokens, CachedTokens: cachedTokens, Usage: &summary}); emitErr != nil {
 				return false, fmt.Errorf("事件推送失败: %w", emitErr)
 			}
+			endRun(trace.StatusOK)
 			return false, nil
 		}
 
@@ -402,12 +461,19 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		for _, tool := range msg.ToolCalls {
 			//判断是不是要调用提问用户
 			if tool.Function.Name == "ask_user" {
+				// ask_user 由循环拦截、不会走到 execTool，所以它的观测要在这里补：
+				// 少了这几条，"这次对话为什么停住了"在 trace 里是个空洞
+				askCtx := trace.WithTool(turnCtx, "ask_user", tool.ID)
+				trace.Emit(askCtx, trace.Event{Kind: trace.KindToolCall, Args: tool.Function.Arguments})
+
 				var args AskUserArgs
 				//解析参数
 				if err := json.Unmarshal([]byte(tool.Function.Arguments), &args); err != nil || len(args.Questions) == 0 || len(args.Questions) > 6 {
 					//如果json不合法 把错误信息直接加入到上下文中 然后跳过
 					if err != nil {
-						messages = append(messages, openai.ToolMessage(fmt.Sprintf("ask_user 参数json不合法 err:%s", err.Error()), tool.ID))
+						result := fmt.Sprintf("ask_user 参数json不合法 err:%s", err.Error())
+						trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: result, Error: err.Error()})
+						messages = append(messages, openai.ToolMessage(result, tool.ID))
 						opt.Messages = messages
 						if err := as.persistSession(sess, messages); err != nil {
 							return false, err
@@ -415,7 +481,9 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 						continue
 					}
 					//如果提问的问题大于6个小于1个 同上
-					messages = append(messages, openai.ToolMessage("ask_user 参数不合法: questions 必须是 1~6 个问题", tool.ID))
+					result := "ask_user 参数不合法: questions 必须是 1~6 个问题"
+					trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: result, Error: "questions 数量不在 1~6"})
+					messages = append(messages, openai.ToolMessage(result, tool.ID))
 					opt.Messages = messages
 					if err := as.persistSession(sess, messages); err != nil {
 						return false, err
@@ -425,11 +493,18 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				//如果要调用提问用户 则不可调用其他工具
 				for _, other := range msg.ToolCalls {
 					if other.ID != tool.ID {
-						messages = append(messages, openai.ToolMessage(`{"note":"用户被提问打断，本工具本轮未执行，用户回答后如仍需要请重新调用"}`, other.ID))
+						note := `{"note":"用户被提问打断，本工具本轮未执行，用户回答后如仍需要请重新调用"}`
+						messages = append(messages, openai.ToolMessage(note, other.ID))
+						// 这些"看起来被调用了、实际没执行"的工具最容易被误读成"模型做了 X"，
+						// 所以在 trace 里也要显式留一条，而不是只在上下文里体现
+						trace.Emit(trace.WithTool(turnCtx, other.Function.Name, other.ID),
+							trace.Event{Kind: trace.KindToolResult, Result: note, Error: "被 ask_user 打断，本轮未执行"})
 					}
 				}
 				opt.Messages = messages
-				pending, _ := json.Marshal(map[string]string{"tool_call_id": tool.ID})
+				// run_id 一起存进暂停态：恢复时作为 parent_run_id 带回来，
+				// 观测页才能把被打断的这次对话和一个 run 串起来
+				pending, _ := json.Marshal(map[string]string{"tool_call_id": tool.ID, "run_id": rec.RunID()})
 				sess.PendingAsk = string(pending)
 				if err := as.persistSession(sess, messages); err != nil {
 					return false, err
@@ -437,10 +512,12 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments}); emitErr != nil {
 					return false, fmt.Errorf("事件推送失败: %w", emitErr)
 				}
+				trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: `{"note":"已向用户提问，本轮暂停等回答"}`})
+				endRun(trace.StatusPaused)
 				return true, nil
 			}
 			//普通工具调用
-			result, execErr := as.execTool(ctx, tool, emit,rr)
+			result, execErr := as.execTool(turnCtx, tool, emit, rr)
 			if execErr != nil {
 				return false, execErr
 			}
@@ -454,32 +531,79 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 	}
 }
 
-func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error,rr *runRecorder) (string, error) {
-	var result string
-	if t, ok := as.Exec[tool.Function.Name]; !ok {
+func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error, rr *runRecorder) (string, error) {
+	// 把归属挂进 ctx：工具内部（联网搜索的每一次子搜索、视觉审查的每一页截图）
+	// 因此不必知道自己在第几轮、call_id 是什么，只要 trace.Emit 就会自动归位
+	ctx = trace.WithTool(ctx, tool.Function.Name, tool.ID)
+	trace.Emit(ctx, trace.Event{Kind: trace.KindToolCall, Args: tool.Function.Arguments})
+
+	var (
+		result    string
+		callErr   string // 空串 = 没失败。刻意不用 error 类型：它同时要进 JSON
+		startedAt = time.Now()
+	)
+
+	t, ok := as.Exec[tool.Function.Name]
+	switch {
+	case !ok:
 		result = "未知工具"
-		if emitErr := emit(StreamEvent{Type: EventTypeToolError, Content: result, ToolName: tool.Function.Name}); emitErr != nil {
-			return result, fmt.Errorf("事件推送失败: %w", emitErr)
+		callErr = result
+	default:
+		res, err := t(ctx, tool.Function.Arguments)
+		if err != nil {
+			result = fmt.Sprintf("工具调用失败 err:%s", err.Error())
+			callErr = err.Error()
+		} else {
+			result = res
+			rr.noteToolCall(tool.Function.Name, tool.Function.Arguments, res) //版本备注只记成功的
 		}
-	} else if res, err := t(ctx, tool.Function.Arguments); err != nil {
-		result = fmt.Sprintf("工具调用失败 err:%s", err.Error())
+	}
+
+	// 失败也要记。原来 runRecorder 只记成功调用，于是"模型连试三次都被拒"这种
+	// 最需要解释的现象，在记录里完全看不到——你只看得到它最后放弃了。
+	trace.Emit(ctx, trace.Event{
+		Kind: trace.KindToolResult, Result: result, Error: callErr,
+		DurationMS: time.Since(startedAt).Milliseconds(),
+	})
+
+	if callErr != "" {
 		if emitErr := emit(StreamEvent{Type: EventTypeToolError, Content: result, ToolName: tool.Function.Name}); emitErr != nil {
 			return result, fmt.Errorf("事件推送失败: %w", emitErr)
 		}
 	} else {
-		result = res
-		rr.noteToolCall(tool.Function.Name,tool.Function.Arguments,res) //只记录成功的
 		if emitErr := emit(StreamEvent{Type: EventTypeToolCall, Content: result, ToolName: tool.Function.Name}); emitErr != nil {
-			return result, err
+			// 这里原来写的是 `return result, err`，而那个 err 是上层已判为 nil 的变量，
+			// 于是"推送失败"被静默吞掉、循环拿着一个根本没发出去的工具结果继续往下跑
+			return result, fmt.Errorf("事件推送失败: %w", emitErr)
 		}
-
-		
 	}
 
 	return result, nil
 }
 
 func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, opt openai.ChatCompletionNewParams, fullText *strings.Builder, emit func(StreamEvent) error) (openai.ChatCompletionMessage, openai.CompletionUsage, error) {
+	// 观测：把这一轮**实际发给模型的东西**记下来。这是"模型为什么这么答"唯一能查的证据——
+	// 只记工具的输入输出是不够的：同一个工具结果，在不同上下文里会被理解成不同的意思。
+	//
+	// trace.Active 这层判断是必要的：序列化整份上下文是 MB 级的开销（每轮重发整份消息），
+	// 关掉观测就不该白做一遍。其余地方的 Emit 不用套它——Discard 本身就是空操作。
+	if trace.Active(ctx) {
+		raw, err := json.Marshal(opt.Messages)
+		if err != nil {
+			// 上下文序列化不了本身就是个信号（比如混进了不可序列化的类型），
+			// 但别因此中断对话：记一条空占位，让"这一轮没留下上下文"是可见的
+			log.Printf("[warn] trace: 序列化上下文失败 err: %v", err)
+			raw = json.RawMessage(`null`)
+		}
+		trace.Emit(ctx, trace.Event{
+			Kind:         trace.KindLLMRequest,
+			Model:        as.ModelID,
+			Messages:     raw,
+			MessageCount: len(opt.Messages),
+			Bytes:        len(raw),
+		})
+	}
+
 	stream := client.Chat.Completions.NewStreaming(ctx, opt)
 	acc := openai.ChatCompletionAccumulator{}
 	for stream.Next() {
@@ -511,14 +635,28 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 	}
 	if err := stream.Err(); err != nil {
 		stream.Close()
+		trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, Error: "流式输出错误: " + err.Error()})
 		return openai.ChatCompletionMessage{}, openai.CompletionUsage{}, fmt.Errorf("流式输出错误: %w", err)
 	}
 	stream.Close()
 
 	if len(acc.Choices) == 0 || acc.Choices[0].FinishReason == "" {
+		trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, Error: "流式响应不完整（没有 finish_reason）"})
 		return openai.ChatCompletionMessage{}, openai.CompletionUsage{}, errors.New("流式响应不完整，请重试")
 	}
-	return acc.Choices[0].Message, acc.Usage, nil
+
+	// 观测：模型回了什么。文本、工具调用意图、finish_reason、以及这一次的用量。
+	// 与上面那条 llm_request 配对看，才能回答"同样的工具结果，模型这次为什么改主意了"
+	msg := acc.Choices[0].Message
+	part := usagePartFrom(acc.Usage)
+	trace.Emit(ctx, trace.Event{
+		Kind:         trace.KindLLMResponse,
+		FinishReason: string(acc.Choices[0].FinishReason),
+		Content:      msg.Content,
+		ToolCalls:    toolCallsOut(msg.ToolCalls),
+		Usage:        &part,
+	})
+	return msg, acc.Usage, nil
 }
 
 func (as *AgentService) setChatOpts() openai.ChatCompletionNewParams {
@@ -529,14 +667,14 @@ func (as *AgentService) setChatOpts() openai.ChatCompletionNewParams {
 	return opt
 }
 
-func (as *AgentService) recordRunVersions(ctx context.Context,rr *runRecorder){
-	uid,ok := authctx.UserID(ctx)
+func (as *AgentService) recordRunVersions(ctx context.Context, rr *runRecorder) {
+	uid, ok := authctx.UserID(ctx)
 	if !ok {
 		return
 	}
-	for _,deckID := range rr.deckIDs() {
-			if err := as.DeckService.RecordRunVersion(uid,deckID,rr.detail(deckID));err != nil{
-			log.Printf("[warn] deck %s 记录历史版本失败 err: %v",deckID,err)
-		}		
+	for _, deckID := range rr.deckIDs() {
+		if err := as.DeckService.RecordRunVersion(uid, deckID, rr.detail(deckID)); err != nil {
+			log.Printf("[warn] deck %s 记录历史版本失败 err: %v", deckID, err)
+		}
 	}
 }

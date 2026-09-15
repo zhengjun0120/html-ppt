@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -25,6 +26,8 @@ type Config struct {
 	// Features 功能开关。零值 = 全关（托管部署不配就是安全默认）；本地开发在
 	// config.yaml 里显式打开。
 	Features Features `yaml:"features"`
+	Vision   Vision   `yaml:"vision"`
+	Trace    Trace    `yaml:"trace"`
 }
 
 // Features 控制"能力型"功能的挂载。关掉某项 = agent 连对应工具都看不到，
@@ -40,6 +43,12 @@ type Features struct {
 
 	//视觉审查
 	Vision bool `yaml:"vision"`
+
+	// Trace 打开 agent 观测（每轮请求/工具参数与返回/工具内部过程/分项 token 落盘）。
+	// 与别的开关不同，它**不影响 agent 的行为**，只影响"记录多少"——
+	// 所以关掉它是纯粹的"不记录"，不会让模型少一个工具。
+	// 记录量按 MB 计（全量上下文 + 逐页截图），托管部署建议关。
+	Trace bool `yaml:"trace"`
 }
 
 type Server struct {
@@ -65,10 +74,10 @@ type DB struct {
 }
 
 type LLM struct {
-	BaseURL string `yaml:"base_url"`
-	APIKey  string `yaml:"api_key"`
-	ModelID   string `yaml:"model_id"`
-	MaxToken int64 `yaml:"max_token"`
+	BaseURL  string `yaml:"base_url"`
+	APIKey   string `yaml:"api_key"`
+	ModelID  string `yaml:"model_id"`
+	MaxToken int64  `yaml:"max_token"`
 
 	AnthropicBaseURL string `yaml:"anthropic_base_url"`
 }
@@ -102,8 +111,35 @@ type Crypto struct {
 }
 
 type Vision struct {
-	ChromePate string `yaml:"chrome_path"`
+	ChromePath string `yaml:"chrome_path"`
 }
+
+// Trace 是 agent 的观测配置（把每轮请求、工具参数与返回、工具内部过程、
+// 分项 token 落成 JSONL + 截图）。开关在 Features.Trace，这里只管"存到哪、存多少"——
+// 与 features.vision / vision.chrome_path 是同一种分工。
+type Trace struct {
+	// Dir 落盘根目录。留空 = <data.dir>/traces（与 deck 同源，整目录备份/清理方便）。
+	Dir string `yaml:"dir"`
+	// CaptureImages 是否把视觉审查的每页截图存下来。
+	// 关掉之后审查报告仍然完整，但"报告说的对不对"就无从核对了——那是这个工具
+	// 最初要解决的问题之一，所以默认开。
+	CaptureImages bool `yaml:"capture_images"`
+	// RetainRunsPerSession 每个会话最多保留几个 run。0 = 不限。
+	// 全量上下文是按 MB 计的，不裁剪迟早撑爆 data 目录。
+	RetainRunsPerSession int `yaml:"retain_runs_per_session"`
+	// MaxFieldBytes 单个长字段（工具参数/返回、上下文、报告）的字节上限。0 = 不截断。
+	// 默认不截断是有意的：排查"模型为什么这么答"时，答案经常就在被截掉的那一段里。
+	MaxFieldBytes int `yaml:"max_field_bytes"`
+}
+
+// 默认值。注意 Trace 只能在这里给"非零"的默认，因为 Load 用 yaml.Unmarshal
+// 覆盖到已填好默认的结构体上：yaml 里没写的键保留默认，显式写了 0 就是 0。
+const (
+	// DefaultRetainRunsPerSession 见 Trace.RetainRunsPerSession
+	DefaultRetainRunsPerSession = 20
+	// DefaultCaptureImages 见 Trace.CaptureImages
+	DefaultCaptureImages = true
+)
 
 // TTL 返回解析后的 token 有效期；配置缺失/写坏时回落 72h（宽松降级，
 // token 过期顶多要重新登录，不值得为此拒绝启动）。
@@ -153,6 +189,23 @@ func Load(path string) (*Config, error) {
 	}
 	if abs, err := filepath.Abs(cfg.Assets.Dir); err == nil {
 		cfg.Assets.Dir = abs
+	}
+
+	// trace.dir 必须在这里一起归一化。它和上面两个字段是同一个坑：
+	// 只判断"是不是绝对路径"就 Join，config.yaml 用相对路径加载时 baseDir 是 "."，
+	// 结果是"换个目录启动就写到别处去了"。而这个失败特别难发现——trace 会照常
+	// 写进一个新目录、页面照常是空的，看起来像"观测没生效"而不像"路径配错了"。
+	// 空值表示默认落在 data 目录下（此时 Data.Dir 已经是绝对路径）。
+	cfg.Trace.Dir = strings.TrimSpace(cfg.Trace.Dir)
+	if cfg.Trace.Dir == "" {
+		cfg.Trace.Dir = filepath.Join(cfg.Data.Dir, "traces")
+	} else {
+		if !filepath.IsAbs(cfg.Trace.Dir) {
+			cfg.Trace.Dir = filepath.Join(baseDir, cfg.Trace.Dir)
+		}
+		if abs, err := filepath.Abs(cfg.Trace.Dir); err == nil {
+			cfg.Trace.Dir = abs
+		}
 	}
 
 	if v := os.Getenv("SERVER_ADDR"); v != "" {
@@ -221,7 +274,14 @@ func defaultConfig() *Config {
 		},
 		LLM: LLM{
 			BaseURL: "https://api.deepseek.com",
-			ModelID:   "deepseek-chat",
+			ModelID: "deepseek-chat",
+		},
+		// Trace 的默认值只能在这里给（Load 是"先填默认、再用 yaml 覆盖"）：
+		// 留到使用处判零值的话，用户显式写 retain_runs_per_session: 0（表示不限）
+		// 会被当成"没配"而塞回默认值——一个永远不生效的配置项。
+		Trace: Trace{
+			CaptureImages:        DefaultCaptureImages,
+			RetainRunsPerSession: DefaultRetainRunsPerSession,
 		},
 	}
 }

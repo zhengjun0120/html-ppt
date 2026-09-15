@@ -78,6 +78,60 @@ func TestParseWebSearchMsg(t *testing.T) {
 	if !got.Truncated {
 		t.Error("stop_reason=max_tokens 应标记为截断")
 	}
+
+	// 子模型**实际发出的**搜索词。这一段过去是个空 case（注释写着"后续可以传回给前端
+	// 显示"），于是联网搜索在观测里只剩一个 searches=2 的计数：知道它搜了两次、
+	// 不知道搜的是什么。而"搜错方向"正是这类工具最典型的失败——它给出一个数字，
+	// 你只能选择信或不信，没有任何线索判断它是不是去查了另一件事。
+	//
+	// 合成响应里两条 server_tool_use 的 input.query 是 q1 / q2
+	if len(got.Queries) != 2 {
+		t.Fatalf("应从 server_tool_use 块里解析出 2 个搜索词，实际 %d 个：%v", len(got.Queries), got.Queries)
+	}
+	if got.Queries[0] != "q1" || got.Queries[1] != "q2" {
+		t.Errorf("搜索词解析错位，实际 %v", got.Queries)
+	}
+
+	// Queries 不该进给模型看的那份 JSON：子搜索词回灌上下文只是白烧 token，
+	// 还会诱导模型去复述"我搜了什么"而不是给出结论。
+	// （它是给观测页看的，走 trace 那条独立通道）
+	rawOut, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(rawOut), "q1") {
+		t.Errorf("Queries 不应出现在给模型的结果里，实际 %s", rawOut)
+	}
+}
+
+// TestWebSearchQueryFromToleratesProtocolDrift input 在 SDK 里是 any，
+// 协议一变（或换成了别的 server 工具）就不能硬断言。
+//
+// 这里是 panic 的高危区：一个 `input.(map[string]any)["query"].(string)` 的双重断言，
+// 只要服务端把 web_search 换成 web_fetch（或者哪天 query 变成了数组）就整包崩——
+// 而"解析"把服务搞崩是最不该发生的一类故障，何况这还只是个观测用的字段。
+func TestWebSearchQueryFromToleratesProtocolDrift(t *testing.T) {
+	cases := []struct {
+		name  string
+		input any
+		want  string
+	}{
+		{"正常", map[string]any{"query": "2026年9月 新能源汽车销量"}, "2026年9月 新能源汽车销量"},
+		{"两侧空白要去掉", map[string]any{"query": "  今天几号  "}, "今天几号"},
+		{"不是 map", "just a string", ""},
+		{"是 map 但没有 query", map[string]any{"url": "https://x.example"}, ""},
+		{"query 不是字符串", map[string]any{"query": 42}, ""},
+		{"query 是数组", map[string]any{"query": []string{"a", "b"}}, ""},
+		{"nil", nil, ""},
+		{"query 是空串", map[string]any{"query": ""}, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := webSearchQueryFrom(c.input); got != c.want {
+				t.Errorf("webSearchQueryFrom(%#v) = %q，期望 %q", c.input, got, c.want)
+			}
+		})
+	}
 }
 
 // anthropicBase 决定联网搜索打到哪里。三种输入都要成立：

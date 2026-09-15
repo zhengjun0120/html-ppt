@@ -27,37 +27,68 @@ const reviewPrompt = `你是这套幻灯片框架的版面审查员。下面按�
 每页最多一行，只写有问题的页。最后一行为：合计：N 页有问题
 都没问题则只输出一行：未发现问题`
 
-func Review(ctx context.Context,client *openai.Client,model string,d *Deck)(string,error){
+// ReviewResult 看图的产出。把"发了什么提示词、附了几张图、花了多少"一并交出来，
+// 是因为这三样都是观测要用的：审查报告的每个结论都要能回溯到"它当时看到了什么"，
+// 而看图是整个 agent 里最贵的一次调用（几张 1244×700 的图，图片 token 很值钱）。
+type ReviewResult struct {
+	Report string                 // 给主模型看的审查报告
+	Prompt string                 // 实际发出去的文本部分（图片作为独立 part 追加在后面）
+	Images int                    // 附了几张图
+	Usage  openai.CompletionUsage // 这次调用的用量；过去拿到了就扔，于是 token 统计系统性偏小
+}
+
+func Review(ctx context.Context, client *openai.Client, model string, d *Deck) (*ReviewResult, error) {
+	//拼接提示词
 	var parts []openai.ChatCompletionContentPartUnionParam
-	
+
 	head := reviewPrompt + "\n\n程序已判定的问题：\n"
-	if f := HardFindings(d); len(f)>0{
-		head += strings.Join(f,"\n")
-	}else {
+	//把有问题的页输出
+	if f := HardFindings(d); len(f) > 0 {
+		head += strings.Join(f, "\n")
+	} else {
 		head += "无(所有硬指标都在范围内)"
 	}
-	head += "\n\n逐页量测：\n"+Digest(d)
+	//输出每页量测的结果
+	head += "\n\n逐页量测：\n" + Digest(d)
 	parts = append(parts, openai.TextContentPart(head))
 
-	for _,s := range d.Slides {
-		parts = append(parts, openai.TextContentPart(fmt.Sprintf("\n第 %d 页：",s.Index+1)))
-		parts = append(parts,openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
-			URL:"data:image/png;base64,"+base64.StdEncoding.EncodeToString(s.PNG),
+	//拼接页和该页截图
+	for _, s := range d.Slides {
+		parts = append(parts, openai.TextContentPart(fmt.Sprintf("\n第 %d 页：", s.Index+1)))
+		parts = append(parts, openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
+			URL:    "data:image/png;base64," + base64.StdEncoding.EncodeToString(s.PNG),
 			Detail: "auto",
 		}))
 	}
-
-	resp,err := client.Chat.Completions.New(ctx,openai.ChatCompletionNewParams{
+	//发送请求
+	resp, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(model),
-		ReasoningEffort: shared.ReasoningEffortHigh,
+		// Low 而不是 High：这个调用是**同步阻塞在 write_deck 里**的。实测 High 要约 48 秒，
+		// 而 Low 明显更快、同一份 deck 抓到的是同一批问题（孤字换行、三列不齐、字号偏小）。
+		ReasoningEffort: shared.ReasoningEffortLow,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(parts),
 		},
+		// 显式给预算：reasoning 先吃 token、吃完就没有 content，而"content 为空"不会报错
+		// ——上层会照样写一行"看图审查："然后什么都没有（我第一次探针就是 max_tokens=200
+		// 撞出来的：content 空、completion 却用满 200）。实测 9 页用掉 4382，给 8000 留余量。
+		MaxTokens: openai.Int(8000),
 	})
 
-	if err != nil{
-		return "",err
+	if err != nil {
+		return nil, err
 	}
-
-	return strings.TrimSpace(resp.Choices[0].Message.Content),nil
+	report := strings.TrimSpace(resp.Choices[0].Message.Content)
+	if report == "" {
+		// 空报告不能当成功返回：否则上层会留一段空的"看图审查："，
+		// 看起来像"审过了、没问题"，实际是这次调用什么都没产出
+		return nil, fmt.Errorf("模型返回了空报告（completion=%d，其中 reasoning=%d），可能被截断",
+			resp.Usage.CompletionTokens, resp.Usage.CompletionTokensDetails.ReasoningTokens)
+	}
+	return &ReviewResult{
+		Report: report,
+		Prompt: head,
+		Images: len(d.Slides),
+		Usage:  resp.Usage,
+	}, nil
 }

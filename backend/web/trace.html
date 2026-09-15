@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Agent 观测台</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0b132b; color: #e2e8f0;
+      display: flex; flex-direction: column; height: 100vh; font-size: 13px;
+    }
+    header { padding: 8px 16px; border-bottom: 1px solid #1e2a45;
+             display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    header b { color: #a78bfa; }
+    header .lbl { color: #64748b; }
+    input[type=text], input[type=password], select {
+      background: #1a2338; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 6px; padding: 4px 8px; font-size: 12px; outline: none;
+    }
+    button { background: #1a2338; color: #e2e8f0; border: 1px solid #334155;
+             border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+    button:hover { border-color: #a78bfa; color: #c4b5fd; }
+    button.on { background: #4c1d95; border-color: #a78bfa; color: #ddd6fe; }
+    .spacer { flex: 1; }
+    label.chk { color: #94a3b8; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+    main { flex: 1; display: flex; min-height: 0; }
+    /* 左栏：会话 + run 列表 */
+    aside { width: 320px; flex: 0 0 320px; border-right: 1px solid #1e2a45;
+            overflow-y: auto; padding: 10px; }
+    .sess { margin-bottom: 14px; }
+    .sess-hd { color: #7dd3fc; font-size: 12px; margin-bottom: 6px;
+               display: flex; justify-content: space-between; gap: 6px; }
+    .sess-hd .sub { color: #475569; font-size: 11px; }
+    .run { padding: 7px 9px; border-radius: 7px; cursor: pointer; margin-bottom: 4px;
+           border: 1px solid transparent; background: #131c31; }
+    .run:hover { border-color: #334155; }
+    .run.sel { border-color: #a78bfa; background: #1e1b3a; }
+    .run .l1 { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
+    .run .uid { color: #5eead4; font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+    .run .txt { color: #cbd5e1; margin-top: 3px; font-size: 12px;
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .run .l2 { color: #64748b; font-size: 11px; margin-top: 3px;
+               display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 1px 6px; border-radius: 999px;
+             font-size: 10px; border: 1px solid currentColor; }
+    .st-ok { color: #86efac; } .st-paused { color: #fcd34d; }
+    .st-error { color: #fca5a5; } .st-running { color: #7dd3fc; }
+
+    /* 右栏：时间轴 */
+    section { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #sum { padding: 8px 14px; border-bottom: 1px solid #1e2a45;
+           display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    #sum .big { color: #a78bfa; font-weight: 600; }
+    #sum table { border-collapse: collapse; font-size: 11px; }
+    #sum td, #sum th { padding: 1px 8px 1px 0; text-align: left; color: #94a3b8; }
+    #sum th { color: #64748b; font-weight: 400; }
+    #sum .num { color: #e2e8f0; font-family: ui-monospace, Consolas, monospace; }
+    #tl { flex: 1; overflow-y: auto; padding: 12px 14px; }
+    .ev { border-left: 2px solid #334155; padding: 6px 0 6px 10px; margin-bottom: 8px; }
+    .ev-hd { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+    .ev-seq { color: #475569; font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+    .ev-kind { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #1e293b; color: #cbd5e1; }
+    .ev-title { color: #e2e8f0; }
+    .ev-meta { color: #64748b; font-size: 11px; }
+    pre { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, Consolas, monospace;
+          font-size: 11.5px; background: #0d1526; border: 1px solid #1e2a45; border-radius: 6px;
+          padding: 8px; margin-top: 6px; max-height: 360px; overflow: auto; color: #cbd5e1; }
+    details > summary { cursor: pointer; color: #7dd3fc; font-size: 11.5px; margin-top: 5px;
+                        outline: none; list-style: none; }
+    details > summary:hover { color: #a5f3fc; }
+    details > summary::before { content: '▸ '; color: #475569; }
+    details[open] > summary::before { content: '▾ '; }
+
+    /* 事件配色：一眼区分"模型说了什么 / 工具做了什么 / 子过程" */
+    .k-run_start   { border-color: #a78bfa; }
+    .k-llm_request { border-color: #1e40af; }
+    .k-llm_response{ border-color: #0e7490; }
+    .k-tool_call   { border-color: #0f766e; }
+    .k-tool_result { border-color: #115e59; }
+    .k-sub_step    { border-color: #b45309; }
+    .k-usage       { border-color: #3f3f46; }
+    .k-error       { border-color: #b91c1c; background: #1f0d0d; }
+    .k-run_end     { border-color: #15803d; }
+
+    .chip { display: inline-block; background: #1e293b; border-radius: 4px;
+            padding: 1px 6px; margin: 2px 4px 2px 0; font-size: 11px; color: #fcd34d; }
+    .src { display: block; color: #7dd3fc; font-size: 11px; text-decoration: none;
+           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .src:hover { text-decoration: underline; }
+    .imgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .imgcard { text-align: center; }
+    .imgs img { width: 240px; border: 1px solid #334155; border-radius: 5px;
+                cursor: zoom-in; display: block; background: #000; }
+    .imgs .cap { color: #94a3b8; font-size: 11px; margin-top: 3px; }
+    table.meas { border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+    table.meas th, table.meas td { border: 1px solid #1e2a45; padding: 2px 7px; }
+    table.meas th { color: #64748b; font-weight: 400; }
+    table.meas td { font-family: ui-monospace, Consolas, monospace; }
+    table.meas tr.bad td { background: #2a1215; color: #fca5a5; }
+    .err { color: #fca5a5; }
+    .empty { color: #475569; padding: 20px; text-align: center; }
+    #lightbox { position: fixed; inset: 0; background: #000c; display: none;
+                z-index: 99; cursor: zoom-out; padding: 20px; text-align: center; }
+    #lightbox img { max-width: 100%; max-height: 100%; }
+  </style>
+</head>
+<body>
+<header>
+  <b>🔍 Agent 观测台</b>
+  <span class="lbl">令牌</span>
+  <input type="password" id="tok" size="18" placeholder="hpt_token">
+  <button id="savetok">保存</button>
+  <span class="spacer"></span>
+  <label class="chk"><input type="checkbox" id="auto" checked> 自动刷新列表</label>
+  <label class="chk"><input type="checkbox" id="live" checked> 实时跟随</label>
+  <button id="reload">刷新</button>
+  <span id="status" class="lbl"></span>
+</header>
+<main>
+  <aside id="runs"><div class="empty">加载中…</div></aside>
+  <section>
+    <div id="sum"><span class="lbl">选一个 run 查看执行过程</span></div>
+    <div id="tl"><div class="empty">左侧点一个 run</div></div>
+  </section>
+</main>
+<div id="lightbox"><img id="lbimg" alt=""></div>
+
+<script>
+// ============================================================================
+// Agent 观测台。数据来自 /api/traces/*（见 internal/handler/trace.go 与
+// internal/trace）。三条与后端对应的约定：
+//
+//  1. 事件列表**默认不含 messages**（它是唯一的大字段）。要读完整上下文，
+//     点"展开完整上下文"，走 /events/:seq 单独把那一条捞回来。
+//  2. 实时跟随用 **from_offset 字节游标**，不是 seq：只读新增的那一段。
+//     每 800ms 全量重读一个十几 MB 的文件是撑不住的。
+//  3. run 是否还在跑由响应里的 running 决定（后端看文件尾部有没有 run_end）。
+//     缺失它的话，页面分不清"还在跑"和"已经崩了"。
+//
+// 安全：trace 里全是 deck 的原始 HTML 与模型输出，所以**一律用 textContent 写入**，
+// 绝不用 innerHTML 拼数据。唯一例外是 <img src>（值来自后端白名单过的文件名）。
+// ============================================================================
+
+const TOKEN_KEY = 'hpt_token';
+const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
+document.getElementById('tok').value = getToken();
+
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+let say = (t, isErr) => { statusEl.textContent = t; statusEl.style.color = isErr ? '#fca5a5' : '#64748b'; };
+
+// ---------- 小工具 ----------
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;   // 永远走 textContent
+  return e;
+};
+const fmtBytes = n => n == null ? '-' : n < 1024 ? n + ' B'
+  : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+const fmtMs = n => n == null ? '-' : n < 1000 ? n + ' ms' : (n / 1000).toFixed(1) + ' s';
+const fmtN = n => n == null ? '-' : n.toLocaleString('en-US');
+const fmtTime = s => { try { return new Date(s).toLocaleString('zh-CN', { hour12: false }); } catch { return s; } };
+// 工具参数/返回值大多是 JSON，但不是所有（模型偶尔给出非法 JSON，那本身就是要看的）
+function pretty(s) {
+  if (s == null || s === '') return '';
+  try { return JSON.stringify(JSON.parse(s), null, 2); } catch { return s; }
+}
+const clip = (s, n) => { s = String(s == null ? '' : s); return s.length <= n ? s : s.slice(0, n) + '…'; };
+
+async function api(path) {
+  const headers = {};
+  const t = getToken();
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  const resp = await fetch(path, { headers });
+  return resp;
+}
+async function apiJSON(path) {
+  const resp = await api(path);
+  if (!resp.ok) {
+    let msg = 'HTTP ' + resp.status;
+    try { msg = (await resp.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return resp.json();
+}
+
+// ============================================================================
+// 左栏：会话 + run 列表
+// ============================================================================
+let sel = null;              // { sessionID, runID }
+let cursor = 0;              // 事件字节游标（增量拉取）
+let polling = null;
+let usageAcc = {};           // 客户端按 component 累加用量（跑动中的 run 靠它显示实时数字）
+let evCount = 0;
+
+async function loadRuns() {
+  let data;
+  try {
+    data = await apiJSON('/api/traces');
+    say('已连接');
+  } catch (e) {
+    say('读取失败：' + e.message, true);
+    return;
+  }
+  const box = $('runs');
+  box.textContent = '';
+  const runs = data.runs || [];
+  if (!runs.length) {
+    box.appendChild(el('div', 'empty',
+      '还没有观测记录。确认 features.trace 打开，然后在 /chat-test 里聊一次。'));
+    return;
+  }
+
+  // 按会话分组（后端已经给了 sessions 汇总，这里面用它的 token 数字）
+  const sessMeta = {};
+  (data.sessions || []).forEach(s => sessMeta[s.session_id] = s);
+  const groups = [];
+  const byId = {};
+  runs.forEach(r => {
+    if (!byId[r.session_id]) { byId[r.session_id] = { id: r.session_id, runs: [] }; groups.push(byId[r.session_id]); }
+    byId[r.session_id].runs.push(r);
+  });
+
+  groups.forEach(g => {
+    const sm = sessMeta[g.id] || {};
+    const wrap = el('div', 'sess');
+    const hd = el('div', 'sess-hd');
+    hd.appendChild(el('span', null, '会话 #' + g.id + (sm.deck_id ? ' · ' + sm.deck_id : '')));
+    // 一次对话可能因 ask_user 暂停而分成多个 run，所以"这次对话花了多少 token"
+    // 必须跨 run 累加——单个 run 的 total 只是半场
+    const tot = (sm.usage && sm.usage.total) ? sm.usage.total.total : 0;
+    hd.appendChild(el('span', 'sub', (g.runs.length > 1 ? g.runs.length + ' 段 · ' : '') + fmtN(tot) + ' tok'));
+    wrap.appendChild(hd);
+
+    g.runs.forEach(r => {
+      const d = el('div', 'run');
+      if (sel && sel.runID === r.run_id) d.classList.add('sel');
+      const l1 = el('div', 'l1');
+      l1.appendChild(el('span', 'uid', r.run_id));
+      l1.appendChild(el('span', 'badge st-' + r.status, r.status));
+      d.appendChild(l1);
+      d.appendChild(el('div', 'txt', clip(r.user_content || '(用户回答)', 44)));
+      const l2 = el('div', 'l2');
+      l2.appendChild(el('span', null, fmtTime(r.started_at)));
+      l2.appendChild(el('span', null, fmtMs(r.duration_ms)));
+      if (r.turns) l2.appendChild(el('span', null, r.turns + ' 轮'));
+      if (r.tool_calls) l2.appendChild(el('span', null, r.tool_calls + ' 次工具'));
+      l2.appendChild(el('span', null, fmtBytes(r.bytes)));
+      d.appendChild(l2);
+      d.onclick = () => openRun(r.session_id, r.run_id);
+      wrap.appendChild(d);
+    });
+    box.appendChild(wrap);
+  });
+}
+
+// ============================================================================
+// 右栏：时间轴
+// ============================================================================
+function resetDetail(sessionID, runID) {
+  sel = { sessionID, runID };
+  cursor = 0;
+  usageAcc = {};
+  evCount = 0;
+  $('tl').textContent = '';
+  $('sum').textContent = '';
+  $('sum').appendChild(el('span', 'lbl', '加载中…'));
+  if (polling) { clearTimeout(polling); polling = null; }
+}
+
+async function openRun(sessionID, runID) {
+  resetDetail(sessionID, runID);
+  await pull(false);
+  markSelected();
+}
+
+function markSelected() {
+  document.querySelectorAll('.run').forEach(d => d.classList.remove('sel'));
+  // 列表可能在这次点击之后刷新过，所以按 run_id 文本重新定位
+  document.querySelectorAll('.run').forEach(d => {
+    const uid = d.querySelector('.uid');
+    if (sel && uid && uid.textContent === sel.runID) d.classList.add('sel');
+  });
+}
+
+// pull 拉一次事件。live=false 用于首次打开（从 0 开始），true 用于增量。
+async function pull(incremental) {
+  if (!sel) return;
+  let data;
+  try {
+    const q = incremental ? '?from_offset=' + cursor : '?from_offset=0';
+    data = await apiJSON(`/api/traces/${sel.sessionID}/${sel.runID}${q}`);
+  } catch (e) {
+    say('读取事件失败：' + e.message, true);
+    return;
+  }
+  cursor = data.next_offset || cursor;
+  (data.events || []).forEach(renderEvent);
+  evCount += (data.events || []).length;
+  renderSummary(data.running);
+  say('已连接 · ' + evCount + ' 条事件' + (data.running ? ' · 运行中' : ''));
+  if (data.running && $('live').checked) {
+    polling = setTimeout(() => pull(true), 800);
+  }
+}
+
+function accUsage(ev) {
+  if (!ev.component || !ev.usage) return;
+  const p = usageAcc[ev.component] ||
+    (usageAcc[ev.component] = { prompt: 0, completion: 0, total: 0, cached: 0, reasoning: 0, image_tokens: 0, calls: 0 });
+  for (const k of Object.keys(p)) p[k] += (ev.usage[k] || 0);
+}
+
+const COMP_LABEL = { main: '主循环', vision: '视觉审查', web_search: '联网搜索' };
+const compLabel = c => COMP_LABEL[c] || c;
+
+function usageTable(u, total) {
+  const t = document.createElement('table');
+  const head = el('tr');
+  ['来源', 'prompt', 'completion', 'cached', '推理', '图片', '次数', '合计'].forEach((h, i) => {
+    const th = el('th', null, h); head.appendChild(th);
+  });
+  t.appendChild(head);
+  Object.keys(u).sort().forEach(c => {
+    const p = u[c];
+    const tr = el('tr');
+    tr.appendChild(el('td', null, compLabel(c)));
+    [p.prompt, p.completion, p.cached, p.reasoning || 0, p.image_tokens || 0, p.calls, p.total]
+      .forEach((v, i) => {
+        const td = el('td', 'num', fmtN(v));
+        if (i === 6) td.style.color = '#a78bfa';
+        tr.appendChild(td);
+      });
+    t.appendChild(tr);
+  });
+  if (total) {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, '合计'));
+    [total.prompt, total.completion, total.cached, total.reasoning || 0, total.image_tokens || 0, total.calls, total.total]
+      .forEach((v, i) => {
+        const td = el('td', 'num', fmtN(v));
+        td.style.color = i === 6 ? '#c4b5fd' : '#e2e8f0';
+        tr.appendChild(td);
+      });
+    t.appendChild(tr);
+  }
+  return t;
+}
+
+// renderSummary 顶部汇总条。跑动中的 run 没有 run_end，就用客户端累加出来的数字——
+// 这正是后端每条 usage 事件都单独发一条的原因（能看到数字往上涨，而不是等结束才知道）
+function renderSummary(running) {
+  const box = $('sum');
+  box.textContent = '';
+  const keys = Object.keys(usageAcc);
+  if (!keys.length) {
+    box.appendChild(el('span', 'lbl', running ? '运行中（还没有用量事件）' : '这个 run 没有任何用量记录'));
+    return;
+  }
+  const total = { prompt: 0, completion: 0, total: 0, cached: 0, reasoning: 0, image_tokens: 0, calls: 0 };
+  keys.forEach(c => Object.keys(total).forEach(k => total[k] += usageAcc[c][k] || 0));
+
+  const head = el('div');
+  head.appendChild(el('span', 'lbl', 'Token 用量　'));
+  head.appendChild(el('span', 'big', fmtN(total.total) + ' 合计'));
+  box.appendChild(head);
+  box.appendChild(usageTable(usageAcc, total));
+  if (running) box.appendChild(el('span', 'badge st-running', '运行中'));
+}
+
+// ---------- 各种事件的渲染 ----------
+function hd(ev, kindLabel, title) {
+  const d = el('div', 'ev k-' + ev.kind);
+  const h = el('div', 'ev-hd');
+  h.appendChild(el('span', 'ev-seq', '#' + ev.seq));
+  h.appendChild(el('span', 'ev-kind', kindLabel));
+  if (title) h.appendChild(el('span', 'ev-title', title));
+  if (ev.turn != null) h.appendChild(el('span', 'ev-meta', '第 ' + (ev.turn + 1) + ' 轮'));
+  const m = el('span', 'ev-meta',
+    new Date(ev.ts).toLocaleTimeString('zh-CN', { hour12: false }));
+  h.appendChild(m);
+  d.appendChild(h);
+  return d;
+}
+function addPre(parent, text, labelText, open) {
+  if (text == null || text === '') return;
+  const det = document.createElement('details');
+  if (open) det.open = true;
+  det.appendChild(el('summary', null, labelText));
+  det.appendChild(el('pre', null, text));
+  parent.appendChild(det);
+}
+
+function renderSubStep(d, ev) {
+  const s = ev.sub || {};
+  const data = s.data || {};
+  const head = s.name + ' · ' + s.stage;
+  // 每个 stage 的 data 形状是后端定的（见 agent/web_search.go 与 agent/vision_review.go）
+  switch (s.name + '/' + s.stage) {
+    case 'web_search/request':
+      d.appendChild(el('div', 'ev-meta', '让子模型去搜：「' + (s.text || '') + '」（最多 ' +
+        (data.max_uses ?? '?') + ' 轮，模型 ' + (data.model || '?') + '）'));
+      break;
+    case 'web_search/queries': {
+      // 这一栏是"联网搜索到底搜了什么"——过去这个 case 是空的，只剩一个次数计数
+      const qs = data.queries || [];
+      const line = el('div');
+      line.appendChild(el('span', 'ev-meta', '子模型实际发出的搜索词：'));
+      if (!qs.length) line.appendChild(el('span', 'ev-meta', '（没有解析到）'));
+      qs.forEach(q => line.appendChild(el('span', 'chip', q)));
+      d.appendChild(line);
+      d.appendChild(el('div', 'ev-meta', '计费搜索 ' + (data.searches ?? 0) + ' 次 · 返回 ' +
+        (data.source_n ?? 0) + ' 条来源 · stop=' + (data.stop_reason || '?') +
+        (data.tool_error ? ' · 工具报错=' + data.tool_error : '') +
+        (data.truncated ? ' · 内容被截断' : '')));
+      break;
+    }
+    case 'vision/capture': {
+      const pages = data.pages || [];
+      d.appendChild(el('div', 'ev-meta', '无头浏览器实拍 ' + pages.length + ' 页 · 画布 ' +
+        (data.canvas_w ?? '?') + '×' + (data.canvas_h ?? '?') + ' · 第 ' + (data.round ?? 1) +
+        ' 次审查 · 硬判定命中 ' + (data.hard_n ?? 0) + ' 条'));
+      if (pages.length) {
+        const t = document.createElement('table');
+        t.className = 'meas';
+        const hr = el('tr');
+        ['页', '标题', 'fit', '最小字号', '溢出', '子元素', '字数'].forEach(h => hr.appendChild(el('th', null, h)));
+        t.appendChild(hr);
+        pages.forEach(p => {
+          const tr = el('tr');
+          // 与后端 HardFindings 的判据同口径，超标的行标红，好一眼扫出问题页
+          const bad = (p.fit < 0.9) || (p.min_font_px < 31) || (p.overflow > 1.02) ||
+                      (p.children > 5) || (p.chars > 200);
+          if (bad) tr.className = 'bad';
+          [p.page, clip(p.title || '', 18), p.fit, p.min_font_px, p.overflow, p.children, p.chars]
+            .forEach(v => tr.appendChild(el('td', null, v)));
+          t.appendChild(tr);
+        });
+        d.appendChild(t);
+      }
+      break;
+    }
+    case 'vision/review_prompt':
+      d.appendChild(el('div', 'ev-meta', '把 ' + (data.images ?? 0) + ' 张截图 + 量测一起发给模型（模型 ' +
+        (data.model || '?') + '）。以下是它实际看到的提示词：'));
+      addPre(d, s.text, '展开看提示词');
+      break;
+    case 'vision/review_response':
+      addPre(d, s.text, '展开看审查报告', true);
+      break;
+    case 'vision/grant':
+      d.appendChild(el('div', 'ev-meta', '为审查签发一次性取页票据（2 分钟过期、取到即废）'));
+      addPre(d, JSON.stringify(data, null, 2), '展开看取页 URL');
+      break;
+    default:
+      // 未知 stage 就把 data 原样摊开：观测台不该因为后端加了一种子过程就少显示东西
+      if (s.text) addPre(d, s.text, '内容', true);
+      if (data && Object.keys(data).length) addPre(d, JSON.stringify(data, null, 2), '数据');
+  }
+  if (s.text && !d.querySelector('pre') && !d.textContent.includes(clip(s.text, 40))) {
+    addPre(d, s.text, '内容');
+  }
+}
+
+function renderImages(d, ev) {
+  if (!ev.images || !ev.images.length) return;
+  const box = el('div', 'imgs');
+  const tok = encodeURIComponent(getToken());
+  ev.images.forEach(im => {
+    const card = el('div', 'imgcard');
+    if (im.url) {
+      // 图片走 <img src>，令牌只能放查询参数（<img> 带不了 Authorization 头）。
+      // 已知妥协：token 会进访问日志，与 deck 预览同一条。
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.src = `/api/traces/${sel.sessionID}/${sel.runID}/img/${encodeURIComponent(im.name)}?token=${tok}`;
+      img.alt = im.label || im.name;
+      img.onclick = () => { $('lbimg').src = img.src; $('lightbox').style.display = 'block'; };
+      card.appendChild(img);
+    } else {
+      // url 为空 = 后端没存这张图（capture_images 关了，或者写盘失败）。
+      // 明确说出来，否则页面上只是个空白，会被当成加载失败去查权限
+      card.appendChild(el('div', 'ev-meta', '（未保存图片）'));
+    }
+    card.appendChild(el('div', 'cap', im.label || im.name));
+    box.appendChild(card);
+  });
+  d.appendChild(box);
+}
+
+function renderEvent(ev) {
+  accUsage(ev);
+  const tl = $('tl');
+  let d;
+
+  switch (ev.kind) {
+    case 'run_start': {
+      d = hd(ev, 'run 开始', ev.model);
+      d.appendChild(el('div', 'ev-title', '用户说：' + (ev.user_content || '')));
+      const meta = el('div', 'ev-meta');
+      meta.textContent = '会话 #' + ev.session_id + ' · deck ' + (ev.deck_id || '无') +
+        (ev.parent_run_id ? ' · 接在被暂停的 ' + ev.parent_run_id + ' 之后' : '');
+      d.appendChild(meta);
+      const tools = el('div');
+      tools.appendChild(el('span', 'ev-meta', '本次挂载工具：'));
+      (ev.tools || []).forEach(t => tools.appendChild(el('span', 'chip', t)));
+      d.appendChild(tools);
+      break;
+    }
+    case 'llm_request': {
+      d = hd(ev, '发给模型', fmtN(ev.message_count) + ' 条消息 · ' + fmtBytes(ev.bytes));
+      // 默认不带上下文：它是唯一的大字段（每轮重发整份消息）。要看原文再单独拉那一条。
+      const det = document.createElement('details');
+      det.appendChild(el('summary', null, '展开完整上下文（' + fmtBytes(ev.bytes) + '）'));
+      det.ontoggle = async () => {
+        if (!det.open || det.dataset.loaded) return;
+        det.dataset.loaded = '1';
+        try {
+          const full = await apiJSON(`/api/traces/${sel.sessionID}/${sel.runID}/events/${ev.seq}`);
+          det.appendChild(el('pre', null, formatMessages(full.messages)));
+        } catch (e) {
+          det.appendChild(el('div', 'err', '加载失败：' + e.message));
+        }
+      };
+      d.appendChild(det);
+      break;
+    }
+    case 'llm_response': {
+      const tc = (ev.tool_calls || []).length;
+      d = hd(ev, '模型回复', (tc ? tc + ' 个工具调用' : '纯文本') + ' · ' + (ev.finish_reason || ''));
+      if (ev.error) d.appendChild(el('div', 'err', ev.error));
+      if (ev.content) addPre(d, ev.content, '正文', !tc);
+      else if (!tc && !ev.error) d.appendChild(el('div', 'ev-meta', '（没有正文——推理 token 可能把预算吃完了）'));
+      (ev.tool_calls || []).forEach(c => {
+        d.appendChild(el('div', 'ev-meta', '想调用 ' + c.name + '：' + clip(c.arguments, 120)));
+      });
+      if (ev.usage) d.appendChild(el('div', 'ev-meta', '本轮 ' + fmtN(ev.usage.total) + ' tok（推理 ' +
+        fmtN(ev.usage.reasoning || 0) + '）'));
+      break;
+    }
+    case 'tool_call': {
+      d = hd(ev, '调用工具', ev.tool_name);
+      d.appendChild(el('div', 'ev-meta', 'tool_call_id=' + ev.tool_call_id));
+      // 参数是本次改动的核心：在此之前它从来没有被任何通道外发过
+      addPre(d, pretty(ev.args), '参数', true);
+      break;
+    }
+    case 'tool_result': {
+      d = hd(ev, '工具返回', ev.tool_name + ' · ' + fmtMs(ev.duration_ms));
+      if (ev.error) d.appendChild(el('div', 'err', '失败：' + ev.error));
+      const big = (ev.result || '').length > 400;
+      addPre(d, pretty(ev.result), '返回值（' + fmtBytes((ev.result || '').length) + '）', !big);
+      break;
+    }
+    case 'sub_step':
+      d = hd(ev, '子过程', '');
+      renderSubStep(d, ev);
+      renderImages(d, ev);
+      break;
+    case 'usage': {
+      d = hd(ev, '用量', compLabel(ev.component));
+      const u = ev.usage || {};
+      d.appendChild(el('div', 'ev-meta', 'prompt ' + fmtN(u.prompt) + ' · completion ' + fmtN(u.completion) +
+        ' · cached ' + fmtN(u.cached) + ' · 推理 ' + fmtN(u.reasoning || 0) +
+        ' · 图片 ' + fmtN(u.image_tokens || 0) + ' · 合计 ' + fmtN(u.total)));
+      break;
+    }
+    case 'error': {
+      d = hd(ev, '出错', '');
+      d.appendChild(el('div', 'err', ev.error || ''));
+      break;
+    }
+    case 'run_end': {
+      d = hd(ev, 'run 结束', ev.status);
+      const sm = ev.summary || {};
+      d.appendChild(el('div', 'ev-meta', '耗时 ' + fmtMs(sm.duration_ms) + ' · ' + (sm.turns || 0) +
+        ' 轮 · ' + (sm.tool_calls || 0) + ' 次工具调用 · 总 token ' + fmtN((sm.total || {}).total)));
+      if (sm.usage && Object.keys(sm.usage).length) d.appendChild(usageTable(sm.usage, sm.total));
+      break;
+    }
+    default:
+      d = hd(ev, ev.kind, '');
+      addPre(d, JSON.stringify(ev, null, 2), '原始事件');
+  }
+  tl.appendChild(d);
+  tl.scrollTop = tl.scrollHeight;
+}
+
+// formatMessages 把落盘的完整上下文摊成人能读的形状。
+// 它是 []openai.ChatCompletionMessageParamUnion 的 JSON：同一个 role 的不同变体
+// 字段差别很大（tool 有 tool_call_id、assistant 有 tool_calls），所以不枚举字段，
+// 只把"关键的几样"提出来，其余原样附在后面。
+function formatMessages(raw) {
+  if (!raw) return '(这条没有上下文)';
+  let arr;
+  try { arr = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return String(raw); }
+  if (!Array.isArray(arr)) return JSON.stringify(arr, null, 2);
+  return arr.map((m, i) => {
+    const head = `───── [${i}] role=${m.role}` +
+      (m.tool_call_id ? ` tool_call_id=${m.tool_call_id}` : '') +
+      (m.name ? ` name=${m.name}` : '');
+    let body = '';
+    if (typeof m.content === 'string') body = m.content;
+    else if (Array.isArray(m.content)) body = m.content.map(p => p.text || JSON.stringify(p)).join('\n');
+    else if (m.content) body = JSON.stringify(m.content, null, 2);
+    const calls = (m.tool_calls || []).map(c =>
+      `  ↳ 想调用 ${c.function?.name}(${clip(c.function?.arguments, 300)})`).join('\n');
+    return head + '\n' + body + (calls ? '\n' + calls : '');
+  }).join('\n\n');
+}
+
+// ============================================================================
+// 交互
+// ============================================================================
+$('savetok').onclick = () => { localStorage.setItem(TOKEN_KEY, $('tok').value.trim()); loadRuns(); };
+$('reload').onclick = () => { loadRuns(); if (sel) { const s = sel; resetDetail(s.sessionID, s.runID); pull(false); } };
+$('live').onchange = () => { if ($('live').checked && sel && !polling) pull(true); };
+$('lightbox').onclick = () => { $('lightbox').style.display = 'none'; };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('lightbox').style.display = 'none'; });
+
+// 列表自动刷新：run 在跑的时候左栏的状态/耗时/token 要跟着变。
+// 不刷新**已选中的**那个（那是右栏的事），避免把用户正在读的内容抖掉。
+setInterval(() => { if ($('auto').checked) loadRuns(); }, 3000);
+
+loadRuns();
+</script>
+</body>
+</html>

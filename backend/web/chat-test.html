@@ -47,6 +47,9 @@
     .syserr    { align-self: center; background: #450a0a; color: #fca5a5; font-size: 13px; }
     .done      { align-self: center; background: #052e16; color: #86efac; font-size: 12px; }
     .sys       { align-self: center; color: #64748b; font-size: 12px; }
+    /* 观测事件：比对话本身低一级的视觉权重，不抢主线阅读 */
+    .trace     { align-self: flex-start; background: #1e1b3a; color: #c4b5fd;
+                 font-size: 12px; max-width: 95%; font-family: ui-monospace, Consolas, monospace; }
     .session   { align-self: center; color: #475569; font-size: 11px; }
     footer { padding: 12px 16px; border-top: 1px solid #1e2a45; display: flex; gap: 8px; }
     textarea {
@@ -159,6 +162,10 @@
         <button id="send">发送</button>
         <button id="abort">中断</button>
         <label><input type="checkbox" id="raw"> 原始帧</label>
+        <label title="把 agent 的执行过程（工具参数、返回耗时、联网搜了什么、视觉审查截图）也显示在对话里。完整记录见 /trace">
+          <input type="checkbox" id="traceChk"> 观测事件</label>
+        <a href="/trace" target="_blank" title="观测台：每轮完整上下文、工具参数、截图、分项 token"
+           style="color:#a78bfa;font-size:12px;align-self:center">观测台↗</a>
       </footer>
     </section>
     <section id="previewPane">
@@ -224,6 +231,7 @@ const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const abortBtn = document.getElementById('abort');
 const rawChk = document.getElementById('raw');
+const traceChk = document.getElementById('traceChk');   // 观测事件默认关：它比对话本身吵得多
 const deckSel = document.getElementById('deck');
 const deckInfo = document.getElementById('deckInfo');
 const previewFrame = document.getElementById('previewFrame');
@@ -856,12 +864,31 @@ function handleFrame(frame) {
     case 'tool_error':
       bubble('toolerr', '⚠️ 工具失败 ' + (ev.tool_name ?? '')).appendChild(pre(ev.content));
       break;
-    case 'done':
+    case 'trace':
+      // 观测事件：agent 的执行过程。**默认不显示**（勾选框控制）——
+      // 它比对话本身吵得多（每一轮的请求/回复/用量都各是一条），
+      // 而完整记录本来就在 /trace 页面里，这里只是给个"顺手看一眼"的入口。
+      if (traceChk.checked) bubble('trace', onTrace(ev.content));
+      break;
+    case 'done': {
       finishStream();                // 写尽缓冲 + 把思考标题切成"已思考"
       bubble('done', `✅ 完成 · prompt=${ev.prompt_tokens ?? '-'} · completion=${ev.completion_tokens ?? '-'} · total=${ev.total_tokens ?? '-'} · cached=${ev.cached_tokens ?? '-'}`);
+      // 分项用量。上面那四个扁平数字是**主循环口径**（保持不变以免打破旧契约），
+      // 而视觉审查（每次要塞好几张图）和联网搜索（按搜索次数计费）是分开计费的
+      // 另外几次调用，它们的用量过去完全没被计入——所以真实成本要看这一行。
+      const u = ev.usage;
+      if (u && u.usage && Object.keys(u.usage).length) {
+        const name = { main: '主循环', vision: '视觉审查', web_search: '联网搜索' };
+        const parts = Object.keys(u.usage).sort().map(k => {
+          const p = u.usage[k];
+          return `${name[k] || k}=${p.total}(${p.calls}次${p.image_tokens ? '·图' + p.image_tokens : ''})`;
+        });
+        bubble('done', `📊 分项 token · ${parts.join(' · ')} · 合计=${(u.total || {}).total ?? '-'}`);
+      }
       // run 结束 = 记档时刻（成功或 ask_user 暂停都会记），刷新历史列表
       loadHistory();
       break;
+    }
     case 'error':
       bubble('syserr', '❌ ' + (ev.content ?? '未知错误'));
       break;
@@ -869,6 +896,55 @@ function handleFrame(frame) {
       bubble('sys', '未知事件类型 ' + type);
   }
 }
+
+// onTrace 把一条观测事件压成一行人读的摘要。
+// 它只做摘要，不做完整渲染：完整视图在 /trace（那里能展开上下文、看截图、按页对量测）。
+function onTrace(content) {
+  let e;
+  try { e = JSON.parse(content); } catch { return 'trace: ' + content; }
+  const turn = e.turn != null ? `[第${e.turn + 1}轮] ` : '';
+  switch (e.kind) {
+    case 'llm_request':
+      return `📤 ${turn}发给模型 ${e.message_count ?? '?'} 条消息（${fmtB(e.bytes)}）`;
+    case 'llm_response': {
+      const n = (e.tool_calls || []).length;
+      const tok = e.usage ? ` · ${e.usage.total} tok` : '';
+      return `📥 ${turn}模型回复${n ? '，想调用 ' + n + ' 个工具' : ''}${tok}`;
+    }
+    case 'tool_call':
+      return `🛠 ${turn}${e.tool_name} 参数 ${clipS(e.args, 200)}`;
+    case 'tool_result':
+      return `${e.error ? '⚠️' : '✅'} ${turn}${e.tool_name} 返回（${e.duration_ms ?? '?'}ms）` +
+        (e.error ? ` 失败：${clipS(e.error, 160)}` : ` ${clipS(e.result, 200)}`);
+    case 'sub_step': {
+      const s = e.sub || {};
+      const d = s.data || {};
+      if (s.name === 'web_search' && s.stage === 'request') return `🔎 ${turn}联网搜索：${clipS(s.text, 160)}`;
+      if (s.name === 'web_search' && s.stage === 'queries')
+        return `🔎 ${turn}实际搜了 ${(d.queries || []).map(q => `「${q}」`).join(' ')}（计费 ${d.searches ?? 0} 次，返回 ${d.source_n ?? 0} 条来源）`;
+      if (s.name === 'vision' && s.stage === 'capture')
+        return `📸 ${turn}视觉审查实拍 ${(d.pages || []).length} 页（第 ${d.round ?? 1} 次），截图见观测台`;
+      if (s.name === 'vision' && s.stage === 'review_prompt') return `📸 ${turn}把 ${d.images ?? 0} 张截图发给审查模型`;
+      if (s.name === 'vision' && s.stage === 'review_response') return `📸 ${turn}审查报告：${clipS(s.text, 240)}`;
+      if (s.stage === 'error' || s.stage === 'review_error') return `⚠️ ${turn}${s.name} ${s.stage}：${clipS(s.text, 200)}`;
+      return `• ${turn}${s.name}/${s.stage} ${clipS(s.text || JSON.stringify(d), 160)}`;
+    }
+    case 'usage': {
+      const p = e.usage || {};
+      const name = { main: '主循环', vision: '视觉审查', web_search: '联网搜索' };
+      return `📊 ${turn}${name[e.component] || e.component} 本次 ${p.total} tok` +
+        (p.reasoning ? `（推理 ${p.reasoning}）` : '') + (p.image_tokens ? `（图片 ${p.image_tokens}）` : '');
+    }
+    case 'error':
+      return `❌ ${turn}${e.error}`;
+    case 'run_end':
+      return `🏁 ${turn}run 结束：${e.status}（总 token ${((e.summary || {}).total || {}).total ?? '-'}）`;
+    default:
+      return `• ${turn}${e.kind}`;
+  }
+}
+const fmtB = n => n == null ? '?' : n < 1024 ? n + 'B' : n < 1048576 ? (n / 1024).toFixed(1) + 'KB' : (n / 1048576).toFixed(1) + 'MB';
+const clipS = (s, n) => { s = String(s == null ? '' : s).replace(/\s+/g, ' '); return s.length <= n ? s : s.slice(0, n) + '…'; };
 
 // ask_user 卡片：逐题渲染。契约：options 第一个 = 推荐答案（点击填入输入框）
 function renderAskCard(qs) {

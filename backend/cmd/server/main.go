@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,8 @@ import (
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
+	"html-ppt/backend/internal/vision"
 )
 
 // main 保持极薄：真正的启动逻辑在 run() 里，方便统一处理错误退出码。
@@ -90,12 +93,38 @@ func run() error {
 
 	deckSvc := deck.New(cfg.Data.Dir, cfg.Assets.Dir, st)
 
-	if err := agent.InitAgentModel(cfg.LLM, st, box, deckSvc, cfg.Features, cfg.Assets.Dir); err != nil {
+	// 视觉审查的一次性门票表：agent 发票（Issue）、handler 收票（Take），
+	// 必须是**同一个实例**——各建一份的话，票发出去永远换不回来（而且不报错，只是 404）。
+	visionGrants := &vision.Grants{}
+
+	if err := agent.InitAgentModel(cfg.LLM, st, box, deckSvc, cfg.Features, cfg.Assets.Dir, trace.Config{
+		Enabled:       cfg.Features.Trace,
+		Dir:           cfg.Trace.Dir,
+		CaptureImages: cfg.Trace.CaptureImages,
+		RetainRuns:    cfg.Trace.RetainRunsPerSession,
+		MaxFieldBytes: cfg.Trace.MaxFieldBytes,
+	}); err != nil {
 		return fmt.Errorf("初始化 agent: %w", err)
 	}
 	agentSvc := agent.GetAgentService()
 
-	h := handler.New(st, deckSvc, agentSvc, authSvc)
+	// 审查的三个运行时依赖在 init 之后补：buildTools 只读开关（features.vision），
+	// 而门票表 / 回环地址 / Chrome 路径只在"真的要审查那一刻"才被读到，
+	// 所以这样接不必改 InitAgentModel 的签名（它已经有 6 个参数了）。
+	if cfg.Features.Vision {
+		if base, err := loopbackBase(cfg.Server.Addr); err != nil {
+			// 不返回错误：审查是增强信息，配错了不该让整个服务起不来（fail-open，
+			// 与变量契约同一条原则——它防的是静默无效，不是安全问题）
+			log.Printf("[warn] 视觉审查：%v，该功能不可用", err)
+		} else {
+			agentSvc.VisionGrants = visionGrants
+			agentSvc.VisionBaseURL = base
+			agentSvc.ChromePath = cfg.Vision.ChromePath
+			log.Printf("[info] 视觉审查已开启：无头浏览器走 %s 取页", base)
+		}
+	}
+
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir))
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 
@@ -116,4 +145,17 @@ func run() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
+}
+
+// loopbackBase 由监听地址推出"后端自己怎么访问自己"。
+//
+// 为什么需要它：视觉审查要起一个无头浏览器去打开 deck 页，而那条一次性通道
+// （/api/render/<nonce>）和 /assets/* 都挂在本服务上，所以必须告诉浏览器一个能用的地址。
+// 监听写成 ":8080" 或 "0.0.0.0:8080" 时一律换成 127.0.0.1——0.0.0.0 不是一个可连接的目标。
+func loopbackBase(addr string) (string, error) {
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil || port == "" {
+		return "", fmt.Errorf("从监听地址 %q 里解析不出端口", addr)
+	}
+	return "http://127.0.0.1:" + port, nil
 }

@@ -123,7 +123,8 @@ func TestSchemaDescriptionsHaveNoASCIIComma(t *testing.T) {
 		InsertSlideArgs{}, DeleteSlideArgs{}, UpdateThemeArgs{}, ReadThemeArgs{},
 		AskUserArgs{}, ReadHistoryDiffArgs{}, ListHistoryArgs{},
 		ReadCustomCSSArgs{}, UpdateCustomCSSArgs{}, ReadComponentArgs{},
-		webSearchArgs{}, // 新工具的参数结构体要加进这份清单，否则这条守卫对它完全没生效
+		webSearchArgs{},
+		ReviewSlidesArgs{}, // 新工具的参数结构体要加进这份清单，否则这条守卫对它完全没生效
 	}
 	for _, v := range argTypes {
 		typ := reflect.TypeOf(v)

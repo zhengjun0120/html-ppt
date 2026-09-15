@@ -21,6 +21,13 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	{
 		api.GET("/health", h.Health)
 
+		// 视觉审查的一次性取页通道：**必须公开**——无头浏览器是"导航"到它的，
+		// 导航带不了 Authorization 头。安全性靠一次性 nonce（见 vision/grant.go）：
+		// 24 字节随机、只绑一份 deck、取到即废、2 分钟过期；响应头与预览完全一致
+		// （同一个 deckPageHeaders），否则"审查看到的页面"和"用户看到的页面"不是一个东西。
+		// 路径前缀改了的话，agent/vision_review.go 里拼 URL 那行必须一起改。
+		api.GET("/render/:nonce", h.RenderDeck)
+
 		// 公开：验证码 / 注册 / 登录
 		authg := api.Group("/auth")
 		{
@@ -37,12 +44,21 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/decks", h.ListDecks)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
 			guarded.POST("/chat", h.Chat)
-			guarded.POST("/chat/answer",h.AskUser)
+			guarded.POST("/chat/answer", h.AskUser)
 
-			guarded.GET("/decks/:id/history",h.ListDeckHistory)
-			guarded.POST("/decks/:id/history/:version/restore",h.RestoreDeckVersion)
-			guarded.DELETE("/decks/:id/history/:version",h.DeleteDeckVersion)
-			guarded.DELETE("/decks/:id/history",h.ClearDeckHistory)
+			guarded.GET("/decks/:id/history", h.ListDeckHistory)
+			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)
+			guarded.DELETE("/decks/:id/history/:version", h.DeleteDeckVersion)
+			guarded.DELETE("/decks/:id/history", h.ClearDeckHistory)
+
+			// 观测记录读取（观测页 /trace 用）。归属复核在 trace.Store 内部做：
+			// 不属于你的 run 一律 404，且与"不存在"同一个响应（不泄露存在性）。
+			// 取图那条特殊：<img src> 带不了 Authorization 头，靠 ?token= 回退，
+			// 与 deck 预览是同一条已知妥协（见 middleware/auth.go 的说明）。
+			guarded.GET("/traces", h.ListTraces)
+			guarded.GET("/traces/:sessionID/:runID", h.GetTraceRun)
+			guarded.GET("/traces/:sessionID/:runID/events/:seq", h.GetTraceEvent)
+			guarded.GET("/traces/:sessionID/:runID/img/:name", h.GetTraceImage)
 		}
 	}
 
@@ -53,6 +69,9 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 
 	// SSE 测试台（同源访问，无 CORS 问题）：http://localhost:8080/chat-test
 	r.StaticFile("/chat-test", filepath.Join(filepath.Dir(cfg.Assets.Dir), "chat-test.html"))
+	// 观测台：http://localhost:8080/trace（免登录的静态页，令牌从 localStorage 取，
+	// 与 chat-test 同一个键；数据接口全部在 guarded 组里）
+	r.StaticFile("/trace", filepath.Join(filepath.Dir(cfg.Assets.Dir), "trace.html"))
 	return r
 }
 
