@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@import '../theme/tokens.css';
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.65;
+    /* Raycast 式正字距：深底上换取透气感（DESIGN.md §1.1） */
+    letter-spacing: 0.2px;
+    background: var(--bg);
+    color: var(--text-1);
+    transition:
+      background 0.25s ease,
+      color 0.25s ease;
+  }
+  .mono,
+  code,
+  pre,
+  kbd {
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+  }
+  ::selection {
+    background: var(--ring);
+  }
+  /* 应用外壳导航链接 */
+  .nav-link {
+    border-radius: var(--radius-control);
+    padding: 4px 10px;
+    font-size: 13px;
+    color: var(--text-2);
+    text-decoration: none;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .nav-link:hover {
+    color: var(--text-1);
+    background: var(--surface-2);
+  }
+  .nav-link.router-link-exact-active {
+    color: var(--text-1);
+    background: var(--surface-2);
+  }
+  /* 细滚动条，随主题 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
