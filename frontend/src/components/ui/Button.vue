@@ -4,13 +4,15 @@ import Spinner from './Spinner.vue'
 
 const props = withDefaults(
   defineProps<{
+    // type 放首位：@babel/parser 7.29.8 对「多个字符串联合属性后跟 type 属性」的
+    // 多行泛型有解析回归（错误报在前一行 `?` 处），调整顺序可绕过
+    type?: 'button' | 'submit'
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
     size?: 'sm' | 'md'
-    type?: 'button' | 'submit'
     disabled?: boolean
     loading?: boolean
-  >(),
-  { variant: 'secondary', size: 'md', type: 'button', disabled: false, loading: false },
+  }>(),
+  { type: 'button', variant: 'secondary', size: 'md', disabled: false, loading: false },
 )
 
 const emit = defineEmits<{ click: [e: MouseEvent] }>()
