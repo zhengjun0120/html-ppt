@@ -5,12 +5,15 @@ import "time"
 // User 用户表。邮箱即身份；密码只存 bcrypt 哈希（不可逆），
 // 自带 API Key 存 AES-GCM 密文（可逆——后端要解出来替用户调 LLM）。
 type User struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	Email        string    `gorm:"uniqueIndex;size:255" json:"email"`
-	PasswordHash string    `gorm:"size:255" json:"-"`
-	APIKeyEnc    string    `gorm:"size:1024" json:"-"` // base64(nonce|密文)；json:"-" 保证永不进响应
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           uint   `gorm:"primaryKey" json:"id"`
+	Email        string `gorm:"uniqueIndex;size:255" json:"email"`
+	PasswordHash string `gorm:"size:255" json:"-"`
+	APIKeyEnc    string `gorm:"size:1024" json:"-"` // base64(nonce|密文)；json:"-" 保证永不进响应
+	// 上次换发 token 的时刻（auth.Refresh 记账用）：NULL 或早于今天零点 = 今天还有刷新额度。
+	// 用指针是刻意的：'从未刷过' 必须是 NULL 而不是 Go 零值——MySQL 严格模式拒收零值日期
+	TokenRefreshedAt *time.Time `json:"-"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 // Deck 归属表：deck 文件在磁盘上，这张表负责 id → 归属用户 的权威映射。

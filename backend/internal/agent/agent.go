@@ -332,10 +332,27 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 	}
 }
 
+type emitKey struct{}
+
+func withEmit(ctx context.Context,emit func(StreamEvent) error) context.Context{
+	return context.WithValue(ctx,emitKey{},emit)
+}
+
+func emitFrom(ctx context.Context) func(StreamEvent) error{
+	e,_ := ctx.Value(emitKey{}).(func(StreamEvent)error)
+	return e
+}
+
 func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error, rr *runRecorder) (string, error) {
 	// 把归属挂进 ctx：工具内部（联网搜索的每一次子搜索、视觉审查的每一页截图）
 	// 因此不必知道自己在第几轮、call_id 是什么，只要 trace.Emit 就会自动归位
 	ctx = trace.WithTool(ctx, tool.Function.Name, tool.ID)
+	ctx = withEmit(ctx,func(e StreamEvent)error{
+		if e.ToolCallID == ""{
+			e.ToolCallID = tool.ID
+		}
+		return emit(e)
+	}) // 子调用 可用它把过程增量推给前端
 	trace.Emit(ctx, trace.Event{Kind: trace.KindToolCall, Args: tool.Function.Arguments})
 
 	var (
@@ -349,6 +366,13 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 	case !ok:
 		result = "未知工具"
 		callErr = result
+	case rr.overQuota(tool.Function.Name, as.MaxPerRun[tool.Function.Name]):
+		// 配额闸门（Tool.MaxPerRun）：审查→修复→再审这类循环没有自然出口，
+		// 提示词拦不住，就在这里拦。刻意不算 callErr：这是策略结果不是故障，
+		// 模型要的是"接下来该怎么办"的指令，前端也不该把它显示成红色失败
+		result = fmt.Sprintf("配额用完：%s 在一次 run 里最多执行 %d 次，已用尽（本次调用未执行）。"+
+			"不要再调用它——基于已有的结果继续完成任务，剩余想检查/想打磨的点在最终汇报里说明。",
+			tool.Function.Name, as.MaxPerRun[tool.Function.Name])
 	default:
 		res, err := t(ctx, tool.Function.Arguments)
 		if err != nil {
@@ -368,11 +392,11 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 	})
 
 	if callErr != "" {
-		if emitErr := emit(StreamEvent{Type: EventTypeToolError, Content: result, ToolName: tool.Function.Name}); emitErr != nil {
+		if emitErr := emit(StreamEvent{Type: EventTypeToolError, Content: result,ToolCallID: tool.ID, ToolName: tool.Function.Name}); emitErr != nil {
 			return result, fmt.Errorf("事件推送失败: %w", emitErr)
 		}
 	} else {
-		if emitErr := emit(StreamEvent{Type: EventTypeToolCall, Content: result, ToolName: tool.Function.Name}); emitErr != nil {
+		if emitErr := emit(StreamEvent{Type: EventTypeToolCall, Content: result, ToolCallID: tool.ID,ToolName: tool.Function.Name}); emitErr != nil {
 			// 这里原来写的是 `return result, err`，而那个 err 是上层已判为 nil 的变量，
 			// 于是"推送失败"被静默吞掉、循环拿着一个根本没发出去的工具结果继续往下跑
 			return result, fmt.Errorf("事件推送失败: %w", emitErr)
@@ -417,6 +441,27 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 			continue
 		}
 		delta := chunk.Choices[0].Delta
+		for _,tc :=range delta.ToolCalls {
+			idx := tc.Index
+			if idx < 0{
+				idx = 0	// 个别网关对单个工具调用用 -1，sdk 累加器内部就归到0
+			}
+			if tc.ID != ""{
+				// 只有首个片段会带id和完整name 后续片段只有index+arguments
+				if emitErr := emit(StreamEvent{Type:EventTypeToolStart,ToolIndex: idx,ToolCallID: tc.ID,ToolName: tc.Function.Name});emitErr != nil{
+					stream.Close()
+					return openai.ChatCompletionMessage{},openai.CompletionUsage{},fmt.Errorf("事件推送失败: %w",emitErr)
+				}
+			}
+			// 流式推送参数
+			if tc.Function.Arguments != ""{
+				if emitErr := emit(StreamEvent{Type: EventTypeToolDelta,ToolIndex: idx,Content: tc.Function.Arguments});emitErr!=nil{
+					stream.Close()
+					return openai.ChatCompletionMessage{},openai.CompletionUsage{},fmt.Errorf("事件推送失败: %w",emitErr)
+				}
+			}
+		}
+
 		if delta.Content != "" {
 			fullText.WriteString(delta.Content)
 			if emitErr := emit(StreamEvent{Type: EventTypeDelta, Content: delta.Content}); emitErr != nil {
@@ -463,7 +508,7 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 func (as *AgentService) setChatOpts() openai.ChatCompletionNewParams {
 	opt := openai.ChatCompletionNewParams{
 		Model:           openai.ChatModel(as.ModelID),
-		ReasoningEffort: shared.ReasoningEffortMax,
+		ReasoningEffort: shared.ReasoningEffortHigh,
 	}
 	return opt
 }

@@ -116,6 +116,8 @@
   <label class="chk"><input type="checkbox" id="auto" checked> 自动刷新列表</label>
   <label class="chk"><input type="checkbox" id="live" checked> 实时跟随</label>
   <button id="reload">刷新</button>
+  <button id="exportRun" disabled title="把当前打开的 run 导出为一个自包含 JSON：timeline 速览 + 全部事件（messages 折叠为增量）+ 截图路径。主要给 AI 排查用，省体积">导出 run</button>
+  <button id="exportRunImg" disabled title="同上，但截图以 base64 内联（文件大）。排查视觉/版面问题时用">导出含图</button>
   <span id="status" class="lbl"></span>
 </header>
 <main>
@@ -191,6 +193,7 @@ async function apiJSON(path) {
 // 左栏：会话 + run 列表
 // ============================================================================
 let sel = null;              // { sessionID, runID }
+let exporting = false;       // 导出进行中：按钮防重入
 let cursor = 0;              // 事件字节游标（增量拉取）
 let polling = null;
 let usageAcc = {};           // 客户端按 component 累加用量（跑动中的 run 靠它显示实时数字）
@@ -262,6 +265,8 @@ async function loadRuns() {
 // ============================================================================
 function resetDetail(sessionID, runID) {
   sel = { sessionID, runID };
+  $('exportRun').disabled = false;    // 选中了 run 才能导出
+  $('exportRunImg').disabled = false;
   cursor = 0;
   usageAcc = {};
   evCount = 0;
@@ -612,10 +617,45 @@ function formatMessages(raw) {
   }).join('\n\n');
 }
 
+// exportRun 把当前打开的 run 导出成一个自包含 JSON 文件（见 trace/export.go）：
+// timeline 速览 + 全部事件 + run 摘要。messages 折叠成增量、截图默认只留路径——
+// 面向的主要读者是 AI，省体积；withImages 时截图 base64 内联（视觉类问题排查用）。
+// 走 fetch+blob 而不是 <a href>：下载也要带 Authorization 头，
+// ?token= 那条回退会把令牌留进访问日志，能不走就不走。
+async function exportRun(withImages) {
+  if (!sel || exporting) return;
+  exporting = true;
+  say('导出中…（重 run 可能要等几秒）');
+  try {
+    const q = withImages ? '?images=1' : '';
+    const resp = await api(`/api/traces/${sel.sessionID}/${sel.runID}/export${q}`);
+    if (!resp.ok) {
+      let msg = 'HTTP ' + resp.status;
+      try { msg = (await resp.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'trace-' + sel.runID + (withImages ? '-img' : '') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    say('已导出 ' + fmtBytes(blob.size));
+  } catch (e) {
+    say('导出失败：' + e.message, true);
+  } finally {
+    exporting = false;
+  }
+}
+
 // ============================================================================
 // 交互
 // ============================================================================
 $('savetok').onclick = () => { localStorage.setItem(TOKEN_KEY, $('tok').value.trim()); loadRuns(); };
+$('exportRun').onclick = () => exportRun(false);
+$('exportRunImg').onclick = () => exportRun(true);
 $('reload').onclick = () => { loadRuns(); if (sel) { const s = sel; resetDetail(s.sessionID, s.runID); pull(false); } };
 $('live').onchange = () => { if ($('live').checked && sel && !polling) pull(true); };
 $('lightbox').onclick = () => { $('lightbox').style.display = 'none'; };

@@ -357,48 +357,61 @@ func listRunMetasIn(sessDir string, now func() time.Time) ([]RunMeta, error) {
 			continue
 		}
 
-		m := RunMeta{
-			RunID:       head.RunID,
-			ParentRunID: head.ParentRunID,
-			SessionID:   head.SessionID,
-			UserID:      head.UserID,
-			DeckID:      head.DeckID,
-			UserContent: head.UserContent,
-			Model:       head.Model,
-			StartedAt:   head.TS,
-			Status:      StatusRunning,
-		}
-		if m.RunID == "" {
-			m.RunID = runID
-		}
-		if st, serr := e.Info(); serr == nil {
-			m.Bytes = st.Size()
-		}
-
+		var end *Event
 		if tail, terr := readLastLine(path); terr == nil {
-			var end Event
-			if json.Unmarshal(tail, &end) == nil && end.Kind == KindRunEnd {
-				m.Status = end.Status
-				if m.Status == "" {
-					m.Status = StatusOK
-				}
-				if end.Summary != nil {
-					sm := *end.Summary
-					m.Usage = &sm
-					m.DurationMS = sm.DurationMS
-					m.Turns = sm.Turns
-					m.ToolCalls = sm.ToolCalls
-				}
+			var te Event
+			if json.Unmarshal(tail, &te) == nil && te.Kind == KindRunEnd {
+				end = &te
 			}
 		}
-		if m.Status == StatusRunning {
-			// 没有 run_end：还在跑（或进程被杀了）。给个"到目前为止"的耗时，
-			// 否则列表上这一行的时间永远是空的
-			m.DurationMS = now().Sub(m.StartedAt).Milliseconds()
+		var size int64
+		if st, serr := e.Info(); serr == nil {
+			size = st.Size()
 		}
-		metas = append(metas, m)
+		metas = append(metas, runMetaFrom(head, end, size, runID, now))
 	}
 	return metas, nil
+}
+
+// runMetaFrom 把 run_start（head，必需）与 run_end（end，nil = 文件里没有，
+// 还在跑或进程被杀）拼成列表口径的 RunMeta。列表扫描与导出共用这一个实现，
+// 两边的"耗时/轮数/token"口径才不会漂移——漂移的表现是导出文件里的汇总
+// 和列表页显示的对不上，查起来极费劲。
+func runMetaFrom(head Event, end *Event, fileBytes int64, fallbackID string, nowFn func() time.Time) RunMeta {
+	m := RunMeta{
+		RunID:       head.RunID,
+		ParentRunID: head.ParentRunID,
+		SessionID:   head.SessionID,
+		UserID:      head.UserID,
+		DeckID:      head.DeckID,
+		UserContent: head.UserContent,
+		Model:       head.Model,
+		StartedAt:   head.TS,
+		Status:      StatusRunning,
+	}
+	if m.RunID == "" {
+		m.RunID = fallbackID
+	}
+	m.Bytes = fileBytes
+
+	if end == nil {
+		// 没有 run_end：还在跑（或进程被杀了）。给个"到目前为止"的耗时，
+		// 否则列表上这一行的时间永远是空的
+		m.DurationMS = nowFn().Sub(m.StartedAt).Milliseconds()
+		return m
+	}
+	m.Status = end.Status
+	if m.Status == "" {
+		m.Status = StatusOK
+	}
+	if end.Summary != nil {
+		sm := *end.Summary
+		m.Usage = &sm
+		m.DurationMS = sm.DurationMS
+		m.Turns = sm.Turns
+		m.ToolCalls = sm.ToolCalls
+	}
+	return m
 }
 
 // ---------- 文件小工具 ----------

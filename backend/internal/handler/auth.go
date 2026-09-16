@@ -65,6 +65,25 @@ func (h *Handler) Login(c *gin.Context) {
 	response.OK(c, gin.H{"token": token})
 }
 
+// Refresh POST /api/auth/refresh —— 换发新 token（每用户每天一次，跨设备共享额度）。
+//
+// 给前端"每天上线静默续期"用：带上当前 token 调一次。200 就把新 token 换上去；
+// 429 说明今天已经刷过（或被别的设备刷了），继续用旧 token 即可——旧 token 的
+// 有效期不受影响，这不是登录障碍，前端不该把它当错误弹给用户。
+func (h *Handler) Refresh(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	token, err := h.auth.Refresh(c.Request.Context(), uid)
+	if err != nil {
+		respondAuthErr(c, err)
+		return
+	}
+	response.OK(c, gin.H{"token": token})
+}
+
 // SetAPIKey POST /api/auth/apikey —— 用户自带 LLM Key（BYOK），传空串清除。
 func (h *Handler) SetAPIKey(c *gin.Context) {
 	uid, ok := authctx.UserID(c.Request.Context())
@@ -104,7 +123,7 @@ func respondAuthErr(c *gin.Context, err error) {
 	case errors.Is(err, auth.ErrEmailInvalid), errors.Is(err, auth.ErrPasswordWeak),
 		errors.Is(err, auth.ErrCodeInvalid), errors.Is(err, auth.ErrAPIKeyInvalid):
 		response.Err(c, http.StatusBadRequest, err.Error())
-	case errors.Is(err, auth.ErrCodeCooldown):
+	case errors.Is(err, auth.ErrCodeCooldown), errors.Is(err, auth.ErrTokenRefreshQuota):
 		response.Err(c, http.StatusTooManyRequests, err.Error())
 	case errors.Is(err, auth.ErrEmailTaken):
 		response.Err(c, http.StatusConflict, err.Error())

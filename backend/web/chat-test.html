@@ -39,6 +39,17 @@
     details.think > summary:hover { color: #94a3b8; }
     details.think .tbody { white-space: pre-wrap; word-break: break-word;
                            max-height: 320px; overflow-y: auto; margin-top: 4px; }
+    /* 工具参数 / 子模型输出的流式盒子：同 think 的折叠思路，闭合时正文不参与布局。
+       参数盒（JSON 碎片）默认折叠只看字数；子模型盒（审查报告）默认展开边跑边读 */
+    details.streambox { align-self: flex-start; background: transparent; color: #64748b;
+                        font-size: 12px; border-left: 2px solid #134e4a; padding-left: 10px;
+                        max-width: 95%; }
+    details.streambox > summary { cursor: pointer; outline: none; }
+    details.streambox > summary:hover { color: #94a3b8; }
+    details.streambox .sbody { white-space: pre-wrap; word-break: break-word;
+                               max-height: 320px; overflow-y: auto; margin-top: 4px;
+                               font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+                               color: #94a3b8; }
     /* 渲染上限提示：超长产出只计数不写 DOM */
     .capnote { color: #475569; font-size: 11px; margin-top: 6px; }
     .tool      { align-self: flex-start; background: #134e4a; font-size: 13px; max-width: 95%; }
@@ -283,6 +294,8 @@ const stream = {
   dEl: null, dNode: null, dShown: 0, bufD: '',
   tEl: null, tNode: null, tCnt: null, tShown: 0, tTotal: 0, bufT: '', tOpen: false, tLast: 0,
   rawEl: null, rawNode: null, rawShown: 0, bufRaw: '',
+  tools: new Map(),   // 主模型正在生成的工具调用参数盒（key: 'i'+tool_index）
+  subs: new Map(),    // 工具执行期子模型输出盒（key: tool_call_id，无则 tool_name）
   scheduled: false,
 };
 
@@ -291,6 +304,8 @@ function resetBubbles() {
   stream.tEl = stream.tNode = stream.tCnt = null;
   stream.tShown = stream.tTotal = 0; stream.bufT = ''; stream.tOpen = false; stream.tLast = 0;
   stream.rawEl = stream.rawNode = null; stream.rawShown = 0; stream.bufRaw = '';
+  // 上一轮的盒子 DOM 留在日志里当记录，这里只清引用：下一轮同名工具拿的是新盒子
+  stream.tools.clear(); stream.subs.clear();
   stream.scheduled = false;
 }
 
@@ -337,6 +352,91 @@ function onThink(chunk) {
   scheduleFlush();
 }
 function onRaw(frame) { stream.bufRaw += frame.replaceAll('\n', ' ⏎ ') + '\n'; scheduleFlush(); }
+
+// ---------- 工具参数 / 子模型输出的流式盒子 ----------
+// tool_start/tool_delta 是主模型正在生成的工具调用参数（arguments 的 JSON 原文片段，
+// 单片段不是合法 JSON——只透传与计数，不解析）；sub_delta 是工具执行期间子模型
+// （视觉审查）流式吐出的报告原文。两类都并进 flushStream 的 rAF 合并通道：
+// 参数盒默认折叠（碎片没有阅读价值，看字数即可），子模型盒默认展开——审查报告是
+// 给人看的，而看图审查是整个流程最长的静默窗口，展开着正好把这段空白填上。
+// 盒子 key 用 'i'+tool_index（后端 tool_delta 只带 index 不带 id），收尾即从 Map
+// 删除：下一轮再调同名工具时拿到的是新盒子，而不是已定格的旧盒。
+function boxKey(ev) { return 'i' + (ev.tool_index ?? 0); }
+
+function ensureBox(map, key, name, title, open) {
+  let b = map.get(key);
+  if (b) return b;
+  const el = document.createElement('details');
+  el.className = 'streambox';
+  el.open = open;
+  const sum = document.createElement('summary');
+  sum.textContent = title + ' 0 字…';
+  const body = document.createElement('div');
+  body.className = 'sbody';
+  const node = document.createTextNode('');
+  body.appendChild(node);
+  el.append(sum, body);
+  log.appendChild(el);
+  scroll();
+  b = { el, sum, body, node, buf: '', shown: 0, total: 0, name, id: null, title, sealed: false, capped: false };
+  map.set(key, b);
+  return b;
+}
+
+function flushBoxBuf(b) {
+  if (!b.buf) return false;
+  b.shown = appendChunk(b.node, b.buf, b.shown);
+  b.buf = '';
+  // capnote 只补一次：后续每帧都到上限，反复插会刷出一排提示
+  if (b.shown >= RENDER_CAP && !b.capped) { b.capped = true; capNote(b.el); }
+  if (b.el.open) b.body.scrollTop = b.body.scrollHeight;   // 展开中：跟住最新输出
+  return true;
+}
+
+function feedBox(map, key, name, title, chunk, open) {
+  if (!chunk) return null;
+  const b = ensureBox(map, key, name, title, open);
+  if (b.sealed) return b;                     // 收尾后迟到的增量不再写
+  b.buf += chunk;
+  b.total += chunk.length;
+  scheduleFlush();
+  return b;
+}
+
+// sealBoxes 把匹配的盒子定格（name 传 '' 收尾全部）并从 Map 删除，DOM 气泡留在日志里当记录。
+// 事件和盒子都带 tool_call_id 时按 id 精确归属（同名并行调用不会错位）；任一方缺 id
+// 就退回按名字——工具是逐个执行的，"当前唯一未定格的同名盒"在实际时序下不会错位。
+function sealBoxes(map, name, suffix, id) {
+  for (const [k, b] of map) {
+    if (b.sealed) continue;
+    const byId = id && b.id;                  // 两边都带 id 才按 id 匹配
+    if (byId ? b.id !== id : (name && b.name !== name)) continue;
+    b.sealed = true;
+    b.el.open = false;                      // 展开中的子模型盒收回去：完整结果马上由结果气泡给出
+    flushBoxBuf(b);
+    b.sum.textContent = b.title + ' · ' + b.total + ' 字' + suffix;
+    map.delete(k);
+  }
+}
+const sealAll = suffix => { sealBoxes(stream.tools, '', suffix); sealBoxes(stream.subs, '', suffix); };
+
+function onToolStart(ev) {
+  const b = ensureBox(stream.tools, boxKey(ev), ev.tool_name ?? '',
+                      '🛠 ' + (ev.tool_name ?? '?') + ' · 参数生成中', false);
+  b.name = ev.tool_name ?? '';
+  b.id = ev.tool_call_id ?? null;   // 收尾时按 id 精确归属（参数盒 key 仍用 index：delta 不带 id）
+  scroll();
+}
+function onToolDelta(ev) {
+  feedBox(stream.tools, boxKey(ev), '', '🛠 工具 · 参数生成中', ev.content ?? '', false);
+}
+function onSubDelta(ev) {
+  // 有 tool_call_id 按它开盒（后端在 execTool 统一注入）；没带就退回按工具名
+  const id = ev.tool_call_id || null;
+  const b = feedBox(stream.subs, id || ev.tool_name || 'sub', ev.tool_name ?? '',
+                    '👁 ' + (ev.tool_name ?? '子调用') + ' · 子模型输出中', ev.content ?? '', true);
+  if (b) b.id = id;
+}
 
 function scheduleFlush() {
   if (stream.scheduled) return;
@@ -416,6 +516,14 @@ function flushStream() {
     if (stream.rawShown >= RENDER_CAP) capNote(stream.rawEl);
   }
 
+  // 工具参数 / 子模型输出：与正文同一条 rAF 通道，每帧最多写一次 DOM
+  for (const b of stream.tools.values()) {
+    if (flushBoxBuf(b)) b.sum.textContent = b.title + ' ' + b.total + ' 字…';
+  }
+  for (const b of stream.subs.values()) {
+    if (flushBoxBuf(b)) b.sum.textContent = b.title + ' ' + b.total + ' 字…';
+  }
+
   scroll();
 }
 
@@ -425,6 +533,7 @@ function finishStream() {
   if (stream.tEl) {
     stream.tCnt.textContent = '💭 已思考 ' + stream.tTotal + ' 字（点击展开）';
   }
+  sealAll(' · 已结束');   // done 是流的真实终点：所有流式盒子在此定格
   scroll();
 }
 
@@ -815,6 +924,9 @@ async function send() {
     else bubble('syserr', '连接错误：' + e.message);
   } finally {
     streaming = false;
+    // 异常/中断路径的收尾：abort、网络断、HTTP 错误都不会发 done/error 事件。
+    // 正常 done 已由 finishStream 定格（盒子已从 Map 删除），这里再调是空操作
+    sealAll(' · 已中断');
     // 尊重待答状态：流里可能刚渲染了一张提问卡片（renderAskCard 会锁上它），
     // 这里无条件打开的话"提问待答时不能发新消息"就失效了
     sendBtn.disabled = pendingAsk;
@@ -847,6 +959,9 @@ async function sendAnswer(answers, note) {
     else bubble('syserr', '连接错误：' + e.message);
   } finally {
     streaming = false;
+    // 异常/中断路径的收尾：abort、网络断、HTTP 错误都不会发 done/error 事件。
+    // 正常 done 已由 finishStream 定格（盒子已从 Map 删除），这里再调是空操作
+    sealAll(' · 已中断');
     // 尊重待答状态：流里可能刚渲染了一张提问卡片（renderAskCard 会锁上它），
     // 这里无条件打开的话"提问待答时不能发新消息"就失效了
     sendBtn.disabled = pendingAsk;
@@ -872,6 +987,15 @@ function handleFrame(frame) {
     case 'think':
       onThink(ev.content ?? '');     // 同上；折叠显示，正文不参与布局
       break;
+    case 'tool_start':
+      onToolStart(ev);               // 主模型开始生成某次工具调用的参数
+      break;
+    case 'tool_delta':
+      onToolDelta(ev);               // arguments 的 JSON 原文片段：盒子只透传计数，不解析
+      break;
+    case 'sub_delta':
+      onSubDelta(ev);                // 工具执行期子模型（视觉审查）的报告原文，展开直读
+      break;
     case 'session': {
       const id = parseInt(ev.content, 10) || 0;
       if (id > 0) {
@@ -885,12 +1009,18 @@ function handleFrame(frame) {
       break;
     }
     case 'ask_user': {
+      // 提问参数的流式盒定格收起，问题本身由下面的卡片重新展示；
+      // 同轮被提问打断的其它工具不会再有结果事件，一并收尾
+      sealAll(' · 等待回答');
       let qs = [];
       try { qs = JSON.parse(ev.content).questions || []; } catch { /* 参数非法时后端已拦截，这里兜底 */ }
       renderAskCard(qs);
       break;
     }
     case 'tool_call': {
+      // 后端补了 tool_call_id 后按 id 精确归属；没带就按名字兜底
+      sealBoxes(stream.tools, ev.tool_name ?? '', ' · 完成', ev.tool_call_id);
+      sealBoxes(stream.subs, ev.tool_name ?? '', ' · 完成', ev.tool_call_id);   // 子模型输出盒一并收起
       const b = bubble('tool', '🛠 调用工具 ' + (ev.tool_name ?? ''));
       b.appendChild(pre(ev.content));
       // write_deck 成功 → 新 deck 自动进下拉框并选中，右侧预览跟着加载
@@ -907,6 +1037,8 @@ function handleFrame(frame) {
       break;
     }
     case 'tool_error':
+      sealBoxes(stream.tools, ev.tool_name ?? '', ' · 失败', ev.tool_call_id);
+      sealBoxes(stream.subs, ev.tool_name ?? '', ' · 失败', ev.tool_call_id);
       bubble('toolerr', '⚠️ 工具失败 ' + (ev.tool_name ?? '')).appendChild(pre(ev.content));
       break;
     case 'trace':

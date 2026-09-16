@@ -34,6 +34,7 @@ var (
 	ErrCodeCooldown       = errors.New("发送太频繁，请 1 分钟后再试")
 	ErrEmailTaken         = errors.New("该邮箱已注册")
 	ErrBadCredentials     = errors.New("邮箱或密码不正确")
+	ErrTokenRefreshQuota  = errors.New("今天已经刷新过登录凭据")
 	ErrCryptoUnavailable  = errors.New("加密模块未配置（crypto.aes_key），无法保存 API Key")
 	ErrStorageUnavailable = errors.New("数据库不可用")
 )
@@ -188,6 +189,40 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", ErrBadCredentials
 	}
 	return s.signToken(u.ID), nil
+}
+
+// Refresh 给当前登录用户换发一个新 token（有效期从现在起重新计满一个 TTL）。
+//
+// 限额是"每用户每天一次"，额度记在用户行上、与设备无关：先上线的设备把当天的
+// 额度用掉，其余设备拿着旧 token 继续用——JWT 无状态，已签发的都有效到过期，
+// 所以"没抢到今天额度"不构成任何登录障碍，只是拿不到新 token 而已。
+//
+// 闸门是条件 UPDATE 的 RowsAffected，天然原子：并发两次刷新只有一次能把
+// token_refreshed_at 从"今天之前"改成"现在"，另一次改 0 行、拿到额度用完的错。
+// "今天"以服务器本地日历日为准（见 dayStart）。
+func (s *Service) Refresh(ctx context.Context, userID uint) (string, error) {
+	if s.db == nil {
+		return "", ErrStorageUnavailable
+	}
+	now := time.Now()
+	res := s.db.WithContext(ctx).Model(&store.User{}).
+		Where("id = ? AND (token_refreshed_at IS NULL OR token_refreshed_at < ?)", userID, dayStart(now)).
+		Update("token_refreshed_at", now)
+	if res.Error != nil {
+		return "", fmt.Errorf("db: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return "", ErrTokenRefreshQuota
+	}
+	return s.signToken(userID), nil
+}
+
+// dayStart 当天零点（本地时区）。"每天一次"的"天"以服务器本地日历日为准。
+//
+// 刻意不用 time.Truncate(24h)：它按"距零值时间的绝对时长"切分，切点落在 UTC 零点，
+// 在东八区就是早上 8 点——那样"每天"会变成"每天早上 8 点到次日早上 8 点"。
+func dayStart(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 // SetAPIKey 保存/清除（传空串清除）用户自带的 LLM API Key。存密文。

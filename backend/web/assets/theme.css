@@ -56,6 +56,27 @@
   font-display: swap;
 }
 
+/* Inter（可变字重 100–900，仅拉丁）：为 swiss 预设的第二档字体自带（授权见 fonts/inter/OFL.txt）。
+   为什么这一档也破例自带：瑞士风的整个表情押在"大字号 + 轻字重"上，而系统字体里
+   中文没有 200/300 这种字重（雅黑最低只到 Regular）——只换字体不换字重，
+   hero 档的大字会粗成一块黑。自带可变字体后，.cover-title / .big-num 在两种字体上
+   都能拿到 160 那一档的细。来源见 fonts/README.md；只含拉丁，中文自动落到栈里的
+   PingFang/Microsoft YaHei，中英混排的字体配对正是这一档预设要的样子。 */
+@font-face {
+  font-family: "Inter";
+  src: url(./fonts/inter/inter-latin-wght-normal.woff2) format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url(./fonts/inter/inter-latin-italic-wght-normal.woff2) format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   /* ---------- reveal.js 官方变量 ---------- */
   --r-background-color: #f6f2e9;
@@ -87,9 +108,23 @@
   --fs-title: 1.32em;     /* 45px 35pt  块内小标题：卡片 h3/h4、.term、.label */
   --fs-h3: 1.6em;         /* 54px 42pt  页面内三级标题 */
   --fs-display: 2.4em;    /* 82px 63pt  视觉焦点：hero 数字、一章一句话 */
+  /* --fs-hero 是给封面标题、整页大数字、章节编号留的"最大锚点"档（156px）。
+     原来阶梯的顶点是 2.4em：封面标题、章节页和正文的最大比值只有 1.8:1，
+     一页没有第一视觉落点，deck 就只剩下"灰白底 + 小字"这一个表情——"版面显得空"
+     的第一来源不是字少，是**字号之间的落差太小**。
+     它和 --fs-display 的比例是 1.92（全阶梯最大的一档差，刻意留的：这两档
+     分别对应"整页的事"与"页内的事"，混用等于层级读不出）。 */
+  --fs-hero: 4.6em;       /* 156px 120pt 整页级锚点：封面大标题、大编号、单数字页 */
   /* 页面标题（h2）是 reveal 的 2.11em = 72px = 55pt，由 moon.css 的
      --r-heading2-size 提供。含它共 7 档，但一个页面通常只用 4 档。*/
   --r-heading3-size: var(--fs-h3);
+
+  /* ---------- hero 档字重（主题级旋钮）----------
+     .cover-title / .big-num / .plate / .bleed 的大字号共用它。默认 400：
+     衬线/黑体在 400 下都是真实字重、不触发合成加粗（黑体大标题写 600/900 会糊成黑块）。
+     swiss 预设置 200，让自带的 Inter 可变字体细下来——这是瑞士风"大字号+细字重"的招牌。
+     它是合法的模型覆盖点（不在保留名单里）：想换气质可在 update_theme 的 vars 里改。 */
+  --hero-weight: 400;
 
   /* ---------- 间距阶梯（8px 基准）----------
      8/16/24/32/48px。为什么不写 px：适配兜底缩放的是 section 的 font-size，
@@ -129,6 +164,25 @@
   --on-accent: #ffffff;
   --text-muted: #6f665c;
   --radius: 2px;
+
+  /* ---------- 整页翻色的派生 token（见 renderThemeCSS） ----------
+     .bg-ink（墨色页）与 .bg-accent（强调色页）两种"节奏页"需要的不是新颜色，
+     而是同一套颜色**反过来**时的中性件：弱化字、发丝线、面板底。
+     它们必须由 Go 按主题算（rgba 无法在纯 CSS 里从 hex 派生而不依赖 color-mix），
+     这里是兜底皮肤（纸感）的对应值。页面不要直接引用它们——挂 .bg-ink/.bg-accent，
+     组件自己会翻（见 components.css 的"整页变体"）。 */
+  --ink-bg: #1c1a17;    /* 墨页/墨块的底色（= 标题色的只读别名） */
+  --ink-fg: #f6f2e9;
+  --ink-accent: #d3604f; /* 墨页上的强调色变体：Go 按对比度从 accent↔fg 互混里挑的第一个达标值 */
+  /* 交换用的只读别名（见 renderThemeCSS 的注释：少了它们，accent 页会循环引用） */
+  --page-accent: #b23a2e;
+  --page-fg: #ffffff;
+  --ink-muted: rgba(246, 242, 233, 0.65);
+  --ink-hairline: rgba(246, 242, 233, 0.18);
+  --ink-panel: rgba(246, 242, 233, 0.10);
+  --accent-muted: rgba(255, 255, 255, 0.72);
+  --accent-hairline: rgba(255, 255, 255, 0.22);
+  --accent-panel: rgba(255, 255, 255, 0.12);
 }
 
 .reveal {

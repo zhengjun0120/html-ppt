@@ -27,6 +27,10 @@ type AgentService struct {
 	DeckService *deck.Service
 	Tools       []openai.ChatCompletionToolUnionParam
 	Exec        map[string]ToolFunc
+	// MaxPerRun 工具名 → 一次 run 里的最大执行次数（0/缺失 = 不限）。
+	// 它是"审查→修复→再审"这类无收敛循环的唯一硬闸门：提示词是软约束，
+	// 实测的 22 轮 run 就是靠 maxTurns 兜底才停下来的。见 Tool.MaxPerRun 与 execTool。
+	MaxPerRun map[string]int
 	st          *store.Store // BYOK：查用户密钥密文
 	box         *cryptox.Box // BYOK：解密；nil = BYOK 关闭
 	// CustomCSS = features.custom_css：关闭时 buildTools 不挂载自定义样式三件套
@@ -85,6 +89,12 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 	for name, t := range tools {
 		agentServer.Tools = append(agentServer.Tools, t.Definition)
 		agentServer.Exec[name] = t.Execute
+		if t.MaxPerRun > 0 {
+			if agentServer.MaxPerRun == nil {
+				agentServer.MaxPerRun = make(map[string]int)
+			}
+			agentServer.MaxPerRun[name] = t.MaxPerRun
+		}
 	}
 	// 启动时把挂载了哪些工具打出来：features 开关的效果要可见
 	//（关掉 custom_css 后这里就不该再有 read/update_custom_css 和 read_component）

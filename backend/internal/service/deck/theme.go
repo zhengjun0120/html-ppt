@@ -119,6 +119,7 @@ const (
 	FontEditorial = "editorial" // 衬线标题 + 无衬线正文：中文杂志的经典配对
 	FontModern    = "modern"    // 几何无衬线（Helvetica/PingFang）
 	FontMono      = "mono"      // 等宽
+	FontSwiss     = "swiss"     // Inter（自带可变字重）+ 系统中文：瑞士国际主义排版那一档
 )
 
 // 默认值必须与 web/assets/theme.css 的 :root 一致（两处耦合，改一处必改另一处）。
@@ -153,11 +154,13 @@ var (
 	// 是"没有做过字体决策"的默认结果；而"衬线标题 + 无衬线正文"这一对，
 	// 光是换上去就能让页面从"AI 生成的网页"变成"有人排过版的读物"。
 	//
-	// 五对里只有 mono 这一对引用了**随附字体**（web/assets/fonts、theme.css 里的
-	// @font-face）。为什么只在这一档破例：拉丁等宽字体到处都有，中日文等宽字体却没有
-	// ——Consolas 的"等宽"只覆盖拉丁，中文落到系统黑体后步进宽度和拉丁对不上，
-	// 于是这一档的整个观感取决于机器上恰好装了什么。中日文等宽是"必须自带才成立"的
-	// 那一档；其余四对靠系统字体栈就能得到可预期的结果，不值得各背一份几 MB 的字体。
+	// 六对里只有两对引用了**随附字体**（web/assets/fonts、theme.css 里的 @font-face）：
+	// mono 与 swiss。破例的理由各是一条"不装这台机器就不成立"的硬需求：
+	//   - mono：拉丁等宽到处有，中日文等宽却没有——Consolas 的"等宽"只覆盖拉丁，
+	//     中文落到系统黑体后步进宽度和拉丁对不上，整档观感取决于机器装了什么。
+	//   - swiss：瑞士风押在"大字号 + 细字重"上，系统中文黑体最细只到 Regular，
+	//     可变字重的 Inter 才能让 hero 档大标题真的"细"下来（见 FontSwiss 那条注释）。
+	// 其余四对靠系统字体栈就能得到可预期的结果，不值得各背一份几 MB 的字体。
 	fontPairs = map[string][2]string{
 		FontSans:  {`"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif`, `"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif`},
 		FontSerif: {`Georgia, "Times New Roman", "Songti SC", SimSun, serif`, `Georgia, "Times New Roman", "Songti SC", SimSun, serif`},
@@ -167,9 +170,14 @@ var (
 		},
 		FontModern: {`"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif`, `"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif`},
 		FontMono:   {`"JetBrains Maple Mono", Consolas, "Courier New", monospace`, `"JetBrains Maple Mono", Consolas, "Courier New", monospace`},
+		// swiss：拉丁走自带的 Inter 可变字体（见 theme.css 的 @font-face），中文落系统黑体。
+		// 为什么这一档也自带：瑞士风的整个表情押在"极大字号 + 极细字重"上，而系统中文黑体
+		// 最细只到 Regular——不自带 Inter，--fs-hero 那一档大字会粗成一团，"轻"的味道全没了。
+		// 中英混排本身就是这一档想要的样子（拉丁细体 + 黑体中文），不是将就。
+		FontSwiss:  {`"Inter", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif`, `"Inter", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif`},
 	}
 	// fontNames 给报错信息与 schema 契约测试用的稳定顺序清单（map 遍历是随机的）
-	fontNames = []string{FontSans, FontSerif, FontEditorial, FontModern, FontMono}
+	fontNames = []string{FontSans, FontSerif, FontEditorial, FontModern, FontMono, FontSwiss}
 	textures  = map[string]bool{
 		TextureNone: true, TextureGrid: true, TextureDots: true, TextureRule: true,
 	}
@@ -275,6 +283,63 @@ func onAccentColor(hex string) string {
 	return "#ffffff"
 }
 
+// relLum 返回 #rrggbb 的 WCAG 相对亮度（wcagContrast 用；onAccentColor 保持
+// 它自己的简化版比较，不动已上线的判色行为）。
+func relLum(hex string) float64 {
+	lin := func(c float64) float64 {
+		if c <= 0.03928 {
+			return c / 12.92
+		}
+		return math.Pow((c+0.055)/1.055, 2.4)
+	}
+	n, _ := strconv.ParseUint(hex[1:], 16, 32)
+	r := lin(float64(n>>16&0xff) / 255)
+	g := lin(float64(n>>8&0xff) / 255)
+	b := lin(float64(n&0xff) / 255)
+	return 0.2126*r + 0.7152*g + 0.0722*b
+}
+
+// mixHex 把两个 #rrggbb 按比例线性混合（t=0 得 a，t=1 得 b）。
+func mixHex(a, b string, t float64) string {
+	na, _ := strconv.ParseUint(a[1:], 16, 32)
+	nb, _ := strconv.ParseUint(b[1:], 16, 32)
+	ch := func(shift uint) uint64 {
+		x := float64(na>>shift&0xff)*(1-t) + float64(nb>>shift&0xff)*t
+		return uint64(math.Round(x))
+	}
+	return fmt.Sprintf("#%02x%02x%02x", ch(16), ch(8), ch(0))
+}
+
+// wcagContrast 返回两个颜色的 WCAG 对比度（4.5 ~ 1）。
+// 名字带 wcag 前缀是为了和测试文件里的 contrastRatio helper 区分（同名会编译冲突）。
+func wcagContrast(a, b string) float64 {
+	la, lb := relLum(a), relLum(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+// accentOnInk 为"墨页/墨块"挑一个仍可读的强调色变体。
+//
+// 为什么需要它：主题强调色的对比度是按**原背景**校准的（预设对比度测试量的是这个组合），
+// 墨页把底色翻成了反方向（inkBg = 主题的标题色）——浅色主题的墨页是深底，
+// 中低明度的强调色（松墨的深绿、纸感的暗红）会跌破投影可读线；
+// **深色主题的"墨页"是亮页**，同样要按亮底重新校准。所以必须拿真实底色来测。
+// 候选色用"强调色 ↔ 墨页前景色"线性互混 t=1/6…5/6——混到前景方向
+// = 往"页面上已有的中性字色"靠，色相在、不引入新颜色。
+// 全都不达标时退回前景色本身：宁可失去一处彩色，不交付一段读不出来的字。
+// 调用方保证入参都已过 validate（6 位十六进制）。
+func accentOnInk(accent, inkFg, inkBg string) string {
+	for i := 1; i <= 5; i++ {
+		c := mixHex(accent, inkFg, float64(i)/6)
+		if wcagContrast(c, inkBg) >= 4.5 {
+			return c
+		}
+	}
+	return inkFg
+}
+
 // renderThemeCSS 把 Theme 渲染成 `:root{}` 变量文本 +（可选）纹理规则
 // （不含 <style> 标签本身——标签由骨架持有，写入时 SetRawText 只填内容）。
 // 派生变量在这里集中计算：旋钮越少，LLM 的选择面越小，观感越不容易崩。
@@ -308,6 +373,36 @@ func renderThemeCSS(t Theme) string {
 	// 变成一条彩线（原来 .row 用虚线画分隔，正是这个问题最显眼的地方）
 	fmt.Fprintf(&sb, "--hairline:%s;", hexToRGBA(t.TextColor, 0.12))
 	fmt.Fprintf(&sb, "--radius:%s;", t.Radius)
+
+	// ---- 整页翻色的派生 token（.bg-ink / .bg-accent 用，见 components.css）----
+	// 为什么在 Go 算而不是 CSS color-mix：color-mix 要浏览器支持，且"反过来"的
+	// 中性件（弱化字/发丝线/面板底）要按目标底色重算 alpha，纯 CSS 从 hex 推不出
+	// rgba——和 --on-accent 同一个理由（跟着主题走、不依赖运行环境）。
+	// --ink-* 是"墨页"那一套：底=标题色，字=原背景色（浅色主题→深色页；
+	//   深色主题→浅色页），中性件全部由**原背景色**派生（它就是墨页上的正文色）。
+	// --accent-* 是"强调色页"那一套：底=accent，字=--on-accent，中性件由 on-accent 派生。
+	// --page-fg / --page-accent 是 .bg-accent/.accent-block 做"accent↔反色交换"时
+	//   必须存在的两个**只读别名**：交换块里 --accent 和 --on-accent 会被同时重定义，
+	//   而 CSS 变量的 var() 引用按"元素最终计算值"解析、不分声明先后——不经过
+	//   这两个别名就会形成 --accent→--on-accent→--accent 的循环引用（整块失效、
+	//   背景变回原 accent、白字压在原 accent 上）。这是实测验证过的坑，别"优化"掉。
+	// --ink-bg：墨页/墨块的**底色只读别名**（= 主题标题色）。必须存在而不是让
+	//   变体块写 background: var(--r-heading-color)：同一元素上 --r-heading-color
+	//   会被重定义成反色（ink-fg），而 var() 按最终值解析——墨页会变成白底白字。
+	fmt.Fprintf(&sb, "--ink-bg:%s;", t.HeadingColor)
+	fmt.Fprintf(&sb, "--ink-fg:%s;", t.Background)
+	// --ink-accent：墨页上的"有彩色"要按墨页底色重新校准——强调色的对比度原来是对着
+	//   **原背景**测的（预设的对比度测试量的是这个组合），底色翻向后多数会跌破可读线。
+	//   取"强调色 ↔ 墨页前景"六次互混的第一个达标者（见 accentOnInk）。
+	fmt.Fprintf(&sb, "--ink-accent:%s;", accentOnInk(t.Accent, t.Background, t.HeadingColor))
+	fmt.Fprintf(&sb, "--page-accent:%s;", t.Accent)
+	fmt.Fprintf(&sb, "--page-fg:%s;", onAccentColor(t.Accent))
+	fmt.Fprintf(&sb, "--ink-muted:%s;", hexToRGBA(t.Background, 0.65))
+	fmt.Fprintf(&sb, "--ink-hairline:%s;", hexToRGBA(t.Background, 0.18))
+	fmt.Fprintf(&sb, "--ink-panel:%s;", hexToRGBA(t.Background, 0.10))
+	fmt.Fprintf(&sb, "--accent-muted:%s;", hexToRGBA(onAccentColor(t.Accent), 0.72))
+	fmt.Fprintf(&sb, "--accent-hairline:%s;", hexToRGBA(onAccentColor(t.Accent), 0.22))
+	fmt.Fprintf(&sb, "--accent-panel:%s;", hexToRGBA(onAccentColor(t.Accent), 0.12))
 
 	if len(t.Vars) > 0 {
 		names := make([]string, 0, len(t.Vars))

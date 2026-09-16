@@ -7,6 +7,7 @@ type StreamEvent struct {
 	Content    string `json:"content"`
 	ToolCallID string `json:"tool_call_id,omitempty"`
 	ToolName   string `json:"tool_name,omitempty"`
+	ToolIndex int64 `json:"tool_index,omitempty"`	// 用于区分并行调用工具时的输出
 	// 下面四个扁平字段是**主循环口径**（不端子调用的历史语义，保持不动以免打破前端契约）。
 	// 视觉审查与联网搜索各自的用量在 Usage 里分项列出——真实总成本看 Usage.Total。
 	PromptTokens     int64 `json:"prompt_tokens,omitempty"`     //输入token
@@ -26,6 +27,10 @@ const (
 	EventTypeDone      = "done"       // 全部完成，携带完整回复
 	EventTypeError     = "error"      // 出错，前端弹错误提示
 	EventTypeThink     = "think"      // 思考内容，前端可显示"正在思考…"
+	EventTypeToolStart = "tool_start" // 收到某次工具调用的 id+name, 参数开始生成
+	EventTypeToolDelta = "tool_delta" // 工具参数增量
+
+	EventTypeSubDelta = "sub_delta"	//子调用的文本增量
 
 	EventTypeSession = "session"  // 携带 session_id (首轮/续轮/恢复都会发) 由前后端保存
 	EventTypeAskUser = "ask_user" // 结构化提问卡片

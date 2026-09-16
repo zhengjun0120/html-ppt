@@ -18,6 +18,12 @@ const reviewChars = 1500 //限制返回给模型的报告字数长度
 // 不设上限的话"让 agent 自己挑页"很容易退化成"每页都挑"——那正好是这次要改掉的行为。
 const maxReviewPages = 6
 
+// reviewQuotaPerRun 一次 run 里 review_slides 的硬配额（Tool.MaxPerRun 的值）。
+// 预期用法三步：全量审可疑页（1~2 次覆盖完）→ 批量修复 → 确认（1 次，只看改过的页）。
+// 它是"审查→修复→再审"死循环的唯一硬闸门：实测一次 run 里模型审了 5 轮、改了 5 轮，
+// 直到 maxTurns 被强制收尾——提示词拦不住它，计数器拦得住。
+const reviewQuotaPerRun = 3
+
 // 开关没开。与"跑了但失败"必须分开：后者要出声，前者本来就该安静。
 var errVisionOff = errors.New("视觉审查没开")
 
@@ -134,10 +140,19 @@ func (a *AgentService) reviewPages(ctx context.Context, uid uint, deckID string,
 		b.WriteString(fmt.Sprintf("\n（没看的页里，第 %s 页还有硬判定）", joinPages(rest)))
 	}
 
+	onDelta := func(string){}
+	if emit := emitFrom(ctx); emit!=nil{
+		onDelta = func(text string){
+			if emitErr := emit(StreamEvent{Type:EventTypeSubDelta,ToolName: "review_slides",Content: text});emitErr != nil{
+				log.Printf("[warn] sub_delta 推送失败 err:%v",emitErr)
+			}
+		}
+	}
+
 	// 获取客户端
 	client := a.clientFor(ctx)
 	// 把这几页的图 + 整份算出来的相关判定发给模型
-	rr, err := vision.Review(ctx, client, a.ModelID, sel, vision.ScopeFindings(vision.Analyze(deck), pages))
+	rr, err := vision.Review(ctx, client, a.ModelID, sel, vision.ScopeFindings(vision.Analyze(deck), pages),onDelta)
 	if err != nil {
 		log.Printf("[warn] 视觉审查：看图失败，只回量测 err:%v", err)
 		trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{

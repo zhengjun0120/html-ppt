@@ -13,13 +13,14 @@
 
 /* ---- 画布安全边距 ----
    内容贴边是所有排版规范里最基础的一条禁令，而原来这里根本没有：
-   section 的 padding 是 0，标题、清单、脚注全部顶着 960×700 画布的边缘。
+   section 的 padding 是 0，标题、清单、脚注全部顶着画布的边缘。
    6% 是"均衡型版面"的通行值。投影仪还会把画面边缘裁掉最多 5%，
    贴边等于把内容送进裁刀。
 
    必须显式写 box-sizing：reveal.css 里没有全局 *{box-sizing:border-box}，
    而 section 的宽度是画布的 100%，用默认的 content-box 加 padding 会直接撑成
-   1076px → 横向溢出 → 适配兜底把整页缩小。reveal 自己的 .page/.cube 模式
+   1394px（画布 1244 + 左右各 75px）→ 横向溢出 → 适配兜底把整页缩小。
+   reveal 自己的 .page/.cube 模式
    给 section 加 padding 时也带着这个声明。 */
 .reveal .slides section {
   padding: var(--slide-pad-y) var(--slide-pad-x);
@@ -38,9 +39,9 @@
    `.reveal .timeline li`(0,2,1) 的 --fs-small——时间轴单元会悄悄变成正文大小。
    加角色类时把名字同步进排除名单。 */
 :where(.reveal .slides section) p:where(:not(.stat, .term, .label, .sub, .footnote,
-    .note, .kicker, .num, .quote, .unit, .val)),
+    .note, .kicker, .num, .quote, .unit, .val, .kpi-val, .big-num, .mark, .caption)),
 :where(.reveal .slides section) li:where(:not(.stat, .term, .label, .sub, .footnote,
-    .note, .kicker, .num, .quote, .unit, .val)) {
+    .note, .kicker, .num, .quote, .unit, .val, .kpi-val, .big-num, .mark, .caption)) {
   font-size: var(--fs-body);
 }
 
@@ -50,6 +51,11 @@
 @media print {
   html.reveal-print .reveal .slides section {
     padding: var(--slide-pad-y) var(--slide-pad-x) !important;
+  }
+  /* .half 的 padding:0 是版式的一部分（中缝要通到画布两边），
+     上面那条 !important 的兜底边距会把对开页顶出双倍内边距，单独豁免 */
+  html.reveal-print .reveal .slides section.half {
+    padding: 0 !important;
   }
 }
 
@@ -96,8 +102,8 @@
    不报错、只是不对。用 :where() 把角色类从这条规则里排除掉；:where() 特异性为零，
    所以这条规则的优先级和加守卫之前完全一样（不会连带影响已有 deck 和自定义槽的覆盖）。
    新增文本角色类时，记得同步加进这个排除名单。 */
-.reveal .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
-.reveal .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+.reveal .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)),
+.reveal .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)) {
   color: var(--accent);
   margin: 0 0 var(--space-2xs);
   font-size: var(--fs-title);
@@ -105,7 +111,7 @@
 /* 卡片正文用正文色，不用弱化色：它是卡片的主体内容，不是次要说明。
    弱化色只留给真正的次要层（.sub/.footnote/.note/.muted）——
    投影场景下"什么都要弱化"等于什么都不突出。 */
-.reveal .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+.reveal .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)) {
   margin: 0;
   font-size: var(--fs-body);
   color: var(--r-main-color);
@@ -346,7 +352,7 @@
   color: var(--accent);
 }
 /* 单位：**刻意不在字号阶梯上**。它不是独立的一档文字，而是数字的一部分，
-   所以按数字自身字号的比例走（1.55em 的数字配 0.45em 单位，2.4em 的焦点数字
+   所以按数字自身字号的比例走（1.6em 的数字配 0.45em 单位，2.4em 的焦点数字
    配出来的单位自然更大），这样"数字带单位"在任何位置都成比例。 */
 .reveal .unit {
   font-size: 0.45em;
@@ -374,14 +380,14 @@
    让它去记"窄列要小一档"只会得到插在阶梯缝隙里的手写值。
    只影响裸段落与 h3/h4：.stat/.sub/.label 这些角色类被 :where() 排除在外——
    不排除的话，.grid-3 里那张"105 分"的数字卡会被缩成小字（那是它现在的用途之一）。 */
-.reveal .grid-3 .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
-.reveal .grid-4 .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
-.reveal .grid-3 .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
-.reveal .grid-4 .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+.reveal .grid-3 .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)),
+.reveal .grid-4 .card h3:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)),
+.reveal .grid-3 .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)),
+.reveal .grid-4 .card h4:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)) {
   font-size: var(--fs-body);
 }
-.reveal .grid-3 .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)),
-.reveal .grid-4 .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+.reveal .grid-3 .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)),
+.reveal .grid-4 .card p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)) {
   font-size: var(--fs-small);
 }
 
@@ -423,7 +429,7 @@
 /* 用 :where(:not(...)) 把文本角色类排除掉，理由同 .card 的守卫：
    这条规则比角色类高一级，不排除的话 .bleed 里的 .stat 会变成一坨普通大段落
    ——不报错，只是不对。新增角色类记得同步进名单。 */
-.reveal .bleed p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+.reveal .bleed p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)) {
   margin: 0;
   font-size: var(--fs-display);
   font-weight: 800;
@@ -431,12 +437,13 @@
   letter-spacing: -0.01em;
   color: var(--r-heading-color);
 }
-/* 一页一个大数字：和上面那句陈述句同档（都是"这一页只有一件事"） */
-.reveal .bleed .stat { font-size: var(--fs-display); letter-spacing: -0.02em; }
+/* 一页一个大数字：整页级锚点，走 --fs-hero（和"一章一句话"不同档——
+   数字比句子更经得起放大：句子在 hero 档一行只剩 7 个字，数字不会）。 */
+.reveal .bleed .stat { font-size: var(--fs-hero); letter-spacing: -0.02em; font-weight: var(--hero-weight); }
 
 /* ---- .plate：章节过渡页 ---- */
 .reveal .plate { padding: var(--space-sm) 0 0; }
-.reveal .plate .stat { font-size: var(--fs-display); letter-spacing: -0.02em; }
+.reveal .plate .stat { font-size: var(--fs-hero); letter-spacing: -0.02em; font-weight: var(--hero-weight); }
 .reveal .plate h2 { margin: var(--space-2xs) 0 0; }
 .reveal .plate .sub { margin-top: var(--space-xs); }
 
@@ -475,7 +482,7 @@
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-.reveal .band p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num)) {
+.reveal .band p:where(:not(.stat, .term, .label, .sub, .footnote, .kicker, .num, .kpi-val, .big-num, .mark, .caption)) {
   margin: 0;
   font-size: var(--fs-title);
   font-weight: 700;
@@ -497,3 +504,500 @@
   line-height: 1.5;
   color: var(--text-muted);
 }
+
+/* ============================================================
+   组件集 v4 —— 整页变体 + 视觉材料
+
+   为什么还有 v4：v1~v3 解决的是"结构从哪来"（卡片、行清单、六种轮廓），
+   但产出仍然被评价为"白板上印字"——因为**一屏上只有文字这一种材料**：
+   一套底色贯穿全篇（页与页没有明暗节奏）、色块面积几乎为零（卡片只有 6% 淡染）、
+   字号最大最小只差 2.6 倍（没有第一视觉落点）、没有任何图形/装饰/图像词汇。
+   这些不是模型偷懒，是词汇表里就没有——它想画一块满版强调色都画不出来。
+
+   v4 的四组材料，全部维持老规矩：只引用主题变量（含新增的翻色 token）、
+   尺寸一律 em（适配兜底缩放 section 的 font-size，px 不跟着缩）。
+   字号阶梯新增 --fs-hero（156px），给"整页级锚点"用：封面大标题、大编号、单数字页。
+   ============================================================ */
+
+/* ---- 整页变体（section 级 class，可与 .center 叠加）----
+
+   底色的铺满由**两层**共同完成，缺一不可：
+   1. reveal 的背景层（主力）：init.js 在 Reveal.initialize 前给挂了这两个类的
+      section 设 data-background-color，reveal 据此渲染独立的 .slide-background
+      元素——它永远铺满画布四边，PDF 导出原生按它出图。直接给 section 写
+      background 是不够的：reveal 把"内容多高、section 就多高"并垂直居中
+      （center 模式），稀疏页的 CSS 背景只会盖住内容盒，整页换色会悬在画布
+      中央像一张贴上去的卡片（实测翻过车）。
+   2. 下面的 CSS 背景（兜底）：内容盒自身也涂上同色，背景层缺失/延迟时不露底。
+      取值与 init.js 写进 data-background-color 的是同一个语义字段
+      （--ink-bg ← heading_color、accent ← accent），两层永远同色。
+
+   文字颜色全部走**继承 + 元素级规则**——reveal/theme 层的 h1~h6、p、li 都是
+   `color: var(--r-main-color)` 这类**在元素上解析**的写法，所以只要在 section 上
+   重定义这批变量，整棵子树自动翻色，每个组件不需要写任何"变体下的我长什么样"
+   的规则（变体 × 组件的组合爆炸被这个机制直接消掉了）。这也是为什么颜色 token
+   不许写死在元素上——整套翻色机制免费成立的前提就是"颜色只有一个间接层"。
+
+   .bg-ink 的底色取 --ink-bg（主题标题色的只读别名）：浅色主题下标题色≈近黑（墨页），
+   深色主题下标题色≈近白（亮页）——两个方向共用一条规则，都是"这页反过来"。
+   所有赋值只允许引用 :root 级、本块内**不再重定义**的 token：var() 按元素的最终
+   计算值解析、不分声明先后，读同块重定义过的变量会拿到新值（白底白字事故）。 */
+.reveal .slides section.bg-ink {
+  background: var(--ink-bg);
+  --r-heading-color: var(--ink-fg);
+  --r-main-color: var(--ink-fg);
+  --accent: var(--ink-accent); /* 提亮过的强调色变体（对比度在 Go 里按墨页底色算好） */
+  --text-muted: var(--ink-muted);
+  --hairline: var(--ink-hairline);
+  --card-bg: var(--ink-panel);
+  --border: var(--ink-hairline);
+  color: var(--ink-fg);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+/* 强调色页的核心一笔：**交换 --accent 与 --on-accent**。
+   组件库里所有"强调色"的地方（卡片小标题、徽章字色、timeline 的序号…）
+   写的都是 var(--accent)——不交换的话，它们在强调色底上就是一块同色隐形。
+   交换后它们全变成反色，恰好是"压在强调色上读得清"的那一支。
+   顺序要求：background 必须写在重定义之前（CSS 变量按声明序解析，
+   background 先读到外层真值，后面的 var(--accent) 才读到交换值）。 */
+.reveal .slides section.bg-accent {
+  background: var(--page-accent);
+  /* 两个只读别名见 theme.css/renderThemeCSS：var() 按最终值解析不分声明先后，
+     没有它们、直接 --accent: var(--on-accent) 再 --on-accent: var(--accent) 就是死循环；
+     同理，本块内被重定义的 --accent/--on-accent 谁都不能拿来当底色或字色。 */
+  --r-heading-color: var(--page-fg);
+  --r-main-color: var(--page-fg);
+  --accent: var(--page-fg);
+  --on-accent: var(--page-accent);
+  --text-muted: var(--accent-muted);
+  --hairline: var(--accent-hairline);
+  --card-bg: var(--accent-panel);
+  --border: var(--accent-hairline);
+  color: var(--page-fg);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+/* 交换的自洽检查：自带强调色底的组件（.mark/.badge）在这一页会得到
+   "白底 + 真强调色字"——正是我们想要的反色小徽章，不需要任何覆盖。 */
+
+/* ---- 显式整页版式必须满画布高 ----
+   reveal 的 center 模式带着 `.reveal.center .slides section{min-height:0!important}`
+   （它假定页面是内容高度、由 JS 算 top 居中），会压掉普通的 min-height。
+   .cover/.half/.stretch 这三个是**声明了整页轮廓**的版式：封面三段式要撑到画布边、
+   对半页要真的一人一半、stretch 要有得可撑——所以同深度选择器 + !important 压回来
+   （本文件在 reveal.css 之后加载，同特异性时后写者胜）。
+   与 fit 兜底的相容性已算过：满高页 scrollHeight=700，700/692=1.012 < 1.02 容差，
+   不会被误判成溢出而触发缩小。 */
+.reveal .slides section.cover,
+.reveal .slides section.half,
+.reveal .slides section.stretch {
+  min-height: 100% !important;
+}
+
+/* ---- .cover：封面/收尾页的纵向节奏 ----
+   整页高 flex + 两端对齐：页眉、主体、页脚三块自然撑满一页。
+   原来封面页就是"居中的 h1 + 一个标签"，其余全是留白——低密度版式不等于
+   不布置，.cover 给的是**骨架**，密度由三块的有无来调。 */
+.reveal .slides section.cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+/* 字重不写死：hero 档大字的分量来自**字号本身**（156px），而不是粗细。
+   写 600/900 会在系统中文黑体上触发合成加粗（雅黑无细字重），大标题糊成一块黑——
+   正是 --fs-hero 想解决的"白板印字"的反面失败。取 --hero-weight（主题级旋钮）：
+   默认 400（各主题 Regular，衬线/黑体都不合成加粗）；swiss 预设设 200，
+   让自带的 Inter 可变字体真正细下来——"大字号 + 细字重"正是瑞士风的招牌。 */
+.reveal .cover-title {
+  margin: 0;
+  font-family: var(--r-heading-font);
+  color: var(--r-heading-color);
+  font-size: var(--fs-hero);
+  font-weight: var(--hero-weight);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+}
+.reveal .cover-sub {
+  margin: var(--space-sm) 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ---- .half：对半双主题页 ----
+   上下两半各自满 padding（等于把安全边距还给内容），中间一根 hairline。
+   section 本身 padding 清零——分隔线要通到画布两边才有"对开"的轮廓，
+   内容仍由 .half-col 的 padding 保证不贴边。 */
+.reveal .slides section.half {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.reveal .half-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--slide-pad-y) var(--slide-pad-x);
+}
+.reveal .half-col + .half-col { border-top: 1px solid var(--hairline); }
+
+/* ---- .stretch：内容撑满整页高 ----
+   v1~v3 的页面全是"内容自然高"——内容一少，下半页就是白板。
+   这个开关把 section 变成 flex 列，并让**直接子元素**里吃高度不吃字数的
+   版式容器（网格/色块/图框/时间轴）平摊剩余高度：
+   字不变多，页面不再"没长完"。卡片多的页不要挂它（会挤）。 */
+.reveal .slides section.stretch { display: flex; flex-direction: column; }
+.reveal .slides section.stretch > .grid-2,
+.reveal .slides section.stretch > .grid-3,
+.reveal .slides section.stretch > .grid-4,
+.reveal .slides section.stretch > .split,
+.reveal .slides section.stretch > .duo,
+.reveal .slides section.stretch > .figure,
+.reveal .slides section.stretch > .tint-block,
+.reveal .slides section.stretch > .ink-block,
+.reveal .slides section.stretch > .accent-block,
+.reveal .slides section.stretch > .timeline-v { flex: 1; min-height: 0; }
+/* 网格内的卡片行平摊列高（grid-auto-rows 而不是 1fr：行数由模型决定，不能定死） */
+.reveal .slides section.stretch > .grid-2,
+.reveal .slides section.stretch > .grid-3,
+.reveal .slides section.stretch > .grid-4 { grid-auto-rows: 1fr; }
+
+/* ---- .big-num：整页级大数字（.plate 之外也通用）----
+   刻意不用 font-weight:900（那是"数字很贵"的旧直觉；参考物里的大字都是**细**的——
+   字号本身就是分量，加粗只会糊成一团黑）。随主题字体族：无衬线栈给 300，
+   Inter（swiss 预设）给 200 档的细。 */
+.reveal .big-num {
+  margin: 0;
+  font-size: var(--fs-hero);
+  font-weight: var(--hero-weight);
+  line-height: 1;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* ---- 整面色块：页面里的"第二基底" ----
+   原来全库最大的"块"只是一层 6% 淡染的卡片——页面上没有任何有重量的面。
+   三个变体（淡底/墨底/强调色底）+ 角色级配色由局部变量重定义完成，
+   所以块内直接放 h3/p/.kpi/.rows 都自动是对的颜色，不需要专门的"块内文字"类。 */
+.reveal .tint-block {
+  background: var(--card-bg);
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+}
+.reveal .ink-block {
+  /* 与 .bg-ink 完全同一套翻色（同一个只读别名体系，见上面的注释） */
+  background: var(--ink-bg);
+  --r-heading-color: var(--ink-fg);
+  --r-main-color: var(--ink-fg);
+  --accent: var(--ink-accent);
+  --text-muted: var(--ink-muted);
+  --hairline: var(--ink-hairline);
+  --border: var(--ink-hairline);
+  color: var(--ink-fg);
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+}
+/* 病态嵌套兜底：墨页上再放墨块 = 白上白。这里把底换成"略亮一层的面板色"，
+   内容翻色逻辑不动——块仍然读得出，只是不再是硬翻面。 */
+.reveal .slides section.bg-ink .ink-block { background: var(--ink-panel); }
+.reveal .accent-block {
+  background: var(--page-accent);
+  /* 与 section.bg-accent 完全同一套交换（只读别名体系）：块内所有"强调色"的
+     部分变成反色，自带强调色底的 .mark/.badge 得到"白底本色字" */
+  --r-heading-color: var(--page-fg);
+  --r-main-color: var(--page-fg);
+  --accent: var(--page-fg);
+  --on-accent: var(--page-accent);
+  --text-muted: var(--accent-muted);
+  --hairline: var(--accent-hairline);
+  --border: var(--accent-hairline);
+  color: var(--page-fg);
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+}
+/* 强调色页里再放强调块：换成"更亮一层"的面板底，翻色不动（同 ink 的嵌套兜底） */
+.reveal .slides section.bg-accent .accent-block { background: var(--accent-panel); }
+
+/* ---- .kpi：带框的数据单元 ----
+   为什么不用 .card 凑：卡片是"内容容器"（白底、描边、为文字服务），
+   数据单元需要的是另一套东西——数字吃掉字阶里靠上的档、单位挂在基线上。
+   用 .card 凑的结果就是实测里"一页三个灰卡片里各躺一行小字"的白板感。
+   框用 hairline（分组靠间距，描边只是辅助——和 .row 同一个原则）。 */
+.reveal .kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--hairline);
+  margin-top: var(--space-md);
+}
+/* 同排多个 kpi 时（配合 grid）外距交给 grid 的 gap，卡自己不再加 margin */
+.reveal .grid-2 > .kpi,
+.reveal .grid-3 > .kpi,
+.reveal .grid-4 > .kpi { margin-top: 0; }
+.reveal .kpi-val {
+  margin: 0;
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--r-heading-color);
+}
+.reveal .kpi-label {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.reveal .kpi-note {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ---- .timeline-v：纵向时间轴（带年份/要写句子的序列）----
+   和 .timeline（横向、每格一个词）的分工：格子要装句子就竖排。
+   轴是 1px 虚线（repeating-linear-gradient，不依赖 dashed 渲染差异），
+   节点点心的圆点在轴上。行内容直接复用 .label/.sub/.term。 */
+.reveal .timeline-v {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0 0;
+  padding: 0 0 0 var(--space-md);
+  list-style: none;
+  position: relative;
+}
+.reveal .timeline-v::before {
+  content: "";
+  position: absolute;
+  left: 0.28em;
+  top: 0.4em;
+  bottom: 0.4em;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom,
+    var(--hairline) 0 0.25em, transparent 0.25em 0.5em);
+}
+.reveal .timeline-v li { position: relative; }
+.reveal .timeline-v li::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-md) + 0.05em);
+  top: 0.5em;
+  width: 0.48em;
+  height: 0.48em;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+/* 高亮节点：这一格是故事的主角（accent 色实心点） */
+.reveal .timeline-v li.tl-hi::before { background: var(--accent); }
+.reveal .timeline-v li.tl-hi .label { color: var(--accent); }
+
+/* ---- .duo：对仗对比双栏 ----
+   和 .split 的区别：split 有主次（1.55:1），duo 完全对等 + 中缝分隔——
+   "两种方案、两个时代、两组数字"这种"比着看"的内容用后者，
+   用 grid-2+card 会得到两张互不相干的卡片而不是一场对照。 */
+/* 两个 .duo-col 直接放进 .duo，中间**不需要任何元素**（不给模型多一个 class 要记）：
+   中缝是 .duo 自己画的一根绝对定位 hairline，居中、随栏高伸缩。 */
+.reveal .duo {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--space-lg);
+  margin-top: var(--space-md);
+  align-items: stretch;
+}
+.reveal .duo::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.2em;
+  bottom: 0.2em;
+  width: 1px;
+  background: var(--hairline);
+}
+.reveal .duo-col { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
+.reveal .duo-col ul {
+  display: block;
+  margin: var(--space-2xs) 0 0;
+  padding: var(--space-xs) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+.reveal .duo-col li {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--text-muted);
+  padding: var(--space-2xs) 0;
+}
+
+/* ---- 图框：图片的版式词汇 ----
+   "空"的另一半原因是页面里从来没有图的位置。现在：位图走 <img>
+   （外链被 CSP 挡、同源上传还没有，所以图框空着时会显出一块"请在此处放图"的
+   虚线占位面——它比消失的图更好：用户一眼知道这里要配图，模型也敢用）。
+   题注是图的固定件：figure + caption 是语义结构，caption 的 mono 小字味
+   是"图注"这个体裁的样子。 */
+.reveal figure.figure {
+  margin: var(--space-md) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+.reveal figure.figure > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  margin: 0;
+  min-height: 0;
+  max-width: none; /* 撤 reveal 的 img{max-width:95%}：框宽是版式算出来的，不该再打折 */
+}
+.reveal figure.figure .figure-body {
+  flex: 1;
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+}
+.reveal figure.figure .figure-body img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  margin: 0;
+  max-width: none;
+}
+/* 空图框显占位面（有内容就不该看到虚线）：判定用"没有**任何元素子节点**"
+   而不是 ":not(:has(img))"——提示词明确允许图框里放色块/大数字代替图片，
+   那些内容不该被套上"图占位"的虚线框。等比占位用行内 aspect-ratio。
+   包在 @supports 里：老浏览器没有图框就安静地不存在，而不是渲染成一块怪虚线。 */
+@supports selector(:has(*)) {
+  .reveal figure.figure .figure-body:not(:has(*)) {
+    min-height: 9em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    font-size: var(--fs-label);
+    letter-spacing: 0.2em;
+  }
+  .reveal figure.figure .figure-body:not(:has(*))::after { content: "图占位"; }
+}
+.reveal figure.figure .caption {
+  margin: 0;
+  font-size: var(--fs-label);
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+/* 图框里允许放色块（"图上压一块结论"的写法） */
+.reveal .figure-body > .tint-block,
+.reveal .figure-body > .ink-block,
+.reveal .figure-body > .accent-block { margin-top: 0; }
+
+/* ---- 页眉页脚（页面家具 v4：每页的"抬头纸"）----
+   原来页面上没有通栏的横件——页眉页脚是"版式被设计过"最便宜的信号：
+   一根发丝线 + 两端的小字，整页立刻有了坐标系。
+   注意它们**同样受家具纪律约束**（见 prompt）：不是每页都要上。 */
+/* 字体走 --r-code-font（等宽栈）：meta 小字 + 大字距 + 全大写是"抬头纸"的体裁样子。
+   中文落进等宽栈也不会坏——随附的 Maple Mono 含中日文。 */
+.reveal .page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: var(--space-sm);
+  font-family: var(--r-code-font);
+  font-size: var(--fs-label);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+/* 页脚的"贴底"只发生在 flex 上下文（.stretch/.cover/.half-col）里——那里 auto 外边距
+   生效；普通页它就是一个带顶线的收尾块，用常规上边距。 */
+.reveal .page-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--hairline);
+  margin-top: var(--space-md);
+  font-family: var(--r-code-font);
+  font-size: var(--fs-label);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.reveal section.stretch > .page-foot,
+.reveal section.cover > .page-foot,
+.reveal .half-col > .page-foot { margin-top: auto; }
+
+/* ---- 装饰件：点阵 / 斜纹 ----
+   "空"的第三层：版面边缘什么都没有。点阵/斜纹是**有方向的空白填充**——
+   给角落一个纹理块（绝对定位或当 flex 子元素摆在一侧），页面立刻"有设计"。
+   一律 --text-muted 起步：装饰必须比正文轻，在变体页上才不糊。
+   底色用 background-color 写成简写之外的两条声明：color 只喂给渐变里的
+   currentColor，不再是"继承来的正文色"（原写法在 accent 页上会把整块染反）。 */
+.reveal .dots-deco {
+  color: var(--text-muted);
+  background-image: radial-gradient(currentColor 15%, transparent 16%);
+  background-size: 1.2em 1.2em;
+  min-width: 4em;
+  min-height: 4em;
+  /* 在 flex 容器（.stretch/.cover 是纵向 flex）里子元素默认在交叉轴拉满宽度——
+     装饰块会被拉成一条满宽的怪带子。钉住自身尺寸，位置交给外层排布 */
+  align-self: flex-start;
+}
+.reveal .hatch-deco {
+  color: var(--text-muted);
+  background-image: repeating-linear-gradient(135deg,
+    currentColor 0 1px, transparent 1px 0.7em);
+  min-width: 4em;
+  min-height: 4em;
+  align-self: flex-start;
+}
+
+/* ---- .ico：行内矢量图标槽 ----
+   为什么现在才给图标：v1 时代给图标槽，结果一定是"每个标题上方一个圆角方块
+   图标"——反撞衫名单第一排的那个。所以这里的纪律写进 prompt：只放**语义相关**
+   的少数几处。SVG 用 currentColor 描边，深浅页自动成立。 */
+.reveal .ico {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.12em;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.reveal .ico-lg { width: 2em; height: 2em; stroke-width: 1.4; vertical-align: -0.3em; }
+.reveal .ico-sm { width: 0.75em; height: 0.75em; stroke-width: 2; }
+
+/* ---- .mark：强调色底纹高光 ----
+   划重点的最小单位。规则（不是装饰）：**一页最多一处**——
+   处处高亮 = 没有高亮，而且满页小色块就是"荧光笔涂鸦"的模板感。 */
+.reveal .mark {
+  background: var(--accent);
+  color: var(--on-accent);
+  padding: 0 0.15em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ---- .split 的更狠的宽度比 ----
+   1.55:1 是"主+次"；7:5 是"主+证"（两侧都要说清一段），8:4 是"图+注"级别的悬殊。
+   只加比例不加语义的话，模型会永远停在同一个比值上——比例本身就是叙事结构。 */
+.reveal .split.w7-5 { grid-template-columns: 7fr 5fr; }
+.reveal .split.w8-4 { grid-template-columns: 2fr 1fr; }

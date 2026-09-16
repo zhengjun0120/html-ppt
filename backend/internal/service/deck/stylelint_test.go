@@ -127,6 +127,21 @@ func TestStyleLintIgnoresLegitColorKeywords(t *testing.T) {
 	}
 }
 
+// "整页只剩一块色块"要被检出——那是用户拿真实截图反馈过的"贴在页面底色上的大卡片"。
+// section 自身挂了 .bg-ink/.bg-accent 的（有意的色面页）豁免；唯一子节点不是色块的不计。
+func TestStyleLintFlagsSoleColorBlockPage(t *testing.T) {
+	html := `<section><div class="accent-block"><p class="stat">01</p><h2>认识 Qt</h2></div></section>` +
+		`<section class="bg-accent"><div class="accent-block"><p>有意保留的块</p></div></section>` +
+		`<section><div class="half-col"><p>不是色块</p></div></section>`
+	rep := lintHTML(t, html)
+	if rep.SolePageBlocks != 1 {
+		t.Fatalf("应检出 1 页整页色块（bg-accent 页豁免、非色块不计），实际 %d", rep.SolePageBlocks)
+	}
+	if w := rep.Warning(); !strings.Contains(w, "贴上去的卡片") {
+		t.Errorf("警告里应说明症状与正确做法，实际：%s", w)
+	}
+}
+
 // 用组件库搭出来的页面必须是完全静默的：否则每次写入都带一段噪音，
 // 模型很快就会学会忽略它。
 func TestStyleLintSilentOnComponentBasedPage(t *testing.T) {
@@ -242,5 +257,61 @@ func TestStyleLintFlagsInlineFontSize(t *testing.T) {
 	clean := lintHTML(t, `<section><h2>标题</h2><div class="card"><p>正文</p></div></section>`)
 	if strings.Contains(clean.Warning(), "font-size") {
 		t.Fatalf("没有内联字号不该提这件事: %s", clean.Warning())
+	}
+}
+
+// emoji：提示词禁用（用户明确要求除外），机制要兜底指出来——不然模型违规时
+// 只有截图审查可能偶然看到。✓ → 这类正当排版符号刻意不抓（抓了会让模型
+// 连对照表都不敢写）。范围依据见 emojiRe 的注释。
+func TestStyleLintFlagsEmojiButNotTypographicMarks(t *testing.T) {
+	rep := lintHTML(t, `<section><h1>营收增长 🔥</h1><p>用户突破 🚀 100 万</p></section>`)
+	if len(rep.EmojiPages) != 1 {
+		t.Fatalf("应报 1 页 emoji，实际 %+v", rep.EmojiPages)
+	}
+	if !strings.Contains(rep.EmojiPages[0], "×2") {
+		t.Fatalf("应数出 2 个 emoji: %v", rep.EmojiPages)
+	}
+	w := rep.Warning()
+	for _, want := range []string{"emoji", ".ico", "read_icons"} {
+		if !strings.Contains(w, want) {
+			t.Errorf("提示语里应出现 %q，实际: %s", want, w)
+		}
+	}
+
+	// ✓ 与 → 是正当排版符号（对照表、流向），不该被抓
+	clean := lintHTML(t, `<section><p>A 方案 ✓ 已具备</p><p>下一步 → 部署</p></section>`)
+	if len(clean.EmojiPages) != 0 {
+		t.Fatalf("✓ 与 → 不该被抓: %+v", clean.EmojiPages)
+	}
+
+	// 多页场景提示要带页号；单页场景（update_slide）自动说"本页"
+	multi := lintHTML(t, `<section><h1>干净的页</h1></section>
+	                      <section><h1>这页有 🔥</h1></section>`)
+	if len(multi.EmojiPages) != 1 || !strings.Contains(multi.EmojiPages[0], "第 2 页") {
+		t.Fatalf("多页场景应带页号: %+v", multi.EmojiPages)
+	}
+	single := newStyleLinter()
+	secs := sectionsFrom(t, `<section><h1>有 🔥 的页</h1></section>`)
+	single.add(secs[0])
+	if !strings.Contains(single.report().Warning(), "本页") {
+		t.Fatalf("单页场景应说本页: %s", single.report().Warning())
+	}
+}
+
+// 破折号"一页最多一个"数的是归并后的处数：中文破折号 —— 是两个 U+2014，
+// 按字符数会把合法的一个 —— 误判成两处。
+func TestStyleLintFlagsExcessEmDash(t *testing.T) {
+	rep := lintHTML(t, `<section><h1>背景——现状</h1><p>问题——但是——机会</p></section>`)
+	if len(rep.DashPages) != 1 || !strings.Contains(rep.DashPages[0], "3 处") {
+		t.Fatalf("应报 1 页 3 处破折号，实际 %+v", rep.DashPages)
+	}
+	w := rep.Warning()
+	if !strings.Contains(w, "一页最多一个") {
+		t.Errorf("提示语应带上规则原文: %s", w)
+	}
+
+	one := lintHTML(t, `<section><h1>背景——现状</h1><p>其他内容</p></section>`)
+	if len(one.DashPages) != 0 {
+		t.Fatalf("单个 —— 是合法用法，不该报: %+v", one.DashPages)
 	}
 }

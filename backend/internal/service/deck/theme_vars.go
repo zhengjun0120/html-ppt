@@ -35,6 +35,13 @@ var reservedVars = map[string]bool{
 	"--on-accent":   true,
 	"--text-muted":  true,
 	"--radius":      true,
+	// 整页翻色的派生 token（renderThemeCSS 每次全量重算，见 theme.go）。
+	// 拦掉的理由和其它契约变量一样：vars 拼在同一块 :root 里，同名键会
+	// **静默盖住**派生值——墨页/强调页的翻色从此坏掉，且没有任何报错。
+	"--ink-bg": true, "--ink-fg": true, "--ink-accent": true,
+	"--ink-muted": true, "--ink-hairline": true, "--ink-panel": true,
+	"--page-accent": true, "--page-fg": true,
+	"--accent-muted": true, "--accent-hairline": true, "--accent-panel": true,
 }
 
 // reservedVarPrefixes 按前缀拦一类名字。用前缀而不是把每个名字列出来：
@@ -131,7 +138,9 @@ var cssCommentRe = regexp.MustCompile(`(?s)/\*.*?\*/`)
 // 阶梯类按**前缀**匹配（--space-*/--fs-*/--slide-pad-*），加一档字号不用来这里同步。
 // --r- 前缀是 reveal.js 自己的变量，同样归主题字段所有，一并纳入。
 var reservedVarDeclRe = regexp.MustCompile(
-	`--(?:accent|border|hairline|card-bg|accent-soft|on-accent|text-muted|radius` +
+	`--(?:accent|border|hairline|card-bg|accent-soft|accent-muted|accent-hairline|accent-panel` +
+		`|ink-bg|ink-fg|ink-accent|ink-muted|ink-hairline|ink-panel` +
+		`|page-accent|page-fg|on-accent|text-muted|radius` +
 		`|space-[a-z0-9]+|fs-[a-z0-9]+|slide-pad-[a-z]+|r-[a-z0-9-]+)\s*:`)
 
 // findReservedVarRedefinition 在自定义 CSS 里找出第一个被重定义的契约变量，

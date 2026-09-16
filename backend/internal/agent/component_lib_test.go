@@ -46,6 +46,31 @@ func TestSplitRulesHandlesComments(t *testing.T) {
 	}
 }
 
+// 嵌套块回归：v4 之后组件库里有真正的 @media 块（打印规则不止一条）。
+// 按 } 朴素切的旧实现会把 @media 的第二条内层规则泄漏成独立"选择器"，
+// extractClassNames 于是抠出 .reveal-print 这种框架类并要求 prompt 收录它——
+// 真实发生过的失败。正确行为：@media 整块是一条规则、类名提取只看块首。
+func TestSplitRulesHandlesNestedMedia(t *testing.T) {
+	css := `@media print {
+  html.reveal-print .reveal .slides section { padding: 1em !important; }
+  html.reveal-print .reveal .slides section.half { padding: 0 !important; }
+}
+.reveal .card { color: red; }
+`
+	rules := splitRules(css)
+	if len(rules) != 2 {
+		t.Fatalf("应切出 2 条（@media 整块 + 平铺规则），实际 %d:\n%s", len(rules), strings.Join(rules, "\n---\n"))
+	}
+	if !strings.HasPrefix(rules[0], "@media print") {
+		t.Errorf("第一条应是完整的 @media 块: %q", rules[0])
+	}
+	for _, n := range extractClassNames(css) {
+		if n == "reveal-print" {
+			t.Errorf("框架类 .reveal-print 不该进组件类清单（@media 被拆散了）")
+		}
+	}
+}
+
 func TestExtractClassNames(t *testing.T) {
 	got := extractClassNames(fixtureCSS)
 	// reveal/slides 是框架命名空间，不算可用组件类，应被过滤掉
@@ -227,4 +252,54 @@ func TestRealComponentLibraryContract(t *testing.T) {
 	}
 
 	t.Logf("真实组件库类名: %s", names)
+}
+
+func TestLoadIconCatalog(t *testing.T) {
+	dir := t.TempDir()
+	content := "## trending-up · 增长\n<path d=\"M3 17\"/>"
+	if err := os.WriteFile(filepath.Join(dir, iconCatalogFile), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := loadIconCatalog(dir)
+	if err != nil || got != content {
+		t.Fatalf("读回内容不一致: %q, err=%v", got, err)
+	}
+	if _, err := loadIconCatalog(t.TempDir()); err == nil {
+		t.Fatal("清单缺失应报错")
+	}
+	if _, err := loadIconCatalog(""); err == nil {
+		t.Fatal("目录未配置应报错")
+	}
+}
+
+// TestRealIconCatalogContract 契约测试：真实的 icons.md 必须存在且可直接复制——
+// 模型把清单里的标记原样粘进 .ico，清单坏了 .ico 就渲染出空框或带错口径的图形。
+// 读不到真实文件时跳过（不依赖仓库布局变脆）。
+func TestRealIconCatalogContract(t *testing.T) {
+	p := filepath.Join("..", "..", "web", "assets", iconCatalogFile)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Skipf("读不到真实图标清单（%s），跳过契约检查: %v", p, err)
+	}
+	cat := string(data)
+
+	// 条目量：少于 20 个就覆盖不了常见演示语义，read_icons 就白挂了
+	if n := len(regexp.MustCompile(`(?m)^## `).FindAllString(cat, -1)); n < 20 {
+		t.Fatalf("图标清单只有 %d 个条目（<20）", n)
+	}
+	for _, want := range []string{"trending-up", "alert-triangle", "check"} {
+		if !strings.Contains(cat, "## "+want) {
+			t.Errorf("图标清单缺基础条目 %s", want)
+		}
+	}
+
+	// 复制安全性：标记里不许出现 stroke=/fill= 属性——.ico 的描边口径由组件库
+	// 接管，path 自带属性会把它盖掉（深浅页自动适配也就失效了）
+	if strings.Contains(cat, `stroke="`) || strings.Contains(cat, `fill="`) {
+		t.Error("图标清单里出现了 stroke/fill 属性：描边必须由 .ico 接管")
+	}
+	// Tabler 每个图标都带的背景占位 path 必须在生成时剥掉，否则会把图标框出来
+	if strings.Contains(cat, "M0 0h24v24H0z") {
+		t.Error("图标清单混入了 Tabler 的背景占位 path")
+	}
 }

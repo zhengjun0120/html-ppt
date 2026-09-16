@@ -15,7 +15,7 @@
        一页只装得下这么多。如果这里塞旧稿子，页面会触发出缩兜底，
        那就分不清"新版式好"还是"被缩小了"。 -->
   <script type="application/json" id="deck-theme">{"preset":"paper","accent":"#b23a2e","background":"#f6f2e9","heading_color":"#1c1a17","text_color":"#2b2723","surface":"#fffdf8","border_color":"#ded4c3","font":"editorial","radius":"2px","texture":"grid","transition":"slide","canvas":"wide","vars":{"--accent-2":"#4a6fa5","--positive":"#2f6b4f","--warn":"#a8721f"}}</script>
-  <style id="deck-theme-override">:root{--r-background-color:#f6f2e9;--r-main-color:#2b2723;--r-heading-color:#1c1a17;--r-link-color:#b23a2e;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#b23a2e;--border:#ded4c3;--card-bg:#fffdf8;--accent-soft:rgba(178, 58, 46, 0.14);--on-accent:#ffffff;--text-muted:rgba(43, 39, 35, 0.65);--hairline:rgba(43, 39, 35, 0.12);--radius:2px;--accent-2:#4a6fa5;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:linear-gradient(rgba(43, 39, 35, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(43, 39, 35, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}</style>
+  <style id="deck-theme-override">:root{--r-background-color:#f6f2e9;--r-main-color:#2b2723;--r-heading-color:#1c1a17;--r-link-color:#b23a2e;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#b23a2e;--border:#ded4c3;--card-bg:#fffdf8;--accent-soft:rgba(178, 58, 46, 0.14);--on-accent:#ffffff;--text-muted:rgba(43, 39, 35, 0.65);--hairline:rgba(43, 39, 35, 0.12);--radius:2px;--ink-bg:#1c1a17;--ink-fg:#f6f2e9;--ink-accent:#c9776c;--page-accent:#b23a2e;--page-fg:#ffffff;--ink-muted:rgba(246, 242, 233, 0.65);--ink-hairline:rgba(246, 242, 233, 0.18);--ink-panel:rgba(246, 242, 233, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#4a6fa5;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:linear-gradient(rgba(43, 39, 35, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(43, 39, 35, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}</style>
 </head>
 <body>
   <div class="reveal"><div class="slides">
@@ -133,10 +133,85 @@
       <p class="footnote">地址栏加 ?preset=terminal 可以看这套字体铺满整页的样子</p>
     </section>
 
+    <!-- ============ 组件集 v4：整页翻色 + 视觉材料 ============
+         判据（只有看才知道的三件事）：
+         1) 色面页上的每个文字层级都读得清（翻色由 :root 只读别名完成，不该有任何一处灰掉）
+         2) 色面页的卡片/发丝线/强调件（.kicker/.term/.num/.mark/.badge）都随页翻色而不是同色隐形
+         3) ?preset=swiss 下两张大字页的标题应该"细"——那是 Inter 可变字重生效的判据 -->
+    <section class="cover bg-ink">
+      <span class="page-head"><span>版式验收 · v4</span><span>cover / bg-ink</span></span>
+      <h1 class="cover-title">一页需要一个<br>落点</h1>
+      <div>
+        <p class="cover-sub">hero 档大字 + 整页墨色底：验收文字层级是否全部读得出</p>
+        <span class="tag">.cover-title 156px</span>
+      </div>
+      <span class="page-foot"><span>layouts-test</span><span>01</span></span>
+    </section>
+
+    <section class="bg-accent">
+      <h2><span class="kicker">组件的自动翻色</span>强调色页</h2>
+      <p class="term">var(--accent) 在这页上就是反色</p>
+      <p>这是 <span class="mark">.mark</span> 与 <span class="badge">.badge</span>——都该是"亮底 + 本色字"。</p>
+      <div class="grid-3">
+        <div class="card"><h3>卡片标题</h3><p>卡内底色 = 反色 12% 淡染</p></div>
+        <div class="card"><h3>发丝线</h3><p class="sub">.sub 用 --accent-muted</p></div>
+        <div class="card"><h3>页码</h3><p class="muted">muted 自动反色</p></div>
+      </div>
+      <p class="footnote">一页里只要有任何一行还是原主题的墨色，就是翻色漏了</p>
+    </section>
+
+    <section class="stretch">
+      <h2>数据材料：.kpi + 空 .figure</h2>
+      <div class="grid-3">
+        <div class="kpi"><span class="kpi-label">海平面</span><p class="kpi-val">3.4 <span class="unit">mm/年</span></p><p class="kpi-note">近 30 年翻倍</p></div>
+        <div class="kpi"><span class="kpi-label">盛夏天数</span><p class="kpi-val">+47 <span class="unit">天</span></p><p class="kpi-note">以 1981 为基线</p></div>
+        <div class="kpi"><span class="kpi-label">电力峰值</span><p class="kpi-val">__%</p><p class="kpi-note">__ 省电网，夏季同比</p></div>
+      </div>
+      <figure class="figure">
+        <div class="figure-body" style="aspect-ratio:21/6"></div>
+        <p class="caption">图框空着应显"图占位"虚线 · caption 是图的固定件</p>
+      </figure>
+    </section>
+
+    <section class="half">
+      <div class="half-col">
+        <h2>对半页 · 上半</h2>
+        <div class="rows">
+          <div class="row"><p class="label">.half-col</p><p class="sub">各自垂直居中，通栏铺到画布边缘</p></div>
+        </div>
+      </div>
+      <div class="half-col">
+        <p class="big-num">2/2</p>
+        <p class="sub">中缝是一根 hairline；两半的内容互不干涉</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>序列与对比：.timeline-v / .duo / 色块</h2>
+      <ul class="timeline-v">
+        <li><p class="label">1988</p><p class="sub">IPCC 成立</p></li>
+        <li><p class="label">1997</p><p class="sub">京都议定书</p></li>
+        <li class="tl-hi"><p class="label">2015</p><p class="sub">巴黎协定：1.5℃ 入约</p></li>
+      </ul>
+      <div class="duo">
+        <div class="duo-col"><p class="term">适应</p><p class="sub">接受新的常态</p></div>
+        <div class="duo-col"><p class="term">缓解</p><p class="sub">改变原因本身</p></div>
+      </div>
+      <div class="ink-block"><p class="label">.ink-block：块内文字自动反色</p></div>
+    </section>
+
+    <section>
+      <h2>自带字体：Inter 细字重</h2>
+      <p style="font-family:var(--r-heading-font);font-size:2.4em;font-weight:200;margin:0">Thin 200 · 1.5℃ Climate</p>
+      <p style="font-family:var(--r-heading-font);font-size:1.6em;font-weight:400;margin:0">Regular 400 · 环境容量约束下的排版试验</p>
+      <p style="font-family:var(--r-heading-font);font-size:1.1em;font-weight:700;margin:0">Bold 700 · 中文落黑体，拉丁该明显比上面细</p>
+      <p class="footnote">拉丁应来自 Inter（细体），中文落 PingFang/YaHei——?preset=swiss 下整页都是它</p>
+    </section>
+
   </div></div>
   <script src="/assets/reveal.js"></script>
   <!-- 预设对比：?preset=noir 就能看那一套的实际观感。
-       下面这十份 CSS 是把 Go 的 renderThemeCSS 输出原样抄过来的
+       下面这十一份 CSS 是把 Go 的 renderThemeCSS 输出原样抄过来的
        ——**它们是数据快照，不是第二份实现**。改了 Go 里的预设定义，这里会显示旧观感
        （只影响这个验收页，不影响任何真实 deck）。 -->
   <script>
@@ -151,18 +226,20 @@
       pine: ["#f5f1e8", "#2f5d3a", "松墨"],
       kraft: ["#eedfc7", "#8f4520", "牛皮纸"],
       dune: ["#f0e6d2", "#2b241b", "沙丘"],
+      swiss: ["#fafaf8", "#002fa7", "瑞士风"],
     };
     var OVERRIDE = {
-      paper: `:root{--r-background-color:#f6f2e9;--r-main-color:#2b2723;--r-heading-color:#1c1a17;--r-link-color:#b23a2e;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#b23a2e;--border:#ded4c3;--card-bg:#fffdf8;--accent-soft:rgba(178, 58, 46, 0.14);--on-accent:#ffffff;--text-muted:rgba(43, 39, 35, 0.65);--hairline:rgba(43, 39, 35, 0.12);--radius:2px;--accent-2:#4a6fa5;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:linear-gradient(rgba(43, 39, 35, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(43, 39, 35, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}`,
-      editorial: `:root{--r-background-color:#ffffff;--r-main-color:#1f1f1f;--r-heading-color:#0d0d0d;--r-link-color:#111111;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#111111;--border:#e2e2e2;--card-bg:#f7f7f7;--accent-soft:rgba(17, 17, 17, 0.14);--on-accent:#ffffff;--text-muted:rgba(31, 31, 31, 0.65);--hairline:rgba(31, 31, 31, 0.12);--radius:0px;--accent-2:#e8590c;--positive:#1a7f4b;--warn:#b8860b;}.reveal .progress{color:var(--accent)}`,
-      noir: `:root{--r-background-color:#0e0e11;--r-main-color:#cfcbc2;--r-heading-color:#f4efe6;--r-link-color:#d9a441;--r-main-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--r-heading-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--accent:#d9a441;--border:#2e2e36;--card-bg:#17171c;--accent-soft:rgba(217, 164, 65, 0.14);--on-accent:#12100e;--text-muted:rgba(207, 203, 194, 0.65);--hairline:rgba(207, 203, 194, 0.12);--radius:0px;--accent-2:#8a93a6;--positive:#7fa650;--warn:#c9762c;}.reveal .progress{color:var(--accent)}`,
-      duotone: `:root{--r-background-color:#f4efe3;--r-main-color:#2b3a4d;--r-heading-color:#12233d;--r-link-color:#ff5a36;--r-main-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--r-heading-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--accent:#ff5a36;--border:#12233d;--card-bg:#fbf7ec;--accent-soft:rgba(255, 90, 54, 0.14);--on-accent:#12100e;--text-muted:rgba(43, 58, 77, 0.65);--hairline:rgba(43, 58, 77, 0.12);--radius:0px;--accent-2:#12233d;--positive:#2f6b4f;--warn:#e0a020;}.reveal-viewport{background-image:radial-gradient(rgba(43, 58, 77, 0.07) 1.2px,transparent 1.2px);background-size:22px 22px}.reveal .progress{color:var(--accent)}`,
-      terminal: `:root{--r-background-color:#080c0a;--r-main-color:#a9d6b0;--r-heading-color:#5cff9d;--r-link-color:#39ff7a;--r-main-font:"JetBrains Maple Mono", Consolas, "Courier New", monospace;--r-heading-font:"JetBrains Maple Mono", Consolas, "Courier New", monospace;--accent:#39ff7a;--border:#1f3527;--card-bg:#0f1512;--accent-soft:rgba(57, 255, 122, 0.14);--on-accent:#12100e;--text-muted:rgba(169, 214, 176, 0.65);--hairline:rgba(169, 214, 176, 0.12);--radius:0px;--accent-2:#62d0ff;--positive:#7dffb0;--warn:#ffd166;}.reveal-viewport{background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(169, 214, 176, 0.07) 33px 34px)}.reveal .progress{color:var(--accent)}`,
-      tech: `:root{--r-background-color:#0b132b;--r-main-color:#e2e8f0;--r-heading-color:#5eead4;--r-link-color:#5eead4;--r-main-font:"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--r-heading-font:"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--accent:#5eead4;--border:rgba(94, 234, 212, 0.25);--card-bg:rgba(94, 234, 212, 0.06);--accent-soft:rgba(94, 234, 212, 0.14);--on-accent:#12100e;--text-muted:rgba(226, 232, 240, 0.65);--hairline:rgba(226, 232, 240, 0.12);--radius:10px;--accent-2:#818cf8;--positive:#4ade80;--warn:#fbbf24;}.reveal .progress{color:var(--accent)}`,
-      indigo: `:root{--r-background-color:#f1f3f5;--r-main-color:#26384f;--r-heading-color:#0a1f3d;--r-link-color:#1b4a86;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#1b4a86;--border:#d5dde7;--card-bg:#ffffff;--accent-soft:rgba(27, 74, 134, 0.14);--on-accent:#ffffff;--text-muted:rgba(38, 56, 79, 0.65);--hairline:rgba(38, 56, 79, 0.12);--radius:2px;--accent-2:#c2453a;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:linear-gradient(rgba(38, 56, 79, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(38, 56, 79, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}`,
-      pine: `:root{--r-background-color:#f5f1e8;--r-main-color:#34422e;--r-heading-color:#1a2e1f;--r-link-color:#2f5d3a;--r-main-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--r-heading-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--accent:#2f5d3a;--border:#dcd5c2;--card-bg:#fdfbf5;--accent-soft:rgba(47, 93, 58, 0.14);--on-accent:#ffffff;--text-muted:rgba(52, 66, 46, 0.65);--hairline:rgba(52, 66, 46, 0.12);--radius:0px;--accent-2:#8a6a2f;--positive:#3f7d4f;--warn:#b06a1f;}.reveal .progress{color:var(--accent)}`,
-      kraft: `:root{--r-background-color:#eedfc7;--r-main-color:#4a3826;--r-heading-color:#2a1e13;--r-link-color:#8f4520;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#8f4520;--border:#d3bf9d;--card-bg:#f7ecd8;--accent-soft:rgba(143, 69, 32, 0.14);--on-accent:#ffffff;--text-muted:rgba(74, 56, 38, 0.65);--hairline:rgba(74, 56, 38, 0.12);--radius:2px;--accent-2:#4a6fa5;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(74, 56, 38, 0.07) 33px 34px)}.reveal .progress{color:var(--accent)}`,
-      dune: `:root{--r-background-color:#f0e6d2;--r-main-color:#4a4238;--r-heading-color:#1f1a14;--r-link-color:#2b241b;--r-main-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--r-heading-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--accent:#2b241b;--border:#ddd0b6;--card-bg:#faf4e8;--accent-soft:rgba(43, 36, 27, 0.14);--on-accent:#ffffff;--text-muted:rgba(74, 66, 56, 0.65);--hairline:rgba(74, 66, 56, 0.12);--radius:8px;--accent-2:#8a7a5c;--positive:#4f6b46;--warn:#a8721f;}.reveal .progress{color:var(--accent)}`,
+      paper: `:root{--r-background-color:#f6f2e9;--r-main-color:#2b2723;--r-heading-color:#1c1a17;--r-link-color:#b23a2e;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#b23a2e;--border:#ded4c3;--card-bg:#fffdf8;--accent-soft:rgba(178, 58, 46, 0.14);--on-accent:#ffffff;--text-muted:rgba(43, 39, 35, 0.65);--hairline:rgba(43, 39, 35, 0.12);--radius:2px;--ink-bg:#1c1a17;--ink-fg:#f6f2e9;--ink-accent:#c9776c;--page-accent:#b23a2e;--page-fg:#ffffff;--ink-muted:rgba(246, 242, 233, 0.65);--ink-hairline:rgba(246, 242, 233, 0.18);--ink-panel:rgba(246, 242, 233, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#4a6fa5;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:linear-gradient(rgba(43, 39, 35, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(43, 39, 35, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}`,
+      editorial: `:root{--r-background-color:#ffffff;--r-main-color:#1f1f1f;--r-heading-color:#0d0d0d;--r-link-color:#111111;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#111111;--border:#e2e2e2;--card-bg:#f7f7f7;--accent-soft:rgba(17, 17, 17, 0.14);--on-accent:#ffffff;--text-muted:rgba(31, 31, 31, 0.65);--hairline:rgba(31, 31, 31, 0.12);--radius:0px;--ink-bg:#0d0d0d;--ink-fg:#ffffff;--ink-accent:#888888;--page-accent:#111111;--page-fg:#ffffff;--ink-muted:rgba(255, 255, 255, 0.65);--ink-hairline:rgba(255, 255, 255, 0.18);--ink-panel:rgba(255, 255, 255, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#e8590c;--positive:#1a7f4b;--warn:#b8860b;}.reveal .progress{color:var(--accent)}`,
+      noir: `:root{--r-background-color:#0e0e11;--r-main-color:#cfcbc2;--r-heading-color:#f4efe6;--r-link-color:#d9a441;--r-main-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--r-heading-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--accent:#d9a441;--border:#2e2e36;--card-bg:#17171c;--accent-soft:rgba(217, 164, 65, 0.14);--on-accent:#12100e;--text-muted:rgba(207, 203, 194, 0.65);--hairline:rgba(207, 203, 194, 0.12);--radius:0px;--ink-bg:#f4efe6;--ink-fg:#0e0e11;--ink-accent:#745929;--page-accent:#d9a441;--page-fg:#12100e;--ink-muted:rgba(14, 14, 17, 0.65);--ink-hairline:rgba(14, 14, 17, 0.18);--ink-panel:rgba(14, 14, 17, 0.1);--accent-muted:rgba(18, 16, 14, 0.72);--accent-hairline:rgba(18, 16, 14, 0.22);--accent-panel:rgba(18, 16, 14, 0.12);--accent-2:#8a93a6;--positive:#7fa650;--warn:#c9762c;}.reveal .progress{color:var(--accent)}`,
+      duotone: `:root{--r-background-color:#f4efe3;--r-main-color:#2b3a4d;--r-heading-color:#12233d;--r-link-color:#ff5a36;--r-main-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--r-heading-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--accent:#ff5a36;--border:#12233d;--card-bg:#fbf7ec;--accent-soft:rgba(255, 90, 54, 0.14);--on-accent:#12100e;--text-muted:rgba(43, 58, 77, 0.65);--hairline:rgba(43, 58, 77, 0.12);--radius:0px;--ink-bg:#12233d;--ink-fg:#f4efe3;--ink-accent:#fd7353;--page-accent:#ff5a36;--page-fg:#12100e;--ink-muted:rgba(244, 239, 227, 0.65);--ink-hairline:rgba(244, 239, 227, 0.18);--ink-panel:rgba(244, 239, 227, 0.1);--accent-muted:rgba(18, 16, 14, 0.72);--accent-hairline:rgba(18, 16, 14, 0.22);--accent-panel:rgba(18, 16, 14, 0.12);--accent-2:#12233d;--positive:#2f6b4f;--warn:#e0a020;}.reveal-viewport{background-image:radial-gradient(rgba(43, 58, 77, 0.07) 1.2px,transparent 1.2px);background-size:22px 22px}.reveal .progress{color:var(--accent)}`,
+      terminal: `:root{--r-background-color:#080c0a;--r-main-color:#a9d6b0;--r-heading-color:#5cff9d;--r-link-color:#39ff7a;--r-main-font:"JetBrains Maple Mono", Consolas, "Courier New", monospace;--r-heading-font:"JetBrains Maple Mono", Consolas, "Courier New", monospace;--accent:#39ff7a;--border:#1f3527;--card-bg:#0f1512;--accent-soft:rgba(57, 255, 122, 0.14);--on-accent:#12100e;--text-muted:rgba(169, 214, 176, 0.65);--hairline:rgba(169, 214, 176, 0.12);--radius:0px;--ink-bg:#5cff9d;--ink-fg:#080c0a;--ink-accent:#185d2f;--page-accent:#39ff7a;--page-fg:#12100e;--ink-muted:rgba(8, 12, 10, 0.65);--ink-hairline:rgba(8, 12, 10, 0.18);--ink-panel:rgba(8, 12, 10, 0.1);--accent-muted:rgba(18, 16, 14, 0.72);--accent-hairline:rgba(18, 16, 14, 0.22);--accent-panel:rgba(18, 16, 14, 0.12);--accent-2:#62d0ff;--positive:#7dffb0;--warn:#ffd166;}.reveal-viewport{background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(169, 214, 176, 0.07) 33px 34px)}.reveal .progress{color:var(--accent)}`,
+      tech: `:root{--r-background-color:#0b132b;--r-main-color:#e2e8f0;--r-heading-color:#5eead4;--r-link-color:#5eead4;--r-main-font:"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--r-heading-font:"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--accent:#5eead4;--border:rgba(94, 234, 212, 0.25);--card-bg:rgba(94, 234, 212, 0.06);--accent-soft:rgba(94, 234, 212, 0.14);--on-accent:#12100e;--text-muted:rgba(226, 232, 240, 0.65);--hairline:rgba(226, 232, 240, 0.12);--radius:10px;--ink-bg:#5eead4;--ink-fg:#0b132b;--ink-accent:#275b63;--page-accent:#5eead4;--page-fg:#12100e;--ink-muted:rgba(11, 19, 43, 0.65);--ink-hairline:rgba(11, 19, 43, 0.18);--ink-panel:rgba(11, 19, 43, 0.1);--accent-muted:rgba(18, 16, 14, 0.72);--accent-hairline:rgba(18, 16, 14, 0.22);--accent-panel:rgba(18, 16, 14, 0.12);--accent-2:#818cf8;--positive:#4ade80;--warn:#fbbf24;}.reveal .progress{color:var(--accent)}`,
+      indigo: `:root{--r-background-color:#f1f3f5;--r-main-color:#26384f;--r-heading-color:#0a1f3d;--r-link-color:#1b4a86;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#1b4a86;--border:#d5dde7;--card-bg:#ffffff;--accent-soft:rgba(27, 74, 134, 0.14);--on-accent:#ffffff;--text-muted:rgba(38, 56, 79, 0.65);--hairline:rgba(38, 56, 79, 0.12);--radius:2px;--ink-bg:#0a1f3d;--ink-fg:#f1f3f5;--ink-accent:#869fbe;--page-accent:#1b4a86;--page-fg:#ffffff;--ink-muted:rgba(241, 243, 245, 0.65);--ink-hairline:rgba(241, 243, 245, 0.18);--ink-panel:rgba(241, 243, 245, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#c2453a;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:linear-gradient(rgba(38, 56, 79, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(38, 56, 79, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}`,
+      pine: `:root{--r-background-color:#f5f1e8;--r-main-color:#34422e;--r-heading-color:#1a2e1f;--r-link-color:#2f5d3a;--r-main-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--r-heading-font:Georgia, "Times New Roman", "Songti SC", SimSun, serif;--accent:#2f5d3a;--border:#dcd5c2;--card-bg:#fdfbf5;--accent-soft:rgba(47, 93, 58, 0.14);--on-accent:#ffffff;--text-muted:rgba(52, 66, 46, 0.65);--hairline:rgba(52, 66, 46, 0.12);--radius:0px;--ink-bg:#1a2e1f;--ink-fg:#f5f1e8;--ink-accent:#92a791;--page-accent:#2f5d3a;--page-fg:#ffffff;--ink-muted:rgba(245, 241, 232, 0.65);--ink-hairline:rgba(245, 241, 232, 0.18);--ink-panel:rgba(245, 241, 232, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#8a6a2f;--positive:#3f7d4f;--warn:#b06a1f;}.reveal .progress{color:var(--accent)}`,
+      kraft: `:root{--r-background-color:#eedfc7;--r-main-color:#4a3826;--r-heading-color:#2a1e13;--r-link-color:#8f4520;--r-main-font:"PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Songti SC", "SimSun", Georgia, "Times New Roman", serif;--accent:#8f4520;--border:#d3bf9d;--card-bg:#f7ecd8;--accent-soft:rgba(143, 69, 32, 0.14);--on-accent:#ffffff;--text-muted:rgba(74, 56, 38, 0.65);--hairline:rgba(74, 56, 38, 0.12);--radius:2px;--ink-bg:#2a1e13;--ink-fg:#eedfc7;--ink-accent:#bf9274;--page-accent:#8f4520;--page-fg:#ffffff;--ink-muted:rgba(238, 223, 199, 0.65);--ink-hairline:rgba(238, 223, 199, 0.18);--ink-panel:rgba(238, 223, 199, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#4a6fa5;--positive:#2f6b4f;--warn:#a8721f;}.reveal-viewport{background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(74, 56, 38, 0.07) 33px 34px)}.reveal .progress{color:var(--accent)}`,
+      dune: `:root{--r-background-color:#f0e6d2;--r-main-color:#4a4238;--r-heading-color:#1f1a14;--r-link-color:#2b241b;--r-main-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--r-heading-font:"Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;--accent:#2b241b;--border:#ddd0b6;--card-bg:#faf4e8;--accent-soft:rgba(43, 36, 27, 0.14);--on-accent:#ffffff;--text-muted:rgba(74, 66, 56, 0.65);--hairline:rgba(74, 66, 56, 0.12);--radius:8px;--ink-bg:#1f1a14;--ink-fg:#f0e6d2;--ink-accent:#8e8577;--page-accent:#2b241b;--page-fg:#ffffff;--ink-muted:rgba(240, 230, 210, 0.65);--ink-hairline:rgba(240, 230, 210, 0.18);--ink-panel:rgba(240, 230, 210, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#8a7a5c;--positive:#4f6b46;--warn:#a8721f;}.reveal .progress{color:var(--accent)}`,
+      swiss: `:root{--r-background-color:#fafaf8;--r-main-color:#1a1a1a;--r-heading-color:#0a0a0a;--r-link-color:#002fa7;--r-main-font:"Inter", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--r-heading-font:"Inter", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;--accent:#002fa7;--border:#d4d4d2;--card-bg:#f0f0ee;--accent-soft:rgba(0, 47, 167, 0.14);--on-accent:#ffffff;--text-muted:rgba(26, 26, 26, 0.65);--hairline:rgba(26, 26, 26, 0.12);--radius:0px;--ink-bg:#0a0a0a;--ink-fg:#fafaf8;--ink-accent:#7d95d0;--page-accent:#002fa7;--page-fg:#ffffff;--ink-muted:rgba(250, 250, 248, 0.65);--ink-hairline:rgba(250, 250, 248, 0.18);--ink-panel:rgba(250, 250, 248, 0.1);--accent-muted:rgba(255, 255, 255, 0.72);--accent-hairline:rgba(255, 255, 255, 0.22);--accent-panel:rgba(255, 255, 255, 0.12);--accent-2:#0a0a0a;--hero-weight:200;--positive:#1a7f4b;--warn:#b8860b;}.reveal-viewport{background-image:linear-gradient(rgba(26, 26, 26, 0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(26, 26, 26, 0.07) 1px,transparent 1px);background-size:30px 30px}.reveal .progress{color:var(--accent)}`,
     };
     // 注意：变量名不能叫 name——脚本是经典脚本、作用域即 window，
     // 而 window.name 是 DOMString 类型的属性：给它赋 null 会被存成字符串 "null"（真值），

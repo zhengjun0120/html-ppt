@@ -7,6 +7,7 @@ package trace
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 
 	"os"
@@ -476,5 +477,158 @@ func appendRaw(t *testing.T, path string, evs ...Event) {
 	}
 	if err := f.Sync(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestExportRunCarriesEverythingAndStaysPrivate 导出面向的主要读者是 AI，所以三条
+// 体积/可读性优化都要守住：messages 增量折叠（多轮 run 不重复携带同样的上下文）、
+// 截图默认不内联（?images=1 才带）、timeline 速览与事件一一对应。同时归属闸门不能
+// 松——导出文件一次带走的全是上下文原文，敏感度比任何单条读取接口都高。
+func TestExportRunCarriesEverythingAndStaysPrivate(t *testing.T) {
+	root := t.TempDir()
+	const (
+		sessID = 7
+		uid    = 42
+		runID  = "1700000000020-x"
+	)
+	usage := map[string]UsagePart{CompMain: {Prompt: 100, Completion: 20, Total: 120}}
+	// end=false：run_end 由下面 appendRaw 自己补在最后一行——
+	// 尾行不是 run_end 的话，读侧会把整个 run 判成"还在跑"
+	seedRun(t, root, seed{sessID: sessID, userID: uid, runID: runID,
+		deckID: "deck-1", content: "做一份PPT", end: false, usage: usage})
+
+	// 截图直接写到 Recorder 落盘的同一位置（attachImages：sess/run/img/<name>）。
+	// 一张在盘上、一张只有名字没有文件——导出对缺图必须宽容而不是整个失败。
+	imgDir := filepath.Join(root, "7", runID, "img")
+	if err := os.MkdirAll(imgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	png := []byte("fake-png-bytes")
+	if err := os.WriteFile(filepath.Join(imgDir, "v1-p001.png"), png, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// appendRaw 不发 seq（见它自己的注释），所以这里显式带上：seedRun 已用到 1~5。
+	// 两条后续 llm_request 的上下文在前一条基础上只增不减——真实 run 正是这种形状，
+	// 导出时应被折叠成增量，而不是把同样的上下文重复携带 N 遍。
+	// u0 必须与 seedRun 写入的那条 user 消息逐字节一致，前缀比较才成立
+	u0 := `{"role":"user","content":"做一份PPT"}`
+	a1 := `{"role":"assistant","content":"好的"}`
+	u1 := `{"role":"user","content":"再加一页"}`
+	path := filepath.Join(root, "7", runID+".jsonl")
+	appendRaw(t, path,
+		Event{Seq: 6, Kind: KindLLMRequest, MessageCount: 2, Bytes: 64,
+			Messages: json.RawMessage("[" + u0 + "," + a1 + "]")},
+		Event{Seq: 7, Kind: KindLLMRequest, MessageCount: 3, Bytes: 96,
+			Messages: json.RawMessage("[" + u0 + "," + a1 + "," + u1 + "]")},
+		Event{
+			Seq: 8, Kind: KindSubStep,
+			Sub: &SubStep{Name: "vision", Stage: "capture", Text: "实拍 1 页"},
+			Images: []ImageEvent{
+				{Name: "v1-p001.png", Label: "第 1 页", URL: runID + "/img/v1-p001.png"},
+				{Name: "v1-p002.png", Label: "第 2 页（盘上没有）", URL: runID + "/img/v1-p002.png"},
+			},
+		},
+		Event{
+			Seq: 9, Kind: KindRunEnd, Status: StatusOK,
+			Summary: &Summary{DurationMS: 1234, Turns: 1, ToolCalls: 1, Usage: usage, Total: usage[CompMain]},
+		})
+
+	s := NewStore(root)
+	exp, err := s.ExportRun(uid, sessID, runID, false)
+	if err != nil {
+		t.Fatalf("导出失败: %v", err)
+	}
+
+	if exp.Format != ExportFormat || exp.Version != ExportVersion {
+		t.Errorf("导出文件自我标识不对: format=%q version=%d", exp.Format, exp.Version)
+	}
+	// 摘要与列表同口径：run_end 写了 ok/1轮/1次工具
+	if exp.Run.Status != StatusOK || exp.Run.Turns != 1 || exp.Run.ToolCalls != 1 {
+		t.Errorf("run 摘要不对: status=%q turns=%d tool_calls=%d", exp.Run.Status, exp.Run.Turns, exp.Run.ToolCalls)
+	}
+	if exp.Run.UserContent != "做一份PPT" || exp.Run.Bytes <= 0 {
+		t.Errorf("run 元信息缺内容: user_content=%q bytes=%d", exp.Run.UserContent, exp.Run.Bytes)
+	}
+
+	// seedRun 5 条（run_start/llm_request/tool_call/tool_result/usage）+ 2 请求 + sub_step + run_end
+	if len(exp.Events) != 9 || len(exp.Timeline) != 9 {
+		ks := []string{}
+		for _, ev := range exp.Events {
+			ks = append(ks, ev.Kind)
+		}
+		t.Fatalf("事件/速览数不对: %d/%d（要 9） kinds=%v", len(exp.Events), len(exp.Timeline), ks)
+	}
+	// user_id 在事件层清空：归属已在 run 层校验过，导出里不需要（也不该）再带
+	if exp.Events[0].UserID != 0 {
+		t.Errorf("导出事件不应携带 user_id, got %d", exp.Events[0].UserID)
+	}
+
+	bySeq := map[int]*Event{}
+	for i := range exp.Events {
+		bySeq[exp.Events[i].Seq] = &exp.Events[i]
+	}
+	// 首条 llm_request 给全量（数组形状）；后续两条被折叠成自描述的增量对象
+	if m := bySeq[2].Messages; len(m) == 0 || m[0] != '[' {
+		t.Errorf("首条 llm_request 应保留全量 messages（数组）, got %.60s", m)
+	}
+	var delta struct {
+		Note        string            `json:"note"`
+		PrevCount   int               `json:"prev_count"`
+		NewMessages []json.RawMessage `json:"new_messages"`
+	}
+	if err := json.Unmarshal(bySeq[6].Messages, &delta); err != nil || delta.PrevCount != 1 || len(delta.NewMessages) != 1 {
+		t.Errorf("第 2 条请求应折叠为增量 prev=1/new=1, err=%v got %.80s", err, bySeq[6].Messages)
+	}
+	if err := json.Unmarshal(bySeq[7].Messages, &delta); err != nil || delta.PrevCount != 2 || len(delta.NewMessages) != 1 {
+		t.Errorf("第 3 条请求应折叠为增量 prev=2/new=1, err=%v got %.80s", err, bySeq[7].Messages)
+	}
+
+	// 默认不内联：URL 保持相对路径当线索，顶部说明缺图可再导
+	if exp.Images.Inlined || exp.Images.Count != 2 || exp.Images.Hint == "" {
+		t.Errorf("默认导出的截图口径不对: %+v", exp.Images)
+	}
+	for _, im := range bySeq[8].Images {
+		if strings.HasPrefix(im.URL, "data:") {
+			t.Error("默认导出不应内联截图")
+		}
+	}
+
+	// timeline 是速览层：与事件一一对应，工具名/收尾状态要能扫到
+	joined := strings.Join(exp.Timeline, "\n")
+	if !strings.Contains(joined, "write_deck") || !strings.Contains(joined, "run结束") {
+		t.Errorf("timeline 缺关键行:\n%s", joined)
+	}
+
+	// images=1：在盘的截图原样内联，缺图的仍保留相对路径
+	expImg, err := s.ExportRun(uid, sessID, runID, true)
+	if err != nil {
+		t.Fatalf("带图导出失败: %v", err)
+	}
+	if !expImg.Images.Inlined || expImg.Images.Hint != "" {
+		t.Errorf("带图导出的说明不对: %+v", expImg.Images)
+	}
+	var img0, img1 *ImageEvent
+	for i := range expImg.Events {
+		if expImg.Events[i].Kind == KindSubStep {
+			img0, img1 = &expImg.Events[i].Images[0], &expImg.Events[i].Images[1]
+		}
+	}
+	got, derr := base64.StdEncoding.DecodeString(strings.TrimPrefix(img0.URL, "data:image/png;base64,"))
+	if derr != nil || string(got) != string(png) {
+		t.Errorf("在盘的截图没有被原样内联: err=%v got=%q", derr, got)
+	}
+	if strings.HasPrefix(img1.URL, "data:") || img1.URL == "" {
+		t.Error("缺图应保留相对路径当线索，既不是 data URL 也不是清空")
+	}
+
+	// 归属闸门：别人的 run、不存在的 run、路径穿越，一律 ErrNotFound 且长得一样
+	if _, err := s.ExportRun(uid+1, sessID, runID, false); err != ErrNotFound {
+		t.Errorf("别人的 run 导出应返回 ErrNotFound, got %v", err)
+	}
+	if _, err := s.ExportRun(uid, sessID, "1700000000099-zzz", false); err != ErrNotFound {
+		t.Errorf("不存在的 run 应返回 ErrNotFound, got %v", err)
+	}
+	if _, err := s.ExportRun(uid, sessID, "../../secret", false); err != ErrNotFound {
+		t.Errorf("路径穿越应被白名单拦下返回 ErrNotFound, got %v", err)
 	}
 }

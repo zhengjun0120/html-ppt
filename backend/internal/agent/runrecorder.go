@@ -11,12 +11,31 @@ import (
 type runRecorder struct {
 	mu sync.Mutex
 	decks map[string][]string
+	// toolCalls 本 run 内各工具的执行次数（含被配额拒掉的），配额检查用。
+	// runRecorder 每 run 一个，正好是配额的作用域；execTool 逐个顺序执行工具，
+	// 没有并发，锁沿用这里现成的 mu，不为它单独引入原子类型。
+	toolCalls map[string]int
 }
 
 func newRunRecorder() *runRecorder{
 	return &runRecorder{
 		decks: make(map[string][]string),
 	}
+}
+
+// overQuota 记一次工具调用并判断是否超出配额。max 为 0 或负数表示不限。
+// 先计数再比较：第 1~max 次放行执行，第 max+1 次起被拒。
+func (rr *runRecorder) overQuota(name string, max int) bool {
+	if max <= 0 {
+		return false
+	}
+	rr.mu.Lock()
+	defer rr.mu.Unlock()
+	if rr.toolCalls == nil {
+		rr.toolCalls = make(map[string]int)
+	}
+	rr.toolCalls[name]++
+	return rr.toolCalls[name] > max
 }
 
 func(rr *runRecorder) note(deckID,op string){

@@ -86,7 +86,7 @@ type LLM struct {
 // 只放 config.yaml（gitignored）或环境变量，绝不入库存明文。
 type Auth struct {
 	JWTSecret string `yaml:"jwt_secret"`
-	TokenTTL  string `yaml:"token_ttl"` // 如 "72h"；解析失败回落默认值
+	TokenTTL  string `yaml:"token_ttl"` // 如 "720h"（30 天）；解析失败回落默认值
 }
 
 // SMTP 邮件服务（QQ 邮箱示例）：password 填"授权码"而非邮箱登录密码，
@@ -141,12 +141,13 @@ const (
 	DefaultCaptureImages = true
 )
 
-// TTL 返回解析后的 token 有效期；配置缺失/写坏时回落 72h（宽松降级，
-// token 过期顶多要重新登录，不值得为此拒绝启动）。
+// TTL 返回解析后的 token 有效期；配置缺失/写坏时回落 720h（30 天——
+// 配合 auth.Refresh 的"每天一次静默续期"，正常用户基本不会再见到登录页）。
+// 宽松降级：token 过期顶多要重新登录，不值得为此拒绝启动。
 func (a Auth) TTL() time.Duration {
 	d, err := time.ParseDuration(a.TokenTTL)
 	if err != nil || d <= 0 {
-		return 72 * time.Hour
+		return 720 * time.Hour
 	}
 	return d
 }

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-accent="teal">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deck Agent · 主题配色 Demo</title>
+<script>
+// 首帧前定主题，避免刷新闪色（真实工程里这段会原样搬进 index.html）
+(function () {
+  var t = localStorage.getItem('demo-theme');
+  if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  var a = localStorage.getItem('demo-accent') || 'teal';
+  var dk = localStorage.getItem('demo-dark') || 'raycast'; // 暗色基调，仅作用于暗色主题
+  document.documentElement.dataset.theme = t;
+  document.documentElement.dataset.accent = a;
+  document.documentElement.dataset.dark = dk;
+})();
+</script>
+<style>
+/* ====================================================================
+   语义 Token 层 —— 这一层就是将来 frontend/src/theme/tokens.css 的雏形。
+   规则：组件只允许用语义 token，不允许出现裸色值；
+        明暗两套各自定义同一批名字，换主题 = 换变量值，组件零改动。
+   暗色另分四档"基调"（中性色的色相不同），选中哪档只换中性色，语义色/主色不感知。
+   ==================================================================== */
+
+/* —— 暗色基调 · 曜石（默认）：参考 Raycast 设计系统 ——
+   蓝味近黑 #07080a（绝不是纯黑）、卡片 #101111、rgba 白描边、语义色取 Raycast 系 */
+:root[data-theme="dark"] {
+  --bg: #07080a;            /* 页面底：近乎纯黑的蓝冷调 */
+  --surface: #101111;       /* 面板 / 卡片（Raycast Surface 100） */
+  --surface-2: #1B1C1E;     /* 输入框 / 嵌套卡片 / hover 面（Raycast Card Surface） */
+  --surface-3: #242628;     /* 最高层：popover / tooltip / 选中项 */
+  --border: rgba(255,255,255,.07);   /* Raycast 式"若隐若现"的白描边 */
+  --border-strong: rgba(255,255,255,.15);
+  --text-1: #F9F9F9;        /* 主文本（近白） */
+  --text-2: #B0B3B6;        /* 次文本（Raycast 亮灰 #CECECE 与中灰 #9C9C9D 之间） */
+  --text-3: #82868C;        /* 弱化 / 占位 / 时间戳（AA 修正：placeholder 4.66:1） */
+  --code-bg: #0C0D0F;       /* 代码 / 工具参数块 */
+
+  /* —— 语义状态色：Raycast 绿 / 黄 / 红 / 蓝 —— */
+  --success: #5FC992;
+  --warning: #FFBC33;
+  --danger:  #FF6363;       /* Raycast Red */
+  --info:    #55B3FF;       /* Raycast Blue：交互/链接/焦点 */
+
+  /* Raycast 双环容器 + 深投影：外环收边、内环压暗，卡片像放在暗桌面上的玻璃件 */
+  --shadow: 0 0 0 1px rgb(27,28,30), 0 12px 32px rgba(0,0,0,.55);
+}
+/* —— 暗色基调 · 石墨：无色相的中性深灰，Linear / VS Code 的路子 —— */
+:root[data-theme="dark"][data-dark="graphite"] {
+  --bg: #141517; --surface: #1B1D21; --surface-2: #23262B; --surface-3: #2D3138;
+  --border: #30343B; --border-strong: #454B54;
+  --text-1: #E9EBEE; --text-2: #A0A6AE; --text-3: #6A717A;
+  --code-bg: #17191D;
+}
+/* —— 暗色基调 · 深蓝黑（原版，留作对照）：夜间工作台的蓝灰氛围 —— */
+:root[data-theme="dark"][data-dark="navy"] {
+  --bg: #0B1120; --surface: #111A2F; --surface-2: #182339; --surface-3: #202E4A;
+  --border: #25334F; --border-strong: #35476B;
+  --text-1: #E7ECF6; --text-2: #9FAECB; --text-3: #637399;
+  --code-bg: #0D1526;
+  --shadow: 0 8px 28px rgba(2, 6, 18, .45);
+}
+/* —— 暗色基调 · 暖炭：带一点暖褐，长时间盯屏更柔（Notion dark 气质）—— */
+:root[data-theme="dark"][data-dark="warm"] {
+  --bg: #1A1817; --surface: #211F1D; --surface-2: #2A2724; --surface-3: #34302C;
+  --border: #37322D; --border-strong: #4C463F;
+  --text-1: #EDEAE6; --text-2: #A8A29A; --text-3: #716B62;
+  --code-bg: #1D1B19;
+}
+/* —— 暗色基调 · 纯黑：OLED 极致对比（GitHub dark 气质）—— */
+:root[data-theme="dark"][data-dark="black"] {
+  --bg: #060608; --surface: #0E0E11; --surface-2: #17171B; --surface-3: #212127;
+  --border: #27272E; --border-strong: #3B3B45;
+  --text-1: #EDEEF2; --text-2: #9CA0AB; --text-3: #61656F;
+  --code-bg: #0B0B0E;
+}
+:root[data-theme="light"] {
+  --bg: #F5F7FB;
+  --surface: #FFFFFF;
+  --surface-2: #EEF2F8;
+  --surface-3: #E3E9F3;
+  --border: #DFE6F0;
+  --border-strong: #C2CEE0;
+  --text-1: #1B2537;
+  --text-2: #4E5D77;
+  --text-3: #5E6E89;  /* AA 修正：placeholder 在输入框底 4.6:1 */
+  --code-bg: #F1F4F9;
+  --success: #047857; /* AA 修正：白底 5.5:1 */
+  --warning: #B45309;
+  --danger:  #DC2626;
+  --info:    #2563EB;
+  --shadow: 0 8px 28px rgba(27, 37, 55, .10);
+}
+
+/* ====================================================================
+   主色（品牌色）—— 三套候选，只动 accent 系的几个变量，其余 token 不感知。
+   注意暗色用亮一档（400 系）保证深底上的可读性，亮色用深一档（600 系）保证对比度。
+   ==================================================================== */
+:root[data-accent="teal"] {
+  --accent: #2DD4BF; --accent-contrast: #04302A; /* 暗色：亮青碧 + 深字 */
+}
+:root[data-accent="teal"][data-theme="light"] {
+  --accent: #0F766E; --accent-contrast: #FFFFFF; /* 亮色：深青碧（AA 修正）+ 白字 */
+}
+:root[data-accent="indigo"] {
+  --accent: #818CF8; --accent-contrast: #191646;
+}
+:root[data-accent="indigo"][data-theme="light"] {
+  --accent: #4F46E5; --accent-contrast: #FFFFFF;
+}
+:root[data-accent="blue"] {
+  --accent: #60A5FA; --accent-contrast: #0A1B33;
+}
+:root[data-accent="blue"][data-theme="light"] {
+  --accent: #2563EB; --accent-contrast: #FFFFFF;
+}
+/* 赤红（Raycast Red）：品牌感最强的选项。注意它和 danger 语义同色，
+   选它意味着"主操作"与"危险操作"同色系，需要靠位置和描边区分——谨慎候选 */
+:root[data-accent="red"] {
+  --accent: #FF6363; --accent-contrast: #2B0708;
+}
+:root[data-accent="red"][data-theme="light"] {
+  --accent: #E05252; --accent-contrast: #FFFFFF;
+}
+
+/* 派生 token：一律由上面的基础 token 混出来，换主题/主色自动跟随 */
+:root {
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 32%, transparent);
+  --ring: color-mix(in srgb, var(--accent) 40%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 13%, transparent);
+  --danger-soft:  color-mix(in srgb, var(--danger) 12%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
+}
+
+/* ============================ 基础 ============================ */
+* { box-sizing: border-box; }
+html { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: 14px; line-height: 1.65;
+  /* Raycast 式正字距：深底上微微放宽，换取"透气"的阅读感 */
+  letter-spacing: .2px;
+  background: var(--bg); color: var(--text-1);
+  transition: background .25s ease, color .25s ease;
+}
+.mono { font-family: ui-monospace, Consolas, "Cascadia Code", monospace; letter-spacing: 0; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
+
+section { margin-top: 36px; }
+.sec-title { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+.sec-desc  { font-size: 12.5px; color: var(--text-3); margin: 0 0 16px; }
+
+/* ============================ 顶栏 ============================ */
+header.bar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 20px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+header.bar h1 { font-size: 15px; margin: 0; }
+header.bar h1 b { color: var(--accent); }
+.spacer { flex: 1; }
+/* 亮色主题下暗色基调开关不生效，压暗提示 */
+:root[data-theme="light"] #darkSeg { opacity: .4; }
+
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button {
+  border: 0; background: transparent; color: var(--text-2);
+  font-size: 12.5px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+}
+.seg button:hover { color: var(--text-1); }
+.seg button.on { background: var(--surface-3); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.seg button.on .dot { background: var(--accent); }
+
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.dot.teal { background: #2DD4BF; } .dot.indigo { background: #818CF8; } .dot.blue { background: #60A5FA; } .dot.red { background: #FF6363; }
+
+/* Raycast 式深度：暗色下次级按钮带"顶部白高光 + 底部暗压线"的内嵌阴影，
+   像放在暗桌面上的实体按键；主按钮 hover 用透明度过渡而不是换色 */
+:root[data-theme="dark"] .btn.secondary,
+:root[data-theme="dark"] #themeBtn,
+:root[data-theme="dark"] .pbtn {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 -1px 0 rgba(0,0,0,.18);
+}
+:root[data-theme="dark"] .btn.primary { filter: none; }
+:root[data-theme="dark"] .btn.primary:hover { opacity: .85; filter: none; }
+/* 曜石基下的卡片双环收边（外环 rgb(27,28,30) + 内环压暗），签名式容器处理 */
+:root[data-theme="dark"][data-dark="raycast"] :is(.panel, .deck-card) {
+  box-shadow: 0 0 0 1px rgb(27,28,30), inset 0 0 0 1px rgb(7,8,10);
+}
+/* 键帽：Raycast 的招牌微件（渐变键面 + 内嵌高光 + 硬压线） */
+.kbd {
+  font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; letter-spacing: 0;
+  color: var(--text-2);
+  background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+  border: 1px solid var(--border-strong); border-radius: 4px;
+  padding: 1px 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1.5px 0 rgba(0,0,0,.45);
+}
+
+#themeBtn {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-1);
+  border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+}
+#themeBtn:hover { border-color: var(--accent); }
+
+/* ============================ 色板 ============================ */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.swatch { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.swatch .chip { height: 52px; border-bottom: 1px solid var(--border); }
+.swatch .meta { padding: 7px 10px 8px; }
+.swatch .name { font-size: 12px; font-weight: 600; }
+.swatch .use  { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.swatch .val  { font-size: 10.5px; color: var(--text-3); margin-top: 3px; text-transform: uppercase; }
+
+/* ============================ 基础组件 ============================ */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.panel h3 { margin: 0 0 12px; font-size: 13px; color: var(--text-2); font-weight: 600; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+
+/* 按钮 */
+.btn { border: 0; border-radius: 8px; padding: 8px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--accent-contrast); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.secondary { background: var(--surface-2); color: var(--text-1); border: 1px solid var(--border); }
+.btn.secondary:hover { border-color: var(--border-strong); }
+.btn.ghost { background: transparent; color: var(--text-2); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text-1); }
+.btn.danger { background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
+.btn.sm { padding: 4px 10px; font-size: 12px; }
+.btn:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; border: 1px solid var(--border); }
+/* 触感反馈：按下有物理位移（去 AI 味纪律：可交互元素必须有按压响应） */
+.btn:active, .pbtn:active, .opt:active, .send:active { transform: translateY(1px) scale(.98); }
+
+/* 内联图标（Phosphor，单一图标家族、统一线宽；真实工程用 @phosphor-icons/vue） */
+.ic { width: 14px; height: 14px; vertical-align: -2px; margin-right: 5px; fill: currentColor; flex: none; }
+/* 主题按钮的日/月图标随主题切换显隐 */
+:root[data-theme="dark"] .ic-moon { display: none; }
+:root[data-theme="light"] .ic-sun { display: none; }
+
+/* 骨架屏：加载态用"最终布局的形状"占位，不用转圈 spinner */
+.deck-card.skel { pointer-events: none; }
+.skel .sk-block { position: relative; overflow: hidden; background: var(--surface-2); border-radius: 6px; }
+.skel .cover { padding: 0; }
+.skel .cover .sk-block { width: 100%; height: 100%; border-radius: 0; }
+.skel .sk-line { height: 12px; margin-top: 8px; }
+.skel .sk-line:first-child { margin-top: 0; }
+.skel .w60 { width: 60%; } .skel .w40 { width: 40%; }
+@media (prefers-reduced-motion: no-preference) {
+  .skel .sk-block::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text-1) 8%, transparent), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+}
+
+/* 输入 */
+.input, textarea.input {
+  width: 100%; background: var(--surface-2); color: var(--text-1);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 12px; font-size: 13.5px; outline: none;
+  font-family: inherit;
+}
+.input::placeholder { color: var(--text-3); }
+.input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+
+/* 状态条 / toast */
+.notice { display: flex; gap: 8px; align-items: center; padding: 9px 13px; border-radius: 8px; font-size: 13px; margin-top: 10px; }
+.notice.ok   { background: var(--success-soft); color: var(--success); }
+.notice.err  { background: var(--danger-soft);  color: var(--danger); }
+.notice.warn { background: var(--warning-soft); color: var(--warning); }
+
+/* ============================ 对话流元素 ============================ */
+.chatbox { display: flex; flex-direction: column; gap: 10px; max-width: 520px; }
+.msg { max-width: 86%; padding: 9px 13px; border-radius: 12px; font-size: 13.5px; }
+.msg.user { align-self: flex-end; background: var(--accent-soft); border: 1px solid var(--accent-border); border-bottom-right-radius: 4px; }
+.msg.agent { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+.msg .time { display: block; font-size: 10.5px; color: var(--text-3); margin-top: 4px; }
+
+.think {
+  align-self: flex-start; max-width: 86%;
+  border-left: 2px solid var(--border-strong); padding: 2px 0 2px 10px;
+  font-size: 12px; color: var(--text-3);
+}
+.think summary { cursor: pointer; }
+.think summary:hover { color: var(--text-2); }
+
+.tool {
+  align-self: flex-start; width: 86%;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+  font-size: 12.5px; overflow: hidden;
+}
+.tool .thead { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+.tool .tname { font-weight: 600; }
+.tool .chip { margin-left: auto; font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+.tool .chip.run { background: var(--accent-soft); color: var(--accent); }
+.tool .chip.ok  { background: var(--success-soft); color: var(--success); }
+.tool .chip.err { background: var(--danger-soft); color: var(--danger); }
+.tool pre {
+  margin: 0; padding: 9px 12px; background: var(--code-bg);
+  border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--text-2); max-height: 110px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+}
+
+.ask {
+  align-self: flex-start; width: 86%;
+  background: var(--surface); border: 1px solid var(--accent-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px; padding: 12px 14px; font-size: 13px;
+}
+.ask .q { font-weight: 600; margin-bottom: 8px; }
+.ask .opts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.ask .opt {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2);
+  border-radius: 999px; padding: 4px 12px; font-size: 12.5px; cursor: pointer;
+}
+.ask .opt:hover { border-color: var(--accent); color: var(--text-1); }
+.ask .opt.sel { background: var(--accent-soft); border-color: var(--accent); color: var(--text-1); }
+
+/* ============================ 工作台实景 ============================ */
+.mock {
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.m-top {
+  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  border-bottom: 1px solid var(--border); background: var(--surface); font-size: 12.5px;
+}
+.m-top .logo { font-weight: 700; }
+.m-top .logo b { color: var(--accent); }
+.m-top .deck { color: var(--text-2); }
+.m-top .avatar { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); border: 1px solid var(--accent-border); color: var(--accent); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.m-body { display: grid; grid-template-columns: 1fr 300px; min-height: 380px; }
+
+.m-preview { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; }
+.m-ptools { display: flex; gap: 6px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--border); font-size: 11.5px; color: var(--text-3); }
+.m-ptools .pbtn { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); border-radius: 6px; padding: 3px 9px; font-size: 11.5px; cursor: pointer; }
+.m-ptools .pbtn:hover { color: var(--text-1); border-color: var(--border-strong); }
+.m-ptools .page { margin-left: auto; }
+.m-canvas { flex: 1; display: grid; place-items: center; padding: 22px; background: var(--bg); }
+/* 幻灯片是"被生成的 deck"，用自己独立的主题（演示里固定为亮色），不受应用主题影响——
+   这正是"深色外壳 + 亮色画布"策略要达到的对比效果 */
+.slide {
+  width: 82%; aspect-ratio: 16/9; background: #FFFFFF; border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  padding: 7% 8%; color: #1E293B; font-size: 12px; display: flex; flex-direction: column;
+}
+.slide h4 { margin: 0 0 4px; font-size: 15px; color: #0F172A; }
+.slide .sub { color: #64748B; font-size: 10.5px; margin-bottom: 12px; }
+.slide .chart { flex: 1; display: flex; align-items: flex-end; gap: 7px; }
+.slide .bar { width: 26px; border-radius: 3px 3px 0 0; background: #CBD5E1; }
+.slide .bar.hot { background: #F59E0B; }
+.slide .foot { margin-top: 10px; font-size: 9.5px; color: #94A3B8; display: flex; justify-content: space-between; }
+
+.m-chat { display: flex; flex-direction: column; background: var(--surface); }
+.m-chead { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }
+.m-chead .new { margin-left: auto; }
+.m-cmsgs { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
+.m-cmsgs .msg { font-size: 12px; padding: 7px 11px; }
+.m-cmsgs .tool { width: 100%; font-size: 11.5px; }
+.m-cmsgs .tool pre { display: none; }
+.m-cinput { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); }
+.m-cinput .input { flex: 1; padding: 7px 10px; font-size: 12px; }
+.m-cinput .send { border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-contrast); font-weight: 700; padding: 0 12px; cursor: pointer; display: grid; place-items: center; }
+
+/* deck 卡片 */
+.decks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.deck-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform .15s ease, border-color .15s ease; }
+.deck-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.deck-card .cover { height: 86px; background: linear-gradient(135deg, var(--surface-3), var(--surface-2)); display: grid; place-items: center; color: var(--text-3); font-size: 11px; }
+.deck-card .body { padding: 10px 12px 12px; }
+.deck-card .t { font-size: 13px; font-weight: 600; }
+.deck-card .m { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.deck-card .m .pending { color: var(--warning); }
+
+footer.note { margin-top: 40px; font-size: 12px; color: var(--text-3); border-top: 1px solid var(--border); padding-top: 14px; }
+
+@media (max-width: 760px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .m-body { grid-template-columns: 1fr; }
+  .m-preview { border-right: 0; border-bottom: 1px solid var(--border); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <h1><b>Deck Agent</b> · 主题配色 Demo</h1>
+  <span class="spacer"></span>
+  <span class="seg" id="accentSeg" title="主色候选">
+    <button data-accent="teal"><span class="dot teal"></span>青碧</button>
+    <button data-accent="indigo"><span class="dot indigo"></span>靛蓝</button>
+    <button data-accent="blue"><span class="dot blue"></span>湖蓝</button>
+    <button data-accent="red"><span class="dot red"></span>赤红</button>
+  </span>
+  <span class="seg" id="darkSeg" title="暗色基调（仅作用于暗色主题）">
+    <button data-dark="raycast" title="参考 Raycast：蓝味近黑 + 白描边 + 多层内嵌阴影">曜石</button>
+    <button data-dark="graphite">石墨</button>
+    <button data-dark="navy">蓝黑</button>
+    <button data-dark="warm">暖炭</button>
+    <button data-dark="black">纯黑</button>
+  </span>
+  <button id="themeBtn"><svg class="ic ic-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg><svg class="ic ic-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg><span id="themeLbl">切换亮色</span></button>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= 色板 ================= -->
+  <section>
+    <h2 class="sec-title">① 语义色板（随上方开关实时变化）</h2>
+    <p class="sec-desc">变量名就是将来 <span class="mono">tokens.css</span> 里的名字。组件永远只用语义 token，明暗两套各定义一遍值。</p>
+    <div class="swatches">
+      <div class="swatch"><div class="chip" style="background:var(--bg)"></div><div class="meta"><div class="name">--bg</div><div class="use">页面底</div><div class="val" data-token="--bg"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--surface)"></div><div class="meta"><div class="name">--surface</div><div class="use">面板/卡片</div><div class="val" data-token="--surface"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--surface-2)"></div><div class="meta"><div class="name">--surface-2</div><div class="use">输入框/悬停</div><div class="val" data-token="--surface-2"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--surface-3)"></div><div class="meta"><div class="name">--surface-3</div><div class="use">弹层/选中</div><div class="val" data-token="--surface-3"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--border)"></div><div class="meta"><div class="name">--border</div><div class="use">描边</div><div class="val" data-token="--border"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--text-1)"></div><div class="meta"><div class="name">--text-1</div><div class="use">主文本</div><div class="val" data-token="--text-1"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--text-2)"></div><div class="meta"><div class="name">--text-2</div><div class="use">次文本</div><div class="val" data-token="--text-2"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--text-3)"></div><div class="meta"><div class="name">--text-3</div><div class="use">弱化/时间戳</div><div class="val" data-token="--text-3"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--accent)"></div><div class="meta"><div class="name">--accent</div><div class="use">主色</div><div class="val" data-token="--accent"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--accent-soft)"></div><div class="meta"><div class="name">--accent-soft</div><div class="use">主色淡底</div><div class="val" data-token="--accent-soft"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--code-bg)"></div><div class="meta"><div class="name">--code-bg</div><div class="use">代码/参数块</div><div class="val" data-token="--code-bg"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--success)"></div><div class="meta"><div class="name">--success</div><div class="use">成功</div><div class="val" data-token="--success"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--warning)"></div><div class="meta"><div class="name">--warning</div><div class="use">警告</div><div class="val" data-token="--warning"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--danger)"></div><div class="meta"><div class="name">--danger</div><div class="use">危险</div><div class="val" data-token="--danger"></div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--info)"></div><div class="meta"><div class="name">--info</div><div class="use">信息</div><div class="val" data-token="--info"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ================= 基础组件 ================= -->
+  <section>
+    <h2 class="sec-title">② 基础组件</h2>
+    <p class="sec-desc">同一批 token 铺到按钮 / 输入 / 状态条上。重点看：主色按钮的文字对比度、focus 光环、禁用态是否够"灰得明显"。</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>按钮</h3>
+        <div class="row">
+          <button class="btn primary">发送 / 主操作</button>
+          <button class="btn secondary">次要操作</button>
+          <button class="btn ghost">幽灵按钮</button>
+          <button class="btn danger">删除版本</button>
+          <button class="btn primary" disabled>禁用</button>
+        </div>
+        <div class="row">
+          <button class="btn secondary sm">新对话</button>
+          <button class="btn secondary sm">历史版本</button>
+          <button class="btn ghost sm">在新标签打开</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>输入与状态</h3>
+        <input class="input" placeholder="想做什么样的演示文稿？试试描述主题…" style="margin-top:2px">
+        <div class="notice ok"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></svg>第 3 页已写入（success）</div>
+        <div class="notice err"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M165.66,101.66,139.31,128l26.35,26.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></svg>工具调用失败：页面结构不合法（danger）</div>
+        <div class="notice warn"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z"/></svg>配额用完：视觉审查本次不再执行（warning）</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 对话流 ================= -->
+  <section>
+    <h2 class="sec-title">③ 对话流元素（工作台的核心内容）</h2>
+    <p class="sec-desc">用户气泡用主色淡底而不是实心色——长文本压在实色上很吵；工具卡片、思考块、提问卡片各是一层"信息密度递增"的面。</p>
+    <div class="panel">
+      <div class="chatbox">
+        <div class="msg user">帮我做一份《2026 前端趋势分享》的 PPT，10 页左右，科技风<span class="time">14:02</span></div>
+        <details class="think" open>
+          <summary>思考中 · 已想 12s</summary>
+          <div style="margin-top:4px">用户要科技风、10 页。先规划大纲：封面、目录、三个趋势章节、总结。需要调用 write_page 逐页生成……</div>
+        </details>
+        <div class="tool">
+          <div class="thead"><span class="dot run" style="background:var(--accent)"></span><span class="tname mono">write_page</span><span>写入第 1 页 · 封面</span><span class="chip run">运行中</span></div>
+          <pre>{ "deck_id": "deck-0007", "page": 1, "title": "2026 前端趋势" }</pre>
+        </div>
+        <div class="tool">
+          <div class="thead"><span class="dot" style="background:var(--success)"></span><span class="tname mono">vision_review</span><span>审查 3 页</span><span class="chip ok">成功 · 4.2s</span></div>
+        </div>
+        <div class="tool">
+          <div class="thead"><span class="dot" style="background:var(--danger)"></span><span class="tname mono">web_search</span><span>搜索失败</span><span class="chip err">失败</span></div>
+          <pre>工具调用失败 err: upstream timeout</pre>
+        </div>
+        <div class="msg agent">封面和目录已经写好了。开始正文前想确认两点：<span class="time">14:05</span></div>
+        <div class="ask">
+          <div class="q">① 正文更偏"技术深度"还是"业务视角"？</div>
+          <div class="opts"><button class="opt">技术深度</button><button class="opt sel">业务视角</button><button class="opt">两者均衡</button></div>
+          <div class="q">② 需要插入实时数据图表吗？</div>
+          <div class="opts"><button class="opt">要，用 CSS 图表</button><button class="opt">不需要</button></div>
+          <button class="btn primary sm">提交回答</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 工作台实景 ================= -->
+  <section>
+    <h2 class="sec-title">④ 工作台实景（预览为主 + 对话侧栏）</h2>
+    <p class="sec-desc">策略：应用的"外壳"跟随明暗主题，画布里的幻灯片用 deck 自己的主题（固定亮色）——深色外壳能把亮色片子衬出来，切到亮色主题时两者自然融为一体。</p>
+    <div class="mock">
+      <div class="m-top">
+        <span class="logo">Deck<b>Agent</b></span>
+        <span class="deck">/ 2026 前端趋势分享</span>
+        <span class="kbd">Ctrl K</span>
+        <span class="avatar">Z</span>
+      </div>
+      <div class="m-body">
+        <div class="m-preview">
+          <div class="m-ptools">
+            <button class="pbtn"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></svg>刷新</button>
+            <button class="pbtn"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,48V96a8,8,0,0,1-16,0V67.31l-50.34,50.35a8,8,0,0,1-11.32-11.32L188.69,56H160a8,8,0,0,1,0-16h48A8,8,0,0,1,216,48ZM106.34,138.34,56,188.69V160a8,8,0,0,0-16,0v48a8,8,0,0,0,8,8H96a8,8,0,0,0,0-16H67.31l50.35-50.34a8,8,0,0,0-11.32-11.32Z"/></svg>新标签</button>
+            <button class="pbtn"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M136,80v43.47l36.12,21.67a8,8,0,0,1-8.24,13.72l-40-24A8,8,0,0,1,120,128V80a8,8,0,0,1,16,0Zm-8-48A95.44,95.44,0,0,0,60.08,60.15C52.81,67.51,46.35,74.59,40,82V64a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16H49c7.15-8.42,14.27-16.35,22.39-24.57a80,80,0,1,1,1.66,114.75,8,8,0,1,0-11,11.64A96,96,0,1,0,128,32Z"/></svg>历史</button>
+            <span class="page">3 / 12</span>
+          </div>
+          <div class="m-canvas">
+            <div class="slide">
+              <h4>趋势二：局部交互常态化</h4>
+              <div class="sub">Static pages are dead — 长页面正在被可交互片段取代</div>
+              <div class="chart">
+                <div class="bar" style="height:34%"></div>
+                <div class="bar" style="height:52%"></div>
+                <div class="bar hot" style="height:78%"></div>
+                <div class="bar" style="height:46%"></div>
+                <div class="bar" style="height:63%"></div>
+              </div>
+              <div class="foot"><span>2026 前端趋势分享</span><span>07</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="m-chat">
+          <div class="m-chead">对话<button class="btn secondary sm new"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></svg>新对话</button></div>
+          <div class="m-cmsgs">
+            <div class="msg user">把第 3 页的图表换成曲线上升的感觉</div>
+            <div class="tool">
+              <div class="thead"><span class="dot" style="background:var(--success)"></span><span class="tname mono">write_page</span><span>第 3 页</span><span class="chip ok">成功</span></div>
+            </div>
+            <div class="msg agent">已把柱状图改成上升折线的构图，保留了原来的amber高亮色。还要调整别的地方吗？</div>
+            <div class="msg user">很好，再给每页加页码</div>
+          </div>
+          <div class="m-cinput">
+            <input class="input" placeholder="回复 agent…">
+            <button class="send" aria-label="发送"><svg class="ic" style="margin:0;width:15px;height:15px;vertical-align:middle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M231.87,114l-168-95.89A16,16,0,0,0,40.92,37.34L71.55,128,40.92,218.67A16,16,0,0,0,56,240a16.15,16.15,0,0,0,7.93-2.1l167.92-96.05a16,16,0,0,0,.05-27.89ZM56,224a.56.56,0,0,0,0-.12L85.74,136H144a8,8,0,0,0,0-16H85.74L56.06,32.16A.46.46,0,0,0,56,32l168,95.83Z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Deck 列表 ================= -->
+  <section>
+    <h2 class="sec-title">⑤ Deck 列表卡片（含加载态）</h2>
+    <p class="sec-desc">进入工作台的入口页。hover 微浮起，副信息（更新时间 / 待答提问）用弱化色。最右是加载骨架屏——用最终布局的形状占位，不用转圈 spinner。</p>
+    <div class="decks">
+      <div class="deck-card"><div class="cover">16:9 封面缩略图</div><div class="body"><div class="t">2026 前端趋势分享</div><div class="m">更新于 2 小时前 · 12 页</div></div></div>
+      <div class="deck-card"><div class="cover">16:9 封面缩略图</div><div class="body"><div class="t">产品周报 W37</div><div class="m">更新于昨天 · 8 页</div></div></div>
+      <div class="deck-card"><div class="cover">16:9 封面缩略图</div><div class="body"><div class="t">新员工培训大纲</div><div class="m">更新于 3 天前 · <span class="pending"><svg class="ic" style="width:12px;height:12px;margin-right:3px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z"/></svg>有待回答的提问</span></div></div></div>
+      <div class="deck-card skel" aria-hidden="true"><div class="cover"><div class="sk-block"></div></div><div class="body"><div class="sk-block sk-line w60"></div><div class="sk-block sk-line w40"></div></div></div>
+    </div>
+  </section>
+
+  <footer class="note">
+    暗色默认基调"曜石"参考 Raycast 设计系统：#07080a 蓝味近黑、rgba 白描边、多层内嵌阴影、正字距 0.2px、Raycast 语义色；另有石墨/蓝黑/暖炭/纯黑四档可对比。主色含"赤红"（Raycast Red）候选，但它与危险语义同色，选前想清楚。选中组合告诉我，token 定稿后迁进 <span class="mono">frontend/src/theme/tokens.css</span>；配套规则见 <span class="mono">design/DESIGN.md</span>。
+  </footer>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  // 主题切换（日/月图标由 CSS 按 data-theme 显隐，这里只改文字）
+  var btn = document.getElementById('themeBtn');
+  var themeLbl = document.getElementById('themeLbl');
+  function syncBtn() {
+    themeLbl.textContent = root.dataset.theme === 'dark' ? '切换亮色' : '切换暗色';
+  }
+  btn.addEventListener('click', function () {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('demo-theme', root.dataset.theme);
+    syncBtn(); fillVals();
+  });
+  syncBtn();
+
+  // 主色切换
+  var seg = document.getElementById('accentSeg');
+  function syncSeg() {
+    seg.querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.accent === root.dataset.accent);
+    });
+  }
+  seg.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    root.dataset.accent = b.dataset.accent;
+    localStorage.setItem('demo-accent', b.dataset.accent);
+    syncSeg();
+  });
+  syncSeg();
+
+  // 暗色基调切换（仅作用于暗色主题）
+  var dseg = document.getElementById('darkSeg');
+  function syncDseg() {
+    var cur = root.dataset.dark || 'raycast';
+    dseg.querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.dark === cur);
+    });
+  }
+  dseg.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    root.dataset.dark = b.dataset.dark;
+    localStorage.setItem('demo-dark', b.dataset.dark);
+    syncDseg(); fillVals();
+  });
+  syncDseg();
+
+  // 色板实时值
+  function fillVals() {
+    document.querySelectorAll('.swatch .val').forEach(function (el) {
+      var v = getComputedStyle(root).getPropertyValue(el.dataset.token).trim();
+      el.textContent = v;
+    });
+  }
+  fillVals();
+})();
+</script>
+</body>
+</html>

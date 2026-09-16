@@ -21,6 +21,11 @@ type ToolFunc func(ctx context.Context,arguments string)(string,error)
 type Tool struct {
 	Definition openai.ChatCompletionToolUnionParam //发给模型的schema
 	Execute ToolFunc //执行函数
+	// MaxPerRun 一次 run 里允许执行的最大次数；0 = 不限。超额的调用不执行，
+	// 模型会收到一条"配额用完"的结果（见 execTool）。它是"审查→修复→再审"这类
+	// 无收敛循环的唯一硬闸门——提示词是软约束，实测一次 22 轮的 run 审了 5 轮、
+	// 改了 5 轮，直到 maxTurns 兜底才被强制收尾。
+	MaxPerRun int
 }
 
 // toolUID 从 ctx 取当前登录用户。工具是"以某个用户的身份"执行的：
@@ -282,14 +287,14 @@ type UpdateThemeArgs struct {
 	// 注意：description 里不能出现半角逗号（invopop/jsonschema 按半角逗号切键值对，
 	// 出现一个就会把后半段描述静默丢掉）。这里的清单由 deck.PresetSummary() 生成到
 	// 工具级 Description 里，字段级只留一句指引。
-	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,enum=indigo,enum=pine,enum=kraft,enum=dune,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
+	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,enum=indigo,enum=pine,enum=kraft,enum=dune,enum=swiss,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
 	Accent       *string `json:"accent,omitempty" jsonschema:"type=string,description=强调色（6位十六进制，如 #b23a2e），卡片边框和底色默认随之派生"`
 	Background   *string `json:"background,omitempty" jsonschema:"type=string,description=页面背景色（6位十六进制）"`
 	HeadingColor *string `json:"heading_color,omitempty" jsonschema:"type=string,description=标题颜色（6位十六进制）"`
 	TextColor    *string `json:"text_color,omitempty" jsonschema:"type=string,description=正文颜色（6位十六进制）"`
 	Surface      *string `json:"surface,omitempty" jsonschema:"type=string,description=面板与卡片底色（6位十六进制）。留空 = 由 accent 派生一层淡染（暗底主题的发光面板就是这么来的）。浅色主题下要让卡片呈中性的纸面、而不是强调色的粉调时传它"`
 	BorderColor  *string `json:"border_color,omitempty" jsonschema:"type=string,description=边框与分隔线的颜色（6位十六进制）。留空 = 由 accent 派生。浅色主题下想要墨色发丝线而不是彩色线时传它"`
-	Font         *string `json:"font,omitempty" jsonschema:"type=string,enum=sans,enum=serif,enum=editorial,enum=modern,enum=mono,description=字体配对：sans 全无衬线 / serif 全衬线 / editorial 衬线标题+无衬线正文（中文杂志的经典组合）/ modern 几何无衬线 / mono 等宽"`
+	Font         *string `json:"font,omitempty" jsonschema:"type=string,enum=sans,enum=serif,enum=editorial,enum=modern,enum=mono,enum=swiss,description=字体配对：sans 全无衬线 / serif 全衬线 / editorial 衬线标题+无衬线正文（中文杂志的经典组合）/ modern 几何无衬线 / mono 等宽 / swiss 自带 Inter 可变字体（拉丁细体大字＋系统黑体中文，瑞士风预设的底子）"`
 	Radius       *string `json:"radius,omitempty" jsonschema:"type=string,description=卡片圆角（带单位的长度值，如 10px。0px = 直角——圆角卡片是最容易一眼认出的模板特征之一）"`
 	Texture      *string `json:"texture,omitempty" jsonschema:"type=string,enum=none,enum=grid,enum=dots,enum=rule,description=页面背景纹理：none 无 / grid 细网格（稿纸）/ dots 网点（印刷感）/ rule 横线（稿纸、终端扫描线）"`
 	Transition   *string `json:"transition,omitempty" jsonschema:"type=string,enum=slide,enum=fade,enum=zoom,enum=convex,enum=concave,enum=none,description=翻页动画"`
@@ -613,6 +618,33 @@ func (a *AgentService) toolReadComponent(ctx context.Context, arguments string) 
 	return marshalNoEscape(componentResult{Name: args.Name, Rules: rules, Note: specificityNote})
 }
 
+// ---------- 预置图标清单 ----------
+// .ico 槽的 path 只准从这里复制。LLM 手绘 SVG path 的产出大多是不成形的曲线团，
+// 而图标画错比没有图标更扎眼，所以这里不给"自己画"的自由：清单是一组审核过的
+// Tabler 描边图标，与 .ico 的口径（24×24、currentColor 描边、fill:none）逐字匹配。
+
+type ReadIconsArgs struct{}
+
+func (a *AgentService) toolReadIcons(ctx context.Context, _ string) (string, error) {
+	if _, err := toolUID(ctx); err != nil {
+		return "", err
+	}
+	catalog, err := loadIconCatalog(a.AssetsDir)
+	if err != nil {
+		return "", err
+	}
+	out, err := marshalNoEscape(map[string]string{
+		"icons": catalog,
+		"note": "看中哪个就把它的标记原样放进 <svg class=\"ico\" viewBox=\"0 0 24 24\"> 里。" +
+			"描边/颜色/粗细由组件库接管，不要在 path 上加 stroke/fill 属性；" +
+			"禁止画清单之外的 path；清单里没有合适的就不放图标（每个标题都配图标在反撞衫名单上）。",
+	})
+	if err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
 type ReviewSlidesArgs struct {
 	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=要审查的 deck ID"`
 	// 页号留空不是错误：那是"先只给我数字"，与 write_deck 之后的自动体检同一条路
@@ -840,6 +872,17 @@ func (a *AgentService)buildTools () map[string]Tool{
 		}
 	}
 
+	// 预置图标清单：.ico 槽的唯一合法 path 来源。刻意不挂在 custom_css 开关下——
+	// .ico 是组件库的正牌成员，跟自定义样式槽没有依赖关系。
+	tools["read_icons"] = Tool{
+		Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+			Name:        "read_icons",
+			Description: openai.String("读预置图标清单（只读）：返回一组审核过的描边图标，每个都带可直接复制进 .ico 的 SVG 标记和中文语义标签。要用图标时先调它挑一个复制，**不要自己画 SVG path**——手绘路径画出来就是不成形的曲线团。清单里没有合适的就不放图标。"),
+			Parameters:  generateSchema[ReadIconsArgs](),
+		}),
+		Execute: a.toolReadIcons,
+	}
+
 	if a.WebSearch {
 		tools["web_search"] = Tool{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
@@ -872,13 +915,16 @@ func (a *AgentService)buildTools () map[string]Tool{
 					"**可以用 pages 点名几页真正看一眼画面**：文字被裁、元素重叠、贴边、对比度不足、"+
 					"这页的图和标题讲的不是一回事——这些只有看图才知道，数字看不出来。"+
 					"pages 留空就只回数字（免费、几秒）；带了页号才会给这几页截图（每次调用最多 %d 页，慢、贵，挑着看）。"+
-					"看哪几页由你判断：优先 fit<0.90、最小字号<31px、溢出>1.02 的页。"+
-					"新建 deck 之后系统已自动量测过一次（结果在 write_deck 的 review 字段里）；"+
-					"改了若干页之后想确认没改坏，或用户说'看起来怪'、'帮我检查一下'时用它。"+
-					"只读、不改页面，报告里指出的问题由你自己决定改不改。", maxReviewPages)),
+					"看哪几页由你判断：优先 fit<0.90、最小字号<31px、溢出>1.02 的页，加上自己拿不准的页。"+
+					"新建 deck 之后系统已自动量测过一次（结果在 write_deck 的 review 字段里）。"+
+					"报告按【硬/软】分级：硬=投屏会翻车（被裁/重叠/看不清），软=审美打磨。"+
+					"用法是三步：第一次把可疑页一次看全 → 批量修复 → 只确认改过的页；"+
+					"一次 run 里最多调 %d 次（系统硬配额，超出会被拒绝），按这三步分配。"+
+					"只读、不改页面，报告里指出的问题由你自己决定改不改。", maxReviewPages, reviewQuotaPerRun)),
 				Parameters: generateSchema[ReviewSlidesArgs](),
 			}),
-			Execute: a.toolReviewSlides,
+			Execute:    a.toolReviewSlides,
+			MaxPerRun:  reviewQuotaPerRun,
 		}
 	}
 

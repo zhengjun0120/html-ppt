@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/response"
@@ -209,6 +210,52 @@ func (h *Handler) GetTraceImage(c *gin.Context) {
 	// private：这是用户自己的 deck 截图，不允许中间层缓存
 	c.Header("Cache-Control", "private, max-age=300")
 	c.Data(http.StatusOK, "image/png", png)
+}
+
+// ExportTrace GET /api/traces/:sessionID/:runID/export
+//
+// 单个 run 的全量导出：一个自包含的 JSON 文件，全部事件 + 与列表同口径的 run 摘要
+// + timeline 速览。导出面向的主要读者是 AI：messages 折叠成增量、截图默认不内联
+// （?images=1 带上，排查视觉问题时用），详见 trace/export.go 的说明。
+//
+// 走下载而不是普通 JSON API：Content-Disposition 让浏览器直接存盘。
+// 内容用原生写法（c.Data）而不是 response.OK——导出文件是给外部工具/人看的
+// 数据包，不应混进任何包装结构。归属校验在 Store 内部（与读接口同一个 runFileFor），
+// "不是你的"和"不存在"一样 404。还在跑的 run 也允许导出（status=running 如实标注）。
+func (h *Handler) ExportTrace(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	sessionID, err := paramUint(c, "sessionID")
+	if err != nil {
+		response.Err(c, http.StatusNotFound, "观测记录不存在")
+		return
+	}
+	runID := c.Param("runID")
+
+	// 默认不内联截图（导出主要给 AI 读，base64 只添体积不给文本读者信息）；
+	// images=1 时带上全部截图——排查视觉/版面问题时用。
+	wantImages := strings.EqualFold(strings.TrimSpace(c.Query("images")), "1")
+	exp, err := h.traces.ExportRun(uid, sessionID, runID, wantImages)
+	if err != nil {
+		if errors.Is(err, trace.ErrNotFound) {
+			response.Err(c, http.StatusNotFound, "观测记录不存在")
+			return
+		}
+		response.Err(c, http.StatusInternalServerError, "导出观测记录失败")
+		return
+	}
+
+	data, err := json.Marshal(exp)
+	if err != nil {
+		response.Err(c, http.StatusInternalServerError, "导出观测记录失败")
+		return
+	}
+	// runID 进过白名单（runFileFor）才会走到这里，拼进文件名是安全的
+	c.Header("Content-Disposition", `attachment; filename="trace-`+runID+`.json"`)
+	c.Data(http.StatusOK, "application/json; charset=utf-8", data)
 }
 
 // ---------- 参数解析小工具 ----------

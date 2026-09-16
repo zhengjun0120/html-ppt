@@ -23,6 +23,30 @@ try {
 // 主题块缺失或 canvas 值不认识时，前端按 standard 摆、后端按 wide 写，就会错位。
 var canvas = CANVAS[deckTheme.canvas] || CANVAS.wide;
 
+// ---------- 整页色面：给 section 级 .bg-ink / .bg-accent 配全画布背景层 ----------
+// 为什么必须走 reveal 的 data-background-color，而不是只靠 section 自己的 CSS 背景：
+// reveal 会把"内容多高、section 就多高"并垂直居中（center 模式），稀疏页的 CSS 背景
+// 只盖住内容盒——整页换色会悬在画布中央，看起来像一张贴上去的卡片（用户实测反馈过）。
+// data-background-color 由 reveal 渲染成独立的 .slide-background 层，永远铺满画布四边，
+// PDF 导出（print-pdf）也原生按它出图。必须在 Reveal.initialize 之前设：
+// reveal 在 initialize 的同步流程里就构建背景层。
+// 取值与 Go 侧 renderThemeCSS 的 --ink-bg/--accent 同一来源（主题 JSON 的语义字段）：
+// agent 不写具体颜色，update_theme 之后刷新页面即跟着变。
+(function () {
+  var inkBg = deckTheme.heading_color;     // = --ink-bg 的取值（见 theme.go）
+  var accentBg = deckTheme.accent;
+  if (!inkBg && !accentBg) return;
+  var apply = function (cls, color) {
+    if (!color) return;
+    var secs = document.querySelectorAll('section.' + cls);
+    for (var i = 0; i < secs.length; i++) secs[i].setAttribute('data-background-color', color);
+  };
+  try {
+    apply('bg-ink', inkBg);
+    apply('bg-accent', accentBg);   // 两个类都挂时 accent（更重的礼遇）覆盖 ink
+  } catch (e) {}
+})();
+
 Reveal.initialize({
   hash: true,       // URL 带 #/2 页码：刷新不丢位置，截图也能精确定位到某页
   transition: deckTheme.transition || 'slide',
@@ -31,6 +55,35 @@ Reveal.initialize({
   controls: true,
   progress: true,
 });
+
+// ---------- 整页色面页的"满版"观感 ----------
+// 画布固定 16:9，预览窗口比例不一致时画布外必然留白；留白的底色就是 body
+// （reveal 把 .reveal-viewport 类加在 body 上）。reveal 的老惯例是"留白 = 主题底色"，
+// 单底色 deck 时代它成立——留白与页面融为一体，看不出画布边界。但整页翻色页
+// 打破了这个惯例：墨色页近黑、主题底藏青，两种"黑"不同，画布边界显形，
+// 看起来像一张没对齐的卡片（用户实测截图反馈过）。
+// 处理走"色面页整窗满版"：当前页是色面页时，整个窗口的底色同步成页面自己的
+// 底色（纹理一并撤掉）——预览观感与 16:9 投屏（无留白）完全一致；
+// 普通页恢复纸面，维持原有的"连续纸面"观感。只影响预览：
+// PDF 导出与截图（视口=画布尺寸）本来就没有留白。
+(function () {
+  function syncPasteboard(slide) {
+    var color = (slide && slide.getAttribute('data-background-color')) || '';
+    var vp = document.body;
+    try { if (Reveal.getViewportElement) vp = Reveal.getViewportElement() || vp; } catch (e) {}
+    if (color) {
+      vp.style.backgroundColor = color;
+      vp.style.backgroundImage = 'none';   // 色面页不带稿纸纹理
+    } else {
+      vp.style.removeProperty('background-color');
+      vp.style.removeProperty('background-image');
+    }
+  }
+  try {
+    Reveal.on('ready', function () { syncPasteboard(Reveal.getCurrentSlide()); });
+    Reveal.on('slidechanged', function (e) { syncPasteboard(e.currentSlide); });
+  } catch (e) {}
+})();
 
 // ---------- 溢出兜底（fit）----------
 // 为什么写在 init.js 而不是单独的 fit.js：骨架只在 write_deck 时固化一次，

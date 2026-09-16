@@ -1,0 +1,105 @@
+/* ======================================================================
+   Deck Agent · 语义 Token 层（定稿）
+   决策记录：design/DESIGN.md §1.2（2026-09-16：暗色"曜石"基调 + 青碧主色，
+   暗色参照 Raycast 设计系统；亮色为冷灰白 + 深青碧）
+   视觉对照：design/theme-demo.html
+   对比度核验：node tmp/check-contrast.mjs —— 明暗两态 22 项文字/背景配对
+   全部 ≥ WCAG AA（4.5:1），核验不通过不得改动下列色值
+   ====================================================================== */
+
+/* —— 亮色（默认）：冷灰白画布 —— */
+:root {
+  --bg: #F5F7FB;
+  --surface: #FFFFFF;
+  --surface-2: #EEF2F8;
+  --surface-3: #E3E9F3;
+  --border: #DFE6F0;
+  --border-strong: #C2CEE0;
+  --text-1: #1B2537;
+  --text-2: #4E5D77;
+  --text-3: #5E6E89;   /* 比 demo 初版深一档：placeholder 在输入框底色上达 4.6:1 */
+  --code-bg: #F1F4F9;
+  --accent: #0F766E;         /* 青碧（深档）：白字按钮 5.5:1，作链接文字 5.1:1 */
+  --accent-contrast: #FFFFFF;
+  --success: #047857;  /* 比 demo 初版深一档：白底 5.5:1 */
+  --warning: #B45309;
+  --danger:  #DC2626;
+  --info:    #2563EB;
+  --shadow: 0 8px 28px rgba(27, 37, 55, .10);
+}
+
+/* —— 暗色（data-theme="dark"）："曜石"基调，参照 Raycast ——
+   四要素：蓝味近黑底 / rgba 白描边 / 多层内嵌阴影 / 正文正字距（字距在全局样式层） */
+:root[data-theme="dark"] {
+  --bg: #07080A;
+  --surface: #101111;
+  --surface-2: #1B1C1E;
+  --surface-3: #242628;
+  --border: rgba(255, 255, 255, .07);
+  --border-strong: rgba(255, 255, 255, .15);
+  --text-1: #F9F9F9;
+  --text-2: #B0B3B6;
+  --text-3: #82868C;   /* 比 demo 初版亮一档：placeholder 在输入框底色上达 4.66:1 */
+  --code-bg: #0C0D0F;
+  --accent: #2DD4BF;         /* 青碧（亮档）：深底上 10.8:1 */
+  --accent-contrast: #04302A;
+  --success: #5FC992;
+  --warning: #FFBC33;
+  --danger:  #FF6363;  /* Raycast Red：只做危险态与品牌点缀，不做主按钮 */
+  --info:    #55B3FF;  /* Raycast Blue：交互/链接/焦点 */
+  /* 双环容器 + 深投影：外环收边、内环压暗（Raycast 签名） */
+  --shadow: 0 0 0 1px rgb(27, 28, 30), 0 12px 32px rgba(0, 0, 0, .55);
+}
+
+/* —— 派生 token：由基础 token 混出，禁止写死色值 —— */
+:root {
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 32%, transparent);
+  --ring: color-mix(in srgb, var(--accent) 40%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 13%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
+  --danger-soft:  color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* —— 形状与字体（DESIGN.md §3 圆角锁：控件 8 / 卡片 12 / 胶囊全圆） —— */
+:root {
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --font-sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, Consolas, "Cascadia Code", monospace;
+}
+
+/* ======================================================================
+   Tailwind v4 注册（M0 脚手架接入 Tailwind 后由此生成工具类：
+   bg-canvas / bg-surface / bg-surface-2 / border-line / text-ink / text-ink-2 /
+   text-ink-3 / bg-accent / text-accent / rounded-control / rounded-card …）
+   Tailwind 未接入前以下是普通注释级声明，不影响 :root 变量直接可用。
+   ====================================================================== */
+@theme inline {
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-code: var(--code-bg);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text-1);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* dark: 工具类变体跟随 data-theme 属性（而非系统 media query），
+   手动切换主题时所有 dark: 工具类同步生效 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

@@ -1,9 +1,9 @@
 # web/assets/fonts —— 随附字体
 
 这个目录里放的是**我们自己服务的字体**（不依赖 CDN、不依赖用户机器上装了什么）。
-字体栈里的其余四对仍然走系统字体栈，理由见 `theme.css` 顶部与
-`internal/service/deck/theme.go` 的 `fontPairs` 注释：只有"中日文等宽"这一档
-必须自带才成立，其余几档靠系统字体就能得到可预期的结果。
+字体栈里的多数配对仍然走系统字体栈，理由见 `theme.css` 顶部与
+`internal/service/deck/theme.go` 的 `fontPairs` 注释：只有两档必须自带才成立
+（mono 的中日文等宽、swiss 的细字重大字），其余几档靠系统字体就能得到可预期的结果。
 
 ## JetBrains Maple Mono
 
@@ -21,6 +21,21 @@ OFL 的保留字体名条款要求改名——不改就不用管。
 三个文件各约 6.5MB，一共约 19MB。它们大是因为**含完整的中日韩字型**
 （只含拉丁的等宽字体 woff2 通常只有几十 KB）——这份体积正是我们在这一档
 自带字体所换来的东西。
+
+## Inter（可变字重，仅拉丁）
+
+| | |
+|---|---|
+| 文件 | `inter/inter-latin-wght-normal.woff2`、`inter/inter-latin-italic-wght-normal.woff2` |
+| 来源 | [rsms/inter](https://rsms.me/inter/) 官方分发的 Variable 版（拉丁子集文件，100–900 全字重轴） |
+| 授权 | SIL Open Font License 1.1，全文见 `inter/OFL.txt` |
+| 版权 | The Inter Project Authors (2016) |
+
+为什么第二档自带：swiss 预设的表情押在"极大字号 + 极细字重"上，而系统中文黑体
+最细只到 Regular——不自带可变字体，--fs-hero 那一档大标题只会粗成一块黑。
+可变字体一个文件覆盖 100–900 全字重（两份合计约 720KB，比三档静态字重还小）。
+只含拉丁：中文自动落到字体栈后面的 PingFang/YaHei，中英混排的两种字重观感
+正是这一档预设要的样子。`@font-face` 声明见 `theme.css`。
 
 ## 体积与将来的子集化
 

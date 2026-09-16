@@ -40,6 +40,9 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 		guarded := api.Group("", middleware.Auth(cfg.Auth.JWTSecret))
 		{
 			guarded.GET("/auth/me", h.Me)
+			// 登录态换发：每用户每天一次（额度记在用户行上，跨设备共享）。
+			// 前端"每天上线"时静默续一个 TTL，正常用户从此几乎不再见到登录页
+			guarded.POST("/auth/refresh", h.Refresh)
 			guarded.POST("/auth/apikey", h.SetAPIKey)
 			guarded.GET("/decks", h.ListDecks)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
@@ -47,6 +50,13 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/chat/answer", h.AskUser)
 			// 暂停中的提问（页面刷新后重建提问卡片用；没有则 questions 为空串）
 			guarded.GET("/chat/pending", h.PendingAsk)
+
+			// 对话历史的读取端（回放）。会话按 deck 组织：前者列出一个 deck 名下的
+			// 全部会话（进工作台先恢复最近对话/切会话用），后者返回单个会话的可回放
+			// 消息列表（前端把历史灌回消息流组件，刷新后原样恢复）。
+			// 只读，不经过 agent 闸门——暂停中的会话照样能看历史。
+			guarded.GET("/decks/:id/chat/sessions", h.ListDeckSessions)
+			guarded.GET("/chat/sessions/:id/messages", h.GetSessionMessages)
 
 			guarded.GET("/decks/:id/history", h.ListDeckHistory)
 			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)
@@ -61,6 +71,7 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/traces/:sessionID/:runID", h.GetTraceRun)
 			guarded.GET("/traces/:sessionID/:runID/events/:seq", h.GetTraceEvent)
 			guarded.GET("/traces/:sessionID/:runID/img/:name", h.GetTraceImage)
+			guarded.GET("/traces/:sessionID/:runID/export", h.ExportTrace)
 		}
 	}
 

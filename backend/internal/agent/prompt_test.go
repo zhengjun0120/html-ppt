@@ -154,7 +154,7 @@ func TestPromptCanvasNumbersMatchCode(t *testing.T) {
 // 容量预算的几个硬数字：压缩提示词时最容易顺手删掉的就是它们，
 // 而删掉之后模型只会写得更满——溢出的代价比多几十个 token 大得多。
 func TestPromptKeepsCapacityBudget(t *testing.T) {
-	for _, s := range []string{"200 字", "≤ 5 个", "1094×610", "8~14 页"} {
+	for _, s := range []string{"200 字", "≤ 5 个", "1094×618", "8~14 页"} {
 		if !strings.Contains(systemPrompt, s) {
 			t.Errorf("提示词里找不到容量预算的关键数字 %q——它被压缩掉了？", s)
 		}
@@ -221,6 +221,18 @@ func TestPromptKeepsVisionReviewRules(t *testing.T) {
 	for _, s := range []string{"0.90", "31px", "1.02"} {
 		if !strings.Contains(flow, s) {
 			t.Errorf("挑页顺序里少了阈值 %q——模型会去点那些本来就没问题的页", s)
+		}
+	}
+	// 防死循环的三条规则 + 配额锚点。配额数字派生自 reviewQuotaPerRun（execTool 的
+	// 硬闸门），提示词与代码必须一致。这三条是实测 22 轮不收敛的 run 换来的：
+	// "乒乓"禁止一次改一页审一页，"批量修复"+"确认轮"给出唯一收敛路径，
+	// 被压缩掉任何一个，模型就会退回"挤牙膏审查 + 被预算强制收尾"的老路。
+	if want := fmt.Sprintf("最多调 %d 次", reviewQuotaPerRun); !strings.Contains(flow, want) {
+		t.Errorf("提示词里没有 %q（配额来自代码 reviewQuotaPerRun，两处必须一致）", want)
+	}
+	for _, s := range []string{"改一页→审一页", "批量修复", "确认轮"} {
+		if !strings.Contains(flow, s) {
+			t.Errorf("「标准工作流」里找不到 %q——防死循环的规则被压缩掉了？", s)
 		}
 	}
 }

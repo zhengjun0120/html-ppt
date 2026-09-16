@@ -31,6 +31,9 @@ const (
 	PresetPine   = "pine"
 	PresetKraft  = "kraft"
 	PresetDune   = "dune"
+	// 第 11 套是按"视觉语言的完备性"补的：前 10 套里没有一套是"中性底 + 单一高饱和色 +
+	// 极细大字"的瑞士国际主义——那是演示排版史上有据可依的一档，也是整页色块节奏最天然的风格
+	PresetSwiss = "swiss"
 )
 
 // Preset 是一套预设的公开描述。Name 是工具参数里的取值，
@@ -208,6 +211,29 @@ var presets = map[string]Preset{
 			},
 		},
 	},
+	// 瑞士国际主义（Typographic Style）：中性灰白纸 + 单一高饱和色 + 近黑网格。
+	// 这套预设的"参照物"不是某个文件，是一段有公开文献的平面设计史（Mueller-Brockmann 一脉）。
+	// 取值按这个代码库的既有规矩独立挑选（外部同风格项目是 AGPL-3.0，不抄色板）：
+	// 克莱因蓝是公开的色彩史料值，纸/墨/灰都是中性件。
+	// 为什么它和编辑风不撞：编辑风强调色是黑、零彩色、衬线配对；swiss 强调色是全场唯一
+	// 的饱和色（页面几乎全部是黑字白底，那一点蓝才值钱），且自带 Inter 细字重大字——
+	// 一个像杂志评论页，一个像印刷展海报。
+	PresetSwiss: {
+		Name: PresetSwiss, Label: "瑞士风",
+		About: "灰白纸 + 克莱因蓝单色 + 极细大字 + 等宽小标签，直角、细网格。品牌发布、设计理念、数据与观点并重的表达，要「印刷展」气质时用",
+		Theme: Theme{
+			Accent: "#002fa7", Background: "#fafaf8",
+			HeadingColor: "#0a0a0a", TextColor: "#1a1a1a",
+			Surface: "#f0f0ee", BorderColor: "#d4d4d2",
+			Font: FontSwiss, Radius: "0px", Texture: TextureGrid,
+			Vars: map[string]string{
+				"--hero-weight": "200",   // Inter 细体：瑞士风的"极大字号 + 极轻字重"全靠它
+				"--accent-2": "#0a0a0a", // 双色对比时：蓝 vs 墨，都是体系内的颜色
+				"--positive": "#1a7f4b",
+				"--warn":     "#b8860b",
+			},
+		},
+	},
 }
 
 // presetOrder 是稳定顺序：map 遍历随机，而它出现在工具说明与报错信息里，
@@ -216,7 +242,7 @@ var presets = map[string]Preset{
 // "第一眼看哪个"发生变化，而它们本来就是补充项。
 var presetOrder = []string{
 	PresetPaper, PresetEditorial, PresetNoir, PresetDuotone, PresetTerminal, PresetTech,
-	PresetIndigo, PresetPine, PresetKraft, PresetDune,
+	PresetIndigo, PresetPine, PresetKraft, PresetDune, PresetSwiss,
 }
 
 // Presets 按稳定顺序返回全部预设（工具说明、文档、测试用）。

@@ -17,6 +17,11 @@ import (
 
 const componentCSSFile = "components.css"
 
+// iconCatalogFile 是预置图标清单（Tabler 描边 path，.ico 槽的唯一合法 path 来源）。
+// 单独成文件而不是写进组件库 CSS：组件库会被浏览器加载，图标清单只有模型消费，
+// 不该让每个 deck 页面白白多下载几 KB。
+const iconCatalogFile = "icons.md"
+
 // frameworkClasses 是框架命名空间（reveal 的根类），不算"可用组件类"：
 // 它们出现在每条选择器的前缀里，但 prompt 明确规定 AI 不许动它们。
 var frameworkClasses = map[string]bool{"reveal": true, "slides": true}
@@ -47,21 +52,46 @@ func loadComponentCSS(assetsDir string) (string, error) {
 	return string(data), nil
 }
 
-// splitRules 把 CSS 粗切成一条条 "选择器 { 声明 }"。
-// 组件库是平铺规则（没有 @media 嵌套），按 } 切就够；将来真出现嵌套块再换正经解析。
+// loadIconCatalog 读图标清单。为什么不给模型"自己画 path"的自由：LLM 手绘的
+// SVG 路径大多是不成形的曲线团，而图标画错比没有图标更扎眼；审核过的清单
+// （Tabler 描边，与 .ico 的 currentColor/fill:none 口径逐字匹配）复制即用、零适配。
+func loadIconCatalog(assetsDir string) (string, error) {
+	if strings.TrimSpace(assetsDir) == "" {
+		return "", fmt.Errorf("组件库目录未配置")
+	}
+	p := filepath.Join(assetsDir, iconCatalogFile)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return "", fmt.Errorf("读取图标清单失败: %w", err)
+	}
+	return string(data), nil
+}
+
+// splitRules 把 CSS 粗切成一条条规则（整块返回，含外层 @media 时整块是一条）。
+// 必须按花括号配对切，不能按 } 朴素切：v4 之后的组件库有真正的嵌套块
+// （@media print 里两条打印规则），按 } 切会把 @media 的**第二条**内层规则
+// 泄漏成一条独立"选择器"——extractClassNames 会从里面抠出 .reveal-print
+// 这种框架类并要求 prompt 收录它（真实发生过的测试失败）。
+// 嵌套块的"选择器"取首 个 { 之前的文本（@media print），类名提取自然为空，
+// 不会误伤 extractClassNames；extractRules 也只会命中平铺规则，可接受。
 func splitRules(css string) []string {
-	// 先去掉注释，免得注释里的 } 把块切歪
+	// 先去掉注释，免得注释里的 } 把配对切歪
 	noComment := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(css, "")
 	var rules []string
-	for _, chunk := range strings.Split(noComment, "}") {
-		r := strings.TrimSpace(chunk)
-		if r == "" {
-			continue
+	depth, start := 0, 0
+	for i, r := range noComment {
+		switch r {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				if rule := strings.TrimSpace(noComment[start : i+1]); rule != "" {
+					rules = append(rules, rule)
+				}
+				start = i + 1
+			}
 		}
-		if !strings.Contains(r, "{") {
-			continue // 尾巴上的碎片
-		}
-		rules = append(rules, r+"}")
 	}
 	return rules
 }
