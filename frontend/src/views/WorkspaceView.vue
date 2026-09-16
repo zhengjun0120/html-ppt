@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessages from '@/components/chat/ChatMessages.vue'
+import HistoryDrawer from '@/components/preview/HistoryDrawer.vue'
 import PreviewPane from '@/components/preview/PreviewPane.vue'
 import { ApiError } from '@/api/client'
 import { useChatStore } from '@/stores/chat'
@@ -13,13 +14,17 @@ import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 
 const route = useRoute()
-const deckId = String(route.params.id)
+// /decks/new = 无文稿冷启动模式：不带 deck_id 发起对话，agent 会创建新文稿
+const isNew = String(route.params.id) === 'new'
+const deckId = isNew ? '' : String(route.params.id)
 const chat = useChatStore()
 const deckStore = useDeckStore()
 const toast = useToast()
 
 // 窄屏（<md）：对话/预览 二选一；桌面双栏
 const mobileView = ref<'preview' | 'chat'>('preview')
+const historyOpen = ref(false)
+const previewKey = ref(0)
 
 onMounted(async () => {
   chat.reset(deckId)
@@ -39,13 +44,19 @@ function newConversation() {
   chat.reset(deckId)
   toast.info('已开启新对话')
 }
+
+function onRestored() {
+  // 恢复/改动后刷新预览
+  previewKey.value += 1
+  void deckStore.refresh().catch(() => {})
+}
 </script>
 
 <template>
   <div class="flex h-full overflow-hidden">
-    <!-- 预览为主：占绝大部分宽度 -->
+    <!-- 预览为主：占绝大部分宽度；key 变化强制重建 iframe（历史恢复后刷新） -->
     <div class="min-h-0 min-w-0 flex-1" :class="mobileView === 'chat' ? 'hidden md:block' : 'block'">
-      <PreviewPane :deck-id="deckId" class="h-full" />
+      <PreviewPane :key="previewKey" :deck-id="deckId" class="h-full" @history="historyOpen = true" />
     </div>
 
     <!-- 对话侧栏：可收起（窄屏自动转 tab 切换） -->
@@ -65,6 +76,15 @@ function newConversation() {
         <ChatInput />
       </div>
     </aside>
+
+    <!-- 历史版本抽屉 -->
+    <HistoryDrawer
+      v-if="!isNew"
+      :open="historyOpen"
+      :deck-id="deckId"
+      @close="historyOpen = false"
+      @restored="onRestored"
+    />
 
     <!-- 窄屏 tab 栏 -->
     <nav class="fixed bottom-0 left-0 right-0 z-30 flex border-t border-line bg-surface md:hidden">
