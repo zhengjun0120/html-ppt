@@ -197,6 +197,34 @@ func TestPromptKeepsRhythmRules(t *testing.T) {
 	}
 }
 
+// 视觉审查那几条规则，压缩时同样最像"劝告"、最容易被顺手删掉，但这次的代价不对称：
+//
+//   - 删掉"量测只有一半"那句，模型会拿数字当"版面没问题"的证明——被裁/重叠/对比度
+//     是它唯一能发现这几类问题的通道，通道没了它反而更自信。
+//   - 删掉"点名页号"，模型就只剩两种行为：不看画面，或者把每一页都点一遍（那就退回了
+//     这次改造要干掉的全量审查：9 页约两分钟、图片 token 是全程最贵的一项）。
+//   - "最多 N 页"里的 N 派生自代码常量 maxReviewPages：模型照着提示词挑页，
+//     数字对不上就会在工具那里撞一条报错，白烧一轮往返。
+func TestPromptKeepsVisionReviewRules(t *testing.T) {
+	flow := promptRegion(t, "# 标准工作流", "\n# 交互方式")
+	for _, s := range []string{"review_slides", "pages", "1 基", "只回数字", "只有一半"} {
+		if !strings.Contains(flow, s) {
+			t.Errorf("「标准工作流」里找不到 %q——视觉审查那几条被压缩掉了？", s)
+		}
+	}
+	if want := fmt.Sprintf("最多 %d 页", maxReviewPages); !strings.Contains(flow, want) {
+		t.Errorf("提示词里没有 %q（上限来自代码 maxReviewPages，两处必须一致）", want)
+	}
+	// 挑页顺序里的三个阈值与 vision 包的判定阈值是同一组数字：
+	// 提示词说"fit 低于 0.90 优先看"，而程序判定的下限也是 0.90，这样模型挑的页
+	// 和报告报的页才是一回事。
+	for _, s := range []string{"0.90", "31px", "1.02"} {
+		if !strings.Contains(flow, s) {
+			t.Errorf("挑页顺序里少了阈值 %q——模型会去点那些本来就没问题的页", s)
+		}
+	}
+}
+
 // promptRegion 取提示词里从 start 到 end 之间的一段（end 传空串则取到文件末尾）。
 // 用来把断言限定在某一节里，避免"别处顺口提过一次"造成的假通过。
 func promptRegion(t *testing.T, start, end string) string {

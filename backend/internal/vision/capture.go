@@ -11,14 +11,29 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-//视口固定成默认画布 1244*700
+// 启动窗口取最宽的预设画布（wide 1244×700）；真正的视口在页面加载后按 deck 自己的
+// 画布再覆盖一次，见 Capture 里 SetDeviceMetricsOverride 那段。
 const (
-	ViewportW = 1244
-	ViewportH = 700
+	DefaultCanvasW = 1244
+	DefaultCanvasH = 700
 
 	readyDelay  = 1500 * time.Millisecond //等待字体异步加载完成
 	settleDelay = 300 * time.Millisecond  //每次调用 Reveal.slide(i) 后等待 300ms
+
+	// 画布区间。画布值来自 deck 自己的主题块（模型写的 JSON），是个不可信输入：
+	// 一个手滑写成 999999 的宽会让截图变成几百 MB 的 PNG（截图是逐像素编码的），
+	// 而"离谱的画布"没有任何合法的用途。超出区间就退回默认画布。
+	minCanvasW, maxCanvasW = 400, 4000
+	minCanvasH, maxCanvasH = 300, 3000
 )
+
+// viewportFor 把 deck 声明的画布换算成截图视口，不可信的值退回默认画布。
+func viewportFor(w, h int) (int, int) {
+	if w < minCanvasW || w > maxCanvasW || h < minCanvasH || h > maxCanvasH {
+		return DefaultCanvasW, DefaultCanvasH
+	}
+	return w, h
+}
 
 //图+数字
 //
@@ -52,6 +67,36 @@ type Options struct {
 	URL        string
 	ChromePath string
 	Timeout    time.Duration
+
+	// MeasureOnly：只量测、不截图。
+	//
+	// 量测是浏览器自己算的（几秒、零模型开销），截图才是贵的那一半（PNG 编码 +
+	// 图片 token）。write_deck 之后的自动体检走这条路：先把数字摆出来，"要不要花
+	// 时间看画面"由 agent 点名页号决定。
+	MeasureOnly bool
+
+	// Shoot：只对这几页截图，**0 基下标**（与 Slide.Index 同一套口径，调用方不用
+	// 在这里再做一次 1→0 换算——换算写错既不报错也不改变图片本身的样子，
+	// 只会安静地拍错页，而拍错页的报告和拍对了看着一样可信）。
+	// len(Shoot)==0（nil 和空切片一样）表示全拍。
+	Shoot []int
+}
+
+// 这一页要不要截图。单独拆出来是为了能脱离浏览器单测：
+// 0 基/1 基写错不会报错，只会拍错页。
+func shootPage(opt Options, i int) bool {
+	if opt.MeasureOnly {
+		return false
+	}
+	if len(opt.Shoot) == 0 {
+		return true
+	}
+	for _, p := range opt.Shoot {
+		if p == i {
+			return true
+		}
+	}
+	return false
 }
 
 //把页面调到 某一页静止呈现的状态
@@ -140,6 +185,27 @@ const slideCountJS = `(function(){
   return Reveal.getSlides().filter(function(s){return s.tagName==='SECTION';}).length;
 })()`
 
+// deck 自己声明的逻辑画布（主题块里的 canvas 决定它）。读 Reveal.getConfig() 而不是
+// 去解析页面里的主题 JSON：那才是真正生效的那个值（主题块缺失时 init.js 有兜底）。
+const canvasJS = `(function(){
+  if (typeof Reveal === 'undefined') return JSON.stringify({w:0,h:0});
+  var cfg = Reveal.getConfig() || {};
+  return JSON.stringify({w: cfg.width||0, h: cfg.height||0});
+})()`
+
+// 让 reveal 重算缩放。视口变了页面会收到 resize、reveal 自己也会重排，但那一步在什么时候
+// 完成取决于它内部的调度，而紧接着我们就要量测和截图——不留这个竞态。这里显式调一次，
+// 把重排变成同步的，代价只是一次重排（同一个视口不会重复触发，见下面只在换视口时才调）。
+const relayoutJS = `(function(){
+  if (typeof Reveal !== 'undefined' && Reveal.layout) Reveal.layout();
+  return 'ok';
+})()`
+
+type canvasSize struct {
+	W int `json:"w"`
+	H int `json:"h"`
+}
+
 func Capture(ctx context.Context, opt Options) (*Deck, error) {
 	if opt.Timeout == 0 {
 		opt.Timeout = 120 * time.Second
@@ -148,7 +214,7 @@ func Capture(ctx context.Context, opt Options) (*Deck, error) {
 		chromedp.Headless,
 		chromedp.DisableGPU,
 		chromedp.Flag("hide-scrollbars", true),
-		chromedp.WindowSize(ViewportW, ViewportH),
+		chromedp.WindowSize(DefaultCanvasW, DefaultCanvasH),
 	)
 	if opt.ChromePath != "" {
 		allocOpts = append(allocOpts, chromedp.ExecPath(opt.ChromePath))
@@ -164,7 +230,7 @@ func Capture(ctx context.Context, opt Options) (*Deck, error) {
 	defer cancelTimeout()
 
 	if err := chromedp.Run(runCtx,
-		emulation.SetDeviceMetricsOverride(ViewportW, ViewportH, 1, false), //缩放1 非移动
+		emulation.SetDeviceMetricsOverride(DefaultCanvasW, DefaultCanvasH, 1, false), //缩放1 非移动
 		chromedp.Navigate(opt.URL),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 	); err != nil {
@@ -183,7 +249,37 @@ func Capture(ctx context.Context, opt Options) (*Deck, error) {
 		return nil, fmt.Errorf("量到 %d 页：Reveal 没起来（js报错？）", n)
 	}
 
-	deck := &Deck{CanvasW: ViewportW, CanvasH: ViewportH}
+	// 视口跟随 deck 自己的画布。
+	//
+	// 为什么不能让视口写死 1244：**拍出来的画面得是"观众看到的那一张"**。画布比例和
+	// 视口比例不一致时，reveal 会按短边缩放并把内容居中，多出来的部分就是空白——
+	// 实测（classic 4:3 画布、模拟 16:9 屏）视口用 1244 拍，两侧各留 149px 空白；
+	// 视口换成画布自己的 933，空白只剩 reveal 那 2% 边距。那 149px 是**只在截图里存在**的
+	// 版面问题，而视觉模型会老老实实把它报成"内容没铺满、两侧大片空白"。
+	// canvasJS 返回的是**字符串**（JSON.stringify 的结果），所以要先取字符串再解——
+	// 直接往 struct 里解会报 "cannot unmarshal string into Go value of type canvasSize"。
+	// 与 measureJS 同一套：Evaluate 拿到的是 JS 表达式的返回值，不是它代表的那个对象。
+	var rawCanvas string
+	if err := chromedp.Run(runCtx, chromedp.Evaluate(canvasJS, &rawCanvas)); err != nil {
+		return nil, fmt.Errorf("读画布尺寸失败 err:%w", err)
+	}
+	var cs canvasSize
+	if err := json.Unmarshal([]byte(rawCanvas), &cs); err != nil {
+		return nil, fmt.Errorf("画布尺寸解析失败(%s) err:%w", rawCanvas, err)
+	}
+	vw, vh := viewportFor(cs.W, cs.H)
+	if vw != DefaultCanvasW || vh != DefaultCanvasH {
+		// 只有真的要换才覆盖：默认画布那一次覆盖是白走一趟 resize + 重排
+		if err := chromedp.Run(runCtx,
+			emulation.SetDeviceMetricsOverride(int64(vw), int64(vh), 1, false),
+			chromedp.Evaluate(relayoutJS, nil),
+		); err != nil {
+			return nil, fmt.Errorf("按画布 %d*%d 设视口失败 err:%w", vw, vh, err)
+		}
+		time.Sleep(settleDelay) //重排之后再量：量的是重排后的结果
+	}
+
+	deck := &Deck{CanvasW: vw, CanvasH: vh}
 	for i := 0; i < n; i++ {
 		var prep string
 		if err := chromedp.Run(runCtx, chromedp.Evaluate(fmt.Sprintf(prepareJS, i), &prep)); err != nil {
@@ -202,21 +298,27 @@ func Capture(ctx context.Context, opt Options) (*Deck, error) {
 		}
 		s.Index = i //以循环下标为准：页面回报的值一旦错位，报告就会指错页
 		if s.CanvasW > 0 && s.CanvasH > 0 {
+			// 报告里写的画布是 deck 自己声明的那个（离谱的值也要如实报出来——
+			// 那是 deck 的毛病，藏起来反而没人会去改）
 			deck.CanvasW, deck.CanvasH = s.CanvasW, s.CanvasH
 		}
 
 		//整视口截图。**不要用元素截图**：reveal 会给 .slides 加 transform，
 		//元素截图走的是未变换的盒子模型，裁出来的区域会整体偏移（实测左侧内容被切掉）。
 		//视口已经固定成画布尺寸，整视口截图就是"观众实际看到的那一张"。
-		var buf []byte
-		if err := chromedp.Run(runCtx, chromedp.ActionFunc(func(c context.Context) error {
-			b, e := page.CaptureScreenshot().WithFormat(page.CaptureScreenshotFormatPng).Do(c)
-			buf = b
-			return e
-		})); err != nil {
-			return nil, fmt.Errorf("第 %d 页截图失败 err:%w", i+1, err)
+		//没被点名的页连拍都不拍：PNG 编码是这段里最费时间的一步，而没人看的图
+		//只会让 write_deck 之后的自动体检从几秒变成几十秒。
+		if shootPage(opt, i) {
+			var buf []byte
+			if err := chromedp.Run(runCtx, chromedp.ActionFunc(func(c context.Context) error {
+				b, e := page.CaptureScreenshot().WithFormat(page.CaptureScreenshotFormatPng).Do(c)
+				buf = b
+				return e
+			})); err != nil {
+				return nil, fmt.Errorf("第 %d 页截图失败 err:%w", i+1, err)
+			}
+			s.PNG = buf
 		}
-		s.PNG = buf
 		deck.Slides = append(deck.Slides, s)
 	}
 	return deck, nil

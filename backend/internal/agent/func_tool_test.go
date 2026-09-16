@@ -6,7 +6,9 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -105,6 +107,54 @@ func TestBuildToolsFeatureGating(t *testing.T) {
 	}
 	if _, ok := argSchema.Properties["max_uses"]; !ok {
 		t.Error("web_search 的 schema 里没有 max_uses 字段（模型无从控制搜索次数）")
+	}
+}
+
+// review_slides 的 pages 必须保持**可选**，这不是风格问题：它是"免费只量测"那条路的
+// 唯一入口。谁把它标成 required，模型就再也拿不到不花钱的数字体检，只能每次点满页号
+// 去看图——而这条回归**不报任何错**：工具照样能用，只是每次新建 deck 都变慢、变贵。
+// （这次改造要解决的正是那个"每次都全量看图"的行为，所以这条守卫守的是改造本身。）
+func TestReviewSlidesPagesStaysOptional(t *testing.T) {
+	svc := &AgentService{Vision: true}
+	tool, ok := svc.buildTools()["review_slides"]
+	if !ok {
+		t.Fatal("Vision 打开后应挂载 review_slides")
+	}
+	raw, err := json.Marshal(tool.Definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var def struct {
+		Function struct {
+			Description string `json:"description"`
+			Parameters  struct {
+				Required   []string       `json:"required"`
+				Properties map[string]any `json:"properties"`
+			} `json:"parameters"`
+		} `json:"function"`
+	}
+	if err := json.Unmarshal(raw, &def); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(def.Function.Parameters.Required) != 1 || def.Function.Parameters.Required[0] != "deck_id" {
+		t.Errorf("只该把 deck_id 标为必填（pages 留空＝只回数字），实际 required=%v",
+			def.Function.Parameters.Required)
+	}
+	prop, ok := def.Function.Parameters.Properties["pages"].(map[string]any)
+	if !ok {
+		t.Fatal("schema 里没有 pages 字段：模型无从点名页号，只能看全份")
+	}
+	if prop["type"] != "array" {
+		t.Errorf("pages 应当是数组（类型由 schema 强制，模型写不出幻觉格式），实际 %v", prop["type"])
+	}
+	if items, _ := prop["items"].(map[string]any); items == nil || items["type"] != "integer" {
+		t.Errorf("pages 应当是整数数组（写成字符串会被 json.Unmarshal 直接拒掉，白费一轮），实际 %v", prop["items"])
+	}
+	// 上限数字必须出现在模型能看到的地方，而真实上限在代码里（maxReviewPages）：
+	// 两处漂移的表现是模型点了 8 页、收到一条工具报错、白烧一轮往返。
+	if !strings.Contains(fmt.Sprint(def.Function.Description, prop["description"]), strconv.Itoa(maxReviewPages)) {
+		t.Errorf("工具说明和 pages 描述里至少要有一处写出上限 %d 页", maxReviewPages)
 	}
 }
 

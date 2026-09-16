@@ -6,6 +6,7 @@ import (
 	"errors"
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/service/deck"
+	"sort"
 	"strings"
 	"time"
 
@@ -73,14 +74,16 @@ func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string
 		return "",err
 	}
 
-	review := a.runVisionReview(ctx,uid,res.DeckID)
+	// 自动体检：只量测不读图。数字是浏览器自己算的（几秒、零模型开销），
+	// 所以每次新建 deck 都跑得起；要不要花时间看图由 agent 点名页号决定。
+	check := a.measureDeck(ctx, uid, res.DeckID)
 
 	return marshalNoEscape(deckWriteResult{
-		DeckID: res.DeckID,
-		Slides: res.Slides,
-		URL:    "/api/decks/" + res.DeckID + "/file",
+		DeckID:  res.DeckID,
+		Slides:  res.Slides,
+		URL:     "/api/decks/" + res.DeckID + "/file",
 		Warning: res.Warning,
-		Review: review,
+		Review:  check,
 	})
 }
 
@@ -612,6 +615,34 @@ func (a *AgentService) toolReadComponent(ctx context.Context, arguments string) 
 
 type ReviewSlidesArgs struct {
 	DeckID string `json:"deck_id" jsonschema:"required,type=string,description=要审查的 deck ID"`
+	// 页号留空不是错误：那是"先只给我数字"，与 write_deck 之后的自动体检同一条路
+	// 描述里绝不能出现半角逗号（连 JSON 示例 [2,5,7] 里的也不行）：jsonschema 标签
+	// 解析器按半角逗号切键值对，从那里往后整段描述会被静默吃掉，
+	// 于是模型看到的正好是"留空会怎样"那一半说明。用顿号。
+	Pages []int `json:"pages" jsonschema:"type=array,description=要看画面的页码（1 基，与 list_slides 返回的 position 一致）；例如 [2、5、7]；留空则只返回量测数字、不看图；一次最多 6 页"`
+}
+
+// 页号归一：去重、排序，并把 0 基误传挡在门口。
+//
+// 0 基误传是这里最可能的一种错，而且它**不报错**：传 [0,1] 时 0 只会被当成
+// "没有这一页"丢掉，实际拍的是第 1 页，而报告里写着"第 1 页"——模型以为看过了。
+func normalizePages(in []int) ([]int, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+	seen := map[int]bool{}
+	var out []int
+	for _, p := range in {
+		if p <= 0 {
+			return nil, fmt.Errorf("页号从 1 开始：pages 你传的是 %v（含 %d）。要看前两页是 pages:[1,2]", in, p)
+		}
+		if !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	sort.Ints(out)
+	return out, nil
 }
 
 func(a *AgentService) toolReviewSlides(ctx context.Context,arguments string)(string,error){
@@ -628,9 +659,25 @@ func(a *AgentService) toolReviewSlides(ctx context.Context,arguments string)(str
 	if _,err := a.DeckService.GetHTML(uid,args.DeckID);err != nil{
 		return "",err
 	}
-	report := a.runVisionReview(ctx,uid,args.DeckID)
-	if report == ""{
-		return "",errors.New("视觉审查不可用")
+
+	pages,err := normalizePages(args.Pages)
+	if err != nil{
+		return "",err
+	}
+	if len(pages) > maxReviewPages {
+		//报错而不是自己截断：截断的话模型以为这 9 页都看过了，实际只看了前 6 页，
+		//它会照着"都看过了"汇报。返回错误能让它自己挑最像有问题的几页重来。
+		return "",fmt.Errorf("一次最多看 %d 页，你点了 %d 页（%v）：挑最像有问题的 %d 页，剩下的分几次调用",
+			maxReviewPages, len(pages), pages, maxReviewPages)
+	}
+	if len(pages) == 0 {
+		//只看数字：与 write_deck 之后的自动体检同一条路，几秒、零模型开销
+		return a.measureDeck(ctx,uid,args.DeckID),nil
+	}
+
+	report,err := a.reviewPages(ctx,uid,args.DeckID,pages)
+	if err != nil{
+		return "",err
 	}
 	return report,nil
 }
@@ -738,7 +785,10 @@ func (a *AgentService)buildTools () map[string]Tool{
 		"ask_user":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name:"ask_user",
-				Description:openai.String("向用户提问，缺少关键决策信息、或执行影响较大/不可逆的操作前使用。一次提问 1~6 个问题，可带候选项（将你最推荐的答案写在候选项第一个）；必须单独调用，不要与其他工具同时调用。提问后本轮会暂停，用户的回答会作为你的工具结果返回。"),
+				Description:openai.String("向用户提问，缺少关键决策信息、或执行影响较大/不可逆的操作前使用。一次提问 1~6 个问题，可带候选项（将你最推荐的答案写在候选项第一个）；必须单独调用，不要与其他工具同时调用。提问后本轮会暂停，用户的回答会作为你的工具结果返回。"+
+					"\n\n不要在这些情况用它：用户只是在打招呼、闲聊、问你问题或问你能做什么（正常回话就行）；"+
+					"用户这句话还没说要什么产出、只是抛了个模糊的想法（用普通文字问一句更自然）。"+
+					"能用一句话问清的事不要开卡片——它会暂停整个循环，代价比一句话重得多。"),
 				Parameters: generateSchema[AskUserArgs](),
 			}),
 			Execute: a.toolAskUser,
@@ -818,10 +868,14 @@ func (a *AgentService)buildTools () map[string]Tool{
 		tools["review_slides"] = Tool{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "review_slides",
-				Description: openai.String("把这份 deck 实际渲染出来并逐页看一眼，返回版面审查报告" +
-					"（哪一页被缩放兜底压小了、哪一页文字超出画布、哪一处文字被裁或对比度不足等）。" +
-					"新建 deck 之后系统已经自动审过一次；改了若干页之后想确认没改坏，或用户说'看起来怪'、'帮我检查一下'时用它。" +
-					"只读、不改页面，报告里指出的问题由你自己决定改不改。"),
+				Description: openai.String(fmt.Sprintf("渲染这份 deck 并量测每一页（fit 缩放、最小字号、溢出、字数、版式重复），"+
+					"**可以用 pages 点名几页真正看一眼画面**：文字被裁、元素重叠、贴边、对比度不足、"+
+					"这页的图和标题讲的不是一回事——这些只有看图才知道，数字看不出来。"+
+					"pages 留空就只回数字（免费、几秒）；带了页号才会给这几页截图（每次调用最多 %d 页，慢、贵，挑着看）。"+
+					"看哪几页由你判断：优先 fit<0.90、最小字号<31px、溢出>1.02 的页。"+
+					"新建 deck 之后系统已自动量测过一次（结果在 write_deck 的 review 字段里）；"+
+					"改了若干页之后想确认没改坏，或用户说'看起来怪'、'帮我检查一下'时用它。"+
+					"只读、不改页面，报告里指出的问题由你自己决定改不改。", maxReviewPages)),
 				Parameters: generateSchema[ReviewSlidesArgs](),
 			}),
 			Execute: a.toolReviewSlides,
