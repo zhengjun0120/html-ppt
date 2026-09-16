@@ -25,3 +25,4 @@ dist/
 .vite/
 # 说明：backend/config.yaml（含数据库/LLM/JWT/SMTP 等真实密钥）与 backend/data/
 # 由 backend/.gitignore 覆盖，不进版本管理。
+tmp/
