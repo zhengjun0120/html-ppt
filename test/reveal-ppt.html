@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>reveal.js 功能之旅</title>
+
+  <!-- reveal.js 核心样式（CDN 引入，单文件即可运行） -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/moon.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+
+  <style>
+    :root {
+      --accent: #5eead4;      /* 青绿主色 */
+      --accent-dim: #2dd4bf;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+    }
+
+    .reveal {
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 34px;
+    }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    .reveal h1 { color: var(--accent); font-size: 2.2em; }
+    .reveal h2 { color: var(--accent); font-size: 1.5em; }
+    .reveal h3 { color: var(--text-main); }
+
+    .reveal .slides section { text-align: left; }
+    .reveal .slides section.center { text-align: center; }
+
+    .reveal p, .reveal li { color: var(--text-main); line-height: 1.6; }
+    .reveal .muted { color: var(--text-muted); font-size: 0.7em; }
+
+    /* 标题页 */
+    .title-slide h1 {
+      font-size: 2.6em;
+      text-shadow: 0 0 30px rgba(94, 234, 212, 0.35);
+    }
+    .title-slide .subtitle { color: var(--text-muted); margin-top: 0.6em; }
+    .title-slide .tag {
+      display: inline-block;
+      margin-top: 1.2em;
+      padding: 0.25em 1em;
+      border: 1px solid var(--accent-dim);
+      border-radius: 999px;
+      color: var(--accent);
+      font-size: 0.6em;
+    }
+
+    /* 卡片网格 */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6em 1.5em;
+      margin-top: 1em;
+    }
+    .card {
+      background: rgba(45, 212, 191, 0.06);
+      border: 1px solid rgba(94, 234, 212, 0.25);
+      border-radius: 10px;
+      padding: 0.7em 1em;
+    }
+    .card h3 { margin: 0 0 0.3em; font-size: 0.8em; color: var(--accent); }
+    .card p { margin: 0; font-size: 0.62em; color: var(--text-muted); }
+
+    /* 徽章 */
+    .badge {
+      display: inline-block;
+      background: var(--accent-dim);
+      color: #0b132b;
+      border-radius: 5px;
+      padding: 0 0.4em;
+      font-size: 0.65em;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    /* 代码块 */
+    .reveal pre { width: 100%; font-size: 0.55em; line-height: 1.5; }
+    .reveal pre code { padding: 0.8em; }
+
+    /* 引用块 */
+    .reveal blockquote {
+      border-left: 4px solid var(--accent);
+      padding-left: 1em;
+      color: var(--text-muted);
+      font-style: normal;
+    }
+
+    /* 结尾页 */
+    .end-slide h1 { text-shadow: 0 0 40px rgba(94, 234, 212, 0.5); }
+
+    /* 页脚水印 */
+    .footer {
+      position: absolute;
+      bottom: -2.2em;
+      left: 0;
+      font-size: 0.42em;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- 1. 封面 -->
+      <section class="center title-slide" data-background-gradient="linear-gradient(135deg, #0b132b 0%, #1a1b3a 60%, #14202e 100%)">
+        <h1>reveal.js 功能之旅</h1>
+        <p class="subtitle">用 HTML 写幻灯片 —— 那些值得一试的特性</p>
+        <span class="tag">按 → 或 空格键 开始</span>
+      </section>
+
+      <!-- 2. 目录 -->
+      <section>
+        <h2>本次内容</h2>
+        <ul>
+          <li><span class="badge">01</span> &nbsp;为什么用 HTML 写幻灯片</li>
+          <li><span class="badge">02</span> &nbsp;核心能力一览</li>
+          <li><span class="badge">03</span> &nbsp;代码演示：几行 HTML 就能跑</li>
+          <li><span class="badge">04</span> &nbsp;进阶玩法（纵向页面 / 分步显示 / PDF 导出）</li>
+        </ul>
+        <p class="footer">reveal.js 功能之旅</p>
+      </section>
+
+      <!-- 3. 为什么 -->
+      <section>
+        <h2>为什么用 HTML 写幻灯片？</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>✏️ 写作即排版</h3>
+            <p>Markdown / HTML 直接生成幻灯片，改内容就是改文本</p>
+          </div>
+          <div class="card">
+            <h3>🔧 版本可控</h3>
+            <p>纯文本文件，放进 Git 就能 diff、回滚、协作</p>
+          </div>
+          <div class="card">
+            <h3>🌐 随处放映</h3>
+            <p>浏览器打开即可，无需安装任何办公软件</p>
+          </div>
+          <div class="card">
+            <h3>🎨 前端能力全开</h3>
+            <p>动画、图表、代码高亮、嵌入式网页都做得到</p>
+          </div>
+        </div>
+        <p class="footer">01 · 为什么用 HTML 写幻灯片</p>
+      </section>
+
+      <!-- 4. 核心能力（分步出现） -->
+      <section>
+        <h2>核心能力一览</h2>
+        <p class="muted">（本页内容正在逐条"分步显示"——这就是 Fragment 功能）</p>
+        <ul>
+          <li class="fragment fade-up">🎯 <b>横向 / 纵向导航</b>：左右翻主章节，上下进子页面</li>
+          <li class="fragment fade-up">✨ <b>多种过渡动画</b>：slide / fade / zoom / convex / cube</li>
+          <li class="fragment fade-up">⌨️ <b>代码语法高亮</b>：内置 highlight.js 插件</li>
+          <li class="fragment fade-up">🎤 <b>演讲者视图</b>：按 <span class="badge">S</span> 查看备注与下一页</li>
+          <li class="fragment fade-up">📄 <b>一键导出 PDF</b>：直接打印成讲义</li>
+        </ul>
+        <p class="footer">02 · 核心能力一览</p>
+      </section>
+
+      <!-- 5. 代码演示 -->
+      <section>
+        <h2>几行 HTML 就能跑</h2>
+        <pre><code class="language-html" data-trim>
+&lt;link rel="stylesheet" href="dist/reveal.css"&gt;
+
+&lt;div class="reveal"&gt;
+  &lt;div class="slides"&gt;
+    &lt;section&gt;第一页&lt;/section&gt;
+    &lt;section&gt;第二页&lt;/section&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script src="dist/reveal.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  Reveal.initialize({ transition: 'slide' });
+&lt;/script&gt;
+        </code></pre>
+        <blockquote>每个 <code>&lt;section&gt;</code> 就是一页幻灯片，嵌套即可实现纵向子页面。</blockquote>
+        <p class="footer">03 · 代码演示</p>
+      </section>
+
+      <!-- 6. 纵向子页面演示（向下箭头可进入） -->
+      <section>
+        <section>
+          <h2>进阶：纵向子页面</h2>
+          <p>本页是一个「父页面」。</p>
+          <p class="muted">👇 按 <span class="badge">↓</span> 查看它嵌套的两个子页面</p>
+          <p class="footer">04 · 进阶玩法</p>
+        </section>
+        <section>
+          <h3>子页面 1 / 2</h3>
+          <p>同一章节的补充内容可以纵向排布，讲解时按需下钻。</p>
+        </section>
+        <section>
+          <h3>子页面 2 / 2</h3>
+          <p>讲完子页面后按 <span class="badge">→</span> 回到主线继续。</p>
+        </section>
+      </section>
+
+      <!-- 7. 快捷键 -->
+      <section>
+        <h2>放映时的实用按键</h2>
+        <table style="font-size: 0.7em; width: 100%;">
+          <thead>
+            <tr><th style="color: var(--accent);">按键</th><th style="color: var(--accent);">作用</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge">→ / 空格</span></td><td>下一页（或下一个 Fragment）</td></tr>
+            <tr><td><span class="badge">←</span></td><td>上一页</td></tr>
+            <tr><td><span class="badge">↓ / ↑</span></td><td>进入 / 返回纵向子页面</td></tr>
+            <tr><td><span class="badge">S</span></td><td>演讲者视图（备注 + 预览下一页）</td></tr>
+            <tr><td><span class="badge">F</span></td><td>全屏放映</td></tr>
+            <tr><td><span class="badge">O</span></td><td>幻灯片总览模式</td></tr>
+            <tr><td><span class="badge">ESC</span></td><td>退出当前模式</td></tr>
+          </tbody>
+        </table>
+        <p class="footer">04 · 进阶玩法</p>
+      </section>
+
+      <!-- 8. 结尾 -->
+      <section class="center end-slide" data-background-gradient="linear-gradient(135deg, #0b132b 0%, #1a1b3a 100%)">
+        <h1>谢谢观看 🎉</h1>
+        <p class="muted">本演示由单个 HTML 文件构成 · reveal.js v5</p>
+        <p class="muted" style="margin-top: 2em;">提示：按 <span class="badge">?</span> 可随时查看全部快捷键</p>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,                 // URL 记录当前页码，刷新不丢位置
+      transition: 'slide',        // 页面切换动画
+      backgroundTransition: 'fade',
+      controls: true,
+      progress: true,
+      slideNumber: false,
+      plugins: [RevealHighlight]
+    });
+  </script>
+
+</body>
+</html>
