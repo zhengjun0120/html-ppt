@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import Button from '@/components/ui/Button.vue'
@@ -9,6 +9,7 @@ import ChatMessages from '@/components/chat/ChatMessages.vue'
 import HistoryDrawer from '@/components/preview/HistoryDrawer.vue'
 import PreviewPane from '@/components/preview/PreviewPane.vue'
 import { ApiError } from '@/api/client'
+import { listSessions } from '@/api/chat'
 import { useChatStore } from '@/stores/chat'
 import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
@@ -26,19 +27,55 @@ const mobileView = ref<'preview' | 'chat'>('preview')
 const historyOpen = ref(false)
 const previewKey = ref(0)
 
+// 会话历史（M5）：deck 名下的历史会话，供切换器与自动恢复
+const sessions = ref<{ id: number; title: string; pending: boolean; updated_at: string }[]>([])
+
+async function loadSessions() {
+  if (isNew) return
+  try {
+    sessions.value = await listSessions(deckId)
+  } catch { /* 列表失败不阻塞工作台 */ }
+}
+
 onMounted(async () => {
   chat.reset(deckId)
   void deckStore.ensureList().catch(() => {})
-  // 深链钩子：?session=N 直接载入历史会话（也是 pending 恢复的测试入口）
   const q = Number(route.query.session)
   if (Number.isFinite(q) && q > 0) {
+    // 深链钩子：?session=N 直接载入指定历史会话
     try {
       await chat.loadSession(q)
+      void loadSessions()
+      return
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : '载入历史会话失败')
     }
   }
+  // 默认恢复最近一次对话（M5）
+  await loadSessions()
+  if (sessions.value.length > 0) {
+    try {
+      await chat.loadSession(sessions.value[0].id)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : '载入上次对话失败')
+    }
+  }
 })
+
+watch(
+  () => chat.status,
+  (s, old) => {
+    // 一轮对话结束后刷新会话列表（新会话已入库、旧会话时间更新）
+    if (old === 'streaming' && s === 'idle') void loadSessions()
+  },
+)
+
+function switchSession(id: number) {
+  if (id === (chat.sessionId ?? 0)) return
+  void chat
+    .loadSession(id)
+    .catch((e) => toast.error(e instanceof ApiError ? e.message : '切换会话失败'))
+}
 
 function newConversation() {
   chat.reset(deckId)
@@ -70,6 +107,22 @@ function onRestored() {
           <PhPlus :size="12" />
           新对话
         </Button>
+      </div>
+      <!-- 会话切换器：自动恢复最近对话（M5） -->
+      <div v-if="!isNew && sessions.length" class="border-b border-line px-3 py-1.5">
+        <select
+          class="w-full cursor-pointer rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 outline-none focus-visible:border-accent"
+          :value="chat.sessionId ?? 0"
+          @change="switchSession(Number(($event.target as HTMLSelectElement).value))"
+        >
+          <option v-if="chat.sessionId == null" :value="0">本次对话</option>
+          <option v-for="s in sessions" :key="s.id" :value="s.id">
+            {{ s.title || `会话 ${s.id}` }}{{ s.pending ? '（待回答）' : '' }}
+          </option>
+          <option v-if="chat.sessionId != null && !sessions.some((s) => s.id === chat.sessionId)" :value="chat.sessionId">
+            本次对话（进行中）
+          </option>
+        </select>
       </div>
       <ChatMessages />
       <div class="border-t border-line p-3 pb-14 md:pb-3">
