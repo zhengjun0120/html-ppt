@@ -17,9 +17,14 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), middleware.CORS(cfg.Server.AllowOrigins))
 
-	api := r.Group("/api")
+		api := r.Group("/api")
 	{
 		api.GET("/health", h.Health)
+
+		// deck-v2 模板清单：公开。模板元数据不含用户数据，画廊（含登录前的
+		// 展示场景）都要用。单个模板详情走同一条鉴权豁免逻辑。
+		api.GET("/templates", h.ListTemplates)
+		api.GET("/templates/:id", h.GetTemplate)
 
 		// 视觉审查的一次性取页通道：**必须公开**——无头浏览器是"导航"到它的，
 		// 导航带不了 Authorization 头。安全性靠一次性 nonce（见 vision/grant.go）：
@@ -79,6 +84,15 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	// （静态资源不挂 Auth：浏览器加载 <script src> 时不会带 Authorization 头）
 	assets := r.Group("", revalidateStatic())
 	assets.Static("/assets", cfg.Assets.Dir)
+
+	// deck-v2 模板库静态服务：画廊的 live 预览 iframe 直接加载
+	//   /templates/<id>/index.html（demo 数据完整可交互）
+	// 模板目录不含用户数据，公开；实例化出的 deck 走的是 /api/decks/:id/file，
+	// 不经过这条路，归属校验不受影响。
+	if h.TemplatesAvailable() {
+		templates := r.Group("", revalidateStatic())
+		templates.Static("/templates", cfg.Templates.Dir)
+	}
 
 	// SSE 测试台（同源访问，无 CORS 问题）：http://localhost:8080/chat-test
 	r.StaticFile("/chat-test", filepath.Join(filepath.Dir(cfg.Assets.Dir), "chat-test.html"))

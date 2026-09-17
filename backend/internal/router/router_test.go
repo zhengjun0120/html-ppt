@@ -22,7 +22,7 @@ func TestRenderRouteIsRegistered(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	// 路由注册阶段不会调用任何 handler 方法，所以依赖可以全传 nil；
 	// 但 config 得给个真实存在的 assets 目录，否则 gin 的 Static 会在注册时报错。
-	h := handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()))
+	h := newTestHandler(t)
 	engine := New(&config.Config{
 		Assets: config.Assets{Dir: t.TempDir()},
 		Auth:   config.Auth{JWTSecret: "test"},
@@ -49,7 +49,7 @@ func TestRenderRouteIsRegistered(t *testing.T) {
 // 只表现为一个空框——和"截图没存下来"长得一模一样。
 func TestTraceRoutesAreRegistered(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()))
+	h := newTestHandler(t)
 	engine := New(&config.Config{
 		Assets: config.Assets{Dir: t.TempDir()},
 		Auth:   config.Auth{JWTSecret: "test"},
@@ -94,7 +94,7 @@ func TestTraceRoutesAreRegistered(t *testing.T) {
 // /chat/answer、/chat/pending 撞参数名"这件事。
 func TestChatHistoryRoutesAreRegistered(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()))
+	h := newTestHandler(t)
 	engine := New(&config.Config{
 		Assets: config.Assets{Dir: t.TempDir()},
 		Auth:   config.Auth{JWTSecret: "test"},
@@ -125,7 +125,7 @@ func TestChatHistoryRoutesAreRegistered(t *testing.T) {
 // 中间件拦下来（401 而不是 200/404）。
 func TestAuthRefreshRouteIsRegisteredAndGuarded(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()))
+	h := newTestHandler(t)
 	engine := New(&config.Config{
 		Assets: config.Assets{Dir: t.TempDir()},
 		Auth:   config.Auth{JWTSecret: "test"},
@@ -154,4 +154,13 @@ func performRequest(engine *gin.Engine, method, path string) *httptest.ResponseR
 	req := httptest.NewRequest(method, path, nil)
 	engine.ServeHTTP(w, req)
 	return w
+}
+
+// newTestHandler 路由注册测试的公共构造：依赖全 nil（注册阶段不会调用 handler），
+// 模板库传 nil（TemplatesAvailable=false，不挂 /templates 静态路由——那是
+// handler/templates_test.go 的职责）。
+func newTestHandler(t *testing.T) *handler.Handler {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	return handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), nil)
 }

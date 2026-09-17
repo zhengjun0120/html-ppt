@@ -22,6 +22,7 @@ import (
 	"html-ppt/backend/internal/router"
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
@@ -93,6 +94,18 @@ func run() error {
 
 	deckSvc := deck.New(cfg.Data.Dir, cfg.Assets.Dir, st)
 
+	// deck-v2 模板注册表：启动时一次加载+校验。失败不阻塞整个服务
+	//（旧管线与登录等照常工作），但模板相关接口不可用、日志里有全貌——
+	// 半成品模板让生成管线拿到坏契约的代价，远高于"模板库暂时不可用"。
+	var templateReg *template.Registry
+	if reg, err := template.NewRegistry(cfg.Templates.Dir, cfg.Assets.Dir); err != nil {
+		log.Printf("[warn] 模板库加载有问题: %v", err)
+		templateReg = reg // 部分模板可能仍注册成功
+	} else {
+		templateReg = reg
+	}
+	log.Printf("[info] 模板库: %d 个模板就绪（%s）", templateReg.Count(), cfg.Templates.Dir)
+
 	// 视觉审查的一次性门票表：agent 发票（Issue）、handler 收票（Take），
 	// 必须是**同一个实例**——各建一份的话，票发出去永远换不回来（而且不报错，只是 404）。
 	visionGrants := &vision.Grants{}
@@ -124,7 +137,7 @@ func run() error {
 		}
 	}
 
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir))
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 

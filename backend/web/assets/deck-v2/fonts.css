@@ -1,0 +1,72 @@
+/* deck-v2 :: fonts.css — 自托管字体，替代原 fonts.css 的 Google Fonts @import。
+ *
+ * 为什么自托管：① 国内访问 Google Fonts 不稳定，字体加载失败会让"截图量测"
+ * 和"用户看到的"用两套字体；② 离线/内网部署也要有确定的渲染结果。
+ *
+ * 字体清单与分工：
+ *   Inter（可变字重，拉丁）         — 无衬线正文/标题的西文，各模板 sans 栈第一位
+ *   Noto Sans SC（简体子集×3字重）  — 中文无衬线
+ *   JetBrains Maple Mono（含CJK）   — 等宽（JetBrains Mono 拉丁 + Maple Mono 中日韩，
+ *                                     上游自动跟踪构建；见 JETBRAINS-MAPLE-OFL.txt）
+ *
+ * 授权：Inter / Noto Sans SC / JetBrains Maple Mono 均为 SIL OFL-1.1，
+ * 授权全文随字体放在同目录（INTER-OFL.txt / JETBRAINS-MAPLE-OFL.txt / NOTO-OFL.txt）。
+ * 所有字体栈都保留系统回退：字体加载失败时渲染仍然成立，只是细节退化。
+ */
+
+/* ---- Inter（拉丁，可变字重 100-900）---- */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/inter-latin-wght-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/inter-latin-italic-wght-normal.woff2') format('woff2');
+}
+
+/* ---- Noto Sans SC（简体子集，覆盖 CJK；拉丁由 Inter 兜住）---- */
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/noto-sans-sc-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/noto-sans-sc-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/noto-sans-sc-700.woff2') format('woff2');
+}
+
+/* ---- JetBrains Maple Mono（JetBrains Mono 拉丁 + Maple 中日韩）----
+ * 家族名刻意声明为 'JetBrains Mono'：模板字体栈里写的就是它，
+ * Maple 层对用户透明（它是 JetBrains Mono 的 CJK 补全）。 */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/JetBrainsMapleMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/assets/deck-v2/fonts/JetBrainsMapleMono-Bold.woff2') format('woff2');
+}

@@ -4,6 +4,7 @@ import (
 	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
@@ -18,12 +19,18 @@ type Handler struct {
 	agent        *agent.AgentService
 	auth         *auth.Service
 	renderGrants *vision.Grants
+	// templates deck-v2 模板注册表（可能为 nil：模板库损坏时不阻塞整个服务，
+	// 只有模板相关接口不可用）。detail 同上。
+	templates *template.Registry
 	// traces 观测记录的读取端（写端在 agent 里）。**不受 features.trace 影响也要装配**：
 	// 关掉的是"继续记录"，已经落盘的记录应该照样能看，
 	// 否则调一次开关就会把之前跑出来的东西变成读不到的孤儿文件。
 	traces *trace.Store
 }
 
-func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store) *Handler {
-	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates}
 }
+
+// TemplatesAvailable 模板库是否可用（router 据此决定挂不挂预览静态路由）。
+func (h *Handler) TemplatesAvailable() bool { return h.templates != nil }

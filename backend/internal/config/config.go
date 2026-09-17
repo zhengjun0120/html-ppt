@@ -14,20 +14,68 @@ import (
 // Config 是整个后端的配置总入口。
 // 优先级：代码默认值 < config.yaml < 环境变量。
 type Config struct {
-	Server Server `yaml:"server"`
-	Data   Data   `yaml:"data"`
-	Assets Assets `yaml:"assets"`
-	DB     DB     `yaml:"db"`
-	LLM    LLM    `yaml:"llm"`
-	Auth   Auth   `yaml:"auth"`
-	SMTP   SMTP   `yaml:"smtp"`
-	Redis  Redis  `yaml:"redis"`
-	Crypto Crypto `yaml:"crypto"`
+	Server    Server    `yaml:"server"`
+	Data      Data      `yaml:"data"`
+	Assets    Assets    `yaml:"assets"`
+	Templates Templates `yaml:"templates"`
+	DB        DB        `yaml:"db"`
+	LLM       LLM       `yaml:"llm"`
+	Auth      Auth      `yaml:"auth"`
+	SMTP      SMTP      `yaml:"smtp"`
+	Redis     Redis     `yaml:"redis"`
+	Crypto    Crypto    `yaml:"crypto"`
 	// Features 功能开关。零值 = 全关（托管部署不配就是安全默认）；本地开发在
 	// config.yaml 里显式打开。
 	Features Features `yaml:"features"`
 	Vision   Vision   `yaml:"vision"`
 	Trace    Trace    `yaml:"trace"`
+	// DeckV2 deck-v2 生成管线的可调参数（批次、各阶段轮数预算、lint 词表）。
+	// 零值时使用代码内默认值（见 config 包的 Default* 常量）。
+	DeckV2 DeckV2 `yaml:"deck_v2"`
+}
+
+// Templates 模板库目录（deck-v2）。
+type Templates struct {
+	Dir string `yaml:"dir"` // 相对 config.yaml 所在目录；空 = ./templates
+}
+
+// DeckV2 生成管线参数。
+type DeckV2 struct {
+	BatchSize int `yaml:"batch_size"` // write_pages 每批页数；0 = DefaultBatchSize
+	MaxTurns  struct {
+		Clarify        int `yaml:"clarify"`
+		Outline        int `yaml:"outline"`
+		OutlineReview  int `yaml:"outline_review"`
+		Generate       int `yaml:"generate"`
+		Iterate        int `yaml:"iterate"`
+	} `yaml:"max_turns"`
+	Lint LintCfg `yaml:"lint"`
+}
+
+// LintCfg AI 味 lint 的可配置部分。词表在代码里有内置默认，这里可整体覆盖。
+type LintCfg struct {
+	CJK_Banned    []string `yaml:"cjk_banned"`
+	EN_Banned     []string `yaml:"en_banned"`
+	TitleMaxChars int      `yaml:"title_max_chars"` // 0 = DefaultTitleMaxChars
+	BulletMaxChars int     `yaml:"bullet_max_chars"`
+	EyebrowPerPages int    `yaml:"eyebrow_per_pages"`
+}
+
+// DeckV2 默认值。零值语义见各字段注释。
+const (
+	DefaultBatchSize     = 3 // write_pages 每批页数（D14：2-4，默认 3）
+	DefaultTitleMaxChars = 16
+	DefaultBulletMaxChars = 28
+	DefaultEyebrowPerPages = 3
+)
+
+// BatchSizeOrDefault 批大小护栏：配置写出界（<1 或 >4）时回落默认。
+// 上界 4 是刻意的：D14 的结论是"2-4 页一批"，配置不该能把它改成一把梭。
+func (d DeckV2) BatchSizeOrDefault() int {
+	if d.BatchSize >= 2 && d.BatchSize <= 4 {
+		return d.BatchSize
+	}
+	return DefaultBatchSize
 }
 
 // Features 控制"能力型"功能的挂载。关掉某项 = agent 连对应工具都看不到，
@@ -182,6 +230,14 @@ func Load(path string) (*Config, error) {
 	if !filepath.IsAbs(cfg.Assets.Dir) {
 		cfg.Assets.Dir = filepath.Join(baseDir, cfg.Assets.Dir)
 	}
+	// 模板库目录同款归一化；空值 = ./templates
+	cfg.Templates.Dir = strings.TrimSpace(cfg.Templates.Dir)
+	if cfg.Templates.Dir == "" {
+		cfg.Templates.Dir = "./templates"
+	}
+	if !filepath.IsAbs(cfg.Templates.Dir) {
+		cfg.Templates.Dir = filepath.Join(baseDir, cfg.Templates.Dir)
+	}
 	// 再取一次绝对路径：当 config.yaml 本身是用相对路径加载时，上面的 baseDir 是 "."，
 	// Join 出来仍是相对路径——那"与 cwd 解耦"的契约就没真正成立（换个目录启动就找不到
 	// 文件了：静态资源 404、read_component 读不到组件库）。这里补实这个契约。
@@ -266,6 +322,7 @@ func defaultConfig() *Config {
 		},
 		Data:   Data{Dir: "./data"},
 		Assets: Assets{Dir: "./web/assets"},
+		Templates: Templates{Dir: "./templates"},
 		DB: DB{
 			Enabled: true,
 			Host:    "127.0.0.1",
