@@ -42,8 +42,8 @@ function autoGrow(e: Event) {
       <textarea
         v-model="text"
         rows="1"
-        :disabled="chat.status === 'paused'"
-        placeholder="想对这份文稿做什么？Enter 发送，Shift+Enter 换行"
+        :disabled="chat.status === 'paused' || chat.restoring"
+        :placeholder="chat.restoring ? '正在载入上次对话…' : '想对这份文稿做什么？Enter 发送，Shift+Enter 换行'"
         class="max-h-[120px] w-full resize-none rounded-control border border-line bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none transition-[border-color,box-shadow] placeholder:text-ink-3 focus-visible:border-accent focus-visible:shadow-[0_0_0_3px_var(--ring)] disabled:cursor-not-allowed disabled:opacity-55"
         @keydown="onKeydown"
         @input="autoGrow"

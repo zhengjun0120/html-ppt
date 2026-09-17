@@ -16,6 +16,16 @@ import type {
 let idSeq = 0
 const nextId = () => ++idSeq
 
+/** 会改动 deck 内容/外观的工具（与后端 func_tool.go 注册名对齐）：命中时预览需要刷新 */
+export const DECK_MODIFYING_TOOLS = new Set([
+  'write_deck',
+  'update_slide',
+  'insert_slide',
+  'delete_slide',
+  'update_theme',
+  'update_custom_css',
+])
+
 /** 当前流的 abort 控制器（非序列化状态，不放 store.state） */
 let abortCtl: AbortController | null = null
 
@@ -29,11 +39,15 @@ export const useChatStore = defineStore('chat', {
     pendingAsk: null as { toolCallId: string; questions: AskQuestion[] } | null,
     /** 并行工具调用：tool_index → tool_call_id（流式期间） */
     toolIndexToId: {} as Record<number, string>,
+    /** 本次 run 中 agent 是否已成功改动文稿（预览自动刷新的信号） */
+    deckTouched: false,
+    /** 正在载入历史会话（期间禁止发送，避免恢复流程吞掉新消息） */
+    restoring: false,
   }),
 
   getters: {
-    /** 输入框可发消息：不在流式/暂停态 */
-    canSend: (s) => s.status === 'idle',
+    /** 输入框可发消息：不在流式/暂停态，也不在历史恢复中 */
+    canSend: (s) => s.status === 'idle' && !s.restoring,
   },
 
   actions: {
@@ -44,6 +58,7 @@ export const useChatStore = defineStore('chat', {
       this.events = []
       this.pendingAsk = null
       this.toolIndexToId = {}
+      this.deckTouched = false
       abortCtl?.abort()
       abortCtl = null
     },
@@ -115,6 +130,9 @@ export const useChatStore = defineStore('chat', {
             tool.state = 'ok'
             tool.argsDone = true
             tool.result = ev.content
+            // 写操作成功 = deck 已被改动，工作台据此刷新预览。
+            // 名字优先取工具卡自己的（tool_start 时记录），事件缺 tool_name 也能命中
+            if (DECK_MODIFYING_TOOLS.has(tool.name || ev.tool_name || '')) this.deckTouched = true
           }
           break
         }
@@ -185,6 +203,7 @@ export const useChatStore = defineStore('chat', {
     async send(text: string, webSearch = false) {
       const content = text.trim()
       if (!content || this.status !== 'idle') return
+      this.deckTouched = false
       this.events.push({ kind: 'user', id: nextId(), text: content })
       this.status = 'streaming'
       await this.consume(() =>
@@ -195,6 +214,7 @@ export const useChatStore = defineStore('chat', {
     /** 回答 ask_user 提问 */
     async answer(answers: { question: string; answer: string }[], note: string) {
       if (this.sessionId == null || this.status !== 'paused') return
+      this.deckTouched = false
       const ask = [...this.events].reverse().find((e) => e.kind === 'ask' && e.active)
       if (ask && ask.kind === 'ask') {
         ask.active = false
@@ -246,21 +266,26 @@ export const useChatStore = defineStore('chat', {
      */
     async loadSession(sessionId: number) {
       const { request } = await import('@/api/client')
-      const t = await request<Transcript>(`/api/chat/sessions/${sessionId}/messages`)
-      abortCtl?.abort()
-      abortCtl = null
-      this.sessionId = sessionId
-      this.deckId = t.session.deck_id
-      this.status = t.session.pending ? 'paused' : 'idle'
-      this.toolIndexToId = {}
-      this.events = projectTranscript(t)
-      const lastAsk = [...this.events].reverse().find(
-        (e): e is Extract<ViewEvent, { kind: 'ask' }> => e.kind === 'ask',
-      )
-      this.pendingAsk =
-        t.session.pending && lastAsk
-          ? { toolCallId: lastAsk.toolCallId, questions: lastAsk.questions }
-          : null
+      this.restoring = true
+      try {
+        const t = await request<Transcript>(`/api/chat/sessions/${sessionId}/messages`)
+        abortCtl?.abort()
+        abortCtl = null
+        this.sessionId = sessionId
+        this.deckId = t.session.deck_id
+        this.status = t.session.pending ? 'paused' : 'idle'
+        this.toolIndexToId = {}
+        this.events = projectTranscript(t)
+        const lastAsk = [...this.events].reverse().find(
+          (e): e is Extract<ViewEvent, { kind: 'ask' }> => e.kind === 'ask',
+        )
+        this.pendingAsk =
+          t.session.pending && lastAsk
+            ? { toolCallId: lastAsk.toolCallId, questions: lastAsk.questions }
+            : null
+      } finally {
+        this.restoring = false
+      }
     },
 
     /** 兜底：仅知 session id 时从服务端拉 pending 重建提问卡 */

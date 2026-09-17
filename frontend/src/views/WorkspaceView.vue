@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import Button from '@/components/ui/Button.vue'
@@ -12,6 +12,7 @@ import { ApiError } from '@/api/client'
 import { listSessions } from '@/api/chat'
 import { useChatStore } from '@/stores/chat'
 import { useDeckStore } from '@/stores/deck'
+import { usePreviewAutoRefresh } from '@/lib/previewRefresh'
 import { useToast } from '@/stores/toast'
 
 const route = useRoute()
@@ -25,6 +26,9 @@ const toast = useToast()
 // 窄屏（<md）：对话/预览 二选一；桌面双栏
 const mobileView = ref<'preview' | 'chat'>('preview')
 const historyOpen = ref(false)
+// agent 写操作后自动刷新预览（组件卸载时停止）
+const stopPreviewRefresh = usePreviewAutoRefresh(chat, () => { previewKey.value += 1 })
+onBeforeUnmount(stopPreviewRefresh)
 const previewKey = ref(0)
 
 // 会话历史（M5）：deck 名下的历史会话，供切换器与自动恢复

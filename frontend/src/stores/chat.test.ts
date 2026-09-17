@@ -39,6 +39,17 @@ describe('chat store 事件归一（handleEvent）', () => {
     expect(tools[1]).toMatchObject({ name: 'vision_review', state: 'error', args: '{"page":2}' })
   })
 
+  it('写操作成功置 deckTouched，只读工具不影响', () => {
+    const s = store()
+    s.handleEvent({ type: 'tool_start', tool_index: 0, tool_call_id: 'r1', tool_name: 'review_slides' })
+    s.handleEvent({ type: 'tool_call', tool_call_id: 'r1', content: '报告' })
+    expect(s.deckTouched).toBe(false)
+
+    s.handleEvent({ type: 'tool_start', tool_index: 1, tool_call_id: 'w1', tool_name: 'update_slide' })
+    s.handleEvent({ type: 'tool_call', tool_call_id: 'w1', content: '已更新' })
+    expect(s.deckTouched).toBe(true)
+  })
+
   it('ask_user 进入暂停态，done/error 收尾', () => {
     const s = store()
     s.handleEvent({ type: 'delta', content: '确认一下' })
