@@ -20,3 +20,8 @@
 - runtime.js：1162 行，零依赖
 - base.css：257 行
 - animations/animations.css：入场动画库
+
+## 2026-09-18 质量验收补充
+
+（patch 落在模板而非 runtime——runtime.js/base.css 保持上游原样。tech-sharing/style.css
+追加的 `.slide>.deck-footer` 定位修复记入该模板的 ADAPTATION.md。）

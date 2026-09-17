@@ -480,3 +480,41 @@ func (s *Service) PreviewHTML(userID uint, id string) (string, error) {
 	inline := "<style>\n" + string(css) + "\n</style>"
 	return styleLinkRe.ReplaceAllLiteralString(html, inline), nil
 }
+
+// ToPromptText 大纲的模型友好文本形态（generate 阶段注入 system prompt）。
+// 用紧凑的行式而不是裸 JSON：省 token、模型读得更快、也不容易教它把 JSON 误当输出格式。
+func (o *Outline) ToPromptText() string {
+	var b strings.Builder
+	if o.Meta.Audience != "" {
+		fmt.Fprintf(&b, "受众：%s。", o.Meta.Audience)
+	}
+	if o.Meta.DurationMin > 0 {
+		fmt.Fprintf(&b, "时长：%d 分钟。", o.Meta.DurationMin)
+	}
+	if o.Meta.Tone != "" {
+		fmt.Fprintf(&b, "基调：%s。", o.Meta.Tone)
+	}
+	if o.Narrative.Hook != "" {
+		fmt.Fprintf(&b, "\n叙事钩子：%s", o.Narrative.Hook)
+	}
+	if len(o.Narrative.Arcs) > 0 {
+		fmt.Fprintf(&b, "\n叙事分段：%s", strings.Join(o.Narrative.Arcs, " → "))
+	}
+	b.WriteString("\n\n逐页：")
+	for _, p := range o.Pages {
+		fmt.Fprintf(&b, "\n第 %d 页 [%s] %s", p.No, p.Role, p.Title)
+		for _, pt := range p.Points {
+			fmt.Fprintf(&b, "\n  · %s", pt)
+		}
+		if p.LayoutHint != "" {
+			fmt.Fprintf(&b, "\n  （版式建议：%s）", p.LayoutHint)
+		}
+		for _, m := range p.Materials {
+			fmt.Fprintf(&b, "\n  （素材：%s %s）", m.Type, m.Desc)
+		}
+		if p.Notes != "" {
+			fmt.Fprintf(&b, "\n  （备注：%s）", p.Notes)
+		}
+	}
+	return b.String()
+}

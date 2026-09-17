@@ -141,9 +141,9 @@ func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, de
 	if deckID == "" {
 		if continuation {
 			// 冷启动的 ask_user 恢复轮：澄清的答案已到手，该产出大纲了
-			return scopeDecision{scope: as.scopeForStage("outlining"), sys: BuildStagePrompt("outlining", "", nil), isV2: true}, nil
+			return scopeDecision{scope: as.scopeForStage("outlining"), sys: BuildStagePrompt("outlining", "", nil, nil), isV2: true}, nil
 		}
-		return scopeDecision{scope: as.scopeForStage("clarifying"), sys: BuildStagePrompt("", "", nil), isV2: true}, nil
+		return scopeDecision{scope: as.scopeForStage("clarifying"), sys: BuildStagePrompt("", "", nil, nil), isV2: true}, nil
 	}
 	if !as.DeckService.IsV2(deckID) {
 		return scopeDecision{scope: as.scopeForV1(), sys: as.buildSystemMessage(userID, deckID)}, nil
@@ -159,9 +159,10 @@ func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, de
 	case deck.StageGenerating:
 		return scopeDecision{}, ErrStageLocked{Msg: "deck 正在生成中：请等生成完成，或刷新页面后用「继续生成」恢复"}
 	case deck.StageOutlining, deck.StageOutlineReview:
-		return scopeDecision{scope: as.scopeForStage(df.Stage), sys: BuildStagePrompt(df.Stage, deckID, as.templateOrNil(df)), isV2: true}, nil
+		return scopeDecision{scope: as.scopeForStage(df.Stage), sys: BuildStagePrompt(df.Stage, deckID, as.templateOrNil(df), nil), isV2: true}, nil
 	case deck.StageIterating:
-		return scopeDecision{scope: as.scopeForStage(deck.StageIterating), sys: BuildStagePrompt(deck.StageIterating, deckID, as.templateOrNil(df)), isV2: true}, nil
+		o, _ := as.DeckService.ReadOutline(userID, deckID)
+		return scopeDecision{scope: as.scopeForStage(deck.StageIterating), sys: BuildStagePrompt(deck.StageIterating, deckID, as.templateOrNil(df), o), isV2: true}, nil
 	default:
 		return scopeDecision{}, fmt.Errorf("deck 处于未知阶段 %q", df.Stage)
 	}
@@ -734,7 +735,7 @@ func (as *AgentService) recordRunVersions(ctx context.Context, rr *runRecorder) 
 // 整体覆盖会话消息——大纲产物已持久化在 deck 目录里，生成 run 是自包含的执行，
 // 会话回放让位给"生成全记录"。断线恢复：每批 write_pages 落盘即持久化，
 // stage 停在 generating，resume=true 的 run 会先对齐现状再续写。
-func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionID uint, resume bool, emit func(StreamEvent) error) (uint, error) {
+func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionID uint, deckIDParam string, resume bool, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
 	client := as.clientFor(ctx)
 
@@ -743,7 +744,19 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 		return 0, err
 	}
 	if sess.DeckID == "" {
-		return sess.ID, errors.New("会话没有关联的 deck：请先完成大纲与模板选择")
+		// 会话可能没绑上 deck（ask_user 暂停期间的绑定不发生）。generate 的 URL
+		// 里就带着 deck id——这里直接绑，而不是报错让用户重来。
+		if deckIDParam == "" || as.DeckService.EnsureOwner(userID, deckIDParam) != nil {
+			return sess.ID, errors.New("会话没有关联的 deck：请先完成大纲与模板选择")
+		}
+		if as.st != nil {
+			if err := as.st.DB.Model(&store.ChatSession{}).Where("id = ?", sess.ID).Update("deck_id", deckIDParam).Error; err == nil {
+				sess.DeckID = deckIDParam
+			}
+		}
+		if sess.DeckID == "" {
+			return sess.ID, errors.New("绑定 deck 失败")
+		}
 	}
 	df, err := as.DeckService.GetDeckV2(userID, sess.DeckID)
 	if err != nil {
@@ -752,6 +765,8 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 	if df.Stage != deck.StageGenerating {
 		return sess.ID, ErrStageLocked{Msg: fmt.Sprintf("deck 阶段为 %s，不在生成态", df.Stage)}
 	}
+
+	outline, _ := as.DeckService.ReadOutline(userID, sess.DeckID)
 
 	var userMsg string
 	if resume {
@@ -762,7 +777,7 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 			"然后分批 write_pages 写完全部页，处理量测与 lint 反馈，需要时 review_slides 看图，最后如实汇报。"
 	}
 	messages := []openai.ChatCompletionMessageParamUnion{
-		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df)))),
+		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df), outline))),
 		openai.UserMessage(userMsg),
 	}
 	if err := as.persistSession(sess, messages); err != nil {

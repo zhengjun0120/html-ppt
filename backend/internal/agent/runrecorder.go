@@ -104,6 +104,32 @@ func(rr *runRecorder)noteToolCall(name,argsJSON,resultJSON string){
 		if json.Unmarshal([]byte(resultJSON),&res) == nil && res.DeckID!= ""{
 			rr.note(res.DeckID,"调整主题")
 		}
+	// —— deck-v2 工具：会话绑定（bindDeckFromRun）与历史记档的 detail 都靠这些 note ——
+	case "submit_outline":
+		var res struct {
+			DeckID string `json:"deck_id"`
+			Pages  int    `json:"pages"`
+		}
+		if json.Unmarshal([]byte(resultJSON),&res) == nil && res.DeckID != ""{
+			rr.note(res.DeckID,fmt.Sprintf("提交大纲（创建 deck，%d 页）",res.Pages))
+		}
+	case "plan_pages":
+		var a struct {
+			DeckID string `json:"deck_id"`
+		}
+		if json.Unmarshal([]byte(argsJSON),&a) == nil && a.DeckID != ""{
+			rr.note(a.DeckID,"规划版式")
+		}
+	case "write_pages":
+		var a struct {
+			DeckID string `json:"deck_id"`
+		}
+		var res struct {
+			Written int `json:"written"`
+		}
+		if json.Unmarshal([]byte(argsJSON),&a) == nil && json.Unmarshal([]byte(resultJSON),&res) == nil && a.DeckID != "" && res.Written > 0{
+			rr.note(a.DeckID,fmt.Sprintf("写入 %d 页",res.Written))
+		}
 	}
 }
 

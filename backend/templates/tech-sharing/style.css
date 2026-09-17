@@ -55,3 +55,10 @@
  * --accent-ink 保持深色墨（浅色 accent 上的文字），默认值已实测 12.3:1。 */
 .tpl-tech-sharing.v-blue{--accent:#79c0ff;--accent-2:#7ee787;--grad:linear-gradient(120deg,#79c0ff 0%,#d2a8ff 60%,#7ee787 100%)}
 .tpl-tech-sharing.v-ember{--accent:#ffa657;--accent-2:#79c0ff;--grad:linear-gradient(120deg,#ffa657 0%,#ff7b72 55%,#d2a8ff 100%)}
+
+/* [deck-v2 patch] 版式修复：上面的 `.slide>*{position:relative}` 会连带覆盖
+ * .deck-footer 的 absolute 定位（footer 变成文档流内元素、跟在最后一行内容后，
+ * 与讲者行重叠）。恢复这两个 chrome 元素的绝对锚定——它们必须贴住画布边。
+ * 这个 bug 在上游 demo 里不显形（demo cover 内容恰好占满），LLM 生成的短封面页必现。 */
+.tpl-tech-sharing .slide > .deck-footer,
+.tpl-tech-sharing .slide > .deck-header{position:absolute}

@@ -68,7 +68,7 @@ func stagePromptName(stage string) string {
 // 静态规则放前面——打断前缀缓存的代价见 v1 buildSystemMessage 的实测注释。
 //
 //	tpl 非 nil 时（generating/iterating）追加「模板契约」段：版式索引 + rules.md 全文。
-func BuildStagePrompt(stage, deckID string, tpl *template.Template) string {
+func BuildStagePrompt(stage, deckID string, tpl *template.Template, o *deck.Outline) string {
 	var b strings.Builder
 	b.WriteString(prompt("shared.md"))
 	b.WriteString("\n\n")
@@ -88,6 +88,19 @@ func BuildStagePrompt(stage, deckID string, tpl *template.Template) string {
 	}
 	if stage == deck.StageOutlineReview {
 		b.WriteString("\n\n当前处于「大纲待确认」状态：用户可能在大纲面板里直接改，也可能在对话里让你改。让你改就走修订模式；用户说\"确认了/没问题了\"时提示他点界面上的「确认大纲」按钮——你没有确认工具，确认动作在用户手里。")
+	}
+	// 大纲注入：生成阶段是全文（LLM 写页的唯一内容来源）；迭代阶段是紧凑索引
+	//（页码+role+标题，改哪页对哪页）。outline 为 nil 时跳过（v1 路径不会到这里）。
+	if o != nil {
+		if stage == deck.StageGenerating {
+			b.WriteString("\n\n## 大纲（已确认，页数与内容以此为准）\n")
+			b.WriteString(o.ToPromptText())
+		} else {
+			b.WriteString("\n\n## 大纲索引（页码 · role · 标题）\n")
+			for _, pg := range o.Pages {
+				fmt.Fprintf(&b, "\n- 第 %d 页 [%s] %s", pg.No, pg.Role, pg.Title)
+			}
+		}
 	}
 	if tpl != nil && (stage == deck.StageGenerating || stage == deck.StageIterating) {
 		b.WriteString("\n\n## 模板契约：")

@@ -92,8 +92,8 @@ func (a *AgentService) toolSubmitOutline(ctx context.Context, arguments string) 
 		return "", err
 	}
 	var args submitOutlineArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("submit_outline 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("submit_outline: %v", err)
 	}
 	o := args.toOutline()
 	if err := o.Validate(); err != nil {
@@ -130,8 +130,8 @@ func (a *AgentService) toolReadOutline(ctx context.Context, arguments string) (s
 		return "", err
 	}
 	var args deckIDArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("read_outline 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("read_outline: %v", err)
 	}
 	o, err := a.DeckService.ReadOutline(uid, args.DeckID)
 	if err != nil {
@@ -146,8 +146,8 @@ func (a *AgentService) toolUpdateOutline(ctx context.Context, arguments string) 
 		return "", err
 	}
 	var args updateOutlineArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("update_outline 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("update_outline: %v", err)
 	}
 	// 与 submit 共用同一套字段映射
 	sa := submitOutlineArgs{
@@ -184,8 +184,8 @@ func (a *AgentService) toolPlanPages(ctx context.Context, arguments string) (str
 		return "", err
 	}
 	var args planPagesArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("plan_pages 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("plan_pages: %v", err)
 	}
 	plan := make([]deck.PlanAssignment, 0, len(args.Assignments))
 	for _, pa := range args.Assignments {
@@ -217,8 +217,8 @@ func (a *AgentService) toolReadLayout(ctx context.Context, arguments string) (st
 		return "", err
 	}
 	var args readLayoutArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("read_layout 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("read_layout: %v", err)
 	}
 	tpl, err := a.templateForDeck(uid, args.DeckID)
 	if err != nil {
@@ -242,8 +242,8 @@ func (a *AgentService) toolReadGuidelines(ctx context.Context, arguments string)
 		return "", err
 	}
 	var args deckIDArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("read_guidelines 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("read_guidelines: %v", err)
 	}
 	tpl, err := a.templateForDeck(uid, args.DeckID)
 	if err != nil {
@@ -275,8 +275,8 @@ func (a *AgentService) toolWritePages(ctx context.Context, arguments string) (st
 		return "", err
 	}
 	var args writePagesArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("write_pages 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("write_pages: %v", err)
 	}
 	if len(args.Pages) == 0 {
 		return "", errors.New("pages 不能为空")
@@ -330,8 +330,8 @@ func (a *AgentService) toolListSlidesV2(ctx context.Context, arguments string) (
 		return "", err
 	}
 	var args deckIDArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("list_slides 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("list_slides: %v", err)
 	}
 	slides, err := a.DeckService.ListSlidesV2(uid, args.DeckID)
 	if err != nil {
@@ -359,8 +359,8 @@ func (a *AgentService) toolReadSlideV2(ctx context.Context, arguments string) (s
 		return "", err
 	}
 	var args slideIDArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("read_slide 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("read_slide: %v", err)
 	}
 	html, fp, err := a.DeckService.ReadSlideV2(uid, args.DeckID, args.SlideID)
 	if err != nil {
@@ -386,8 +386,8 @@ func (a *AgentService) toolUpdateSlideV2(ctx context.Context, arguments string) 
 		return "", err
 	}
 	var args updateSlideArgsV2
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("update_slide 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("update_slide: %v", err)
 	}
 	warning, err := a.DeckService.UpdateSlideV2(uid, args.DeckID, args.SlideID, args.NewHTML, args.Fingerprint)
 	if err != nil {
@@ -409,8 +409,8 @@ func (a *AgentService) toolInsertSlideV2(ctx context.Context, arguments string) 
 		return "", err
 	}
 	var args insertSlideArgsV2
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("insert_slide 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("insert_slide: %v", err)
 	}
 	id, warning, err := a.DeckService.InsertSlideV2(uid, args.DeckID, args.AfterSlideID, args.NewHTML)
 	if err != nil {
@@ -431,8 +431,8 @@ func (a *AgentService) toolDeleteSlideV2(ctx context.Context, arguments string) 
 		return "", err
 	}
 	var args deleteSlideArgsV2
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-		return "", fmt.Errorf("delete_slide 参数不是合法json:%v", err)
+	if err := decodeToolArgs(arguments, &args); err != nil {
+		return "", fmt.Errorf("delete_slide: %v", err)
 	}
 	if err := a.DeckService.DeleteSlideV2(uid, args.DeckID, args.SlideID); err != nil {
 		return "", err
@@ -540,7 +540,10 @@ func (a *AgentService) buildToolsV2(stage string) map[string]Tool {
 			"整份替换大纲（修订模式）。先 read_outline 拿最新内容与 version，在其基础上改后整份提交；version 过期会报冲突，重读再试。",
 			a.toolUpdateOutline, 0)
 	case deck.StageGenerating:
-		mountCommon()
+		// D12：生成阶段不提供 ask_user——中途提问会打断管线，方向性问题必须在澄清阶段问完
+		if a.WebSearch {
+			mountTool[webSearchArgs](tools, "web_search", webSearchDesc, a.toolWebSearch, 0)
+		}
 		mountReview()
 		mountSlideReads()
 		mountTool[planPagesArgs](tools, "plan_pages",

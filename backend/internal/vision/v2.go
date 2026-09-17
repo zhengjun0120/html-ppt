@@ -98,7 +98,7 @@ const v2MeasureAllJS = `(function(){
     var all = sec.querySelectorAll('*');
     for (var a = 0; a < all.length; a++) {
       var el = all[a];
-      if (el.closest('.notes')) continue; // 讲稿观众不可见，不参与字号/密度判定
+      if (el.closest('.notes, .deck-footer, .deck-header, .kicker, .tag, .slide-number')) continue; // 讲稿、页脚页眉与 kicker/tag 是模板定死的小字设计，不参与最小字号判定（只看真实内容）
       var fs = parseFloat(getComputedStyle(el).fontSize);
       if (fs > 0 && fs < minFont) minFont = fs;
     }

@@ -149,6 +149,6 @@ func (h *Handler) GenerateDeck(c *gin.Context) {
 	}
 	resume := c.Query("resume") == "1"
 	serveAgentSSE(c, func(emit func(agent.StreamEvent) error) (uint, error) {
-		return h.agent.StartGenerationRun(c.Request.Context(), uid, uint(sessionID), resume, emit)
+		return h.agent.StartGenerationRun(c.Request.Context(), uid, uint(sessionID), c.Param("id"), resume, emit)
 	})
 }
