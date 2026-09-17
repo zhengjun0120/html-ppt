@@ -18,13 +18,10 @@ const nextId = () => ++idSeq
 
 /** 会改动 deck 内容/外观的工具（v1 与 v2 两套注册名都在这里）：命中时预览需要刷新 */
 export const DECK_MODIFYING_TOOLS = new Set([
-  'write_deck',
+  'write_pages',
   'update_slide',
   'insert_slide',
   'delete_slide',
-  'update_theme',
-  'update_custom_css',
-  'write_pages',
 ])
 
 /** 阶段推进的用户可读文案（stage / gate_waiting 事件） */
