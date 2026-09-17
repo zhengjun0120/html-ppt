@@ -38,6 +38,19 @@ func (rr *runRecorder) overQuota(name string, max int) bool {
 	return rr.toolCalls[name] > max
 }
 
+// refund 把一次已计入的调用退回去（下限钳到 0）。存在的理由：配额的本意是拦
+// "审查→修复→再审"的无限循环，拦的是**烧了钱、产出了报告**的那类调用。
+// review_slides 的"只看数字"复查（pages 留空）和"看图失败"的调用什么结论都没产出，
+// 让它们占配额的结果是（实测）：两次免费复查 + 一次看图失败 = 配额耗尽，
+// agent 想重试真审查时被拒——工具说明承诺"pages 留空不占配额"，代码必须兑现它。
+func (rr *runRecorder) refund(name string) {
+	rr.mu.Lock()
+	defer rr.mu.Unlock()
+	if rr.toolCalls[name] > 0 {
+		rr.toolCalls[name]--
+	}
+}
+
 func(rr *runRecorder) note(deckID,op string){
 	rr.mu.Lock()
 	defer rr.mu.Unlock()

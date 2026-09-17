@@ -85,7 +85,7 @@ func TestRichV4DeckPassesProductionValidation(t *testing.T) {
 
 	// 变量契约回声：用真实主题（含 v4 翻色 token 的 renderThemeCSS 输出）渲染骨架，
 	// 再校验内联样式里的 var() 是否都有消费方。
-	rendered, err := renderSkeleton("v4 满配", normalized)
+	rendered, err := renderSkeleton("v4 满配", normalized, defaultTheme())
 	if err != nil {
 		t.Fatalf("renderSkeleton 失败：%v", err)
 	}

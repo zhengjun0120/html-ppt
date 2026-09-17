@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -84,63 +85,79 @@ func Review(ctx context.Context, client *openai.Client, model string, sel *Deck,
 			Detail: "auto",
 		}))
 	}
-	//发送请求
-	stream := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
-		Model: openai.ChatModel(model),
-		// Low 而不是 High：这个调用是同步阻塞的（以前阻塞在 write_deck 里，现在阻塞在
-		// review_slides 里）。实测 High 要约 48 秒，而 Low 明显更快、同一份 deck 抓到的
-		// 是同一批问题（孤字换行、三列不齐、字号偏小）。
-		ReasoningEffort: shared.ReasoningEffortLow,
-		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.UserMessage(parts),
-		},
-		// 显式给预算：reasoning 先吃 token、吃完就没有 content，而"content 为空"不会报错
-		// ——上层会照样写一行"看图审查："然后什么都没有（我第一次探针就是 max_tokens=200
-		// 撞出来的：content 空、completion 却用满 200）。实测 9 页用掉 4382；
-		// 现在单次最多 6 页，8000 的余量更宽。
-		MaxTokens: openai.Int(8000),
+	// 空报告重试一次。推理型模型偶尔会把整个 completion 预算全部花在 reasoning 上、
+	// 一字正文不吐（实测 trace 1789613158323-30a4：completion=8000 全是 reasoning），
+	// 这是概率行为不是稳定行为——同样的输入再发一次大多能出正文。截图的编码、
+	// 提示词的拼接都只做一次，重试只重发请求；两次的用量都算这次审查的花费。
+	tryReview := func() (string, openai.CompletionUsage, error) {
+		stream := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
+			Model: openai.ChatModel(model),
+			// Low 而不是 High：这个调用是同步阻塞的（以前阻塞在 write_deck 里，现在阻塞在
+			// review_slides 里）。实测 High 要约 48 秒，而 Low 明显更快、同一份 deck
+			// 抓到的是同一批问题（孤字换行、三列不齐、字号偏小）。
+			ReasoningEffort: shared.ReasoningEffortLow,
+			Messages: []openai.ChatCompletionMessageParamUnion{
+				openai.UserMessage(parts),
+			},
+			// 显式给预算：reasoning 先吃 token、吃完就没有 content，而"content 为空"不会报错
+			// ——上层会照样写一行"看图审查："然后什么都没有（我第一次探针就是 max_tokens=200
+			// 撞出来的：content 空、completion 却用满 200）。实测 9 页用掉 4382；
+			// 现在单次最多 6 页，8000 的余量更宽。
+			MaxTokens: openai.Int(8000),
 
-		StreamOptions: openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)},
-	})
+			StreamOptions: openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)},
+		})
 
-	acc := openai.ChatCompletionAccumulator{}
-	var b strings.Builder
-	for stream.Next(){
-		chunk := stream.Current()
-		if !acc.AddChunk(chunk) {
-			continue
+		acc := openai.ChatCompletionAccumulator{}
+		var sb strings.Builder
+		for stream.Next() {
+			chunk := stream.Current()
+			if !acc.AddChunk(chunk) {
+				continue
+			}
+			if len(chunk.Choices) == 0 {
+				continue
+			}
+			delta := chunk.Choices[0].Delta
+			if delta.Content != "" {
+				sb.WriteString(delta.Content)
+				onDelta(delta.Content)
+			}
 		}
-		if len(chunk.Choices) == 0{
-			continue
+
+		if err := stream.Err(); err != nil {
+			stream.Close()
+			return "", openai.CompletionUsage{}, err
 		}
-		delta := chunk.Choices[0].Delta
-		if delta.Content!= ""{
-			b.WriteString(delta.Content)
-			onDelta(delta.Content)
+		stream.Close()
+		if len(acc.Choices) == 0 || acc.Choices[0].FinishReason == "" {
+			return "", openai.CompletionUsage{}, errors.New("看图审查流式响应不完整（没有 finish_reason）")
 		}
+		return strings.TrimSpace(sb.String()), acc.Usage, nil
 	}
 
-	if err:=stream.Err();err != nil {
-		stream.Close()
+	report, usage, err := tryReview()
+	if err == nil && report == "" {
+		log.Printf("[warn] 视觉审查：模型返回空报告（completion=%d 全为 reasoning），重试一次",
+			usage.CompletionTokens)
+		report, usage, err = tryReview()
+	}
+	if err != nil {
 		return nil, err
 	}
-	stream.Close()
-	if len(acc.Choices) == 0 || acc.Choices[0].FinishReason == ""{
-		return nil,errors.New("看图审查流式响应不完整（没有 finish_reason）")
-	}
-
-	report := strings.TrimSpace(b.String())
 	if report == "" {
 		// 空报告不能当成功返回：否则上层会留一段空的"看图审查："，
-		// 看起来像"审过了、没问题"，实际是这次调用什么都没产出
-		return nil, fmt.Errorf("模型返回了空报告（completion=%d，其中 reasoning=%d），可能被截断",
-			acc.Usage.CompletionTokens, acc.Usage.CompletionTokensDetails.ReasoningTokens)
+		// 看起来像"审过了、没问题"，实际是这次调用什么都没产出。
+		// 重试过仍为空才走到这里——别再无限重试，把决定权交回上层
+		//（它会把量测数字还给模型并退还配额，模型可以直接重试 review_slides）。
+		return nil, fmt.Errorf("模型返回了空报告（completion=%d，其中 reasoning=%d），重试一次仍为空",
+			usage.CompletionTokens, usage.CompletionTokensDetails.ReasoningTokens)
 	}
 	return &ReviewResult{
 		Report: report,
 		Prompt: head,
 		Images: len(sel.Slides),
-		Usage:  acc.Usage,
+		Usage:  usage,
 	}, nil
 }
 

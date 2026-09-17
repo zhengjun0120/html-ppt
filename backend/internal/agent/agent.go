@@ -26,10 +26,23 @@ const maxTurns = 20 //最大允许调用20轮llm请求
 // 数组下标直接就是 time.Weekday（周日=0），不需要转换。
 var weekdayCN = [...]string{"周日", "周一", "周二", "周三", "周四", "周五", "周六"}
 
-func (as *AgentService) buildSystemMessage(deckID string) string {
+func (as *AgentService) buildSystemMessage(userID uint, deckID string) string {
 	msg := systemPrompt
 	if deckID != "" && deck.IsValidID(deckID) {
 		msg += fmt.Sprintf(`当前用户正在预览的演示文稿是 {"deck_id":"%s"},涉及它的修改直接使用这个 deck_id, 不要向用户询问`, deckID)
+	}
+
+	// 最近 deck 的风格谱：跨 deck 同质化的解药。提示词里的"配色家族轮换"规则
+	// 需要这个输入才有意义——agent 每个会话只看得见一份 deck，不告诉它
+	// "上一份用了什么"，它就没法做到"这份换一个族"。与 deckID 注入同理放在
+	// 静态提示词之后的变量区，不进 systemPrompt.md（那是编译进二进制的静态文本，
+	// 而这份清单按用户、按 deck 数量变化）。nil DeckService（单测）时静默跳过。
+	if as.DeckService != nil && userID != 0 {
+		if presets := as.DeckService.RecentPresets(userID, 8); len(presets) > 0 {
+			msg += fmt.Sprintf("\n\n该用户最近 %d 份 deck 用的风格预设（旧→新）：%s。"+
+				"按提示词「配色家族轮换」挑这次的预设，不要连续两份落在同一族；用户点名风格时以用户为准。",
+				len(presets), strings.Join(presets, "、"))
+		}
 	}
 
 	// 当前日期追加在**整个系统提示词的最后**，这个位置是刻意的，不要往前挪：
@@ -77,7 +90,7 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 
 	//首轮构建系统提示词
 	if sessionID == 0 {
-		messages = append(messages, openai.SystemMessage(as.buildSystemMessage(deckID)))
+		messages = append(messages, openai.SystemMessage(as.buildSystemMessage(userID, deckID)))
 	}
 
 	messages = append(messages, openai.UserMessage(userContent))
@@ -362,10 +375,36 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 	)
 
 	t, ok := as.Exec[tool.Function.Name]
+	// runTool 执行工具并处理结果。配额分流有两个入口（数字复查跳过配额直接执行、
+	// 其余走闸门），但执行与失败处理是同一份，抽出来避免抄两遍。
+	runTool := func() {
+		res, err := t(ctx, tool.Function.Arguments)
+		if err != nil {
+			result = fmt.Sprintf("工具调用失败 err:%s", err.Error())
+			callErr = err.Error()
+		} else {
+			result = res
+			// review_slides 的配额只数"真的看了图"的调用：看图失败的降级结果
+			// 不带 visionReportMarker，这里退还计数（pages 留空的数字复查在
+			// 上一个 case 里根本不进配额，无需退还）。实测（trace 1789613158323-30a4）：
+			// 两次免费复查加一次看图失败就把 3 次配额耗尽，模型想重试真审查时被拒——
+			// 只数有产出的调用才符合"拦住审查循环"的本意。
+			if tool.Function.Name == "review_slides" && !strings.Contains(res, visionReportMarker) {
+				rr.refund("review_slides")
+			}
+			rr.noteToolCall(tool.Function.Name, tool.Function.Arguments, res) //版本备注只记成功的
+		}
+	}
 	switch {
 	case !ok:
 		result = "未知工具"
 		callErr = result
+	case tool.Function.Name == "review_slides" && reviewMeasureOnlyArgs(tool.Function.Arguments):
+		// 数字复查（pages 留空）不进配额、直接执行。必须放在闸门之前：
+		// overQuota 是"先计数再比较"，被拦的真审查也会留下计数，若数字复查走闸门，
+		// 它会在配额耗尽后被误拦——提示词承诺它"免费、随时可调"。
+		// 解析失败按真审查处理（宁可少放行，不可放开真审查的闸）。
+		runTool()
 	case rr.overQuota(tool.Function.Name, as.MaxPerRun[tool.Function.Name]):
 		// 配额闸门（Tool.MaxPerRun）：审查→修复→再审这类循环没有自然出口，
 		// 提示词拦不住，就在这里拦。刻意不算 callErr：这是策略结果不是故障，
@@ -374,14 +413,7 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 			"不要再调用它——基于已有的结果继续完成任务，剩余想检查/想打磨的点在最终汇报里说明。",
 			tool.Function.Name, as.MaxPerRun[tool.Function.Name])
 	default:
-		res, err := t(ctx, tool.Function.Arguments)
-		if err != nil {
-			result = fmt.Sprintf("工具调用失败 err:%s", err.Error())
-			callErr = err.Error()
-		} else {
-			result = res
-			rr.noteToolCall(tool.Function.Name, tool.Function.Arguments, res) //版本备注只记成功的
-		}
+		runTool()
 	}
 
 	// 失败也要记。原来 runRecorder 只记成功调用，于是"模型连试三次都被拒"这种

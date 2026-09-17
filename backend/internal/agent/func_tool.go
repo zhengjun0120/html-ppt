@@ -42,6 +42,12 @@ func toolUID(ctx context.Context) (uint, error) {
 type WriteDeckArgs struct {
 	Title       string `json:"title" jsonschema:"required,type=string,description=演示文稿标题，也是浏览器标签页标题"`
 	SectionHtml string `json:"section_html" jsonschema:"required,type=string,description=所有页面的 <section> HTML，按顺序拼接成一整个字符串"`
+	// Preset 为什么在 write_deck 上而不是只靠事后的 update_theme：实测（deck-0022）
+	// agent 会在计划与 ask_user 里跟用户定好风格，然后写完 deck 就一头扎进量测/审查循环，
+	// update_theme 被忘掉——用户的风格选择静默丢失，deck 停在默认纸感上。
+	// 把预设变成创建参数后，"定风格"和"写内容"是同一次调用，没有可忘的步骤。
+	// description 不能含半角逗号（jsonschema 按它切键值对）。
+	Preset string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,enum=indigo,enum=pine,enum=kraft,enum=dune,enum=swiss,enum=aurora,enum=ember,enum=dawn,description=风格预设：创建时就落进主题（deck 出生即这套观感）。你与用户定好的风格必须在这里传入；留空则用默认纸感"`
 }
 
 // deckWriteResult 写类工具（write_deck / update_slide / insert_slide）的统一返回结构。
@@ -74,7 +80,7 @@ func (a *AgentService)toolWriteDeck(ctx context.Context,arguments string)(string
 		return "",errors.New("title 不可为空")
 	}
 
-	res,err := a.DeckService.Create(uid, args.Title, args.SectionHtml)
+	res,err := a.DeckService.Create(uid, args.Title, args.SectionHtml, args.Preset)
 	if err !=nil{
 		return "",err
 	}
@@ -287,9 +293,10 @@ type UpdateThemeArgs struct {
 	// 注意：description 里不能出现半角逗号（invopop/jsonschema 按半角逗号切键值对，
 	// 出现一个就会把后半段描述静默丢掉）。这里的清单由 deck.PresetSummary() 生成到
 	// 工具级 Description 里，字段级只留一句指引。
-	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,enum=indigo,enum=pine,enum=kraft,enum=dune,enum=swiss,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
+	Preset       *string `json:"preset,omitempty" jsonschema:"type=string,enum=paper,enum=editorial,enum=noir,enum=duotone,enum=terminal,enum=tech,enum=indigo,enum=pine,enum=kraft,enum=dune,enum=swiss,enum=aurora,enum=ember,enum=dawn,description=风格预设：一个名字就是一整套观感（配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）。清单与各自适用场合见本工具说明。用户说换个风格/好看一点/专业一点、或没有明确视觉要求时先用它。同一调用里再传其它字段可以覆盖预设的某一项"`
 	Accent       *string `json:"accent,omitempty" jsonschema:"type=string,description=强调色（6位十六进制，如 #b23a2e），卡片边框和底色默认随之派生"`
 	Background   *string `json:"background,omitempty" jsonschema:"type=string,description=页面背景色（6位十六进制）"`
+	BGGradient   *string `json:"bg_gradient,omitempty" jsonschema:"type=string,description=整页背景渐变（CSS 渐变值。例：linear-gradient 从 #091830 经 #0c2b3e 到 #10403f、角度 168deg）。只在 linear/radial/conic-gradient 里选；深色渐变也要保证最浅一端与正文的对比度够投影。传空字符串 = 清掉渐变回到纯色背景。背景渐变是整套视觉的一部分：要有就成套设计（选 aurora/ember/dawn 预设或自己写全套 vars），不要每页各变"`
 	HeadingColor *string `json:"heading_color,omitempty" jsonschema:"type=string,description=标题颜色（6位十六进制）"`
 	TextColor    *string `json:"text_color,omitempty" jsonschema:"type=string,description=正文颜色（6位十六进制）"`
 	Surface      *string `json:"surface,omitempty" jsonschema:"type=string,description=面板与卡片底色（6位十六进制）。留空 = 由 accent 派生一层淡染（暗底主题的发光面板就是这么来的）。浅色主题下要让卡片呈中性的纸面、而不是强调色的粉调时传它"`
@@ -349,6 +356,7 @@ func (a *AgentService) toolUpdateTheme(ctx context.Context,arguments string)(str
 		Preset:       args.Preset,
 		Accent:       args.Accent,
 		Background:   args.Background,
+		BGGradient:   args.BGGradient,
 		HeadingColor: args.HeadingColor,
 		TextColor:    args.TextColor,
 		Surface:      args.Surface,
@@ -750,7 +758,7 @@ func (a *AgentService)buildTools () map[string]Tool{
 		"write_deck":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "write_deck",
-				Description: openai.String("从零创建一整份新演示文稿。sections_html 中提供全部 <section> 内容，按页序拼接，不要写 data-id（系统自动编号）。若用户要修改已有 deck，禁止使用本工具（会覆盖重做），应使用页级编辑工具。"),
+				Description: openai.String("从零创建一整份新演示文稿。sections_html 中提供全部 <section> 内容，按页序拼接，不要写 data-id（系统自动编号）。preset 传入你与用户定下的风格预设——deck 出生即那套观感，不需要也不应该再单独 update_theme 补一次（忘了就是用户的风格选择被静默丢掉）。留空 preset 时 deck 用默认纸感风格。若用户要修改已有 deck，禁止使用本工具（会覆盖重做），应使用页级编辑工具。"),
 				Parameters: generateSchema[WriteDeckArgs](),
 			}),
 			Execute: a.toolWriteDeck,
@@ -798,7 +806,7 @@ func (a *AgentService)buildTools () map[string]Tool{
 		"update_theme":{
 			Definition: openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 				Name: "update_theme",
-				Description: openai.String("修改 deck 的全局主题：风格预设、强调色、背景、标题色、正文色、面板色、边框色、字体配对、卡片圆角、页面纹理、翻页动画、画布比例、自定义调色板(vars)。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用；用户要'一套专门的配色'也用它——把整套颜色写进 vars（形如 {\"--surface\":\"#1e1836\",\"--positive\":\"#4ade80\"}），而不是在页面元素上写死颜色。本工具改的是主题变量，页面内容不受影响。改 vars 前先 read_theme：vars 是整体替换制。" +
+				Description: openai.String("修改 deck 的全局主题：风格预设、强调色、背景、背景渐变、标题色、正文色、面板色、边框色、字体配对、卡片圆角、页面纹理、翻页动画、画布比例、自定义调色板(vars)。只传要改的项。用户提出换风格、换配色、换字体等整体观感需求时使用；用户要'一套专门的配色'也用它——把整套颜色写进 vars（形如 {\"--surface\":\"#1e1836\",\"--positive\":\"#4ade80\"}），而不是在页面元素上写死颜色。本工具改的是主题变量，页面内容不受影响。改 vars 前先 read_theme：vars 是整体替换制。" +
 					"\n\n可用的风格预设（preset 参数，一个名字就是一整套观感，含配色 + 面板色 + 字体配对 + 圆角 + 纹理 + 语义色）：\n" +
 					deck.PresetSummary() +
 					"\n\n用户说'换个风格''好看一点''专业一点'、或者从零开始做一份 deck 而用户没有明确视觉要求时：先选一个预设，这一步比逐个调颜色省事得多，也最不容易做出撞衫的东西。选完还可以在同一调用里传 accent / font 之类的单项做微调（预设是底子，显式字段优先）。反过来，没有明确要求时不要选 tech——它是'现代网页的最大公约数'，也就是最容易一眼看出是生成的那一套。"),
@@ -919,7 +927,8 @@ func (a *AgentService)buildTools () map[string]Tool{
 					"新建 deck 之后系统已自动量测过一次（结果在 write_deck 的 review 字段里）。"+
 					"报告按【硬/软】分级：硬=投屏会翻车（被裁/重叠/看不清），软=审美打磨。"+
 					"用法是三步：第一次把可疑页一次看全 → 批量修复 → 只确认改过的页；"+
-					"一次 run 里最多调 %d 次（系统硬配额，超出会被拒绝），按这三步分配。"+
+					"带页号的调用一次 run 里最多 %d 次（系统硬配额，超出会被拒绝），按这三步分配；"+
+					"pages 留空的数字复查和看图失败的调用不占配额，随时可调、失败了可以直接重试。"+
 					"只读、不改页面，报告里指出的问题由你自己决定改不改。", maxReviewPages, reviewQuotaPerRun)),
 				Parameters: generateSchema[ReviewSlidesArgs](),
 			}),

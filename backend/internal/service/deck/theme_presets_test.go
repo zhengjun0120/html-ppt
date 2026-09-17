@@ -422,7 +422,7 @@ func TestPresetVarsAreNotReservedVars(t *testing.T) {
 // 模板占位符写错、或渲染出的 JSON 不能反序列化，都只有真建一份 deck 时才会暴露——
 // 而那条路径要数据库，单元测试跑不到。所以这里直接验渲染产物。
 func TestRenderSkeletonEmbedsDefaultTheme(t *testing.T) {
-	html, err := renderSkeleton("标题 &amp; 测试", `<section><h1>hi</h1></section>`)
+	html, err := renderSkeleton("标题 &amp; 测试", `<section><h1>hi</h1></section>`, defaultTheme())
 	if err != nil {
 		t.Fatalf("渲染骨架失败: %v", err)
 	}
@@ -471,7 +471,7 @@ func TestFreshDeckAcceptsPresetSemanticVars(t *testing.T) {
 	if _, err := os.Stat(assets); err != nil {
 		t.Fatalf("读不到真实资源目录（本包到 web/assets 是三层）: %v", err)
 	}
-	html, err := renderSkeleton("测试", `<section><h1>hi</h1></section>`)
+	html, err := renderSkeleton("测试", `<section><h1>hi</h1></section>`, defaultTheme())
 	if err != nil {
 		t.Fatal(err)
 	}

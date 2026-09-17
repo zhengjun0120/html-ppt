@@ -28,7 +28,11 @@ type CreateResult struct {
 	Warning string `json:"warning,omitempty"`
 }
 
-func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, error) {
+// Create 新建 deck。preset 非空时，骨架直接以该预设渲染——
+// **"用户选了什么风格"必须在出生那一刻就落进主题**，而不是等 agent 之后补一次 update_theme：
+// 后者的路径里没有任何机制防止"agent 答应了风格却忘调工具"，实测（deck-0022）结果是
+// 用户选的 kraft 被静默丢掉、deck 停在默认纸感上——同质化最直接的一个来源。
+func (s *Service) Create(userID uint, title, sectionHTML, preset string) (CreateResult, error) {
 	if s.st == nil {
 		return CreateResult{}, errStorage
 	}
@@ -38,8 +42,18 @@ func (s *Service) Create(userID uint, title, sectionHTML string) (CreateResult, 
 		return CreateResult{}, err
 	}
 
+	theme := defaultTheme()
+	if strings.TrimSpace(preset) != "" {
+		p, ok := presets[strings.TrimSpace(preset)]
+		if !ok {
+			return CreateResult{}, fmt.Errorf("没有名为 %q 的预设。可用预设：%s",
+				preset, strings.Join(PresetNames(), " / "))
+		}
+		p.applyTo(&theme)
+	}
+
 	// 骨架先渲染出来：它是纯函数（无副作用），而底下的回声校验要用它。
-	rendered, err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)), normalized)
+	rendered, err := renderSkeleton(template.HTMLEscapeString(strings.TrimSpace(title)), normalized, theme)
 	if err != nil {
 		return CreateResult{}, err
 	}
@@ -195,12 +209,11 @@ var skeletonSrc string
 
 var skeletonTmpl = texttemplate.Must(texttemplate.New("deck_skeleton").Parse(skeletonSrc))
 
-// renderSkeleton 渲染骨架。ThemeJSON / ThemeCSS 都从 defaultTheme() 现渲染，
+// renderSkeleton 渲染骨架。ThemeJSON / ThemeCSS 都从传入的 theme 现渲染，
 // 而不是在骨架里手抄一份：手抄的那份没有任何机制保证它与 defaultTheme() 一致，
 // 而骨架真的会用到它们（新建的 deck 在第一次 update_theme 之前的主题就是它）——
 // 这类"两份真相"迟早漂移。
-func renderSkeleton(escapedTitle, sections string) (string, error) {
-	theme := defaultTheme()
+func renderSkeleton(escapedTitle, sections string, theme Theme) (string, error) {
 	themeJSON, err := json.Marshal(theme)
 	if err != nil {
 		return "", fmt.Errorf("序列化默认主题: %w", err)

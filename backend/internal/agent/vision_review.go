@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
+	"encoding/json"
 	"log"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -95,11 +97,67 @@ func (a *AgentService) measureDeck(ctx context.Context, uid uint, deckID string)
 	var b strings.Builder
 	b.WriteString("\n\n版面量测（自动跑的，只有数字，没有看图）：\n")
 	b.WriteString(deck.Text())
+	if note := a.deckRhythmNote(uid, deckID, len(deck.Slides)); note != "" {
+		b.WriteString(note)
+	}
 	b.WriteString("\n数字都在范围内**不等于**版面没问题：文字被裁、元素重叠、贴边、对比度不足、" +
 		"这页的图和标题讲的不是一回事——这些数字看不出来，只有真看一眼才知道。")
 	b.WriteString(fmt.Sprintf("\n要看画面：调 review_slides，pages 传 1 基页号（一次最多 %d 页），"+
 		"优先挑 fit 低于 0.90、最小字号低于 31px、溢出大于 1.02 的页，以及自己写的时候就拿不准的页。", maxReviewPages))
 	return clipRunes(b.String(), reviewChars)
+}
+
+// visionReportMarker 是 review_slides 结果里"真的看到了图"的标记：
+// 看图成功的结果一定带它，"只回数字"（pages 留空）和"看图失败"的结果一定不带。
+// execTool 用它决定要不要把这次调用从配额里退还——配额只数烧了钱、产出了报告的审查。
+const visionReportMarker = "\n看图审查：\n"
+
+// visionFallbackNote 是看图失败时附在量测数字后面的说明。除了告诉模型"这次没有
+// 看图的结论"，还要告诉它"这次不占配额"：实测（trace 1789613158323-30a4）模型
+// 看到降级结果后想重试，却被配额挡住，只能拿着数字收尾。
+const visionFallbackNote = "\n(看图部分失败，以上只有量测数字；这次没有消耗审查配额，可以直接重试)"
+
+// reviewMeasureOnlyArgs 判断 review_slides 的调用参数是不是"数字复查"（pages 缺省或空）。
+// 解析失败返回 false：宁把它当真审查计一次配额，也不能让一个坏参数绕过闸门。
+// 这个判定只服务配额分流，工具真正的参数解析仍归它自己的实现。
+func reviewMeasureOnlyArgs(argsJSON string) bool {
+	var a struct {
+		Pages []int `json:"pages"`
+	}
+	if json.Unmarshal([]byte(argsJSON), &a) != nil {
+		return false
+	}
+	return len(a.Pages) == 0
+}
+
+// colorPageRe 数"色面页"：挂了整页换色变体类（.bg-ink / .bg-accent）的 section。
+// 必须锚定在 <section 标签上：正文文字里提到"bg-ink"不该被算进来。
+// \b 保证按 class token 边界匹配（不会命中想象中的 xbg-ink）。
+var colorPageRe = regexp.MustCompile(`<section[^>]*class="[^"]*\bbg-(?:ink|accent)\b`)
+
+// deckRhythmNote 是一份**整份级**的免费检查：≥8 页的 deck 一张色面页都没有、
+// 也没有背景渐变时，点一句。色面页是"这份被设计过"的第一印象里最便宜的装置
+// （提示词的"整页色彩节奏"一节），但逐页的量测数字看不见"整份从头到尾一个底色"——
+// 它只在整份维度上成立，所以放在这里而不是页级报告里。
+// 语气刻意是"点一下"而不是硬判定：一份素净的纸感 deck 是合法选择，agent 自己判断。
+func (a *AgentService) deckRhythmNote(uid uint, deckID string, slides int) string {
+	if slides < 8 {
+		return ""
+	}
+	html, err := a.DeckService.GetHTML(uid, deckID)
+	if err != nil {
+		return ""
+	}
+	if colorPageRe.MatchString(html) {
+		return ""
+	}
+	// 有背景渐变的主题整份已经有底色氛围，不再要色面页来撑节奏
+	if strings.Contains(html, `"bg_gradient":"`) {
+		return ""
+	}
+	return fmt.Sprintf("\n\n整份层面：这 %d 页里没有一张色面页（.bg-ink / .bg-accent），底色从头到尾一个样——"+
+		"这是最容易被看成\"没排版过\"的一种单调。章节页、金句页、单数字页是天然的换色页；"+
+		"确属有意为之的素净风格可以忽略这条。", slides)
 }
 
 // 量测 + 只看点名的这几页。pages 是 **1 基**页号（与 list_slides 的 position、"第 N 页"同一套）。
@@ -158,7 +216,7 @@ func (a *AgentService) reviewPages(ctx context.Context, uid uint, deckID string,
 		trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{
 			Name: "vision", Stage: "review_error", Text: err.Error(),
 		}})
-		b.WriteString("\n(看图部分失败，以上只有量测数字)")
+		b.WriteString(visionFallbackNote)
 		return clipRunes(b.String(), reviewChars), nil
 	}
 
@@ -178,7 +236,7 @@ func (a *AgentService) reviewPages(ctx context.Context, uid uint, deckID string,
 		Name: "vision", Stage: "review_response", Text: rr.Report,
 	}})
 
-	b.WriteString("\n看图审查：\n")
+	b.WriteString(visionReportMarker)
 	b.WriteString(rr.Report)
 	return clipRunes(b.String(), reviewChars), nil
 }

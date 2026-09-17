@@ -28,7 +28,7 @@ import (
 
 func TestBuildSystemMessagePutsDateLast(t *testing.T) {
 	svc := &AgentService{}
-	msg := svc.buildSystemMessage("deck-0001")
+	msg := svc.buildSystemMessage(0, "deck-0001")
 
 	// 静态提示词要原样留在最前面（防拼装时截断）
 	if !strings.HasPrefix(msg, systemPrompt) {
@@ -72,7 +72,7 @@ func TestBuildSystemMessagePutsDateLast(t *testing.T) {
 func TestBuildSystemMessageWithoutDeck(t *testing.T) {
 	svc := &AgentService{}
 	for _, bad := range []string{"", "../../etc/passwd", "not a deck id"} {
-		msg := svc.buildSystemMessage(bad)
+		msg := svc.buildSystemMessage(0, bad)
 		if strings.Contains(msg, "当前用户正在预览的演示文稿") {
 			t.Errorf("deckID=%q 时不该有 deck 说明", bad)
 		}

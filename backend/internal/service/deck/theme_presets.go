@@ -34,6 +34,14 @@ const (
 	// 第 11 套是按"视觉语言的完备性"补的：前 10 套里没有一套是"中性底 + 单一高饱和色 +
 	// 极细大字"的瑞士国际主义——那是演示排版史上有据可依的一档，也是整页色块节奏最天然的风格
 	PresetSwiss = "swiss"
+	// 后三套是**渐变**预设：主题系统支持 bg_gradient 之后的第一个受益者。
+	// 为什么是"有名字的预设"而不是让模型自由发挥渐变——和整个预设表存在的理由相同：
+	// 自由发挥必然回到"紫→蓝渐变 + 发光强调色"这一个训练分布的众数。给出"极光/余烬/晨雾"
+	// 这些有出处的参照物，模型才有"另一种渐变"可选。三套的每个渐变断点都过了
+	// 正文/标题 7:1 的对比度下限（TestPresetContrastMeetsFloor 逐断点测）。
+	PresetAurora = "aurora"
+	PresetEmber  = "ember"
+	PresetDawn   = "dawn"
 )
 
 // Preset 是一套预设的公开描述。Name 是工具参数里的取值，
@@ -234,6 +242,57 @@ var presets = map[string]Preset{
 			},
 		},
 	},
+	// ---- 渐变三套 ----
+	// 共同的纪律：渐变只走纵向/微对角（160°~170°），深色套的亮端也不越过对比度下限，
+	// Background 字段存渐变的**最暗端**——它是 PDF 导出、翻页动画中间态和"渐变加载前"的兜底色，
+	// 存亮端的话深色主题会闪一屏白。
+	PresetAurora: {
+		Name: PresetAurora, Label: "极光",
+		About: "深蓝夜空渐变到墨绿 + 极光薄荷强调，圆角面板，现代无衬线。科技发布会、未来感主题、游戏与数字产品，要「深邃但不阴沉」的深色场合",
+		Theme: Theme{
+			Accent: "#5fd4b4", Background: "#091830",
+			HeadingColor: "#f0fbf7", TextColor: "#d7e8e6",
+			BgGradient: "linear-gradient(168deg, #091830 0%, #0c2b3e 55%, #10403f 100%)",
+			// 面板色留空 = 由 accent 派生淡染（深底主题的发光面板观感）
+			Font: FontModern, Radius: "10px", Texture: TextureNone,
+			Vars: map[string]string{
+				"--accent-2": "#7aa5ff", // 极光的冷紫蓝对比色（图表/双色用）
+				"--positive": "#6fdc8c",
+				"--warn":     "#f4b656",
+			},
+		},
+	},
+	PresetEmber: {
+		Name: PresetEmber, Label: "余烬",
+		About: "暗室里炭火渐变（深棕黑→赭红）+ 琥珀金强调，全衬线，零纹理。美食、美酒、品牌故事、年终致辞，要「温暖厚重有包间感」的深色场合",
+		Theme: Theme{
+			Accent: "#f0a44a", Background: "#1d0d08",
+			HeadingColor: "#fff1de", TextColor: "#f0dcc8",
+			BgGradient: "linear-gradient(165deg, #1d0d08 0%, #38130b 55%, #5c1f10 100%)",
+			Font: FontSerif, Radius: "4px", Texture: TextureNone,
+			Vars: map[string]string{
+				"--accent-2": "#c96f4a", // 同一炉火里的铜色，做图表第二色不打架
+				"--positive": "#8fae5d",
+				"--warn":     "#e0c354",
+			},
+		},
+	},
+	PresetDawn: {
+		Name: PresetDawn, Label: "晨雾",
+		About: "清晨暖雾渐变（奶白→杏色）+ 赤陶强调，衬线标题，直角。教育、生活方式、轻分享、母婴与健康，要「柔和亲切不刺眼」的浅色场合",
+		Theme: Theme{
+			Accent: "#b54a32", Background: "#fbf4e8",
+			HeadingColor: "#2b1f18", TextColor: "#43332a",
+			BgGradient: "linear-gradient(170deg, #fbf4e8 0%, #f7e9d9 55%, #f2dbc6 100%)",
+			Surface: "#fffdf8", BorderColor: "#e3d5bf",
+			Font: FontEditorial, Radius: "2px", Texture: TextureNone,
+			Vars: map[string]string{
+				"--accent-2": "#5b7a5e", // 雾里的植物绿，和赤陶是互补的冷暖对
+				"--positive": "#3f7d4f",
+				"--warn":     "#a8721f",
+			},
+		},
+	},
 }
 
 // presetOrder 是稳定顺序：map 遍历随机，而它出现在工具说明与报错信息里，
@@ -243,6 +302,7 @@ var presets = map[string]Preset{
 var presetOrder = []string{
 	PresetPaper, PresetEditorial, PresetNoir, PresetDuotone, PresetTerminal, PresetTech,
 	PresetIndigo, PresetPine, PresetKraft, PresetDune, PresetSwiss,
+	PresetAurora, PresetEmber, PresetDawn,
 }
 
 // Presets 按稳定顺序返回全部预设（工具说明、文档、测试用）。
@@ -286,6 +346,7 @@ func (p Preset) applyTo(t *Theme) {
 	t.TextColor = p.Theme.TextColor
 	t.Surface = p.Theme.Surface
 	t.BorderColor = p.Theme.BorderColor
+	t.BgGradient = p.Theme.BgGradient
 	t.Font = p.Theme.Font
 	t.Radius = p.Theme.Radius
 	t.Texture = p.Theme.Texture

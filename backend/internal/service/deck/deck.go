@@ -113,6 +113,42 @@ func (s *Service) List(userID uint) ([]Meta, error) {
 	return out, nil
 }
 
+// deckPresetRe 从 deck.html 的主题 JSON 里抠 preset 名。只做窗口内正则匹配，
+// 不走 goquery 整树解析：这个函数在会话首轮的注入路径上，只需要一个词。
+var deckPresetRe = regexp.MustCompile(`"preset":"([a-z]+)"`)
+
+// RecentPresets 返回该用户最近 limit 份 deck 的风格预设名，按**旧→新**排列
+// （没记过预设的老 deck 跳过）。供 agent 系统消息做"配色家族轮换"：
+// 跨 deck 的同质化（每份都长一个样）只有让 agent 看见"上一份用了什么"才治得了，
+// 提示词单方面喊"别重复"是空话——它根本不知道上一份是什么。
+// 读路径刻意宽容：个别 deck 读不出来就跳过。注入是锦上添花，不值得为一两份
+// 坏文件让建会话失败。
+func (s *Service) RecentPresets(userID uint, limit int) []string {
+	if s.st == nil || limit <= 0 {
+		return nil
+	}
+	var rows []store.Deck
+	if err := s.st.DB.Where("user_id = ?", userID).
+		Order("id desc").Limit(limit).Find(&rows).Error; err != nil {
+		return nil
+	}
+	var out []string
+	for _, r := range rows {
+		raw, err := s.readRaw(r.ID)
+		if err != nil {
+			continue
+		}
+		if m := deckPresetRe.FindStringSubmatch(raw); m != nil {
+			out = append(out, m[1])
+		}
+	}
+	// 查询是新→旧，反转成旧→新："上一份是 X"这种说法才成立
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out
+}
+
 // FilePath 校验 id 白名单后返回 deck.html 的绝对路径。
 // 只暴露路径给内部使用；外部输入先过 authorize。
 func (s *Service) FilePath(id string) (string, error) {

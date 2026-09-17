@@ -38,13 +38,19 @@ type Theme struct {
 	HeadingColor string            `json:"heading_color"`           // 标题色
 	TextColor    string            `json:"text_color"`              // 正文色
 	Surface      string            `json:"surface,omitempty"`       // 面板/卡片底色；空 = 由 accent 派生
-	BorderColor  string            `json:"border_color,omitempty"`  // 边框与分隔线色；空 = 由 accent 派生
-	Font         string            `json:"font"`                    // 字体配对枚举，见 fontPairs
-	Radius       string            `json:"radius"`                  // 卡片圆角
-	Texture      string            `json:"texture"`                 // 页面纹理枚举：none/grid/dots/rule
-	Transition   string            `json:"transition"`              // 翻页动画枚举，init.js 读走
-	Canvas       string            `json:"canvas"`                  // 画布比例预设，init.js 读走
-	Vars         map[string]string `json:"vars,omitempty"`          // 自定义调色板（变量名 → CSS 值）
+	BorderColor  string            `json:"border_color,omitempty"`  // 边框与分隔线；空 = 由 accent 派生
+	// BgGradient 是整页背景渐变（CSS gradient 值，如 "linear-gradient(165deg,#091830,#10403f)"）。
+	// 为什么允许渐变：配色只有纯色时，"深底主题"只能靠一块平涂的底色撑气氛，
+	// 不同题材的深底页面看起来就是同一块色板。渐变是正式的视觉材料（不是"AI 味"本身，
+	// 撞的是"默认紫蓝渐变+发光"那一个具体组合），所以把它收编成主题字段：
+	// 一处定义、随主题整体切换、还能和纹理叠加。空 = 纯色背景（Background 生效）。
+	BgGradient  string            `json:"bg_gradient,omitempty"`
+	Font        string            `json:"font"`                    // 字体配对枚举，见 fontPairs
+	Radius      string            `json:"radius"`                  // 卡片圆角
+	Texture     string            `json:"texture"`                 // 页面纹理枚举：none/grid/dots/rule
+	Transition  string            `json:"transition"`              // 翻页动画枚举，init.js 读走
+	Canvas      string            `json:"canvas"`                  // 画布比例预设，init.js 读走
+	Vars        map[string]string `json:"vars,omitempty"`          // 自定义调色板（变量名 → CSS 值）
 }
 
 // canvasPresets 是画布比例预设：**高度统一 700，只调宽度**。
@@ -233,6 +239,9 @@ func (t Theme) validate() error {
 		if _, ok := presets[t.Preset]; !ok {
 			return fmt.Errorf("preset 只支持 %s，收到 %q", strings.Join(PresetNames(), "/"), t.Preset)
 		}
+	}
+	if err := validateGradient(t.BgGradient); err != nil {
+		return err
 	}
 	if !transitions[t.Transition] {
 		return fmt.Errorf("transition 只支持 slide/fade/zoom/convex/concave/none，收到 %q", t.Transition)
@@ -432,27 +441,95 @@ func derivedColor(explicit, accent string, alpha float64) string {
 	return hexToRGBA(accent, alpha)
 }
 
-// textureCSS 把纹理枚举展开成一条背景图案规则。
+// gradientFuncPattern 限制渐变只能出自这三种 CSS 原生渐变函数。
+// 放开"任意字符串"等于把一个 CSS 注入面开在 :root 旁边；收成枚举后，
+// 校验规则简单到没有绕过路径。颜色断点仍然自由（16 进制或具名色）。
+var gradientFuncPattern = regexp.MustCompile(`^(linear|radial|conic)-gradient\(`)
+
+// maxGradientBytes 渐变值的长度上限。渐变写超过这个长度多半是把整套插画
+// 塞进了背景里——那该走 update_custom_css，而且长值同样撑大主题块。
+const maxGradientBytes = 300
+
+// validateGradient 校验整页背景渐变。空值合法（= 纯色背景）。
+// 结构校验在这里做（函数枚举 + 括号配对 + 危险片段），
+// 对比度校验做不了——那需要渲染后看，交给量测/视觉审查兜底。
+func validateGradient(v string) error {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	if len(v) > maxGradientBytes {
+		return fmt.Errorf("bg_gradient 超过 %d 字节上限：渐变写 2~4 个颜色断点足够，更复杂的画面不该塞在背景里", maxGradientBytes)
+	}
+	if !gradientFuncPattern.MatchString(v) {
+		return fmt.Errorf("bg_gradient 必须以 linear-gradient( / radial-gradient( / conic-gradient( 开头（如 linear-gradient(165deg,#091830,#10403f)），收到 %q", v)
+	}
+	// 括号配对：gradient( 后面的 ) 必须把所有 ( 收干净，否则会把 :root{} 拼坏
+	depth := 0
+	for _, r := range v {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth < 0 {
+				return fmt.Errorf("bg_gradient 括号不配对：%q", v)
+			}
+		}
+	}
+	if depth != 0 {
+		return fmt.Errorf("bg_gradient 括号不配对：%q", v)
+	}
+	low := strings.ToLower(v)
+	for _, f := range []string{";", "{", "}", "<", ">", "\\", "@import", "url(", "expression("} {
+		if strings.Contains(low, f) {
+			return fmt.Errorf("bg_gradient 里不能出现 %q：它会破坏 CSS 结构或形成外部加载通道", f)
+		}
+	}
+	return nil
+}
+
+// textureCSS 把纹理枚举与背景渐变合成一条 .reveal-viewport 规则。
 // 线条颜色由正文色派生而不是固定灰：深色主题上浅、浅色主题上深，
 // 同一个枚举在两种底色上都成立。
+//
+// 纹理和渐变必须合成**同一条 background-image**（多层、逗号分隔），
+// 而不是各写一条规则：CSS 的 background-image 不能跨规则叠加，
+// 后到的规则会整体替换先前的——分开写的话，"有纹理的渐变主题"永远只剩其中一个。
+// 层序：纹理在上（细线/网点浮在渐变前面），渐变垫底。
+// 声明间不留尾分号：老 deck 的渲染产物里没有它，别为一处无意义的差别制造历史 diff。
 func textureCSS(t Theme) string {
-	if t.Texture == "" || t.Texture == TextureNone {
+	var layers []string
+	var decls []string
+	if t.Texture != "" && t.Texture != TextureNone {
+		line := hexToRGBA(t.TextColor, 0.07)
+		switch t.Texture {
+		case TextureGrid:
+			layers = append(layers,
+				fmt.Sprintf("linear-gradient(%s 1px,transparent 1px)", line),
+				fmt.Sprintf("linear-gradient(90deg,%s 1px,transparent 1px)", line))
+		case TextureDots:
+			layers = append(layers,
+				fmt.Sprintf("radial-gradient(%s 1.2px,transparent 1.2px)", line))
+		case TextureRule:
+			layers = append(layers,
+				fmt.Sprintf("repeating-linear-gradient(to bottom,transparent 0 33px,%s 33px 34px)", line))
+		}
+		switch t.Texture {
+		case TextureGrid:
+			decls = append(decls, "background-size:30px 30px")
+		case TextureDots:
+			decls = append(decls, "background-size:22px 22px")
+		}
+	}
+	if g := strings.TrimSpace(t.BgGradient); g != "" {
+		layers = append(layers, g)
+	}
+	if len(layers) == 0 {
 		return ""
 	}
-	line := hexToRGBA(t.TextColor, 0.07)
-	switch t.Texture {
-	case TextureGrid:
-		return fmt.Sprintf(".reveal-viewport{background-image:"+
-			"linear-gradient(%s 1px,transparent 1px),"+
-			"linear-gradient(90deg,%s 1px,transparent 1px);background-size:30px 30px}", line, line)
-	case TextureDots:
-		return fmt.Sprintf(".reveal-viewport{background-image:"+
-			"radial-gradient(%s 1.2px,transparent 1.2px);background-size:22px 22px}", line)
-	case TextureRule:
-		return fmt.Sprintf(".reveal-viewport{background-image:"+
-			"repeating-linear-gradient(to bottom,transparent 0 33px,%s 33px 34px)}", line)
-	}
-	return ""
+	decls = append([]string{"background-image:" + strings.Join(layers, ",")}, decls...)
+	return fmt.Sprintf(".reveal-viewport{%s}", strings.Join(decls, ";"))
 }
 
 // ThemePatch 是工具层的可选字段集合：nil 表示"不改这项"。
@@ -469,9 +546,10 @@ func textureCSS(t Theme) string {
 // 代价是改单个变量也要提交全文——所以配套了 read_theme（先读后写），
 // 和 read_slide/read_custom_css 是同一套路。
 type ThemePatch struct {
-	Preset                                      *string
+	Preset       *string
 	Accent, Background, HeadingColor, TextColor *string
 	Surface, BorderColor                        *string
+	BGGradient                                  *string
 	Font, Radius, Texture, Transition, Canvas   *string
 	Vars                                        *map[string]string
 }
@@ -488,6 +566,7 @@ func (p ThemePatch) aestheticFields() []string {
 		{"accent", p.Accent != nil}, {"background", p.Background != nil},
 		{"heading_color", p.HeadingColor != nil}, {"text_color", p.TextColor != nil},
 		{"surface", p.Surface != nil}, {"border_color", p.BorderColor != nil},
+		{"bg_gradient", p.BGGradient != nil},
 		{"font", p.Font != nil}, {"radius", p.Radius != nil}, {"texture", p.Texture != nil},
 		{"vars", p.Vars != nil},
 	} {
@@ -526,6 +605,10 @@ func (p ThemePatch) applyTo(t *Theme) error {
 	}
 	if p.BorderColor != nil {
 		t.BorderColor = strings.ToLower(strings.TrimSpace(*p.BorderColor))
+	}
+	if p.BGGradient != nil {
+		// 空串 = 清掉渐变回到纯色背景（与 validateGradient 的空值语义一致）
+		t.BgGradient = strings.TrimSpace(*p.BGGradient)
 	}
 	if p.Font != nil {
 		t.Font = strings.ToLower(strings.TrimSpace(*p.Font))
