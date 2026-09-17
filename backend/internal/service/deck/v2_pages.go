@@ -232,10 +232,11 @@ type PageInput struct {
 
 // PageWriteResult 单页写入结果（部分成功语义：好页落盘、坏页带原因返回）。
 type PageWriteResult struct {
-	No      int    `json:"no"`
-	OK      bool   `json:"ok"`
-	Error   string `json:"error,omitempty"`
-	Warning string `json:"warning,omitempty"`
+	No      int        `json:"no"`
+	OK      bool       `json:"ok"`
+	Error   string     `json:"error,omitempty"`
+	Warning string     `json:"warning,omitempty"`
+	Lint    []LintItem `json:"lint,omitempty"`
 }
 
 // WritePagesReport write_pages 的整体返回。
@@ -304,7 +305,7 @@ func (s *Service) WritePagesV2(userID uint, deckID string, pages []PageInput) (*
 
 	for _, pg := range pages {
 		res := PageWriteResult{No: pg.No}
-		res.OK, res.Error, res.Warning = s.writeOnePage(doc, tpl, outline, planByNo, pg)
+		res.OK, res.Error, res.Warning, res.Lint = s.writeOnePage(doc, tpl, outline, planByNo, pg)
 		if res.Warning != "" {
 			warnings = append(warnings, res.Warning)
 		}
@@ -335,37 +336,40 @@ func (s *Service) WritePagesV2(userID uint, deckID string, pages []PageInput) (*
 }
 
 // writeOnePage 单页的全闸门链。doc/sections 是当前段（含本批已写入的前序页）。
-func (s *Service) writeOnePage(doc *goquery.Document, tpl *template.Template, outline *Outline, planByNo map[int]string, pg PageInput) (bool, string, string) {
+func (s *Service) writeOnePage(doc *goquery.Document, tpl *template.Template, outline *Outline, planByNo map[int]string, pg PageInput) (bool, string, string, []LintItem) {
 	// 1. 页码范围（R105）
 	if pg.No < 1 || pg.No > len(outline.Pages) {
-		return false, fmt.Sprintf("页码 %d 超出大纲范围（1~%d）：实写页数必须等于大纲页数，改页数请改大纲", pg.No, len(outline.Pages)), ""
+		return false, fmt.Sprintf("页码 %d 超出大纲范围（1~%d）：实写页数必须等于大纲页数，改页数请改大纲", pg.No, len(outline.Pages)), "", nil
 	}
 	// 2. 版式登记（C201）+ 与计划一致
 	if !tpl.HasLayout(pg.Layout) {
-		return false, fmt.Sprintf("版式 %q 未在本模板登记；可用版式见 generate 提示词的版式索引，或 read_guidelines", pg.Layout), ""
+		return false, fmt.Sprintf("版式 %q 未在本模板登记；可用版式见 generate 提示词的版式索引，或 read_guidelines", pg.Layout), "", nil
 	}
 	if planned, ok := planByNo[pg.No]; ok && planned != pg.Layout {
-		return false, fmt.Sprintf("第 %d 页的版式计划是 %q，你提交的是 %q。要换版式请重新走 plan_pages（全量重排），不要页面级偷换", pg.No, planned, pg.Layout), ""
+		return false, fmt.Sprintf("第 %d 页的版式计划是 %q，你提交的是 %q。要换版式请重新走 plan_pages（全量重排），不要页面级偷换", pg.No, planned, pg.Layout), "", nil
 	}
 	// 3. 结构 + 消毒（v1 判定复用：唯一根 section、禁嵌套、危险标签拒、on*/危险URL 剥）
 	sec, warning, err := parseSlideFragment(pg.HTML)
 	if err != nil {
-		return false, err.Error(), ""
+		return false, err.Error(), "", nil
 	}
 	// 4. data-layout 必须显式存在且与提交的 layout 字段一致
 	if got := sec.AttrOr("data-layout", ""); got != pg.Layout {
-		return false, fmt.Sprintf("<section> 的 data-layout=%q 与参数 layout=%q 不一致", got, pg.Layout), ""
+		return false, fmt.Sprintf("<section> 的 data-layout=%q 与参数 layout=%q 不一致", got, pg.Layout), "", nil
 	}
 	// 5. 类名契约（C202）
 	allowed := tpl.AllowedClasses(pg.Layout)
 	if err := checkClassContract(sec, pg.Layout, allowed); err != nil {
-		return false, err.Error(), ""
+		return false, err.Error(), "", nil
 	}
 
 	// data-id 权威在后端：剥掉 LLM 写的，按大纲页码编号
 	sec.RemoveAttr("data-id")
 	slideID := fmt.Sprintf("s%d", pg.No)
 	sec.SetAttr("data-id", slideID)
+
+	// AI 味 lint（提示级）：结果进返回值，模型在下一批或修复轮自修
+	lint := LintTaste(sec)
 
 	// 讲稿约定：骨架里应含 .notes div；漏了不阻塞（有些版式确实没有讲稿可写），
 	// 但提示一句——演讲者模式空讲稿是质量缺陷。
@@ -375,7 +379,7 @@ func (s *Service) writeOnePage(doc *goquery.Document, tpl *template.Template, ou
 
 	canonical, err := goquery.OuterHtml(sec)
 	if err != nil {
-		return false, fmt.Sprintf("序列化失败: %v", err), ""
+		return false, fmt.Sprintf("序列化失败: %v", err), "", nil
 	}
 
 	// 替换或追加：每页都从 doc 现查（前序页可能刚追加过，选择器不做跨页缓存）
@@ -388,7 +392,7 @@ func (s *Service) writeOnePage(doc *goquery.Document, tpl *template.Template, ou
 	} else {
 		doc.Find("body").AppendHtml(canonical)
 	}
-	return true, "", warning
+	return true, "", warning, lint
 }
 
 // sortSegmentSections 段内 section 按 data-id 页码升序（s2 必须排在 s10 前，字符串序会错）。
@@ -499,6 +503,11 @@ func (s *Service) UpdateSlideV2(userID uint, deckID, slideID, newHTML, fingerpri
 	got := sec.AttrOr("data-id", "")
 	if got != slideID {
 		return "", fmt.Errorf("new_html 的 data-id 是 %q，与要修改的 slide_id %q 不一致：请基于 read_slide 的内容修改，保留原 data-id", got, slideID)
+	}
+
+	// AI 味 lint：迭代期修改同样提示（拼进 warning）
+	for _, it := range LintTaste(sec) {
+		warning = joinWarnings(warning, fmt.Sprintf("[%s] %s（%s）", it.Rule, it.Msg, it.Hint))
 	}
 
 	canonical, err := goquery.OuterHtml(sec)

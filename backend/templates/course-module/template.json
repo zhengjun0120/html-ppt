@@ -1,0 +1,114 @@
+{
+  "id": "course-module",
+  "name": "课程模块",
+  "description": "教学结构：学习目标、概念讲解、示例、随堂练习、选择自测、小结，培训首选",
+  "tags": [
+    "课程",
+    "培训",
+    "教学"
+  ],
+  "scenario": [
+    "课程",
+    "培训",
+    "教学",
+    "工作坊"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "学院蓝",
+      "class": ""
+    },
+    {
+      "id": "warm",
+      "name": "暖讲台",
+      "class": "cm-warm"
+    },
+    {
+      "id": "forest",
+      "name": "森野",
+      "class": "cm-forest"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "课程封面",
+      "use": "课程标题 + 侧栏课程导航出现",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "标题 ≤14 字；副标 ≤20 字"
+    },
+    {
+      "id": "objectives",
+      "name": "学习目标",
+      "use": "本模块学完后能做到的 3-4 条目标",
+      "roles": [
+        "toc"
+      ],
+      "constraints": "3-4 条、每条动词开头 ≤20 字"
+    },
+    {
+      "id": "concept",
+      "name": "概念讲解",
+      "use": "核心概念 + 要点解释（concept-box 承载定义）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "定义 ≤40 字；要点 2-4 条、每条 ≤24 字"
+    },
+    {
+      "id": "example",
+      "name": "示例讲解",
+      "use": "代码/操作示例（.code 块承载，语法高亮可选）",
+      "roles": [
+        "code",
+        "content"
+      ],
+      "constraints": "代码 ≤16 行；配 1-2 句解说"
+    },
+    {
+      "id": "exercise",
+      "name": "随堂练习",
+      "use": "学员动手的任务说明（exercise 容器）",
+      "roles": [
+        "content",
+        "cta"
+      ],
+      "constraints": "任务 ≤30 字；要求 2-3 条"
+    },
+    {
+      "id": "check",
+      "name": "选择自测",
+      "use": "一道选择题（mcq 选项，correct 标正确项）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 1 题；题干 ≤30 字；4 个选项、每项 ≤20 字"
+    },
+    {
+      "id": "summary",
+      "name": "模块小结",
+      "use": "小结 + 下一模块预告",
+      "roles": [
+        "content",
+        "thanks"
+      ],
+      "constraints": "3 条记忆点、每条 ≤20 字；预告 ≤16 字"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Maple Mono"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/course-module",
+    "license": "MIT"
+  }
+}

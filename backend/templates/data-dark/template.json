@@ -1,0 +1,119 @@
+{
+  "id": "data-dark",
+  "name": "数据深空",
+  "description": "玻璃拟态暗色风：大数字、发光卡片、终端命令行，数据与研究叙事首选",
+  "tags": [
+    "数据",
+    "研究",
+    "暗色",
+    "玻璃拟态"
+  ],
+  "scenario": [
+    "数据分享",
+    "研究报告",
+    "年度总结",
+    "趋势解读"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "极光",
+      "class": ""
+    },
+    {
+      "id": "sunset",
+      "name": "落日",
+      "class": "gd-sunset"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "opening",
+      "name": "数据开场",
+      "use": "开场：编号 + 大标题 + 一句话钩子",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "标题 ≤14 字；lede ≤24 字；kicker 是数据集/报告名"
+    },
+    {
+      "id": "context",
+      "name": "背景铺垫",
+      "use": "研究背景/问题定义（居中叙事）",
+      "roles": [
+        "divider",
+        "content"
+      ],
+      "constraints": "标题 ≤14 字；lede ≤36 字"
+    },
+    {
+      "id": "glass-grid",
+      "name": "玻璃数据卡",
+      "use": "3-4 张玻璃卡并列（每卡一个维度：数字或事实）",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "3-4 卡；卡标题 ≤8 字；内容 ≤28 字；数字无出处标“估算”"
+    },
+    {
+      "id": "big-num",
+      "name": "彩虹大数",
+      "use": "全页一个核心数字（gd-big 彩虹渐变字）",
+      "roles": [
+        "data"
+      ],
+      "constraints": "数字 ≤8 字符；指标名 ≤12 字；口径说明 ≤20 字"
+    },
+    {
+      "id": "terminal",
+      "name": "命令行实证",
+      "use": "终端命令 + 输出（gd-cmd 行）",
+      "roles": [
+        "code"
+      ],
+      "constraints": "命令 1-2 条 + 输出 ≤6 行；每行 ≤64 字符"
+    },
+    {
+      "id": "compare",
+      "name": "对照卡",
+      "use": "两列对照（如方案 A/B、前后、国内外）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 2 列；每列 ≤34 字"
+    },
+    {
+      "id": "trend",
+      "name": "四格趋势",
+      "use": "四个趋势/发现并列（grid-4 玻璃卡）",
+      "roles": [
+        "data"
+      ],
+      "constraints": "恰好 4 卡；每卡 ≤26 字"
+    },
+    {
+      "id": "closing",
+      "name": "收束",
+      "use": "研究收束：结论一句 + 后续动作",
+      "roles": [
+        "thanks",
+        "cta"
+      ],
+      "constraints": "结论 ≤20 字；lede ≤24 字"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Maple Mono"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/graphify-dark-graph",
+    "license": "MIT"
+  }
+}

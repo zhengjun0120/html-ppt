@@ -1,0 +1,121 @@
+{
+  "id": "product-launch",
+  "name": "产品发布",
+  "description": "发布会节奏：暗色 hero 开场、产品特性三连、定价卡、发布宣言",
+  "tags": [
+    "产品",
+    "发布",
+    "营销"
+  ],
+  "scenario": [
+    "产品发布",
+    "版本发布",
+    "功能介绍",
+    "客户演示"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "经典暗色",
+      "class": ""
+    },
+    {
+      "id": "violet",
+      "name": "幻紫",
+      "class": "pl-violet"
+    },
+    {
+      "id": "cyan",
+      "name": "电光青",
+      "class": "pl-cyan"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "发布封面",
+      "use": "暗色 hero：产品名大标题 + 一句话主张",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "标题 ≤10 字；lede ≤20 字；kicker 是发布主题标签"
+    },
+    {
+      "id": "introducing",
+      "name": "发布宣言",
+      "use": "居中宣言页：新版本来袭，一页只说一句话",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "宣言 ≤12 字；副句 ≤20 字"
+    },
+    {
+      "id": "feature-trio",
+      "name": "特性三连",
+      "use": "三个核心特性（feature-card 逐卡）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 卡；卡标题 ≤8 字；说明 ≤30 字"
+    },
+    {
+      "id": "fit-cards",
+      "name": "场景适配",
+      "use": "适用场景/人群三卡（暗色页变体）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 卡；说明 ≤28 字"
+    },
+    {
+      "id": "feature-duo",
+      "name": "深度两卡",
+      "use": "两个重点能力各占一卡，讲深一点",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 2 卡；卡标题 ≤10 字；说明 ≤48 字"
+    },
+    {
+      "id": "how-it-works",
+      "name": "三步上手",
+      "use": "使用流程三步（step 逐行）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 步；每步 ≤20 字、动词开头"
+    },
+    {
+      "id": "pricing",
+      "name": "定价卡",
+      "use": "定价三档（price-card，可标推荐档）",
+      "roles": [
+        "content",
+        "cta"
+      ],
+      "constraints": "恰好 3 档；档名 ≤6 字；价格真实，没有定价就写“联系我们”"
+    },
+    {
+      "id": "ship",
+      "name": "发布号召",
+      "use": "收尾号召：现在就用/扫码/链接",
+      "roles": [
+        "cta",
+        "thanks"
+      ],
+      "constraints": "号召 ≤10 字；lede ≤20 字"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/product-launch",
+    "license": "MIT"
+  }
+}

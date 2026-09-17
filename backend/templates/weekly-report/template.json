@@ -1,0 +1,112 @@
+{
+  "id": "weekly-report",
+  "name": "工作周报",
+  "description": "亮色高效风：KPI 面板、本周交付、数据图表、阻塞与下周计划，汇报用",
+  "tags": [
+    "周报",
+    "汇报",
+    "团队"
+  ],
+  "scenario": [
+    "工作汇报",
+    "周报",
+    "迭代回顾",
+    "项目同步"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "商务蓝",
+      "class": ""
+    },
+    {
+      "id": "violet",
+      "name": "紫罗兰",
+      "class": "wr-violet"
+    },
+    {
+      "id": "teal",
+      "name": "青碧",
+      "class": "wr-teal"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "周报封面",
+      "use": "周报开头：周期徽章 + 大标题 + 汇报人",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "标题 ≤14 字；kicker 是周期（如“2026 年第 38 周”）"
+    },
+    {
+      "id": "kpi-grid",
+      "name": "KPI 面板",
+      "use": "本周 4-8 个关键指标（good/warn/bad 状态色）",
+      "roles": [
+        "data"
+      ],
+      "constraints": "4-8 卡；每卡 = 指标名 + 数字 + 环比；状态色如实标注"
+    },
+    {
+      "id": "shipped-list",
+      "name": "本周交付",
+      "use": "本周完成的事项清单（ship-item 逐条）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "4-8 条；每条一句话 ≤30 字，可带状态 pill"
+    },
+    {
+      "id": "metrics-chart",
+      "name": "数据图表",
+      "use": "趋势柱状（chart-bars，高度/宽度按真实比例）",
+      "roles": [
+        "data"
+      ],
+      "constraints": "3-6 根柱；柱高按真实比例给 style；每组 = 名称 + 数值"
+    },
+    {
+      "id": "blockers",
+      "name": "阻塞与风险",
+      "use": "卡住的事、需要的支持（blocker 逐条）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "1-4 条；每条说清“卡在哪 + 需要谁做什么”"
+    },
+    {
+      "id": "next-week",
+      "name": "下周计划",
+      "use": "下周要做的事（next-row 逐条）",
+      "roles": [
+        "content",
+        "cta"
+      ],
+      "constraints": "3-6 条；每条 ≤24 字、动词开头"
+    },
+    {
+      "id": "thanks",
+      "name": "收尾",
+      "use": "周报收尾：一句话 + 联系方式",
+      "roles": [
+        "thanks"
+      ],
+      "constraints": "大字 ≤10 字；补充 ≤16 字"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Maple Mono"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/weekly-report",
+    "license": "MIT"
+  }
+}

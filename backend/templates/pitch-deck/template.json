@@ -1,0 +1,139 @@
+{
+  "id": "pitch-deck",
+  "name": "融资路演",
+  "description": "YC 风格 10 页路演结构：问题/方案/产品/市场/模式/ traction/团队/Ask，数字说话",
+  "tags": [
+    "路演",
+    "商业",
+    "投资"
+  ],
+  "scenario": [
+    "商业路演",
+    "融资介绍",
+    "创业比赛",
+    "项目汇报"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "经典蓝",
+      "class": ""
+    },
+    {
+      "id": "green",
+      "name": "生机绿",
+      "class": "pd-green"
+    },
+    {
+      "id": "ember",
+      "name": "炽橙",
+      "class": "pd-ember"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "路演封面",
+      "use": "开场：项目一句话定位 + 讲者，渐变光斑背景",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "主标题 ≤12 字；lede ≤24 字；kicker 是品牌短标签"
+    },
+    {
+      "id": "problem-cards",
+      "name": "问题三卡",
+      "use": "三个并列痛点/问题，开头编号引导",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 卡；卡标题 ≤10 字；说明 ≤36 字"
+    },
+    {
+      "id": "pill-statement",
+      "name": "方案宣言",
+      "use": "方案核心论点 + 关键词 pill 一排",
+      "roles": [
+        "content",
+        "divider"
+      ],
+      "constraints": "宣言 ≤28 字；pill 3-5 个、每个 ≤6 字"
+    },
+    {
+      "id": "feature-grid",
+      "name": "产品特性四宫格",
+      "use": "产品 4 个能力点（卡带悬浮态）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 4 卡；标题 ≤8 字；说明 ≤28 字"
+    },
+    {
+      "id": "market-metrics",
+      "name": "市场三指标",
+      "use": "市场规模 TAM/SAM/SOM 或三个核心数字",
+      "roles": [
+        "data"
+      ],
+      "constraints": "3 个指标；指标名 ≤8 字；数字 ≤6 字符；说明 ≤24 字（无出处标“估算”）"
+    },
+    {
+      "id": "business-model",
+      "name": "商业模式",
+      "use": "怎么赚钱：定价/模式三列或两列卡",
+      "roles": [
+        "content"
+      ],
+      "constraints": "2-3 列；列标题 ≤8 字；说明 ≤32 字"
+    },
+    {
+      "id": "traction-bars",
+      "name": "增长势头",
+      "use": "traction 横向条形（用 .bar 宽度表达相对大小）",
+      "roles": [
+        "data"
+      ],
+      "constraints": "4-6 条；条目名 ≤10 字；宽度按真实比例给 style，数字标注在条目名后"
+    },
+    {
+      "id": "team-cards",
+      "name": "团队三卡",
+      "use": "核心成员 3 人（头像位 + 名字 + 背景）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 卡；姓名 ≤6 字；背景 ≤30 字"
+    },
+    {
+      "id": "ask-box",
+      "name": "The Ask",
+      "use": "要什么：金额/资源/支持，一页只说这一件事",
+      "roles": [
+        "cta"
+      ],
+      "constraints": "Ask 一句话 ≤30 字；支持点 ≤3 条、每条 ≤14 字"
+    },
+    {
+      "id": "thanks-mega",
+      "name": "致谢大字",
+      "use": "收尾致谢 + 联系方式 pill",
+      "roles": [
+        "thanks",
+        "cta"
+      ],
+      "constraints": "大字 ≤8 字；lede ≤20 字；pill ≤2 个"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/pitch-deck",
+    "license": "MIT"
+  }
+}

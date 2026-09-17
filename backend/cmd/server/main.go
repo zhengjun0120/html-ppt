@@ -106,6 +106,14 @@ func run() error {
 	}
 	log.Printf("[info] 模板库: %d 个模板就绪（%s）", templateReg.Count(), cfg.Templates.Dir)
 	deckSvc.WithTemplateRegistry(templateReg)
+	// AI 味 lint 词表：config 可整体覆盖，缺省用代码内置词表
+	deck.WithLintConfig(deck.LintCfg{
+		CJKBanned: cfg.DeckV2.Lint.CJK_Banned,
+		ENBanned:  cfg.DeckV2.Lint.EN_Banned,
+		TitleMax:  cfg.DeckV2.Lint.TitleMaxChars,
+		BulletMax: cfg.DeckV2.Lint.BulletMaxChars,
+		EyebrowLimit: cfg.DeckV2.Lint.EyebrowPerPages,
+	})
 
 	// 视觉审查的一次性门票表：agent 发票（Issue）、handler 收票（Take），
 	// 必须是**同一个实例**——各建一份的话，票发出去永远换不回来（而且不报错，只是 404）。

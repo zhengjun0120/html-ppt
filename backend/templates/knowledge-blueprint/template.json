@@ -1,0 +1,118 @@
+{
+  "id": "knowledge-blueprint",
+  "name": "知识蓝图",
+  "description": "蓝图网格底纹 + 结构件：流程管线、双卡对照、大数字、代码盒，讲解复杂机制首选",
+  "tags": [
+    "知识",
+    "架构",
+    "蓝图",
+    "深色"
+  ],
+  "scenario": [
+    "知识分享",
+    "架构讲解",
+    "机制解析",
+    "技术深潜"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "蓝图青",
+      "class": ""
+    },
+    {
+      "id": "amber",
+      "name": "蓝图琥珀",
+      "class": "kb-amber"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "pipeline-overview",
+      "name": "流程管线",
+      "use": "整条链路的全景图（kb-step 逐站，hero 标当前站）",
+      "roles": [
+        "content",
+        "divider"
+      ],
+      "constraints": "3-5 站；每站 ≤8 字；hero 标 1 个"
+    },
+    {
+      "id": "section-open",
+      "name": "章节开篇",
+      "use": "章节过渡：大标题 + 一句话引导",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "标题 ≤12 字；副句 ≤22 字"
+    },
+    {
+      "id": "dual-cards",
+      "name": "双卡对照",
+      "use": "两个概念/方案的对照卡（各带小标签行）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 2 卡；卡标题 ≤8 字；内容 ≤40 字"
+    },
+    {
+      "id": "codebox",
+      "name": "代码盒",
+      "use": "一段核心代码/配置（等宽盒 + 高亮）",
+      "roles": [
+        "code"
+      ],
+      "constraints": "代码 ≤18 行；kw/st 高亮 span 可用"
+    },
+    {
+      "id": "statement",
+      "name": "机制宣言",
+      "use": "整页一句话机制总结",
+      "roles": [
+        "quote",
+        "divider"
+      ],
+      "constraints": "宣言 ≤26 字"
+    },
+    {
+      "id": "big-num",
+      "name": "蓝图大数",
+      "use": "一个关键数字/量级（kb-big-num 承载）",
+      "roles": [
+        "data"
+      ],
+      "constraints": "数字 ≤8 字符；来源写进正文，无出处标“估算”"
+    },
+    {
+      "id": "insight",
+      "name": "洞见卡",
+      "use": "一条反直觉结论/关键洞见（kb-insight 承载）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "洞见 ≤32 字；支撑 ≤40 字"
+    },
+    {
+      "id": "legend",
+      "name": "结构分解",
+      "use": "把一个结构拆成组成部件（kb-step 纵列 + 图例）",
+      "roles": [
+        "content"
+      ],
+      "constraints": "3-5 个部件；每个 ≤12 字 + ≤16 字说明"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Maple Mono"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/knowledge-arch-blueprint",
+    "license": "MIT"
+  }
+}
