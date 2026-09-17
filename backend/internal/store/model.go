@@ -18,12 +18,20 @@ type User struct {
 
 // Deck 归属表：deck 文件在磁盘上，这张表负责 id → 归属用户 的权威映射。
 // 所有"这个 deck 是谁的"判断只认这里；越权访问统一按"不存在"处理（不泄露存在性）。
+//
+// v2 新增四列（deck-v2 重构）：Format 区分新旧格式（v1 行在列表里隐藏，不迁移）；
+// Stage 是生成流程状态机（draft→…→iterating，权威在 DB，deck.json 里是冗余副本）；
+// TemplateID/Variant 记录所选模板与主题变体（实例化后不再变更）。
 type Deck struct {
-	ID        string    `gorm:"primaryKey;size:32" json:"id"` // deck-0006
-	UserID    uint      `gorm:"index;not null" json:"user_id"`
-	Title     string    `gorm:"size:255" json:"title"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `gorm:"primaryKey;size:32" json:"id"` // deck-0006
+	UserID     uint      `gorm:"index;not null" json:"user_id"`
+	Title      string    `gorm:"size:255" json:"title"`
+	Format     string    `gorm:"index;size:8;default:v1" json:"format"`
+	Stage      string    `gorm:"index;size:32;default:''" json:"stage"`
+	TemplateID string    `gorm:"size:64;default:''" json:"template_id"`
+	Variant    string    `gorm:"size:64;default:''" json:"variant"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // ChatSession 对话会话。阶段2 的 ask_user 暂停/恢复靠它保存完整消息列表：

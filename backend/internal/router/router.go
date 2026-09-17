@@ -50,6 +50,12 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/auth/refresh", h.Refresh)
 			guarded.POST("/auth/apikey", h.SetAPIKey)
 			guarded.GET("/decks", h.ListDecks)
+			// deck-v2 管线：大纲双通道、两道闸门、生成触发、元数据
+			guarded.GET("/decks/:id/meta", h.GetDeckV2Meta)
+			guarded.PUT("/decks/:id/outline", h.PutOutline)
+			guarded.POST("/decks/:id/outline/confirm", h.ConfirmOutline)
+			guarded.POST("/decks/:id/template", h.SelectTemplate)
+			guarded.POST("/decks/:id/generate", h.GenerateDeck)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer", h.AskUser)

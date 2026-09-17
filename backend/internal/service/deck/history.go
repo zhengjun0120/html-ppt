@@ -73,13 +73,19 @@ func(s *Service)writeHistoryIndex(deckID string,idx historyIndex) error{
 
 // 一轮 agent run 结束后，对其中动过的每份 deck 各记一笔版本
 // 由agent 层在 run成功结束或 ask_user 暂停时调用； 失败的run不调用
-// detail 是本轮操作汇总； html 在锁内回读当前 deck.html,保证与索引一致
+// detail 是本轮操作汇总。格式分流：v2 deck 快照三件套（index.html + style.css
+// + outline.json 的 bundle），v1 快照单文件 deck.html——恢复语义两边都是
+// "回到当时的样子"，v2 的 runtime/base.css 是共享资产不进快照（版本化路径逃生舱）。
 func(s *Service) RecordRunVersion(userID uint,deckID,detail string) error{
 	if err := s.authorize(userID,deckID);err !=nil{
 		return err
 	}
 	unlock := s.lockDeck(deckID)
 	defer unlock()
+
+	if s.IsV2(deckID) {
+		return s.recordVersionV2(deckID, OpRun, detail)
+	}
 
 	raw,err := s.readRaw(deckID)
 	if err !=nil{

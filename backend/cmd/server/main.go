@@ -105,6 +105,7 @@ func run() error {
 		templateReg = reg
 	}
 	log.Printf("[info] 模板库: %d 个模板就绪（%s）", templateReg.Count(), cfg.Templates.Dir)
+	deckSvc.WithTemplateRegistry(templateReg)
 
 	// 视觉审查的一次性门票表：agent 发票（Issue）、handler 收票（Take），
 	// 必须是**同一个实例**——各建一份的话，票发出去永远换不回来（而且不报错，只是 404）。
@@ -120,6 +121,15 @@ func run() error {
 		return fmt.Errorf("初始化 agent: %w", err)
 	}
 	agentSvc := agent.GetAgentService()
+	// deck-v2：模板注册表 + 阶段轮数预算（config 缺省走代码内默认）
+	agentSvc.Templates = templateReg
+	agentSvc.StageMaxTurns = map[string]int{
+		"clarifying":         cfg.DeckV2.MaxTurns.Clarify,
+		"outlining":          cfg.DeckV2.MaxTurns.Outline,
+		"outline_review":     cfg.DeckV2.MaxTurns.OutlineReview,
+		"generating":         cfg.DeckV2.MaxTurns.Generate,
+		"iterating":          cfg.DeckV2.MaxTurns.Iterate,
+	}
 
 	// 审查的三个运行时依赖在 init 之后补：buildTools 只读开关（features.vision），
 	// 而门票表 / 回环地址 / Chrome 路径只在"真的要审查那一刻"才被读到，

@@ -11,6 +11,7 @@ import (
 	"html-ppt/backend/internal/config"
 	"html-ppt/backend/internal/cryptox"
 	"html-ppt/backend/internal/service/deck"
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
@@ -35,6 +36,11 @@ type AgentService struct {
 	box         *cryptox.Box // BYOK：解密；nil = BYOK 关闭
 	// CustomCSS = features.custom_css：关闭时 buildTools 不挂载自定义样式三件套
 	CustomCSS bool
+	// Templates deck-v2 模板注册表（v2 工具集与 generate 提示词的数据源）。
+	// main 在 InitAgentModel 之后注入（与 VisionGrants 同一套后补模式）。
+	Templates *template.Registry
+	// StageMaxTurns v2 各阶段的轮数预算（config deck_v2.max_turns；缺失走默认）。
+	StageMaxTurns map[string]int
 	// AssetsDir 共享静态资源目录（web/assets）：read_component 从这里读组件库，只读
 	AssetsDir string
 

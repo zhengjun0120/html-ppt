@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sync"
 
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 )
 
@@ -36,6 +37,8 @@ type Service struct {
 	assetsDir string
 	st        *store.Store // nil = 数据库降级模式：所有操作返回不可用
 	deckLocks sync.Map
+	// templates deck-v2 模板注册表（WithTemplateRegistry 挂载；nil = v2 写路径不可用）
+	templates *template.Registry
 }
 
 func New(dataDir, assetsDir string, st *store.Store) *Service {
@@ -158,12 +161,32 @@ func (s *Service) FilePath(id string) (string, error) {
 	return filepath.Join(s.decksDir, id, "deck.html"), nil
 }
 
-// GetHTML 读取整份 deck.html（归属校验后的公开读入口）。
+// GetHTML 读取整份 deck 源文件（归属校验后的公开读入口）。
+// 格式分流：v2 → index.html；v1 → deck.html。量测/审查/渲染通道共用这一个读入口，
+// 保证"审查看到的页面"和"用户看到的页面"永远来自同一个文件。
 func (s *Service) GetHTML(userID uint, id string) (string, error) {
 	if err := s.authorize(userID, id); err != nil {
 		return "", err
 	}
+	if s.IsV2(id) {
+		p, err := s.IndexPathV2(id)
+		if err != nil {
+			return "", err
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return "", fmt.Errorf("deck %s 尚未实例化（index.html 缺失，先选择模板）", id)
+		}
+		return string(data), nil
+	}
 	return s.readRaw(id)
+}
+
+// isV2 以 deck.json 的存在为准（DB Format 列是权威，但这里只做读取分流，
+// 用文件判断避免为纯读取路径打一次 DB）。
+func (s *Service) IsV2(id string) bool {
+	_, err := os.Stat(s.deckFilePath(id))
+	return err == nil
 }
 
 // readRaw 读原文，不做归属校验——只允许 authorize 之后的内部调用。

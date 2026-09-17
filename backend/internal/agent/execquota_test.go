@@ -35,13 +35,13 @@ func TestExecToolQuotaBlocksAfterMaxPerRun(t *testing.T) {
 	emit := func(StreamEvent) error { return nil }
 
 	for i := 0; i < 3; i++ {
-		res, err := as.execTool(context.Background(), tool, emit, rr)
+		res, err := as.execTool(context.Background(), tool, emit, rr, nil)
 		if err != nil || res != fmt.Sprintf(`{"exec":%d}`, i+1) {
 			t.Fatalf("第 %d 次调用应正常执行: res=%q err=%v", i+1, res, err)
 		}
 	}
 
-	res, err := as.execTool(context.Background(), tool, emit, rr)
+	res, err := as.execTool(context.Background(), tool, emit, rr, nil)
 	if err != nil {
 		t.Fatalf("配额拦截不应向循环返回错误: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestExecToolQuotaBlocksAfterMaxPerRun(t *testing.T) {
 	}
 
 	// 拦截后的重试同样被拦，且措辞稳定——模型可能会再试一次
-	res2, _ := as.execTool(context.Background(), tool, emit, rr)
+	res2, _ := as.execTool(context.Background(), tool, emit, rr, nil)
 	if !strings.Contains(res2, "配额用完") {
 		t.Errorf("配额用尽后的重试也应被拦下, got %q", res2)
 	}
@@ -83,7 +83,7 @@ func TestExecToolReviewQuotaOnlyCountsRealReviews(t *testing.T) {
 			ID: "call_1", Type: "function",
 			Function: openai.ChatCompletionMessageFunctionToolCallFunction{Name: "review_slides", Arguments: args},
 		}
-		res, err := as.execTool(context.Background(), tool, emit, rr)
+		res, err := as.execTool(context.Background(), tool, emit, rr, nil)
 		if err != nil {
 			t.Fatalf("执行不应出错: %v", err)
 		}
@@ -135,7 +135,7 @@ func TestExecToolNoQuotaMeansUnlimited(t *testing.T) {
 		Function: openai.ChatCompletionMessageFunctionToolCallFunction{Name: "read_slide", Arguments: "{}"},
 	}
 	for i := 0; i < 5; i++ {
-		if _, err := as.execTool(context.Background(), tool, func(StreamEvent) error { return nil }, rr); err != nil {
+		if _, err := as.execTool(context.Background(), tool, func(StreamEvent) error { return nil }, rr, nil); err != nil {
 			t.Fatalf("第 %d 次调用不应出错: %v", i+1, err)
 		}
 	}

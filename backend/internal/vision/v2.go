@@ -12,13 +12,18 @@ package vision
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/shared"
 )
 
 // V2 画布常量：模板 template.json canvas 的合法区间校验用（模板加载器已校验
@@ -311,4 +316,161 @@ func PrintPDF2(ctx context.Context, url, chromePath string, timeout time.Duratio
 		return nil, fmt.Errorf("PrintToPDF 返回空内容")
 	}
 	return pdf, nil
+}
+
+// ---------- 看图审查（v2） ----------
+
+// DigestV2 逐页量测的文本摘要（发给审查模型的原料）。
+func DigestV2(d *Deck2) string {
+	out := make([]string, 0, len(d.Slides))
+	for _, s := range d.Slides {
+		flags := make([]string, 0, 3)
+		if s.OverflowY {
+			flags = append(flags, "纵向溢出")
+		}
+		if s.OverflowX {
+			flags = append(flags, "横向溢出")
+		}
+		if s.MinFontPx < 18 {
+			flags = append(flags, fmt.Sprintf("最小字号 %.0fpx 偏小", s.MinFontPx))
+		}
+		line := fmt.Sprintf("第 %d 页 [%s] %s：字数 %d，最小字号 %.0fpx，底部空隙 %.0fpx，子元素 %d",
+			s.Index+1, s.Layout, s.Title, s.Chars, s.MinFontPx, s.BottomGap, s.Children)
+		if len(flags) > 0 {
+			line += " ⚠ " + strings.Join(flags, "、")
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
+}
+
+// HardFindingsV2 程序硬判定（overflow / 过小字号）。给 ScopeFindingsV2 与 trace 用。
+func HardFindingsV2(d *Deck2) []string {
+	var out []string
+	for _, s := range d.Slides {
+		if s.OverflowY || s.OverflowX {
+			out = append(out, fmt.Sprintf("第 %d 页内容溢出画布（程序硬判定）", s.Index+1))
+		}
+		if s.MinFontPx > 0 && s.MinFontPx < 14 {
+			out = append(out, fmt.Sprintf("第 %d 页最小字号 %.0fpx 低于投影下限（程序硬判定）", s.Index+1, s.MinFontPx))
+		}
+	}
+	return out
+}
+
+const reviewPromptV2 = `你是网页幻灯片的版面审查员。这套幻灯片渲染在固定画布上（所见即所得，截图就是观众看到的画面）。下面按页给你：一页渲染截图 + 这一页的量测数字。
+
+量测字段：版式（data-layout）；字数；最小字号（px，设计像素）；底部空隙（内容距画布底边的空隙，接近 0 或负数 = 贴边/溢出）；子元素数。程序已给出的硬判定（溢出等）只是"值得看一眼"的信号，**不要复核数字**。
+
+**只看给你的这几页**：没给你截图的页不要在报告里出现。你的任务：
+1. 用眼睛确认硬判定在画面上真的存在，并说清是哪一处（引用页面实际文字）。
+2. 找数字看不出来的问题：文字被裁、元素重叠、内容贴边、标题孤字换行、卡片高度不齐、代码块溢出、对比度不足、以及这一页内容与标题讲的不是一回事。
+
+不要提"建议补充内容"这类意见，只说版面。不要重写内容。
+
+**两条纪律，违反的代价是主模型陷入"改→再审→改"的无限返工：**
+- **每条问题分级**：【硬】= 投屏会翻车的（被裁/重叠/看不清/明显错位）；【软】= 审美打磨。拿不准算【软】。
+- **没把握就不报**：一页没问题就写没问题。报得准远比报得多有价值。
+
+输出格式（严格照做）：
+第 N 页｜【硬或软】｜问题类别｜具体是什么（引用页面实际文字）｜期望效果
+每页最多一行，只写有问题的页。最后一行：合计：N 页有问题（硬 M 页）
+都没问题则只输出一行：未发现问题
+
+"期望效果"只写改成什么样（如"该行换到下一行开头"），不要指定实现手段。`
+
+// ReviewV2 让模型看 v2 deck 的指定页截图。findings 由调用方从整份 deck 算好传入。
+func ReviewV2(ctx context.Context, client *openai.Client, model string, d *Deck2, pages []int, onDelta func(string)) (*ReviewResult, error) {
+	if onDelta == nil {
+		onDelta = func(string) {}
+	}
+	var sel []Slide2
+	picked := map[int]bool{}
+	for _, p := range pages {
+		if p >= 1 && p <= len(d.Slides) {
+			sel = append(sel, d.Slides[p-1])
+			picked[p] = true
+		}
+	}
+	if len(sel) == 0 {
+		return nil, fmt.Errorf("没有可审查的页")
+	}
+
+	var head strings.Builder
+	head.WriteString(reviewPromptV2)
+	fmt.Fprintf(&head, "\n\n你要看的页：第 %s 页（共 %d 张截图，deck 共 %d 页）\n", joinInts(pages), len(sel), len(d.Slides))
+	hard := HardFindingsV2(d)
+	head.WriteString("\n程序已判定的硬问题：\n")
+	if len(hard) == 0 {
+		head.WriteString("无")
+	} else {
+		head.WriteString(strings.Join(hard, "\n"))
+	}
+	head.WriteString("\n\n逐页量测（整份）：\n")
+	head.WriteString(DigestV2(d))
+
+	parts := []openai.ChatCompletionContentPartUnionParam{openai.TextContentPart(head.String())}
+	for _, s := range sel {
+		parts = append(parts, openai.TextContentPart(fmt.Sprintf("\n第 %d 页：", s.Index+1)))
+		parts = append(parts, openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
+			URL:    "data:image/png;base64," + base64.StdEncoding.EncodeToString(s.PNG),
+			Detail: "auto",
+		}))
+	}
+	_ = picked
+
+	// 空报告重试一次（与 v1 Review 同一纪律：reasoning 吃光 completion 是概率行为）
+	tryReview := func() (string, openai.CompletionUsage, error) {
+		stream := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
+			Model:           openai.ChatModel(model),
+			ReasoningEffort: shared.ReasoningEffortLow,
+			Messages:        []openai.ChatCompletionMessageParamUnion{openai.UserMessage(parts)},
+			MaxTokens:       openai.Int(8000),
+			StreamOptions:   openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)},
+		})
+		acc := openai.ChatCompletionAccumulator{}
+		var sb strings.Builder
+		for stream.Next() {
+			chunk := stream.Current()
+			if !acc.AddChunk(chunk) {
+				continue
+			}
+			if len(chunk.Choices) == 0 {
+				continue
+			}
+			if delta := chunk.Choices[0].Delta; delta.Content != "" {
+				sb.WriteString(delta.Content)
+				onDelta(delta.Content)
+			}
+		}
+		if err := stream.Err(); err != nil {
+			stream.Close()
+			return "", openai.CompletionUsage{}, err
+		}
+		stream.Close()
+		if len(acc.Choices) == 0 || acc.Choices[0].FinishReason == "" {
+			return "", openai.CompletionUsage{}, errors.New("看图审查流式响应不完整（没有 finish_reason）")
+		}
+		return strings.TrimSpace(sb.String()), acc.Usage, nil
+	}
+
+	report, usage, err := tryReview()
+	if err == nil && report == "" {
+		report, usage, err = tryReview()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if report == "" {
+		return nil, fmt.Errorf("模型返回了空报告（completion=%d）", usage.CompletionTokens)
+	}
+	return &ReviewResult{Report: report, Prompt: head.String(), Images: len(sel), Usage: usage}, nil
+}
+
+func joinInts(xs []int) string {
+	strs := make([]string, 0, len(xs))
+	for _, x := range xs {
+		strs = append(strs, fmt.Sprintf("%d", x))
+	}
+	return strings.Join(strs, "、")
 }

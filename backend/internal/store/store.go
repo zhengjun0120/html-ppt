@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/glebarez/sqlite"
 	gormmysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -54,6 +55,20 @@ func (s *Store) Ping(ctx context.Context) error {
 		return err
 	}
 	return sqlDB.PingContext(ctx)
+}
+
+// OpenMemory 内存 SQLite（纯 Go 驱动，无 cgo），专供测试：
+// 与 MySQL 同一套模型与 AutoMigrate，测试里测的表结构和生产一致。
+// 不放进 _test.go 是因为使用方是其他包的测试（跨包不可见 _test.go 导出）。
+func OpenMemory(ctx context.Context) (*Store, error) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("open memory sqlite: %w", err)
+	}
+	if err := db.WithContext(ctx).AutoMigrate(&User{}, &Deck{}, &ChatSession{}); err != nil {
+		return nil, fmt.Errorf("auto migrate: %w", err)
+	}
+	return &Store{DB: db}, nil
 }
 
 func dsn(cfg config.DB, withDB bool) string {

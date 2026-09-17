@@ -12,7 +12,7 @@ func (h *Handler) RenderDeck(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	html, err := h.decks.GetHTML(uid, deckID)
+	html, err := h.decks.PreviewHTML(uid, deckID)
 	if err != nil {
 		// 这里少了 return 的话，404 之后还会继续往下写一个 200 的空页面——
 		// 无头浏览器拿到 200 + 空 HTML，Reveal 起不来，报错却指向"JS 报错？"，

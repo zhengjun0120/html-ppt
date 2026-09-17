@@ -6,6 +6,7 @@ import (
 	"errors"
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/service/deck"
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"log"
@@ -64,6 +65,134 @@ func (as *AgentService) buildSystemMessage(userID uint, deckID string) string {
 	return msg
 }
 
+// runScope 一次 run 的执行作用域：工具集、配额表、轮数预算。
+// v1 路径用全局装配的那套；v2 路径按阶段现配（阶段 × 工具矩阵）。
+type runScope struct {
+	tools     []openai.ChatCompletionToolUnionParam
+	exec      map[string]ToolFunc
+	maxPerRun map[string]int
+	maxTurns  int
+}
+
+// v2 各阶段的默认轮数预算（config deck_v2.max_turns 可覆盖）。
+var defaultStageMaxTurns = map[string]int{
+	"clarifying":         8,
+	"outlining":          10,
+	"outline_review":     8,
+	"generating":         24,
+	"iterating":          20,
+}
+
+// maxTurnsLegacy v1 路径（deck-v1 会话 / 旧工具集）沿用原值。
+const maxTurnsLegacy = 20
+
+// scopeForV1 全局工具集的 v1 作用域。
+func (as *AgentService) scopeForV1() *runScope {
+	return &runScope{tools: as.Tools, exec: as.Exec, maxPerRun: as.MaxPerRun, maxTurns: maxTurnsLegacy}
+}
+
+// scopeForStage 按阶段装配 v2 作用域。工具集不存在（nil）时返回 v1 作用域——
+// 调用方在阶段守卫之后才到这里，nil 只发生在配置异常，兜底比 panic 温和。
+func (as *AgentService) scopeForStage(stage string) *runScope {
+	toolMap := as.buildToolsV2(stage)
+	if toolMap == nil {
+		return as.scopeForV1()
+	}
+	scope := &runScope{exec: map[string]ToolFunc{}, maxPerRun: map[string]int{}, maxTurns: maxTurnsLegacy}
+	if mt, ok := as.StageMaxTurns[stage]; ok && mt > 0 {
+		scope.maxTurns = mt
+	} else if mt, ok := defaultStageMaxTurns[stage]; ok {
+		scope.maxTurns = mt
+	}
+	for name, t := range toolMap {
+		scope.tools = append(scope.tools, t.Definition)
+		scope.exec[name] = t.Execute
+		if t.MaxPerRun > 0 {
+			scope.maxPerRun[name] = t.MaxPerRun
+		}
+	}
+	return scope
+}
+
+// ErrStageLocked v2 阶段守卫的拒绝（handler 把它映射成 409 + 可执行的提示）。
+type ErrStageLocked struct{ Msg string }
+
+func (e ErrStageLocked) Error() string { return e.Msg }
+
+// scopeDecision 一次 chat run 的路由结论：作用域 + 系统提示词 + 是否 v2 管线。
+// isV2 决定"每个 run 重刷系统提示词"是否生效（v1 会话的行为保持原样）。
+type scopeDecision struct {
+	scope *runScope
+	sys   string
+	isV2  bool
+}
+
+// scopeForSession 决定一次 chat run 的作用域与系统提示词（deck-v2 的阶段路由核心）。
+//
+//	deckID 空：冷启动会话。首轮 = clarifying（提问）；ask_user 恢复轮 = outlining
+//	（答案已到手，该产出大纲了）。
+//	deckID 是 v2 deck：按 deck.stage 路由，selecting_template/generating 阶段拒绝对话。
+//	deckID 是 v1 deck：走旧系统提示词与全局工具集（P5 摘除前 v1 会话仍可用）。
+func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, deckIDParam string, continuation bool) (scopeDecision, error) {
+	deckID := sess.DeckID
+	if deckID == "" {
+		deckID = deckIDParam
+	}
+	if deckID == "" {
+		if continuation {
+			// 冷启动的 ask_user 恢复轮：澄清的答案已到手，该产出大纲了
+			return scopeDecision{scope: as.scopeForStage("outlining"), sys: BuildStagePrompt("outlining", "", nil), isV2: true}, nil
+		}
+		return scopeDecision{scope: as.scopeForStage("clarifying"), sys: BuildStagePrompt("", "", nil), isV2: true}, nil
+	}
+	if !as.DeckService.IsV2(deckID) {
+		return scopeDecision{scope: as.scopeForV1(), sys: as.buildSystemMessage(userID, deckID)}, nil
+	}
+
+	df, err := as.DeckService.GetDeckV2(userID, deckID)
+	if err != nil {
+		return scopeDecision{}, err
+	}
+	switch df.Stage {
+	case deck.StageSelectingTemplate:
+		return scopeDecision{}, ErrStageLocked{Msg: "请先在界面上选择模板（这一步在对话里做不了）"}
+	case deck.StageGenerating:
+		return scopeDecision{}, ErrStageLocked{Msg: "deck 正在生成中：请等生成完成，或刷新页面后用「继续生成」恢复"}
+	case deck.StageOutlining, deck.StageOutlineReview:
+		return scopeDecision{scope: as.scopeForStage(df.Stage), sys: BuildStagePrompt(df.Stage, deckID, as.templateOrNil(df)), isV2: true}, nil
+	case deck.StageIterating:
+		return scopeDecision{scope: as.scopeForStage(deck.StageIterating), sys: BuildStagePrompt(deck.StageIterating, deckID, as.templateOrNil(df)), isV2: true}, nil
+	default:
+		return scopeDecision{}, fmt.Errorf("deck 处于未知阶段 %q", df.Stage)
+	}
+}
+
+// templateOrNil deck → 模板（未选模板/库不可用时 nil，提示词相应少一段）。
+func (as *AgentService) templateOrNil(df *deck.DeckFile) *template.Template {
+	if as.Templates == nil || df.TemplateID == "" {
+		return nil
+	}
+	tpl, err := as.Templates.Get(df.TemplateID)
+	if err != nil {
+		return nil
+	}
+	return tpl
+}
+
+// refreshSystem 把会话消息数组里的系统提示词替换为当前阶段的版本。
+// v2 会话的每个 run 都重刷：阶段会跨轮迁移（回答完提问就到 outlining），
+// 消息数组里那条例行的旧 system 必须跟着换，否则模型拿着上一阶段的
+// 提示词干这一阶段的事。messages[0] 不是 system（异常形状）就前插一条。
+func refreshSystem(messages []openai.ChatCompletionMessageParamUnion, systemPrompt string) []openai.ChatCompletionMessageParamUnion {
+	// 不做类型探测：v2 会话的 messages[0] 恒为 system（第一次 refreshSystem 时前置的，
+	// 之后只会被覆盖），这个不变式由 v2 会话只走 refreshSystem 保证。
+	if len(messages) == 0 {
+		return append([]openai.ChatCompletionMessageParamUnion{openai.SystemMessage(systemPrompt)}, messages...)
+	}
+	messages[0] = openai.SystemMessage(systemPrompt)
+	return messages
+}
+
 func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID string, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
 	client := as.clientFor(ctx)
@@ -88,9 +217,18 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		return sess.ID, err
 	}
 
-	//首轮构建系统提示词
-	if sessionID == 0 {
-		messages = append(messages, openai.SystemMessage(as.buildSystemMessage(userID, deckID)))
+	// deck-v2 阶段路由：作用域 + 系统提示词（v1 会话走旧路径，行为不变）
+	dec, err := as.scopeForSession(userID, sess, deckID, false)
+	if err != nil {
+		return sess.ID, err
+	}
+	if sess.DeckID == "" && deckID != "" {
+		sess.DeckID = deckID // 首轮把请求里的 deck 绑到会话（v1 语义保留）
+	}
+	if dec.isV2 {
+		messages = refreshSystem(messages, dec.sys)
+	} else if sessionID == 0 {
+		messages = append(messages, openai.SystemMessage(dec.sys))
 	}
 
 	messages = append(messages, openai.UserMessage(userContent))
@@ -101,11 +239,12 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		return sess.ID, fmt.Errorf("事件推送失败: %w", emitErr)
 	}
 
-	paused, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+	paused, rr, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
 		UserID:      userID,
-		DeckID:      deckID,
+		DeckID:      sess.DeckID,
 		UserContent: userContent,
-	})
+	}, dec.scope)
+	as.bindDeckFromRun(sess, rr)
 	if paused {
 		return sess.ID, ErrPaused
 	}
@@ -113,6 +252,25 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		return sess.ID, err
 	}
 	return sess.ID, nil
+}
+
+// isLegacyScope 已移除：isV2 标志在 scopeDecision 上，v1 会话不再触碰系统提示词。
+
+// bindDeckFromRun 会话绑定：冷启动会话里 submit_outline 创建了 deck，
+// run 结束（含暂停）后把它绑回会话——之后的轮次才有 stage 可路由。
+func (as *AgentService) bindDeckFromRun(sess *store.ChatSession, rr *runRecorder) {
+	if sess == nil || rr == nil || sess.DeckID != "" || as.st == nil {
+		return
+	}
+	ids := rr.deckIDs()
+	if len(ids) != 1 {
+		return
+	}
+	if err := as.st.DB.Model(&store.ChatSession{}).Where("id = ?", sess.ID).Update("deck_id", ids[0]).Error; err != nil {
+		log.Printf("[warn] 会话 %d 绑定 deck %s 失败: %v", sess.ID, ids[0], err)
+		return
+	}
+	sess.DeckID = ids[0]
 }
 
 // AnswerChat 用户回答 ask_user 后恢复循环
@@ -146,13 +304,22 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	}
 
 	// 恢复也算一次新的 run（消息数组继续用，但 run 的边界是"一次循环执行"）。
-	// parent_run_id 指回被暂停的那次，观测页据此把被打断的对话串起来看
-	paused, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+	// parent_run_id 指回被暂停的那次，观测页据此把被打断的对话串起来看。
+	// 阶段路由在恢复轮重新走：冷启动会话的恢复轮 = outlining（答案已到手）。
+	dec, err := as.scopeForSession(userID, sess, "", true)
+	if err != nil {
+		return sess.ID, err
+	}
+	if dec.isV2 {
+		messages = refreshSystem(messages, dec.sys)
+	}
+	paused, rr, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
 		UserID:      userID,
 		DeckID:      sess.DeckID,
 		UserContent: "(用户回答了 ask_user 的提问)",
 		ParentRunID: pending.RunID,
-	})
+	}, dec.scope)
+	as.bindDeckFromRun(sess, rr)
 	if paused {
 		return sess.ID, ErrPaused
 	}
@@ -162,8 +329,8 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	return sess.ID, nil
 }
 
-func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error, info runTraceInfo) (paused bool, err error) {
-	rr := newRunRecorder()
+func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error, info runTraceInfo, scope *runScope) (paused bool, rr *runRecorder, err error) {
+	rr = newRunRecorder()
 	defer func() {
 		if err == nil {
 			as.recordRunVersions(ctx, rr)
@@ -207,7 +374,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 	opt := as.setChatOpts()
 	opt.Messages = messages
 	opt.StreamOptions = openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)}
-	opt.Tools = as.Tools
+	opt.Tools = scope.tools
 
 	var fullText strings.Builder
 
@@ -223,18 +390,18 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		// 工具调用从 turnCtx 派生自己的工具作用域，兄弟工具之间不会互相污染
 		turnCtx := trace.WithTurn(ctx, i)
 		//预算花完了
-		if i > maxTurns {
+		if i > scope.maxTurns {
 			messages = append(messages, openai.UserMessage("工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"))
 			opt.Messages = messages
 			opt.Tools = nil
 			err := as.persistSession(sess, messages)
 			if err != nil {
-				return false, err
-			}
+				return false, rr, err
+	}
 		}
 		msg, usage, streamErr := as.streamOnce(turnCtx, client, opt, &fullText, emit)
 		if streamErr != nil {
-			return false, streamErr
+			return false, rr, streamErr
 		}
 
 		promptTokens += usage.PromptTokens
@@ -252,23 +419,23 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 			opt.Messages = messages
 			err := as.persistSession(sess, messages)
 			if err != nil {
-				return false, err
-			}
+				return false, rr, err
+	}
 			// 汇总带上分项：扁平那四个字段保持"主循环口径"不动（前端契约），
 			// 真实总成本看 Usage.Total
 			summary := rec.Summary()
 			if emitErr := emit(StreamEvent{Type: EventTypeDone, Content: fullText.String(), PromptTokens: promptTokens, CompletionTokens: completionTokens, TotalTokens: totalTokens, CachedTokens: cachedTokens, Usage: &summary}); emitErr != nil {
-				return false, fmt.Errorf("事件推送失败: %w", emitErr)
-			}
+				return false, rr, fmt.Errorf("事件推送失败: %w", emitErr)
+	}
 			endRun(trace.StatusOK)
-			return false, nil
-		}
+			return false, rr, nil
+	}
 
 		messages = append(messages, msg.ToParam())
 		opt.Messages = messages
 		if err := as.persistSession(sess, messages); err != nil {
-			return false, err
-		}
+			return false, rr, err
+	}
 
 		for _, tool := range msg.ToolCalls {
 			//判断是不是要调用提问用户
@@ -288,8 +455,8 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 						messages = append(messages, openai.ToolMessage(result, tool.ID))
 						opt.Messages = messages
 						if err := as.persistSession(sess, messages); err != nil {
-							return false, err
-						}
+							return false, rr, err
+	}
 						continue
 					}
 					//如果提问的问题大于6个小于1个 同上
@@ -298,8 +465,8 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 					messages = append(messages, openai.ToolMessage(result, tool.ID))
 					opt.Messages = messages
 					if err := as.persistSession(sess, messages); err != nil {
-						return false, err
-					}
+						return false, rr, err
+	}
 					continue
 				}
 				//如果要调用提问用户 则不可调用其他工具
@@ -321,25 +488,25 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				// 它不能直接发给模型。这就是 NewStreamChat 要设闸门的原因。
 				sess.PendingAsk = encodePendingAsk(pendingAsk{ToolCallID: tool.ID, RunID: rec.RunID()})
 				if err := as.persistSession(sess, messages); err != nil {
-					return false, err
-				}
+					return false, rr, err
+	}
 				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments}); emitErr != nil {
-					return false, fmt.Errorf("事件推送失败: %w", emitErr)
-				}
+					return false, rr, fmt.Errorf("事件推送失败: %w", emitErr)
+	}
 				trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: `{"note":"已向用户提问，本轮暂停等回答"}`})
 				endRun(trace.StatusPaused)
-				return true, nil
-			}
+				return true, rr, nil
+	}
 			//普通工具调用
-			result, execErr := as.execTool(turnCtx, tool, emit, rr)
+			result, execErr := as.execTool(turnCtx, tool, emit, rr, scope)
 			if execErr != nil {
-				return false, execErr
+				return false, rr, execErr
 			}
 			messages = append(messages, openai.ToolMessage(result, tool.ID))
 			opt.Messages = messages
 			if err := as.persistSession(sess, messages); err != nil {
-				return false, err
-			}
+				return false, rr, err
+	}
 		}
 		// 继续下一轮
 	}
@@ -356,7 +523,11 @@ func emitFrom(ctx context.Context) func(StreamEvent) error{
 	return e
 }
 
-func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error, rr *runRecorder) (string, error) {
+func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletionMessageToolCallUnion, emit func(StreamEvent) error, rr *runRecorder, scope *runScope) (string, error) {
+	if scope == nil {
+		// 白盒测试路径：nil scope 回落全局装配（生产路径恒有 scope）
+		scope = &runScope{exec: as.Exec, maxPerRun: as.MaxPerRun}
+	}
 	// 把归属挂进 ctx：工具内部（联网搜索的每一次子搜索、视觉审查的每一页截图）
 	// 因此不必知道自己在第几轮、call_id 是什么，只要 trace.Emit 就会自动归位
 	ctx = trace.WithTool(ctx, tool.Function.Name, tool.ID)
@@ -374,7 +545,7 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 		startedAt = time.Now()
 	)
 
-	t, ok := as.Exec[tool.Function.Name]
+	t, ok := scope.exec[tool.Function.Name]
 	// runTool 执行工具并处理结果。配额分流有两个入口（数字复查跳过配额直接执行、
 	// 其余走闸门），但执行与失败处理是同一份，抽出来避免抄两遍。
 	runTool := func() {
@@ -405,7 +576,7 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 		// 它会在配额耗尽后被误拦——提示词承诺它"免费、随时可调"。
 		// 解析失败按真审查处理（宁可少放行，不可放开真审查的闸）。
 		runTool()
-	case rr.overQuota(tool.Function.Name, as.MaxPerRun[tool.Function.Name]):
+	case rr.overQuota(tool.Function.Name, scope.maxPerRun[tool.Function.Name]):
 		// 配额闸门（Tool.MaxPerRun）：审查→修复→再审这类循环没有自然出口，
 		// 提示词拦不住，就在这里拦。刻意不算 callErr：这是策略结果不是故障，
 		// 模型要的是"接下来该怎么办"的指令，前端也不该把它显示成红色失败
@@ -555,4 +726,80 @@ func (as *AgentService) recordRunVersions(ctx context.Context, rr *runRecorder) 
 			log.Printf("[warn] deck %s 记录历史版本失败 err: %v", deckID, err)
 		}
 	}
+}
+
+// StartGenerationRun 生成 run 的发起（POST /api/decks/:id/generate）。
+//
+// 与 chat run 的区别：messages 是**全新的一份**（system=generate 提示词 + 一句启动指令），
+// 整体覆盖会话消息——大纲产物已持久化在 deck 目录里，生成 run 是自包含的执行，
+// 会话回放让位给"生成全记录"。断线恢复：每批 write_pages 落盘即持久化，
+// stage 停在 generating，resume=true 的 run 会先对齐现状再续写。
+func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionID uint, resume bool, emit func(StreamEvent) error) (uint, error) {
+	ctx = authctx.WithUser(ctx, userID)
+	client := as.clientFor(ctx)
+
+	sess, _, err := as.loadSession(ctx, userID, sessionID)
+	if err != nil {
+		return 0, err
+	}
+	if sess.DeckID == "" {
+		return sess.ID, errors.New("会话没有关联的 deck：请先完成大纲与模板选择")
+	}
+	df, err := as.DeckService.GetDeckV2(userID, sess.DeckID)
+	if err != nil {
+		return sess.ID, err
+	}
+	if df.Stage != deck.StageGenerating {
+		return sess.ID, ErrStageLocked{Msg: fmt.Sprintf("deck 阶段为 %s，不在生成态", df.Stage)}
+	}
+
+	var userMsg string
+	if resume {
+		userMsg = "继续生成：先 list_slides 对齐已写入的页，然后从缺失的页继续 write_pages；" +
+			"若全部页已写入，则按最近一次量测结果修复问题页，修完汇报。"
+	} else {
+		userMsg = "开始生成：按工作流走——先 plan_pages 全局规划（被打回就调整重提），" +
+			"然后分批 write_pages 写完全部页，处理量测与 lint 反馈，需要时 review_slides 看图，最后如实汇报。"
+	}
+	messages := []openai.ChatCompletionMessageParamUnion{
+		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df)))),
+		openai.UserMessage(userMsg),
+	}
+	if err := as.persistSession(sess, messages); err != nil {
+		return sess.ID, err
+	}
+	if emitErr := emit(StreamEvent{Type: EventTypeSession, Content: strconv.FormatUint(uint64(sess.ID), 10)}); emitErr != nil {
+		return sess.ID, fmt.Errorf("事件推送失败: %w", emitErr)
+	}
+
+	scope := as.scopeForStage(deck.StageGenerating)
+	_, rr, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+		UserID:      userID,
+		DeckID:      sess.DeckID,
+		UserContent: userMsg,
+	}, scope)
+	if err == nil {
+		// 正常结束 → iterating。中断/错误时 stage 留在 generating（resume 靠它）。
+		if to, terr := as.DeckService.FinishGeneration(userID, sess.DeckID); terr != nil {
+			log.Printf("[warn] deck %s 推进到 iterating 失败: %v", sess.DeckID, terr)
+		} else {
+			a := as // 仅为可读性
+			_ = a
+			as.emitV2Public(emit, EventTypeStage, map[string]any{"deck_id": sess.DeckID, "to": to})
+		}
+	}
+	_ = rr
+	return sess.ID, err
+}
+
+// emitV2Public 生成 run 的管线事件（runLoop 之外没有 ctx emit 链，直连 emit）。
+func (as *AgentService) emitV2Public(emit func(StreamEvent) error, eventType string, payload map[string]any) {
+	if emit == nil {
+		return
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	_ = emit(StreamEvent{Type: eventType, Content: string(data)})
 }

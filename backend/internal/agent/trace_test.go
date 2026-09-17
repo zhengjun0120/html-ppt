@@ -87,7 +87,7 @@ func TestExecToolRecordsArgsAndResult(t *testing.T) {
 	}}
 
 	ctx := trace.WithTurn(trace.With(context.Background(), rec), 2)
-	result, execErr := as.execTool(ctx, toolCall("call_1", "update_slide", `{"deck_id":"deck-0001","slide_id":"s3"}`), c.emit, newRunRecorder())
+	result, execErr := as.execTool(ctx, toolCall("call_1", "update_slide", `{"deck_id":"deck-0001","slide_id":"s3"}`), c.emit, newRunRecorder(), nil)
 	if execErr != nil {
 		t.Fatalf("工具执行不该返回错误: %v", execErr)
 	}
@@ -178,7 +178,7 @@ func TestExecToolRecordsFailures(t *testing.T) {
 			as := &AgentService{Exec: c.exec}
 			ctx := trace.With(context.Background(), rec)
 
-			result, execErr := as.execTool(ctx, toolCall("c1", c.toolName, `{"x":1}`), coll.emit, newRunRecorder())
+			result, execErr := as.execTool(ctx, toolCall("c1", c.toolName, `{"x":1}`), coll.emit, newRunRecorder(), nil)
 			rec.Close()
 			if execErr != nil {
 				t.Fatalf("execTool 不该把工具错误往上抛（循环要继续跑）: %v", execErr)

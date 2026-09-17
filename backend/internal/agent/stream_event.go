@@ -34,6 +34,15 @@ const (
 
 	EventTypeSession = "session"  // 携带 session_id (首轮/续轮/恢复都会发) 由前后端保存
 	EventTypeAskUser = "ask_user" // 结构化提问卡片
+
+	// —— deck-v2 管线事件 ——
+	// 前端对未知事件类型一律忽略（default 分支），所以这些事件对 v1 前端是惰性的。
+	EventTypeStage     = "stage"           // 阶段迁移 {from,to}，Content 是 JSON
+	EventTypeGate      = "gate_waiting"    // 到达用户闸门（outline/template），Content 是 JSON
+	EventTypeOutline   = "outline_updated" // 大纲被 agent 修改，Content 是 JSON {deck_id,version}
+	EventTypePage      = "page_generated"  // 一页写入完成，Content 是 JSON {no,total,layout,ok}
+	EventTypeLint      = "lint_report"     // AI 味/契约违规报告，Content 是 JSON {page,items}
+
 	// EventTypeTrace 观测事件（工具参数、返回耗时、工具内部过程、分项用量）。
 	// Content 是一条 trace.Event 的 JSON，**不含 messages**（那个太大，走观测页按需拉）。
 	// 不认识这个类型的前端会把它归到 default 分支——所以客户端要么显式处理，

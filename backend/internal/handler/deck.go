@@ -34,7 +34,7 @@ func (h *Handler) GetDeckFile(c *gin.Context) {
 		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
-	html, err := h.decks.GetHTML(uid, c.Param("id"))
+	html, err := h.decks.PreviewHTML(uid, c.Param("id"))
 	if err != nil {
 		response.Err(c, http.StatusNotFound, "deck 不存在")
 		return
