@@ -59,14 +59,6 @@ func(rr *runRecorder) note(deckID,op string){
 
 func(rr *runRecorder)noteToolCall(name,argsJSON,resultJSON string){
 	switch name{
-	case "write_deck":
-		var res struct {
-			DeckID string `json:"deck_id"`
-			Slides int `json:"slides"`
-		}
-		if json.Unmarshal([]byte(resultJSON),&res) == nil && res.DeckID!=""{
-			rr.note(res.DeckID,fmt.Sprintf("创建(%d页)",res.Slides))
-		}
 	case "update_slide":
 		var a struct {
 			DeckID string `json:"deck_id"`
@@ -96,13 +88,6 @@ func(rr *runRecorder)noteToolCall(name,argsJSON,resultJSON string){
 		}
 		if json.Unmarshal([]byte(argsJSON),&a) == nil && a.DeckID !=""{
 			rr.note(a.DeckID,"删除了 "+a.SlideID)
-		}
-	case "update_theme":
-		var res struct {
-			DeckID string `json:"deck_id"`
-		}
-		if json.Unmarshal([]byte(resultJSON),&res) == nil && res.DeckID!= ""{
-			rr.note(res.DeckID,"调整主题")
 		}
 	// —— deck-v2 工具：会话绑定（bindDeckFromRun）与历史记档的 detail 都靠这些 note ——
 	case "submit_outline":

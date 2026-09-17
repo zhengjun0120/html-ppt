@@ -161,7 +161,7 @@ func (h *Handler) RestoreDeckVersion(c *gin.Context){
 		response.Err(c,http.StatusNotFound,"deck 不存在 err:" +err.Error())
 		return
 	}
-	if err := h.decks.RestoreVersion(uid,deckID,version);err !=nil{
+	if err := h.decks.RestoreVersionV2(uid,deckID,version);err !=nil{
 		response.Err(c,http.StatusBadRequest,err.Error())
 		return
 	}

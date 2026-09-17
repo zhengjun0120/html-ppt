@@ -114,6 +114,9 @@ func (a *AgentService) captureDeckV2(ctx context.Context, uid uint, deckID strin
 // toolReviewSlidesV2 v2 的 review_slides：pages 留空 = 数字复查（不占配额）；
 // 点名页 = 量测 + 截图 + 看图子调用。1 基/0 基换算只在这里做一次（v1 的教训）。
 func (a *AgentService) toolReviewSlidesV2(ctx context.Context, arguments string) (string, error) {
+	if !a.Vision || a.VisionGrants == nil {
+		return "", errVisionOff
+	}
 	uid, err := toolUID(ctx)
 	if err != nil {
 		return "", err

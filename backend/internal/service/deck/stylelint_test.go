@@ -82,7 +82,7 @@ func TestStyleLintFlagsSectionLevelThemeOverride(t *testing.T) {
 			t.Errorf("应报出 section 上的 %s，实际 %v", w, rep.SectionProps)
 		}
 	}
-	if !strings.Contains(rep.Warning(), "update_custom_css") {
+	if !strings.Contains(rep.Warning(), "模板版式接管") {
 		t.Errorf("section 级覆盖的提示应指向正确做法: %s", rep.Warning())
 	}
 }
@@ -108,7 +108,7 @@ func TestStyleLintHardcodedColorsAndPxFonts(t *testing.T) {
 		t.Fatalf("px 字号应被数出来，实际 %d", rep.PxFontSizes)
 	}
 	w := rep.Warning()
-	for _, want := range []string{"主题变量", "em", "update_theme"} {
+	for _, want := range []string{"var(--accent)", "em"} {
 		if !strings.Contains(w, want) {
 			t.Errorf("提示里应出现 %q: %s", want, w)
 		}

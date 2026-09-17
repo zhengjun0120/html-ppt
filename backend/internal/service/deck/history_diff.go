@@ -83,7 +83,7 @@ func (s *Service) versionDiff(deckID,fromVersion,toVersion string)(*HistoryDiff,
 	var toDetail string
 	var toHTML string
 	if toVersion == ""{
-		toHTML ,err = s.readRaw(deckID)
+		toHTML ,err = s.readIndex(deckID)
 		if err != nil{
 			return nil,err
 		}

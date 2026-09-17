@@ -16,6 +16,7 @@ import (
 	"gorm.io/gorm"
 
 	"html-ppt/backend/internal/agent"
+	"html-ppt/backend/internal/export"
 	"html-ppt/backend/internal/config"
 	"html-ppt/backend/internal/cryptox"
 	"html-ppt/backend/internal/handler"
@@ -142,20 +143,35 @@ func run() error {
 	// 审查的三个运行时依赖在 init 之后补：buildTools 只读开关（features.vision），
 	// 而门票表 / 回环地址 / Chrome 路径只在"真的要审查那一刻"才被读到，
 	// 所以这样接不必改 InitAgentModel 的签名（它已经有 6 个参数了）。
-	if cfg.Features.Vision {
+	var loopback string
+	if cfg.Features.Vision || cfg.Features.Export {
 		if base, err := loopbackBase(cfg.Server.Addr); err != nil {
 			// 不返回错误：审查是增强信息，配错了不该让整个服务起不来（fail-open，
 			// 与变量契约同一条原则——它防的是静默无效，不是安全问题）
-			log.Printf("[warn] 视觉审查：%v，该功能不可用", err)
+			log.Printf("[warn] 视觉/导出：%v，相关功能不可用", err)
 		} else {
-			agentSvc.VisionGrants = visionGrants
-			agentSvc.VisionBaseURL = base
-			agentSvc.ChromePath = cfg.Vision.ChromePath
-			log.Printf("[info] 视觉审查已开启：无头浏览器走 %s 取页", base)
+			loopback = base
 		}
 	}
+	if cfg.Features.Vision && loopback != "" {
+		agentSvc.VisionGrants = visionGrants
+		agentSvc.VisionBaseURL = loopback
+		agentSvc.ChromePath = cfg.Vision.ChromePath
+		log.Printf("[info] 视觉审查已开启：无头浏览器走 %s 取页", loopback)
+	}
 
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg)
+	// deck-v2 导出：复用视觉审查的同一张门票表与 Chrome；超时来自 config（默认 60s）
+	var exportSvc *export.Service
+	if cfg.Features.Export && loopback != "" {
+		timeout := cfg.Export.TimeoutSeconds
+		if timeout <= 0 {
+			timeout = 60
+		}
+		exportSvc = export.New(deckSvc, loopback, cfg.Vision.ChromePath, time.Duration(timeout)*time.Second, visionGrants)
+		log.Printf("[info] deck-v2 导出已开启（pdf/png/html，超时 %ds）", timeout)
+	}
+
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 

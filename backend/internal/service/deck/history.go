@@ -3,14 +3,10 @@ package deck
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 const (
@@ -73,9 +69,8 @@ func(s *Service)writeHistoryIndex(deckID string,idx historyIndex) error{
 
 // 一轮 agent run 结束后，对其中动过的每份 deck 各记一笔版本
 // 由agent 层在 run成功结束或 ask_user 暂停时调用； 失败的run不调用
-// detail 是本轮操作汇总。格式分流：v2 deck 快照三件套（index.html + style.css
-// + outline.json 的 bundle），v1 快照单文件 deck.html——恢复语义两边都是
-// "回到当时的样子"，v2 的 runtime/base.css 是共享资产不进快照（版本化路径逃生舱）。
+// detail 是本轮操作汇总。快照是三件套 bundle（index.html + style.css + outline.json），
+// runtime/base.css 是共享资产不进快照（版本化路径逃生舱）。
 func(s *Service) RecordRunVersion(userID uint,deckID,detail string) error{
 	if err := s.authorize(userID,deckID);err !=nil{
 		return err
@@ -83,49 +78,7 @@ func(s *Service) RecordRunVersion(userID uint,deckID,detail string) error{
 	unlock := s.lockDeck(deckID)
 	defer unlock()
 
-	if s.IsV2(deckID) {
-		return s.recordVersionV2(deckID, OpRun, detail)
-	}
-
-	raw,err := s.readRaw(deckID)
-	if err !=nil{
-		return err
-	}
-	s.recordVersion(deckID,OpRun,detail,raw)
-	return nil
-}
-
-// recordVersion 把一份 deck.html 记入历史
-func(s *Service) recordVersion(deckID,operation,detail,html string){
-	dir := s.historyDir(deckID)
-	if err := os.MkdirAll(dir,0o755);err !=nil{
-		log.Printf("deck %s 历史目录创建失败 err: %v", deckID,err)
-		return
-	}
-
-	idx := s.readHistoryIndex(deckID)
-	meta := VersionMeta{
-		Version: fmt.Sprintf("v%06d",idx.NextSeq),
-		Time: time.Now().Unix(),
-		Operation: operation,
-		Detail:detail,
-		Slides: countSlides(html),
-	}
-	if err := atomicWriteFile(filepath.Join(dir,meta.Version+".html"),[]byte(html));err !=nil{
-		log.Printf("deck %s 快照 %s 写入失败 err:%v",deckID,meta.Version,err)
-		return
-	}
-	idx.NextSeq++
-	idx.Versions = append([]VersionMeta{meta},idx.Versions...)
-
-	kept,dropped := pruneVersions(idx.Versions)
-	for _,v := range dropped {
-		os.Remove(filepath.Join(dir,v+".html"))
-	}
-	idx.Versions = kept
-	if err := s.writeHistoryIndex(deckID,idx);err !=nil{
-		log.Printf("deck %s 历史索引写入失败 err: %v",deckID,err)
-	}
+	return s.recordVersionV2(deckID, OpRun, detail)
 }
 
 // 分层保留 最近 keepFullDays 天全留；更早的每天只留当天最后
@@ -235,61 +188,3 @@ func (s *Service) clearHistoryLocked(deckID string) (int, error) {
 	return n,nil
 }
 
-// restoreSnapshot 恢复的核心: 锁内"找到版本 - 读快照 - 写回 deck.html - 立即记一条"
-func(s *Service) restoreSnapshot(deckID,version string) error{
-	if !versionPattern.MatchString(version){
-		return fmt.Errorf("版本号 %q 不合法",version)
-	}
-	unlock := s.lockDeck(deckID)
-	defer unlock()
-
-	idx := s.readHistoryIndex(deckID)
-	found := false
-	for _,m := range idx.Versions{
-		if m.Version == version{
-			found = true
-			break
-		}
-	}
-
-	if !found{
-		return fmt.Errorf("版本 %s 不存在（可能已被删除或裁剪）",version)
-	}
-
-	data,err := os.ReadFile(filepath.Join(s.historyDir(deckID),version+".html"))
-	if err != nil{
-		return fmt.Errorf("快照文件读取失败 err: %w",err)
-	}
-	if err := s.atomicWriteDeck(deckID,string(data));err !=nil{
-		return fmt.Errorf("写入 deck 失败 err:%w",err)
-	}
-	s.recordVersion(deckID,OpRestore,"恢复到 "+version,string(data))
-	return nil
-}
-
-// RestoreVersion 版本恢复的公开方法
-func (s *Service)RestoreVersion(userID uint,deckID,version string) error{
-	if err := s.authorize(userID,deckID);err !=nil{
-		return err
-	}
-	return s.restoreSnapshot(deckID,version)
-}
-
-func countSlides(html string) int{
-	doc,err := goquery.NewDocumentFromReader(strings.NewReader(html))
-	if err !=nil{
-		log.Printf("解析html失败 err:%v",err)
-		return 0
-	}
-	return doc.Find(".slides > section").Length()
-
-}
-
-func atomicWriteFile(path string,data []byte) error{
-	tmp := path +".tmp"
-	if err := os.WriteFile(tmp,data,0o644);err !=nil{
-		return err
-	}
-
-	return os.Rename(tmp,path)
-}

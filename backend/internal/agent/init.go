@@ -91,7 +91,7 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 		TraceCfg: traceCfg,
 	}
 
-	tools := agentServer.buildTools()
+	tools := agentServer.buildToolsV2(deck.StageIterating)
 	for name, t := range tools {
 		agentServer.Tools = append(agentServer.Tools, t.Definition)
 		agentServer.Exec[name] = t.Execute

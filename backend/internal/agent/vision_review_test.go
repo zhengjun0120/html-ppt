@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"html-ppt/backend/internal/vision"
+	"html-ppt/backend/internal/authctx"
 )
 
 // 开关没开时**安静**（这一项本来就不该出现在工具结果里），
@@ -17,10 +17,11 @@ func TestVisionOffIsSilentAndFailureWouldNotBe(t *testing.T) {
 	svc := &AgentService{} // Vision 零值 = 关
 	ctx := context.Background()
 
-	if got := svc.measureDeck(ctx, 1, "deck-0001"); got != "" {
+	if got := svc.measureDeckV2(ctx, 1, "deck-0001"); got != "" {
 		t.Errorf("开关没开时 measureDeck 不该往工具结果里塞话，实际 %q", got)
 	}
-	_, err := svc.reviewPages(ctx, 1, "deck-0001", []int{1})
+	ctx2 := authctx.WithUser(ctx, 1)
+	_, err := svc.toolReviewSlidesV2(ctx2, `{"deck_id":"deck-0001","pages":[1]}`)
 	if err == nil || !strings.Contains(err.Error(), "没开") {
 		t.Errorf("开关没开时 review_slides 应当说清是功能没开（重试也没用），实际 %v", err)
 	}
@@ -55,28 +56,4 @@ func TestNormalizePagesDedupesAndSorts(t *testing.T) {
 	}
 }
 
-// "没看的页里还有几页有问题"这条提示只列**页级**判定。
-// 版式重复一次会牵出半份 deck 的页号，列出来的效果是让 agent 以为
-// "十页里有八页都有问题"，反而把真正该看的那几页淹掉。
-func TestUnselectedFindingsPagesSkipsDeckLevel(t *testing.T) {
-	fs := []vision.Finding{
-		{Level: vision.LevelPage, Pages: []int{2}, Text: "第 2 页：…"},
-		{Level: vision.LevelPage, Pages: []int{7}, Text: "第 7 页：…"},
-		{Level: vision.LevelLayout, Pages: []int{1, 3, 5, 7}, Text: "版式重复：…"},
-	}
 
-	got := unselectedFindingsPages(fs, []int{2})
-	if !reflect.DeepEqual(got, []int{7}) {
-		t.Errorf("点第 2 页时应当只提示第 7 页（第 2 页已经在看了，版式级那条不列），实际 %v", got)
-	}
-	if got := unselectedFindingsPages(fs, []int{2, 7}); got != nil {
-		t.Errorf("两页都在看，不该再提示别的页，实际 %v", got)
-	}
-	// 升序：模型照着这个顺序挑下一批要看的页，乱序会看起来像"优先级"
-	if got := unselectedFindingsPages([]vision.Finding{
-		{Level: vision.LevelPage, Pages: []int{9}, Text: "第 9 页：…"},
-		{Level: vision.LevelPage, Pages: []int{4}, Text: "第 4 页：…"},
-	}, nil); !reflect.DeepEqual(got, []int{4, 9}) {
-		t.Errorf("应当升序，实际 %v", got)
-	}
-}

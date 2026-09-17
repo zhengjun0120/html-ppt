@@ -32,11 +32,18 @@ type Config struct {
 	// DeckV2 deck-v2 生成管线的可调参数（批次、各阶段轮数预算、lint 词表）。
 	// 零值时使用代码内默认值（见 config 包的 Default* 常量）。
 	DeckV2 DeckV2 `yaml:"deck_v2"`
+	// ExportCfg 导出参数（features.export 打开时生效）。
+	Export ExportCfg `yaml:"export"`
 }
 
 // Templates 模板库目录（deck-v2）。
 type Templates struct {
 	Dir string `yaml:"dir"` // 相对 config.yaml 所在目录；空 = ./templates
+}
+
+// ExportCfg 导出参数。
+type ExportCfg struct {
+	TimeoutSeconds int `yaml:"timeout_seconds"` // 0 = 60s
 }
 
 // DeckV2 生成管线参数。
@@ -91,6 +98,9 @@ type Features struct {
 
 	//视觉审查
 	Vision bool `yaml:"vision"`
+
+	// Export deck-v2 导出（pdf/png/单文件 html）。依赖本机 Chrome（vision.chrome_path）。
+	Export bool `yaml:"export"`
 
 	// Trace 打开 agent 观测（每轮请求/工具参数与返回/工具内部过程/分项 token 落盘）。
 	// 与别的开关不同，它**不影响 agent 的行为**，只影响"记录多少"——

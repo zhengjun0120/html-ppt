@@ -518,3 +518,19 @@ func (o *Outline) ToPromptText() string {
 	}
 	return b.String()
 }
+
+// ---------- 导出支撑（export 包通过接口调用） ----------
+
+// ExportDir deck 的导出产物目录。
+func (s *Service) ExportDir(id string) string {
+	return filepath.Join(s.decksDir, id, "exports")
+}
+
+// PageCount 当前页数（导出校验用）。
+func (s *Service) PageCount(id string) int {
+	html, err := s.readV2File(id, "index.html")
+	if err != nil {
+		return 0
+	}
+	return countSlidesV2(html)
+}

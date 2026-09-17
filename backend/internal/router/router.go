@@ -56,6 +56,8 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/decks/:id/outline/confirm", h.ConfirmOutline)
 			guarded.POST("/decks/:id/template", h.SelectTemplate)
 			guarded.POST("/decks/:id/generate", h.GenerateDeck)
+			guarded.POST("/decks/:id/export", h.ExportDeck)
+			guarded.GET("/decks/:id/exports/:file", h.DownloadExport)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer", h.AskUser)

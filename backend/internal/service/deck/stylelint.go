@@ -14,7 +14,7 @@ import (
 // 为什么需要它：消毒闸门只拦得住"危险"的东西，拦不住"合法但会让整套 deck 烂掉"的东西。
 // 实测三份手写型 deck，可编辑区里 43%~51% 的字符是逐字重复的内联样式（同一串
 // "position:absolute; top:0; right:0; ..." 在 8 页里一字不差抄了 8 遍），另外还有
-// 在 <section> 上写死 background/color/font-family 从而让 update_theme 彻底失效的。
+// 在 <section> 上写死 background/color/font-family 从而绕过模板版式的。
 // 这些都不报错、导出也正常，只是 deck 变得无法再换风格——是最难自查的一类失败。
 //
 // 策略与消毒一致：只提示、不改写、不阻塞。
@@ -224,12 +224,12 @@ func (r styleReport) Warning() string {
 	var parts []string
 	if len(r.SectionProps) > 0 {
 		parts = append(parts, fmt.Sprintf(
-			"在 <section> 上直接写了 %s——那是整页覆盖主题，用户之后换配色不会生效，整页级视觉请走 update_custom_css",
+			"在 <section> 上直接写了 %s——页级视觉由模板版式接管，不要整页覆盖主题",
 			strings.Join(r.SectionProps, "、")))
 	}
 	if r.HardColors >= lintHardColorLimit {
 		parts = append(parts, fmt.Sprintf(
-			"%d 处写死的颜色值，会让 update_theme 失效，改用 var(--accent)/var(--text-muted) 等主题变量", r.HardColors))
+			"%d 处写死的颜色值游离于模板主题之外，改用版式骨架允许的类名与 var(--accent) 等 token", r.HardColors))
 	}
 	if r.PxFontSizes >= lintPxFontLimit {
 		parts = append(parts, fmt.Sprintf(
@@ -240,7 +240,7 @@ func (r styleReport) Warning() string {
 			"%d 处内联 font-size：组件库的字号是固定阶梯（0.7 / 0.92 / 1.1 / 1.32 / 1.6 / 2.4 / 4.6 倍基准），"+
 				"手写的字号会插进两档之间，让人读不出哪一层更重要。要突出就用角色类（.stat / .term / .label / .band），"+
 				"整页级的锚点用 .cover-title / .big-num（.bg-ink/.bg-accent 页面上它们最出彩）；"+
-				"或把它单独放一页用 .bleed；整份 deck 字太小请调 update_theme 的 canvas", r.InlineFontSize))
+				"或把它单独放一页用 .bleed；整份 deck 字太小是内容超载的信号，优先精简内容", r.InlineFontSize))
 	}
 	if r.SolePageBlocks > 0 {
 		parts = append(parts, fmt.Sprintf(

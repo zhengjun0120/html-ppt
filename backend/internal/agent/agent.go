@@ -27,46 +27,7 @@ const maxTurns = 20 //最大允许调用20轮llm请求
 // 数组下标直接就是 time.Weekday（周日=0），不需要转换。
 var weekdayCN = [...]string{"周日", "周一", "周二", "周三", "周四", "周五", "周六"}
 
-func (as *AgentService) buildSystemMessage(userID uint, deckID string) string {
-	msg := systemPrompt
-	if deckID != "" && deck.IsValidID(deckID) {
-		msg += fmt.Sprintf(`当前用户正在预览的演示文稿是 {"deck_id":"%s"},涉及它的修改直接使用这个 deck_id, 不要向用户询问`, deckID)
-	}
-
-	// 最近 deck 的风格谱：跨 deck 同质化的解药。提示词里的"配色家族轮换"规则
-	// 需要这个输入才有意义——agent 每个会话只看得见一份 deck，不告诉它
-	// "上一份用了什么"，它就没法做到"这份换一个族"。与 deckID 注入同理放在
-	// 静态提示词之后的变量区，不进 systemPrompt.md（那是编译进二进制的静态文本，
-	// 而这份清单按用户、按 deck 数量变化）。nil DeckService（单测）时静默跳过。
-	if as.DeckService != nil && userID != 0 {
-		if presets := as.DeckService.RecentPresets(userID, 8); len(presets) > 0 {
-			msg += fmt.Sprintf("\n\n该用户最近 %d 份 deck 用的风格预设（旧→新）：%s。"+
-				"按提示词「配色家族轮换」挑这次的预设，不要连续两份落在同一族；用户点名风格时以用户为准。",
-				len(presets), strings.Join(presets, "、"))
-		}
-	}
-
-	// 当前日期追加在**整个系统提示词的最后**，这个位置是刻意的，不要往前挪：
-	// 前缀缓存要求"完整匹配一个已持久化的前缀单元"，所以变化的内容越靠后，被打断的部分越少。
-	// 实测（约 2000 token 的静态前缀 + 末尾日期）：把末尾日期改一天，cached_tokens 从
-	// 2560/2696 只掉到 2432/2696——前面那 2560 token 照样命中。反过来把日期放开头，
-	// 就是第一个 token 就分叉、后面全部重算。
-	//
-	// 这也是它不写进 systemPrompt.md 的原因：那个文件是 //go:embed 编译进二进制的，
-	// 写死一个日期等于"发布即过期"，而且没有任何东西会报出来。
-	//
-	// 最后那句"不要为了确认日期去联网搜索"不是客套：没有明确授权时模型会在 thinking 里
-	// 纠结"我的知识截止 2024-06、不能访问实时网络"，实测它会真的发起一次计费搜索去问今天几号。
-	now := time.Now()
-	msg += fmt.Sprintf("\n\n当前日期：%s（%s）。涉及「今天」「本月」「最近」这类时间说法时以它为准——"+
-		"你的训练数据有截止时间，不要按它推断当前时间，也不要为了确认日期去联网搜索。",
-		now.Format("2006-01-02"), weekdayCN[int(now.Weekday())])
-
-	return msg
-}
-
 // runScope 一次 run 的执行作用域：工具集、配额表、轮数预算。
-// v1 路径用全局装配的那套；v2 路径按阶段现配（阶段 × 工具矩阵）。
 type runScope struct {
 	tools     []openai.ChatCompletionToolUnionParam
 	exec      map[string]ToolFunc
@@ -76,27 +37,21 @@ type runScope struct {
 
 // v2 各阶段的默认轮数预算（config deck_v2.max_turns 可覆盖）。
 var defaultStageMaxTurns = map[string]int{
-	"clarifying":         8,
-	"outlining":          10,
-	"outline_review":     8,
-	"generating":         24,
-	"iterating":          20,
+	"clarifying":     8,
+	"outlining":      10,
+	"outline_review": 8,
+	"generating":     24,
+	"iterating":      20,
 }
 
-// maxTurnsLegacy v1 路径（deck-v1 会话 / 旧工具集）沿用原值。
+// maxTurnsLegacy 兜底轮数（未识别阶段/无配置时）。
 const maxTurnsLegacy = 20
 
-// scopeForV1 全局工具集的 v1 作用域。
-func (as *AgentService) scopeForV1() *runScope {
-	return &runScope{tools: as.Tools, exec: as.Exec, maxPerRun: as.MaxPerRun, maxTurns: maxTurnsLegacy}
-}
-
-// scopeForStage 按阶段装配 v2 作用域。工具集不存在（nil）时返回 v1 作用域——
-// 调用方在阶段守卫之后才到这里，nil 只发生在配置异常，兜底比 panic 温和。
+// scopeForStage 按阶段装配 v2 作用域。
 func (as *AgentService) scopeForStage(stage string) *runScope {
 	toolMap := as.buildToolsV2(stage)
 	if toolMap == nil {
-		return as.scopeForV1()
+		toolMap = map[string]Tool{}
 	}
 	scope := &runScope{exec: map[string]ToolFunc{}, maxPerRun: map[string]int{}, maxTurns: maxTurnsLegacy}
 	if mt, ok := as.StageMaxTurns[stage]; ok && mt > 0 {
@@ -119,8 +74,8 @@ type ErrStageLocked struct{ Msg string }
 
 func (e ErrStageLocked) Error() string { return e.Msg }
 
-// scopeDecision 一次 chat run 的路由结论：作用域 + 系统提示词 + 是否 v2 管线。
-// isV2 决定"每个 run 重刷系统提示词"是否生效（v1 会话的行为保持原样）。
+// scopeDecision 一次 chat run 的路由结论：作用域 + 系统提示词。
+// v2 会话每个 run 重刷系统提示词（阶段会跨轮迁移，旧 system 必须跟着换）。
 type scopeDecision struct {
 	scope *runScope
 	sys   string
@@ -132,7 +87,7 @@ type scopeDecision struct {
 //	deckID 空：冷启动会话。首轮 = clarifying（提问）；ask_user 恢复轮 = outlining
 //	（答案已到手，该产出大纲了）。
 //	deckID 是 v2 deck：按 deck.stage 路由，selecting_template/generating 阶段拒绝对话。
-//	deckID 是 v1 deck：走旧系统提示词与全局工具集（P5 摘除前 v1 会话仍可用）。
+//	deckID 不是 v2：旧格式文稿已随旧栈下线，明确报错（D7）。
 func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, deckIDParam string, continuation bool) (scopeDecision, error) {
 	deckID := sess.DeckID
 	if deckID == "" {
@@ -146,7 +101,7 @@ func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, de
 		return scopeDecision{scope: as.scopeForStage("clarifying"), sys: BuildStagePrompt("", "", nil, nil), isV2: true}, nil
 	}
 	if !as.DeckService.IsV2(deckID) {
-		return scopeDecision{scope: as.scopeForV1(), sys: as.buildSystemMessage(userID, deckID)}, nil
+		return scopeDecision{}, ErrStageLocked{Msg: "这份文稿是旧格式（deck-v1），已随新版下线；请新建文稿生成"}
 	}
 
 	df, err := as.DeckService.GetDeckV2(userID, deckID)
@@ -181,12 +136,9 @@ func (as *AgentService) templateOrNil(df *deck.DeckFile) *template.Template {
 }
 
 // refreshSystem 把会话消息数组里的系统提示词替换为当前阶段的版本。
-// v2 会话的每个 run 都重刷：阶段会跨轮迁移（回答完提问就到 outlining），
-// 消息数组里那条例行的旧 system 必须跟着换，否则模型拿着上一阶段的
-// 提示词干这一阶段的事。messages[0] 不是 system（异常形状）就前插一条。
+// 不做类型探测：v2 会话的 messages[0] 恒为 system（第一次 refreshSystem 时前置的，
+// 之后只会被覆盖），这个不变式由 v2 会话只走 refreshSystem 保证。
 func refreshSystem(messages []openai.ChatCompletionMessageParamUnion, systemPrompt string) []openai.ChatCompletionMessageParamUnion {
-	// 不做类型探测：v2 会话的 messages[0] 恒为 system（第一次 refreshSystem 时前置的，
-	// 之后只会被覆盖），这个不变式由 v2 会话只走 refreshSystem 保证。
 	if len(messages) == 0 {
 		return append([]openai.ChatCompletionMessageParamUnion{openai.SystemMessage(systemPrompt)}, messages...)
 	}

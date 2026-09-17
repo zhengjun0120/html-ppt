@@ -8,6 +8,9 @@ package handler
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"net/http"
 	"strconv"
 
@@ -151,4 +154,67 @@ func (h *Handler) GenerateDeck(c *gin.Context) {
 	serveAgentSSE(c, func(emit func(agent.StreamEvent) error) (uint, error) {
 		return h.agent.StartGenerationRun(c.Request.Context(), uid, uint(sessionID), c.Param("id"), resume, emit)
 	})
+}
+
+// ExportDeck POST /api/decks/:id/export {format: pdf|png|html}
+// 同步实现（8 页实测 < 30s）；产物落 exports/，GET 下载。
+func (h *Handler) ExportDeck(c *gin.Context) {
+	uid, ok := h.uid(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Format string `json:"format"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Format == "" {
+		response.ParameterErr(c)
+		return
+	}
+	if h.exporter == nil {
+		response.Err(c, http.StatusServiceUnavailable, "导出功能不可用")
+		return
+	}
+	res, err := h.exporter.Export(c.Request.Context(), uid, c.Param("id"), req.Format)
+	if err != nil {
+		mapDeckErr(c, err)
+		return
+	}
+	response.OK(c, res)
+}
+
+// DownloadExport GET /api/decks/:id/exports/:file?token= —— 导出产物下载。
+func (h *Handler) DownloadExport(c *gin.Context) {
+	uid, ok := h.uid(c)
+	if !ok {
+		return
+	}
+	if err := h.decks.EnsureOwner(uid, c.Param("id")); err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	// 文件名白名单（三种产物），防路径穿越
+	name := c.Param("file")
+	switch name {
+	case "deck.pdf", "deck-png.zip", "deck.html":
+	default:
+		c.Status(http.StatusNotFound)
+		return
+	}
+	p := filepath.Join(h.decks.ExportDir(c.Param("id")), name)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	ct := "application/octet-stream"
+	switch {
+	case strings.HasSuffix(name, ".pdf"):
+		ct = "application/pdf"
+	case strings.HasSuffix(name, ".zip"):
+		ct = "application/zip"
+	case strings.HasSuffix(name, ".html"):
+		ct = "text/html; charset=utf-8"
+	}
+	c.Header("Content-Disposition", `attachment; filename="`+name+`"`)
+	c.Data(http.StatusOK, ct, data)
 }

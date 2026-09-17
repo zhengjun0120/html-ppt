@@ -2,10 +2,10 @@ package deck
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 
 	"html-ppt/backend/internal/service/template"
@@ -32,8 +32,6 @@ type Meta struct {
 // 归属的权威在 decks 表：文件系统只是内容存储，"这个 deck 是谁的"只认 DB。
 type Service struct {
 	decksDir string
-	// assetsDir 共享静态资源目录（web/assets）：回声校验从这里现扫变量契约。
-	// 只读——组件库对 AI 和对后端都是只读的（护栏）。
 	assetsDir string
 	st        *store.Store // nil = 数据库降级模式：所有操作返回不可用
 	deckLocks sync.Map
@@ -43,33 +41,6 @@ type Service struct {
 
 func New(dataDir, assetsDir string, st *store.Store) *Service {
 	return &Service{decksDir: filepath.Join(dataDir, "decks"), assetsDir: assetsDir, st: st}
-}
-
-// variableContract 取"被框架 CSS 消费过"的变量清单（详见 variable_contract.go）。
-// 拿不到契约时返回 nil 并跳过回声校验（fail-open）：这项检查防的是"静默无效的样式"，
-// 不是安全问题——宁可漏判，也不能因为资源目录没配好就把所有写入都卡死。
-func (s *Service) variableContract() map[string]bool {
-	known, err := loadVariableContract(s.assetsDir)
-	if err != nil {
-		log.Printf("[warn] 读取 CSS 变量契约失败，本次跳过回声校验: %v", err)
-		return nil
-	}
-	return known
-}
-
-// checkInlineStyleVars 校验页面内容里内联 style 用到的变量是否都有效。
-// known 之外还要加上该 deck 自己在样式块里定义过的变量——否则"自定义槽里定义变量、
-// 页面里 var() 使用"这种正常写法会被误判成无效。
-func (s *Service) checkInlineStyleVars(sectionHTML, deckHTML string) error {
-	known := s.variableContract()
-	if known == nil {
-		return nil
-	}
-	defined := definedVariables(deckStyleBlocks(deckHTML))
-	if unknown := unknownVariables(collectInlineStyleVars(sectionHTML), known, defined); len(unknown) > 0 {
-		return unknownVarErr(unknown, known)
-	}
-	return nil
 }
 
 var errStorage = fmt.Errorf("数据库不可用")
@@ -100,13 +71,13 @@ func (s *Service) EnsureOwner(userID uint, id string) error {
 	return s.authorize(userID, id)
 }
 
-// List 当前用户的全部 deck（标题在创建时落库，列表是纯 DB 查询，不再读文件）。
+// List 当前用户的 deck 列表。D7：只列 v2（format=v2），旧格式行隐藏不迁移。
 func (s *Service) List(userID uint) ([]Meta, error) {
 	if s.st == nil {
 		return nil, errStorage
 	}
 	var rows []store.Deck
-	if err := s.st.DB.Where("user_id = ?", userID).Order("id").Find(&rows).Error; err != nil {
+	if err := s.st.DB.Where("user_id = ? AND format = ?", userID, FormatV2).Order("id").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("查询 deck 列表: %w", err)
 	}
 	out := make([]Meta, 0, len(rows))
@@ -116,104 +87,47 @@ func (s *Service) List(userID uint) ([]Meta, error) {
 	return out, nil
 }
 
-// deckPresetRe 从 deck.html 的主题 JSON 里抠 preset 名。只做窗口内正则匹配，
-// 不走 goquery 整树解析：这个函数在会话首轮的注入路径上，只需要一个词。
-var deckPresetRe = regexp.MustCompile(`"preset":"([a-z]+)"`)
-
-// RecentPresets 返回该用户最近 limit 份 deck 的风格预设名，按**旧→新**排列
-// （没记过预设的老 deck 跳过）。供 agent 系统消息做"配色家族轮换"：
-// 跨 deck 的同质化（每份都长一个样）只有让 agent 看见"上一份用了什么"才治得了，
-// 提示词单方面喊"别重复"是空话——它根本不知道上一份是什么。
-// 读路径刻意宽容：个别 deck 读不出来就跳过。注入是锦上添花，不值得为一两份
-// 坏文件让建会话失败。
-func (s *Service) RecentPresets(userID uint, limit int) []string {
-	if s.st == nil || limit <= 0 {
-		return nil
-	}
-	var rows []store.Deck
-	if err := s.st.DB.Where("user_id = ?", userID).
-		Order("id desc").Limit(limit).Find(&rows).Error; err != nil {
-		return nil
-	}
-	var out []string
-	for _, r := range rows {
-		raw, err := s.readRaw(r.ID)
-		if err != nil {
-			continue
-		}
-		if m := deckPresetRe.FindStringSubmatch(raw); m != nil {
-			out = append(out, m[1])
-		}
-	}
-	// 查询是新→旧，反转成旧→新："上一份是 X"这种说法才成立
-	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
-		out[i], out[j] = out[j], out[i]
-	}
-	return out
-}
-
-// FilePath 校验 id 白名单后返回 deck.html 的绝对路径。
-// 只暴露路径给内部使用；外部输入先过 authorize。
-func (s *Service) FilePath(id string) (string, error) {
-	if !idPattern.MatchString(id) {
-		return "", fmt.Errorf("invalid deck id: %q", id)
-	}
-	return filepath.Join(s.decksDir, id, "deck.html"), nil
-}
-
-// GetHTML 读取整份 deck 源文件（归属校验后的公开读入口）。
-// 格式分流：v2 → index.html；v1 → deck.html。量测/审查/渲染通道共用这一个读入口，
+// GetHTML 读取 deck 源文件（归属校验后的公开读入口）。
+// v2 唯一格式：index.html。量测/审查/渲染通道共用这一个读入口，
 // 保证"审查看到的页面"和"用户看到的页面"永远来自同一个文件。
 func (s *Service) GetHTML(userID uint, id string) (string, error) {
 	if err := s.authorize(userID, id); err != nil {
 		return "", err
 	}
-	if s.IsV2(id) {
-		p, err := s.IndexPathV2(id)
-		if err != nil {
-			return "", err
-		}
-		data, err := os.ReadFile(p)
-		if err != nil {
-			return "", fmt.Errorf("deck %s 尚未实例化（index.html 缺失，先选择模板）", id)
-		}
-		return string(data), nil
-	}
-	return s.readRaw(id)
+	return s.readIndex(id)
 }
 
-// isV2 以 deck.json 的存在为准（DB Format 列是权威，但这里只做读取分流，
-// 用文件判断避免为纯读取路径打一次 DB）。
-func (s *Service) IsV2(id string) bool {
-	_, err := os.Stat(s.deckFilePath(id))
-	return err == nil
-}
-
-// readRaw 读原文，不做归属校验——只允许 authorize 之后的内部调用。
-func (s *Service) readRaw(id string) (string, error) {
-	p, err := s.FilePath(id)
+// readIndex 读 index.html（不做归属校验——只允许 authorize 之后的内部调用）。
+func (s *Service) readIndex(id string) (string, error) {
+	p, err := s.IndexPathV2(id)
 	if err != nil {
 		return "", err
 	}
 	data, err := os.ReadFile(p)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("deck %s 尚未实例化（index.html 缺失，先选择模板）", id)
 	}
 	return string(data), nil
 }
 
-//  鉴权+锁内读文件
-func (s *Service) readOwned(userID uint,id string)(string,error){
-	err := s.authorize(userID,id)
-	if err !=nil{
-		return "",err
-	}
-
-	return s.readRaw(id)
+// IsV2 以 deck.json 的存在为准（DB Format 列是权威，但这里只做读取分流，
+// 用文件判断避免为纯读取路径打一次 DB）。v1 格式已随旧栈摘除，非 v2 一律 false。
+func (s *Service) IsV2(id string) bool {
+	_, err := os.Stat(s.deckFilePath(id))
+	return err == nil
 }
 
-func(s *Service) lockDeck(deckID string) func(){
-	v,_ := s.deckLocks.LoadOrStore(deckID,&sync.Mutex{})
+// NormalizeTitle 列表/会话共用的标题截断（超长截 30 字）。
+func NormalizeTitle(title string) string {
+	title = strings.TrimSpace(title)
+	if r := []rune(title); len(r) > 30 {
+		return string(r[:30])
+	}
+	return title
+}
+
+func (s *Service) lockDeck(deckID string) func() {
+	v, _ := s.deckLocks.LoadOrStore(deckID, &sync.Mutex{})
 	mu := v.(*sync.Mutex)
 	mu.Lock()
 	return mu.Unlock
