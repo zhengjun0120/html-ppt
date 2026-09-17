@@ -327,7 +327,10 @@
       // hash
       const hashTarget = '#/'+(n+1);
       if (location.hash !== hashTarget && !isPresenterWindow) {
-        history.replaceState(null,'', hashTarget);
+        /* [deck-v2 patch] sandbox 化 iframe（opaque origin）里 replaceState 抛 SecurityError，
+         * 会打断 go() 后续的状态更新（进度条/激活页）。hash 本身在沙箱内可写，
+         * 深链语义靠它即可；replaceState 只是让地址栏好看，失败应当被吞掉。 */
+        try { history.replaceState(null,'', hashTarget); } catch (e) {}
       }
 
       // re-trigger entry animations

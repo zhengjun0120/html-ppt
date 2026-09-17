@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-import { answerChat, startChat } from '@/api/chat'
+import { answerChat, generateDeck, startChat } from '@/api/chat'
 import { fetchPending } from '@/api/chat'
 import { iterateSse } from '@/lib/sse'
 import type {
@@ -16,7 +16,7 @@ import type {
 let idSeq = 0
 const nextId = () => ++idSeq
 
-/** 会改动 deck 内容/外观的工具（与后端 func_tool.go 注册名对齐）：命中时预览需要刷新 */
+/** 会改动 deck 内容/外观的工具（v1 与 v2 两套注册名都在这里）：命中时预览需要刷新 */
 export const DECK_MODIFYING_TOOLS = new Set([
   'write_deck',
   'update_slide',
@@ -24,7 +24,26 @@ export const DECK_MODIFYING_TOOLS = new Set([
   'delete_slide',
   'update_theme',
   'update_custom_css',
+  'write_pages',
 ])
+
+/** 阶段推进的用户可读文案（stage / gate_waiting 事件） */
+const STAGE_LABELS: Record<string, string> = {
+  outlining: '已进入大纲阶段',
+  outline_review: '大纲已产出：可在右侧面板直接编辑，或在对话里让我改',
+  selecting_template: '请在主区域选择一个模板',
+  generating: '正在按大纲生成页面…',
+  iterating: '生成完成：已进入迭代编辑',
+}
+
+// 解析事件载荷（content 是 JSON 字符串；解析失败返回 null）
+function parsePayload(content: string): { deck_id?: string; to?: string; gate?: string; version?: number; no?: number; ok?: boolean } | null {
+  try {
+    return JSON.parse(content)
+  } catch {
+    return null
+  }
+}
 
 /** 当前流的 abort 控制器（非序列化状态，不放 store.state） */
 let abortCtl: AbortController | null = null
@@ -43,6 +62,8 @@ export const useChatStore = defineStore('chat', {
     deckTouched: false,
     /** 正在载入历史会话（期间禁止发送，避免恢复流程吞掉新消息） */
     restoring: false,
+    /** 生成进度：大纲页号 → 是否写入成功（page_generated 事件驱动） */
+    pageProgress: {} as Record<number, boolean>,
   }),
 
   getters: {
@@ -59,6 +80,7 @@ export const useChatStore = defineStore('chat', {
       this.pendingAsk = null
       this.toolIndexToId = {}
       this.deckTouched = false
+      this.pageProgress = {}
       abortCtl?.abort()
       abortCtl = null
     },
@@ -177,6 +199,43 @@ export const useChatStore = defineStore('chat', {
           this.status = 'idle'
           break
         }
+        // —— deck-v2 管线事件：推进 deckId（session 绑定在后端完成）、向导阶段、生成进度 ——
+        case 'stage': {
+          const p = parsePayload(ev.content)
+          if (p?.deck_id) this.deckId = p.deck_id
+          if (p?.to) {
+            const label = STAGE_LABELS[p.to]
+            if (label) this.events.push({ kind: 'sys', id: nextId(), text: label })
+            // 阶段迁移事件是向导刷新的权威信号：done 事件先于后端的阶段落库
+            // 到达（runLoop 内 emit done → 返回后才 FinishGeneration），只靠
+            // 流结束时的 refresh 会拉到旧阶段，主区域卡在生成进度页。
+            import('@/stores/wizard')
+              .then(({ useWizardStore }) => useWizardStore().refresh())
+              .catch(() => {})
+          }
+          break
+        }
+        case 'gate_waiting': {
+          const p = parsePayload(ev.content)
+          if (p?.deck_id) this.deckId = p.deck_id
+          if (p?.gate === 'outline') {
+            this.events.push({ kind: 'sys', id: nextId(), text: '大纲已产出：请在右侧查看，确认后选择模板' })
+          }
+          break
+        }
+        case 'outline_updated': {
+          const p = parsePayload(ev.content)
+          if (p?.deck_id) this.deckId = p.deck_id
+          break
+        }
+        case 'page_generated': {
+          const p = parsePayload(ev.content)
+          if (p && typeof p.no === 'number') {
+            this.pageProgress[p.no] = !!p.ok
+            if (p.ok) this.deckTouched = true // 生成中预览跟着长（防抖刷新兜住频率）
+          }
+          break
+        }
         case 'error': {
           this.finalizeStreaming()
           this.events.push({ kind: 'error', id: nextId(), text: ev.content })
@@ -211,20 +270,30 @@ export const useChatStore = defineStore('chat', {
       )
     },
 
-    /** 回答 ask_user 提问 */
-    async answer(answers: { question: string; answer: string }[], note: string) {
-      if (this.sessionId == null || this.status !== 'paused') return
-      this.deckTouched = false
-      const ask = [...this.events].reverse().find((e) => e.kind === 'ask' && e.active)
-      if (ask && ask.kind === 'ask') {
-        ask.active = false
-        ask.answered = answers.length ? answers : null
-        ask.note = answers.length ? null : note
-      }
-      this.pendingAsk = null
-      this.status = 'streaming'
-      await this.consume(() => answerChat(this.sessionId!, answers, note))
-    },
+  /** 回答 ask_user 提问 */
+  async answer(answers: { question: string; answer: string }[], note: string) {
+    if (this.sessionId == null || this.status !== 'paused') return
+    this.deckTouched = false
+    const ask = [...this.events].reverse().find((e) => e.kind === 'ask' && e.active)
+    if (ask && ask.kind === 'ask') {
+      ask.active = false
+      ask.answered = answers.length ? answers : null
+      ask.note = answers.length ? null : note
+    }
+    this.pendingAsk = null
+    this.status = 'streaming'
+    await this.consume(() => answerChat(this.sessionId!, answers, note))
+  },
+
+  /** 生成 run（向导 gate 2 之后触发）：与 chat 共用同一条 SSE 消费管线 */
+  async runGeneration(deckId: string, resume = false) {
+    if (this.sessionId == null || this.status !== 'idle') return
+    this.deckTouched = false
+    this.pageProgress = {}
+    this.events.push({ kind: 'sys', id: nextId(), text: resume ? '继续生成…' : '开始生成…' })
+    this.status = 'streaming'
+    await this.consume(() => generateDeck(deckId, this.sessionId!, resume))
+  },
 
     /** 统一的 SSE 消费循环 */
     async consume(open: () => Promise<Response>) {

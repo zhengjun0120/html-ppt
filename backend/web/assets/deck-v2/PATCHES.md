@@ -11,7 +11,10 @@
 
 ## 补丁清单
 
-（暂无 —— P0 spike 结论出来后在此登记。）
+1. runtime.js go()：history.replaceState 包 try/catch。原因：预览 iframe 带 sandbox
+   （无 allow-same-origin，安全姿态沿用 v1），opaque origin 下 replaceState 抛
+   SecurityError 并打断 go() 的后续状态更新（进度条/激活页切换）。深链语义由
+   location.hash 赋值承担（沙箱内允许自导航），replaceState 只服务地址栏展示。
 
 ## 上游版本
 

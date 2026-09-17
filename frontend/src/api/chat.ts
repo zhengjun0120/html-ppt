@@ -67,6 +67,20 @@ export async function fetchPending(sessionId: number): Promise<string> {
   return r.questions
 }
 
+/** 生成 run 的 SSE 入口（POST /api/decks/:id/generate）。resume=1 断线续跑 */
+export function generateDeck(
+  deckId: string,
+  sessionId: number,
+  resume = false,
+  signal?: AbortSignal,
+): Promise<Response> {
+  return sseFetch(
+    `/api/decks/${deckId}/generate?session_id=${sessionId}${resume ? '&resume=1' : ''}`,
+    {},
+    signal,
+  )
+}
+
 /** 某个 deck 名下的会话列表（按最近活跃倒序） */
 export async function listSessions(deckId: string): Promise<{ id: number; title: string; pending: boolean; updated_at: string }[]> {
   const { request } = await import('./client')
