@@ -139,6 +139,7 @@ func (s *Service) RestoreVersionV2(userID uint, deckID, version string) error {
 			return fmt.Errorf("写回 outline.json 失败: %w", err)
 		}
 	}
+	s.invalidateThumbs(deckID)
 	return s.recordVersionV2(deckID, OpRestore, "恢复到 "+version)
 }
 

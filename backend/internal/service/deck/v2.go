@@ -17,6 +17,7 @@ import (
 
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/thumbs"
 )
 
 // 生成流程阶段（权威在 DB Deck.Stage，deck.json 是冗余副本，写路径以 DB 为准）。
@@ -421,6 +422,7 @@ func (s *Service) SelectTemplate(userID uint, id, templateID, variantID string) 
 	if err := atomicWriteFile(s.stylePath(id), []byte(ins.StyleCSS)); err != nil {
 		return "", fmt.Errorf("写入 style.css 失败: %w", err)
 	}
+	s.invalidateThumbs(id)
 
 	df, err := s.readDeckFile(id)
 	if err != nil {
@@ -533,4 +535,14 @@ func (s *Service) PageCount(id string) int {
 		return 0
 	}
 	return countSlidesV2(html)
+}
+
+// ThumbsDir 缩略图缓存目录（导出服务的 EnsureThumbs / handler 取图共用）。
+func (s *Service) ThumbsDir(id string) string {
+	return thumbs.Dir(s.decksDir, id)
+}
+
+// IndexPath index.html 的绝对路径（缩略图有效性 stamp 的指纹来源）。
+func (s *Service) IndexPath(id string) (string, error) {
+	return s.IndexPathV2(id)
 }

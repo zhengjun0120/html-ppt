@@ -32,4 +32,13 @@ export const templateApi = {
   /** 模板清单（公开接口）。gallery 进入时调用 */
   list: () => request<TemplateMeta[]>('/api/templates'),
   get: (id: string) => request<TemplateMeta>(`/api/templates/${id}`),
+  /**
+   * demo 预览 iframe 的 src（公开接口，无需鉴权）。variant 非空时服务端换肤
+   * （把变体 class 挂到 body）；page > 0 时带 #/N 深链直接落在某一页。
+   */
+  previewUrl: (id: string, variant = '', page = 0) => {
+    const q = variant ? `?variant=${encodeURIComponent(variant)}` : ''
+    const hash = page > 0 ? `#/${page}` : ''
+    return `/api/templates/${id}/preview${q}${hash}`
+  },
 }

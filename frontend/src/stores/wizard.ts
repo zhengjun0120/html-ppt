@@ -30,6 +30,20 @@ export const STEP_LABELS: { key: WizardStep; label: string }[] = [
   { key: 'iterate', label: '迭代' },
 ]
 
+/** 各步骤的独立路由（plan-v3 C1：五步五页） */
+export const STEP_ROUTES: Record<WizardStep, (deckId: string) => string> = {
+  clarify: () => '/new',
+  outline: () => '/new/outline',
+  template: () => '/new/template',
+  generate: () => '/new/generating',
+  iterate: (deckId) => `/decks/${deckId}`,
+}
+
+/** 步骤先后序（守卫用：不允许跳到尚未到达的步骤） */
+export function stepOrder(key: WizardStep): number {
+  return STEP_LABELS.findIndex((s) => s.key === key)
+}
+
 export const useWizardStore = defineStore('wizard', {
   state: () => ({
     deckId: '',

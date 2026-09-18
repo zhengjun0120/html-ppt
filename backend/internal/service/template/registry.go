@@ -143,6 +143,26 @@ func (t *Template) AllowedClasses(layoutID string) map[string]bool {
 // Rules 模板专属质量规则全文（generate 阶段注入）。
 func (t *Template) Rules() string { return t.rulesMD }
 
+// DemoHTML 返回 demo 页 HTML，供画廊预览 iframe 使用。variant 非空时把
+// 变体 class 追加到 body（服务端换肤——前端切变体只换一个 query 参数）。
+// demo 里相对引用的 style.css 由调用方改写为绝对路径（见 handler.PreviewTemplate）。
+func (t *Template) DemoHTML(variant string) string {
+	html := t.indexHTML
+	if variant == "" {
+		return html
+	}
+	cls, ok := t.VariantClass(variant)
+	if !ok || cls == "" || strings.Contains(html, cls) {
+		return html
+	}
+	return bodyClassRe.ReplaceAllStringFunc(html, func(m string) string {
+		sub := bodyClassRe.FindStringSubmatch(m)
+		return `<body class="` + sub[1] + " " + cls + `">`
+	})
+}
+
+var bodyClassRe = regexp.MustCompile(`<body class="([^"]*)">`)
+
 // VariantClass 返回变体 id 对应的 class（未找到时返回 ""，调用方决定是否报错）。
 func (t *Template) VariantClass(variantID string) (string, bool) {
 	for _, v := range t.Variants {

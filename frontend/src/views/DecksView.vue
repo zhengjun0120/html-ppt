@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import { PhArrowClockwise, PhCards, PhPlus, PhPresentation } from '@phosphor-icons/vue'
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
+import { thumbUrl } from '@/api/deckV2'
 import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 
 const deckStore = useDeckStore()
 const router = useRouter()
 const toast = useToast()
+
+/** 封面加载失败的 deck id（无缩略图/未渲染时回退图标位） */
+const coverFailed = ref<Record<string, boolean>>({})
 
 onMounted(async () => {
   try {
@@ -32,7 +36,7 @@ onMounted(async () => {
           <PhArrowClockwise :size="13" />
           刷新
         </Button>
-        <Button variant="primary" @click="router.push('/decks/new')">
+        <Button variant="primary" @click="router.push('/new')">
           <PhPlus :size="13" />
           新文稿
         </Button>
@@ -54,12 +58,12 @@ onMounted(async () => {
     <Empty
       v-else-if="deckStore.list.length === 0"
       title="还没有文稿"
-      desc="在下面的输入框里点右上角「新文稿」，在对话里描述你想要的演示文稿，agent 会逐页生成并自动存到这里。"
+      desc="点「新文稿」，在对话里描述你想要的演示文稿，agent 会先对齐大纲、再由你挑模板，逐页生成后自动存到这里。"
     >
       <template #icon><PhPresentation /></template>
     </Empty>
 
-    <!-- 卡片网格 -->
+    <!-- 卡片网格：封面用第一页缩略图（首次访问会触发后端渲染，之后走缓存） -->
     <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <button
         v-for="d in deckStore.list"
@@ -67,8 +71,16 @@ onMounted(async () => {
         class="group cursor-pointer overflow-hidden rounded-card border border-line bg-surface text-left transition-[transform,border-color] hover:-translate-y-0.5 hover:border-line-strong"
         @click="router.push(`/decks/${d.id}`)"
       >
-        <div class="flex h-[110px] items-center justify-center bg-linear-to-br from-surface-3 to-surface-2 text-ink-3 transition-colors group-hover:text-ink-2">
-          <PhCards :size="28" />
+        <div class="relative flex h-[130px] items-center justify-center overflow-hidden bg-linear-to-br from-surface-3 to-surface-2 text-ink-3 transition-colors group-hover:text-ink-2">
+          <img
+            v-if="!coverFailed[d.id]"
+            :src="thumbUrl(d.id, 1)"
+            :alt="`${d.title} 封面`"
+            class="absolute inset-0 h-full w-full object-cover object-top"
+            loading="lazy"
+            @error="coverFailed[d.id] = true"
+          />
+          <PhCards v-else :size="28" />
         </div>
         <div class="p-3">
           <p class="truncate text-[13.5px] font-semibold" :title="d.title">{{ d.title }}</p>
@@ -78,7 +90,7 @@ onMounted(async () => {
     </div>
 
     <p v-if="deckStore.list.length" class="mt-6 text-center text-[11.5px] text-ink-3">
-      新文稿在对应工作台里与 agent 对话生成；这里点开任意文稿即可继续编辑。
+      点开任意文稿继续迭代；封面是第一页实时快照，内容更新后自动刷新。
     </p>
   </div>
 </template>

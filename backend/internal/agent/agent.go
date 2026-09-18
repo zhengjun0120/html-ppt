@@ -8,7 +8,9 @@ import (
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/thumbs"
 	"html-ppt/backend/internal/trace"
+	"html-ppt/backend/internal/vision"
 	"log"
 	"strconv"
 
@@ -750,13 +752,45 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 		if to, terr := as.DeckService.FinishGeneration(userID, sess.DeckID); terr != nil {
 			log.Printf("[warn] deck %s 推进到 iterating 失败: %v", sess.DeckID, terr)
 		} else {
-			a := as // 仅为可读性
-			_ = a
 			as.emitV2Public(emit, EventTypeStage, map[string]any{"deck_id": sess.DeckID, "to": to})
+			// 异步预热缩略图：文稿列表封面与预览栏首屏不用等首次点开时的
+			// 整本渲染（约 10-20s）。失败静默——懒加载路径会兜底重试。
+			go as.warmThumbs(userID, sess.DeckID)
 		}
 	}
 	_ = rr
 	return sess.ID, err
+}
+
+// warmThumbs 生成结束后整本预渲染缩略图（后台执行，与请求生命周期解耦）。
+func (as *AgentService) warmThumbs(userID uint, deckID string) {
+	defer func() { _ = recover() }() // 预热是锦上添花，任何异常都不许影响主流程
+	if !as.Vision || as.VisionGrants == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	nonce, err := as.VisionGrants.Issue(userID, deckID)
+	if err != nil {
+		return
+	}
+	url := strings.TrimRight(as.VisionBaseURL, "/") + "/api/render/" + nonce
+	d, err := vision.CaptureV2(ctx, vision.OptionsV2{URL: url, ChromePath: as.ChromePath})
+	if err != nil {
+		log.Printf("[warn] deck %s 缩略图预热失败（懒加载兜底）: %v", deckID, err)
+		return
+	}
+	ip, err := as.DeckService.IndexPath(deckID)
+	if err != nil {
+		return
+	}
+	pngs := make(map[int][]byte, len(d.Slides))
+	for _, sl := range d.Slides {
+		pngs[sl.Index+1] = sl.PNG
+	}
+	if err := thumbs.WriteAll(as.DeckService.ThumbsDir(deckID), ip, pngs); err != nil {
+		log.Printf("[warn] deck %s 缩略图落盘失败: %v", deckID, err)
+	}
 }
 
 // emitV2Public 生成 run 的管线事件（runLoop 之外没有 ctx emit 链，直连 emit）。

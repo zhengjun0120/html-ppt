@@ -36,6 +36,8 @@ type Handler struct {
 // （原样序列化给前端），避免 handler 直接 import export 包造成的装配环。
 type Exporter interface {
 	Export(ctx context.Context, uid uint, deckID, format string) (any, error)
+	// EnsureThumbs 缩略图缓存就绪（过期/缺失时整本重渲一次），返回缩略图目录。
+	EnsureThumbs(ctx context.Context, uid uint, deckID string) (string, error)
 }
 
 func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter) *Handler {

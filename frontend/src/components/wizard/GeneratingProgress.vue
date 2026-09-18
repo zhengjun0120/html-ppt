@@ -55,6 +55,6 @@ function stateOf(no: number): 'ok' | 'fail' | 'pending' {
       </div>
     </div>
 
-    <p class="text-[11.5px] text-ink-3">页面在右侧预览里实时出现；完成后自动进入迭代编辑。</p>
+    <p class="text-[11.5px] text-ink-3">下方预览跟随写入实时生长；完成后自动进入「迭代」页继续修改。</p>
   </div>
 </template>

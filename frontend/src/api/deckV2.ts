@@ -1,4 +1,4 @@
-import { request } from './client'
+import { authedUrl, request } from './client'
 
 /** deck-v2 管线类型与接口（与 service/deck/v2.go 的 JSON 形状逐字段对齐） */
 
@@ -103,4 +103,27 @@ async function fetchWithAuth<T>(path: string, init: RequestInit = {}): Promise<T
     throw new Error(data.error ?? `请求失败（${res.status}）`)
   }
   return body as T
+}
+
+// —— 缩略图（plan-v3 C3）：预览栏翻页与文稿列表封面 ——//
+
+/** 单页缩略图地址（<img> 用：?token= 兼容图片标签带不了鉴权头）。
+ *  首次访问会触发后端整本渲染（10-20s），之后按内容版本缓存。 */
+export function thumbUrl(deckId: string, no: number): string {
+  return authedUrl(`/api/decks/${deckId}/thumbs/${no}`)
+}
+
+/** 缩略图清单（pages 为 1 基页码升序） */
+export async function thumbPages(deckId: string): Promise<number[]> {
+  const { request } = await import('./client')
+  const r = await request<{ pages: number[]; count: number }>(`/api/decks/${deckId}/thumbs`)
+  return r.pages
+}
+
+/** 触发导出（pdf/png/html），返回产物文件名；下载用 thumbUrl 风格的 authedUrl 拼 exports 路径 */
+export function exportDeck(deckId: string, format: 'pdf' | 'png' | 'html') {
+  return request<{ path: string; filename: string; size: number }>(`/api/decks/${deckId}/export`, {
+    method: 'POST',
+    body: JSON.stringify({ format }),
+  })
 }

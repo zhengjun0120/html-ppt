@@ -12,8 +12,16 @@ const router = createRouter({
   routes: [
     { path: '/login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
     { path: '/register', component: () => import('@/views/RegisterView.vue'), meta: { public: true } },
+    // 向导五步（plan-v3 C1）：每步一个 URL，可刷新可回退。
+    // WizardView 内部做步骤守卫（不允许跳到尚未到达的步骤；stage 推进时自动前跳）。
+    { path: '/new', name: 'wizard-clarify', component: () => import('@/views/wizard/WizardView.vue') },
+    { path: '/new/outline', name: 'wizard-outline', component: () => import('@/views/wizard/WizardView.vue') },
+    { path: '/new/template', name: 'wizard-template', component: () => import('@/views/wizard/WizardView.vue') },
+    { path: '/new/generating', name: 'wizard-generate', component: () => import('@/views/wizard/WizardView.vue') },
+    // 第 5 步 · 成品预览 + 迭代（旧工作台瘦身版）
     { path: '/decks', component: () => import('@/views/DecksView.vue') },
-    { path: '/decks/:id', component: () => import('@/views/WorkspaceView.vue') },
+    { path: '/decks/new', redirect: '/new' },
+    { path: '/decks/:id', name: 'deck', component: () => import('@/views/DeckView.vue') },
     { path: '/settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/trace', component: () => import('@/views/TraceView.vue') },
     { path: '/', redirect: '/decks' },

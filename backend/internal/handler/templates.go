@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -32,4 +33,26 @@ func (h *Handler) GetTemplate(c *gin.Context) {
 		return
 	}
 	response.OK(c, t.Meta)
+}
+
+// PreviewTemplate GET /api/templates/:id/preview?variant=<vid> —— demo 页 HTML。
+//
+// 选模板页的实时换肤预览：variant 非空时服务端把变体 class 挂到 body，
+// 前端切变体只改 iframe src 的 query。demo 里的相对引用（style.css）改写为
+// 公开静态路由 /templates/<id>/ 的绝对路径——本端点自身带鉴权，资产走静态。
+func (h *Handler) PreviewTemplate(c *gin.Context) {
+	if h.templates == nil {
+		response.Err(c, http.StatusServiceUnavailable, "模板库不可用")
+		return
+	}
+	t, err := h.templates.Get(c.Param("id"))
+	if err != nil {
+		response.Err(c, http.StatusNotFound, "模板不存在")
+		return
+	}
+	html := t.DemoHTML(c.Query("variant"))
+	// 相对引用 → 公开静态路由的绝对引用（demo 目录里有 style.css 与 preview/ 截图）
+	html = strings.ReplaceAll(html, `href="style.css"`, `href="/templates/`+t.ID+`/style.css"`)
+	c.Header("Cache-Control", "no-store")
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }

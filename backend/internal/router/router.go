@@ -23,8 +23,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 
 		// deck-v2 模板清单：公开。模板元数据不含用户数据，画廊（含登录前的
 		// 展示场景）都要用。单个模板详情走同一条鉴权豁免逻辑。
+		// preview = demo 页 HTML（?variant= 服务端换肤），供选模板页实时预览。
 		api.GET("/templates", h.ListTemplates)
 		api.GET("/templates/:id", h.GetTemplate)
+		api.GET("/templates/:id/preview", h.PreviewTemplate)
 
 		// 视觉审查的一次性取页通道：**必须公开**——无头浏览器是"导航"到它的，
 		// 导航带不了 Authorization 头。安全性靠一次性 nonce（见 vision/grant.go）：
@@ -73,6 +75,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 
 			guarded.GET("/decks/:id/history", h.ListDeckHistory)
 			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)
+			// 缩略图：预览栏翻页与文稿列表封面。首次访问整本渲染（10-20s），
+			// 之后按内容版本缓存；?token= 兼容 <img> 标签带不了鉴权头。
+			guarded.GET("/decks/:id/thumbs", h.DeckThumbs)
+			guarded.GET("/decks/:id/thumbs/:no", h.DeckThumb)
 			guarded.DELETE("/decks/:id/history/:version", h.DeleteDeckVersion)
 			guarded.DELETE("/decks/:id/history", h.ClearDeckHistory)
 

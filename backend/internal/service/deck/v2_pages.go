@@ -20,6 +20,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 
 	"html-ppt/backend/internal/service/template"
+	"html-ppt/backend/internal/thumbs"
 )
 
 // ---------- 段读写 ----------
@@ -43,8 +44,21 @@ func (s *Service) writeSlideSegment(deckID, prefix, segment, suffix string) erro
 	if err != nil {
 		return err
 	}
-	return atomicWriteFile(p, []byte(out))
+	if err := atomicWriteFile(p, []byte(out)); err != nil {
+		return err
+	}
+	// 页面内容变了，缩略图缓存即失效（下一次请求会整本重渲）
+	s.invalidateThumbs(deckID)
+	return nil
 }
+
+// invalidateThumbs 页面内容变化后清缩略图缓存（thumbs 包按 index.html 指纹二次校验）。
+func (s *Service) invalidateThumbs(deckID string) {
+	thumbs.Invalidate(s.decksDir, deckID)
+}
+
+// DecksDir deck 存储根目录（thumbs/agent 预热等外部协作方定位用）。
+func (s *Service) DecksDir() string { return s.decksDir }
 
 // parseSegmentDoc 把段解析成 goquery 文档（段的顶层子元素就是各页 section）。
 func parseSegmentDoc(segment string) (*goquery.Document, error) {

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"html-ppt/backend/internal/thumbs"
 	"html-ppt/backend/internal/vision"
 )
 
@@ -24,6 +25,10 @@ type Requester interface {
 	PreviewHTML(userID uint, id string) (string, error)
 	ExportDir(id string) string
 	PageCount(id string) int
+	// EnsureOwner 归属校验（别人的 deck 与不存在的 deck 同样报错）。
+	EnsureOwner(userID uint, id string) error
+	ThumbsDir(id string) string
+	IndexPath(id string) (string, error)
 }
 
 type Service struct {
@@ -53,6 +58,9 @@ type Result struct {
 
 // Export 按格式导出。v1 同步实现（8 页实测 < 30s）。
 func (s *Service) Export(ctx context.Context, uid uint, deckID, format string) (any, error) {
+	if err := s.deck.EnsureOwner(uid, deckID); err != nil {
+		return Result{}, err
+	}
 	nonce, err := s.grants.Issue(uid, deckID)
 	if err != nil {
 		return Result{}, fmt.Errorf("导出发票据失败: %w", err)
@@ -138,4 +146,38 @@ func (s *Service) exportSingleFile(uid uint, deckID, dir string) (Result, error)
 		return Result{}, err
 	}
 	return Result{Path: "exports/" + name, Filename: name, Size: int64(len(html))}, nil
+}
+
+// EnsureThumbs 缩略图缓存就绪：有效直接返回目录；过期/缺失就整本重渲一次
+//（约 10-20s，之后按 deck 内容版本缓存，页级写入会触发失效）。
+// 返回目录路径，调用方按 <no>.png 取图。
+func (s *Service) EnsureThumbs(ctx context.Context, uid uint, deckID string) (string, error) {
+	if err := s.deck.EnsureOwner(uid, deckID); err != nil {
+		return "", err
+	}
+	dir := s.deck.ThumbsDir(deckID)
+	indexPath, err := s.deck.IndexPath(deckID)
+	if err != nil {
+		return "", err
+	}
+	if thumbs.Valid(dir, indexPath) {
+		return dir, nil
+	}
+	nonce, err := s.grants.Issue(uid, deckID)
+	if err != nil {
+		return "", fmt.Errorf("缩略图发票据失败: %w", err)
+	}
+	url := strings.TrimRight(s.baseURL, "/") + "/api/render/" + nonce
+	d, err := vision.CaptureV2(ctx, vision.OptionsV2{URL: url, ChromePath: s.chromePath, Timeout: s.timeout})
+	if err != nil {
+		return "", fmt.Errorf("缩略图渲染失败: %w", err)
+	}
+	pngs := make(map[int][]byte, len(d.Slides))
+	for _, sl := range d.Slides {
+		pngs[sl.Index+1] = sl.PNG
+	}
+	if err := thumbs.WriteAll(dir, indexPath, pngs); err != nil {
+		return "", err
+	}
+	return dir, nil
 }
