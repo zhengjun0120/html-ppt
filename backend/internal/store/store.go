@@ -42,7 +42,7 @@ func Open(ctx context.Context, cfg config.DB) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := db.WithContext(ctx).AutoMigrate(&User{}, &Deck{}, &ChatSession{}); err != nil {
+	if err := db.WithContext(ctx).AutoMigrate(&User{}, &Deck{}, &ChatSession{}, &UserTemplate{}); err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
 	}
 	return &Store{DB: db}, nil
@@ -65,7 +65,7 @@ func OpenMemory(ctx context.Context) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open memory sqlite: %w", err)
 	}
-	if err := db.WithContext(ctx).AutoMigrate(&User{}, &Deck{}, &ChatSession{}); err != nil {
+	if err := db.WithContext(ctx).AutoMigrate(&User{}, &Deck{}, &ChatSession{}, &UserTemplate{}); err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
 	}
 	return &Store{DB: db}, nil

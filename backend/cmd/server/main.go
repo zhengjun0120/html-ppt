@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"os/signal"
 	"syscall"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
+	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
@@ -171,7 +173,31 @@ func run() error {
 		log.Printf("[info] deck-v2 导出已开启（pdf/png/html，超时 %ds）", timeout)
 	}
 
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc)
+	// 用户自定义模板（plan-v3 B）：文件在 data/user-templates/，demo 静态公开供
+	// 发布门禁渲染（模板设计不含用户数据；私有模板的边界在"可用性"不在"可看"）。
+	userTplRoot := filepath.Join(cfg.Data.Dir, "user-templates")
+	_ = os.MkdirAll(userTplRoot, 0o755)
+	var utplSvc usertpl.Service
+	if st != nil && templateReg != nil {
+		utplSvc = *usertpl.New(templateReg, st, userTplRoot, cfg.Vision.ChromePath, loopback)
+		// 重启后重挂全部用户模板目录：私有的也要挂（owner 可用性由 DB 校验把守）
+		if ents, err := os.ReadDir(userTplRoot); err == nil {
+			for _, e := range ents {
+				if !e.IsDir() {
+					continue
+				}
+				dir := filepath.Join(userTplRoot, e.Name())
+				if _, err := os.Stat(filepath.Join(dir, "template.json")); err == nil {
+					if err := templateReg.MountUser(dir); err != nil {
+						log.Printf("[warn] 用户模板 %s 未挂载: %v", e.Name(), err)
+					}
+				}
+			}
+		}
+		log.Printf("[info] 用户自定义模板已开启（%s）", userTplRoot)
+	}
+
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 

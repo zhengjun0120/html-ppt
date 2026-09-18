@@ -164,3 +164,19 @@ func (as *AgentService) clientFor(ctx context.Context) *openai.Client {
 func GetAgentService() *AgentService {
 	return agentServer
 }
+
+// CustomizeClient / CustomizeModel / CustomizeMaxTokens
+// 供模板定制对话（usertpl）复用同一套 LLM 接入：BYOK 优先、服务端 key 兜底。
+type CustomizeLLM struct {
+	Client    *openai.Client
+	Model     string
+	MaxTokens int
+}
+
+func (as *AgentService) CustomizeLLMFor(ctx context.Context) CustomizeLLM {
+	return CustomizeLLM{
+		Client:    as.clientFor(ctx),
+		Model:     as.ModelID,
+		MaxTokens: 8000,
+	}
+}

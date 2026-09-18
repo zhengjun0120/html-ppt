@@ -51,8 +51,12 @@ func (h *Handler) PreviewTemplate(c *gin.Context) {
 		return
 	}
 	html := t.DemoHTML(c.Query("variant"))
-	// 相对引用 → 公开静态路由的绝对引用（demo 目录里有 style.css 与 preview/ 截图）
-	html = strings.ReplaceAll(html, `href="style.css"`, `href="/templates/`+t.ID+`/style.css"`)
+	// 相对引用 → 对应静态路由的绝对引用（内置 = /templates/<id>/，用户 = /user-templates/<id>/）
+	base := "/templates/" + t.ID + "/"
+	if strings.HasPrefix(t.ID, "ut-") {
+		base = "/user-templates/" + t.ID + "/"
+	}
+	html = strings.ReplaceAll(html, `href="style.css"`, `href="`+base+`style.css"`)
 	c.Header("Cache-Control", "no-store")
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }

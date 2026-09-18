@@ -211,11 +211,19 @@ func isClassToken(s string) bool {
 
 // ---------- 注册表 ----------
 
-// Registry 已注册模板的只读集合。启动时一次加载，运行期只读——
-// 模板是代码库的一部分（进 git），不是运行时可变数据，不需要热加载。
+// Registry 已注册模板的只读集合。内置层启动时一次加载（运行期只读——
+// 模板是代码库的一部分，进 git，不热载）；用户层（自定义模板）按发布/
+// 下架增量 Mount/Unmount。
 type Registry struct {
-	mu    sync.RWMutex
-	items map[string]*Template
+	mu        sync.RWMutex
+	items     map[string]*Template
+	builtins  map[string]bool // 内置层 id 集合（用户层不可覆盖内置 id）
+	assetsDir string          // 用户层加载需要（内置层在 New 时已用过）
+	builtinsRoot string       // 内置模板根目录（fork 复制来源）
+	// user 用户自定义模板层（MountUser 注册，Get/List 与内置层合并视图）
+	user map[string]*Template
+	// pendingUser ValidateUserDir → MountUser 之间的校验结果缓存（dir → t）
+	pendingUser map[string]*Template
 }
 
 // NewRegistry 扫描 dir 下的模板目录并逐个校验。
@@ -233,7 +241,7 @@ func NewRegistry(dir, assetsDir string) (*Registry, error) {
 		return nil, fmt.Errorf("扫描模板目录 %s: %w", dir, err)
 	}
 
-	r := &Registry{items: make(map[string]*Template)}
+	r := &Registry{items: make(map[string]*Template), builtins: map[string]bool{}, user: make(map[string]*Template), pendingUser: make(map[string]*Template), assetsDir: assetsDir, builtinsRoot: dir}
 	var errs []string
 	for _, e := range entries {
 		if !e.IsDir() || e.Name() == "tools" {
@@ -249,6 +257,7 @@ func NewRegistry(dir, assetsDir string) (*Registry, error) {
 			continue
 		}
 		r.items[t.ID] = t
+		r.builtins[t.ID] = true
 	}
 	if len(errs) > 0 {
 		return r, fmt.Errorf("%d 个模板校验失败（已跳过）:\n%s", len(errs), strings.Join(errs, "\n"))
@@ -256,7 +265,72 @@ func NewRegistry(dir, assetsDir string) (*Registry, error) {
 	return r, nil
 }
 
-// List 返回全部模板元数据（按 id 排序，画廊列表稳定）。
+// MountUser 注册一个用户自定义模板（发布时调用；重发布 = 幂等覆盖）。
+// 校验用与内置层完全同一套 loadTemplate 规则——不过关的模板进不来。
+func (r *Registry) MountUser(dir string) error {
+	if err := r.ValidateUserDir(dir); err != nil {
+		return err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	t, ok := r.pendingUser[dir]
+	if !ok {
+		return fmt.Errorf("内部错误：校验缓存缺失，请重试")
+	}
+	if r.builtins[t.ID] {
+		return fmt.Errorf("模板 id %q 与内置模板冲突", t.ID)
+	}
+	delete(r.pendingUser, dir)
+	r.user[t.ID] = t
+	r.items[t.ID] = t
+	return nil
+}
+
+// ValidateUserDir 按内置层同一套规则校验一个用户模板目录（不注册）。
+// 发布门禁的第一关用它；校验结果缓存一份供紧随其后的 MountUser 复用
+//（避免同一目录连跑两遍完整校验）。
+func (r *Registry) ValidateUserDir(dir string) error {
+	baseCSS, err := os.ReadFile(filepath.Join(r.assetsDir, "deck-v2", "base.css"))
+	if err != nil {
+		return err
+	}
+	t, err := loadTemplate(dir, r.assetsDir, collectClasses(string(baseCSS)))
+	if err != nil {
+		return err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.builtins[t.ID] {
+		return fmt.Errorf("模板 id %q 与内置模板冲突", t.ID)
+	}
+	if r.pendingUser == nil {
+		r.pendingUser = map[string]*Template{}
+	}
+	r.pendingUser[dir] = t
+	return nil
+}
+
+// UnmountUser 注销用户模板（下架/删除时调用；未注册时静默）。
+func (r *Registry) UnmountUser(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.builtins[id] {
+		delete(r.user, id)
+		delete(r.items, id)
+	}
+}
+
+// BuiltinDir 内置模板的源目录（fork 复制来源）。
+func (r *Registry) BuiltinDir(id string) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if !r.builtins[id] {
+		return "", fmt.Errorf("内置模板 %q 不存在", id)
+	}
+	return filepath.Join(r.builtinsRoot, id), nil
+}
+
+// List 返回全部模板元数据（内置 + 已挂载的用户层，按 id 排序，画廊列表稳定）。
 func (r *Registry) List() []*Meta {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

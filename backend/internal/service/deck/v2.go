@@ -378,6 +378,17 @@ func (s *Service) SelectTemplate(userID uint, id, templateID, variantID string) 
 	if s.templates == nil {
 		return "", fmt.Errorf("模板库不可用")
 	}
+	// 用户自定义模板（ut- 前缀）的可见性校验：registry 里挂载 ≠ 人人可用——
+	// 私有的用户模板只有 owner 能选；公开模板任何人可选。
+	if strings.HasPrefix(templateID, "ut-") && s.st != nil {
+		var utRow store.UserTemplate
+		if err := s.st.DB.First(&utRow, "id = ?", templateID).Error; err != nil {
+			return "", fmt.Errorf("模板 %q 不存在", templateID)
+		}
+		if utRow.UserID != userID && !(utRow.Visibility == "public" && utRow.Status == "published") {
+			return "", fmt.Errorf("模板 %q 不存在", templateID) // 与不存在同口径，不泄露存在性
+		}
+	}
 	tpl, err := s.templates.Get(templateID)
 	if err != nil {
 		return "", err

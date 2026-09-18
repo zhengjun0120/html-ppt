@@ -162,5 +162,5 @@ func performRequest(engine *gin.Engine, method, path string) *httptest.ResponseR
 func newTestHandler(t *testing.T) *handler.Handler {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	return handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), nil, nil)
+	return handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), nil, nil, nil)
 }

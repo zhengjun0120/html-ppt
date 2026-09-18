@@ -46,3 +46,23 @@ type ChatSession struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// UserTemplate 用户自定义模板：文件在磁盘（data/user-templates/<id>/ 四件套），
+// 这张表负责 id → 归属/可见性/发布状态 的权威映射。
+//
+// Visibility: private | public（公开后其他用户可在画廊「社区模板」里选用）。
+// Status: draft | publishing | published | failed（publishing = 门禁运行中）。
+// PublishError 存最近一次门禁失败的可读原因；PublishReport 存各关结果的 JSON。
+type UserTemplate struct {
+	ID           string    `gorm:"primaryKey;size:32" json:"id"` // ut-xxxxxx
+	UserID       uint      `gorm:"index;not null" json:"user_id"`
+	BaseID       string    `gorm:"size:64" json:"base_id"` // fork 来源的内置模板 id
+	Name         string    `gorm:"size:128" json:"name"`
+	Description  string    `gorm:"size:512" json:"description"`
+	Visibility   string    `gorm:"size:8;default:private" json:"visibility"`
+	Status       string    `gorm:"size:16;default:draft" json:"status"`
+	PublishError string    `gorm:"size:1024" json:"publish_error,omitempty"`
+	PublishReport string   `gorm:"type:text" json:"publish_report,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}

@@ -27,6 +27,7 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 		api.GET("/templates", h.ListTemplates)
 		api.GET("/templates/:id", h.GetTemplate)
 		api.GET("/templates/:id/preview", h.PreviewTemplate)
+		api.GET("/community-templates", h.CommunityTemplates)
 
 		// 视觉审查的一次性取页通道：**必须公开**——无头浏览器是"导航"到它的，
 		// 导航带不了 Authorization 头。安全性靠一次性 nonce（见 vision/grant.go）：
@@ -79,6 +80,15 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			// 之后按内容版本缓存；?token= 兼容 <img> 标签带不了鉴权头。
 			guarded.GET("/decks/:id/thumbs", h.DeckThumbs)
 			guarded.GET("/decks/:id/thumbs/:no", h.DeckThumb)
+			// 用户自定义模板：fork / 我的 / 详情 / 改名 / 删除 / 发布门禁 / 下架
+			guarded.POST("/templates/:id/fork", h.ForkTemplate)
+			guarded.GET("/user-templates", h.ListUserTemplates)
+			guarded.GET("/user-templates/:id", h.GetUserTemplate)
+			guarded.PUT("/user-templates/:id", h.UpdateUserTemplate)
+			guarded.DELETE("/user-templates/:id", h.DeleteUserTemplate)
+			guarded.POST("/user-templates/:id/publish", h.PublishUserTemplate)
+			guarded.POST("/user-templates/:id/unpublish", h.UnpublishUserTemplate)
+				guarded.POST("/user-templates/:id/chat", h.CustomizeUserTemplate)
 			guarded.DELETE("/decks/:id/history/:version", h.DeleteDeckVersion)
 			guarded.DELETE("/decks/:id/history", h.ClearDeckHistory)
 
@@ -106,6 +116,11 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	if h.TemplatesAvailable() {
 		templates := r.Group("", revalidateStatic())
 		templates.Static("/templates", cfg.Templates.Dir)
+		// 用户自定义模板 demo：公开 + no-cache（定制对话会改 style.css，
+		// 缓存会让预览与发布量测拿到旧样式）。模板设计不含用户数据；发布门禁的无头渲染
+		// 走这里，导航带不了鉴权头）。目录在 main 里保证存在。
+		utStatic := r.Group("", noCacheHeader())
+		utStatic.Static("/user-templates", filepath.Join(cfg.Data.Dir, "user-templates"))
 	}
 
 	// SSE 测试台（同源访问，无 CORS 问题）：http://localhost:8080/chat-test
@@ -125,6 +140,13 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 //
 // 刻意不用"长缓存 + 内容哈希"：deck.html 引用 /assets/xxx.css 时不带指纹，一旦长缓存就再也换不掉。
 // no-cache 不等于不缓存，只是每次都问一句，命中 304 时开销极小。
+func noCacheHeader() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache")
+		c.Next()
+	}
+}
+
 func revalidateStatic() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")

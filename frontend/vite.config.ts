@@ -19,6 +19,8 @@ export default defineConfig({
       '/assets': { target: 'http://127.0.0.1:8080', changeOrigin: false },
       // deck-v2 模板库静态服务（画廊 live 预览 iframe 用）
       '/templates': { target: 'http://127.0.0.1:8080', changeOrigin: false },
+      // 用户自定义模板 demo 静态（定制工作台预览 iframe 用）
+      '/user-templates': { target: 'http://127.0.0.1:8080', changeOrigin: false },
     },
   },
 })

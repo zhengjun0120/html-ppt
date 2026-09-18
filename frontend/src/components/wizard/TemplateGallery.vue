@@ -4,6 +4,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
 import { templateApi } from '@/api/templates'
+import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
+import { PhPlus } from '@phosphor-icons/vue'
 import { useChatStore } from '@/stores/chat'
 import { useWizardStore } from '@/stores/wizard'
 import { useToast } from '@/stores/toast'
@@ -21,12 +23,17 @@ const wizard = useWizardStore()
 const chat = useChatStore()
 const toast = useToast()
 
+const userTemplates = ref<UserTemplateRow[]>([])
+const community = ref<CommunityTemplate[]>([])
+
 const selected = ref('')
 const selectedVariant = ref('')
 const demoPage = ref(1)
 const starting = ref(false)
 
 void wizard.loadTemplates().catch(() => toast.error('模板清单加载失败'))
+void userTemplateApi.list().then((r) => (userTemplates.value = r)).catch(() => {})
+void userTemplateApi.community().then((r) => (community.value = r)).catch(() => {})
 
 const selectedMeta = computed(() => wizard.templates.find((t) => t.id === selected.value))
 const canStart = computed(() => !!selected.value && !wizard.busy && !starting.value && chat.sessionId != null)
@@ -85,6 +92,22 @@ async function start() {
       <p class="mt-0.5 text-[12px] text-ink-3">
         模板决定整套视觉（配色、字体、版式）。必选一个；选中后可切换主题变体、翻页预览整本 demo。
       </p>
+    </div>
+
+    <!-- 我的模板（可用） -->
+    <div v-if="userTemplates.length" class="flex flex-wrap gap-2">
+      <button
+        v-for="ut in userTemplates"
+        :key="ut.id"
+        type="button"
+        class="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-[12px] transition-colors"
+        :class="selected === ut.id ? 'border-accent bg-accent-soft text-ink' : 'border-line bg-surface text-ink-2 hover:border-accent'"
+        :title="ut.name + '（' + (ut.visibility === 'public' ? '公开' : '私有') + '）'"
+        @click="pick(ut.id); selectedVariant = ut.variants?.[0]?.id ?? 'default'"
+      >
+        {{ ut.name }}
+        <span class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">我的</span>
+      </button>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">

@@ -50,10 +50,11 @@
   <section class="slide" data-title="Context" data-layout="cards-3">
     <p class="kicker">// context</p>
     <h2 class="h2">问题：一个线程一个连接，<br>撑不住 10 万并发。</h2>
+    <p class="lede mt-m">10 万条长连接 × 2MB 栈 ≈ 200GB 内存——先看三条老路分别卡在哪。</p>
     <div class="grid g3 mt-l">
-      <div class="card card-accent"><h4>Thread-per-conn</h4><p class="dim">每条连接一根 OS 线程，栈 2–8MB。10 万连接 = 几百 GB RAM。</p><span class="tag mt-s">❌ 不现实</span></div>
-      <div class="card card-accent"><h4>Event loop (C)</h4><p class="dim">epoll/kqueue + 回调地狱。快，但写起来痛苦且容易出 bug。</p><span class="tag mt-s">😩 callback hell</span></div>
-      <div class="card card-accent"><h4>Async / await</h4><p class="dim">看起来像同步代码，编译成状态机。一根线程跑几千任务。</p><span class="tag mt-s">✅ Rust 选这个</span></div>
+      <div class="card card-accent"><h4>Thread-per-conn</h4><p class="dim">每条连接一根 OS 线程，栈 2–8MB。10 万连接 = 几百 GB RAM。</p><span class="tag mt-s">不现实</span></div>
+      <div class="card card-accent"><h4>Event loop (C)</h4><p class="dim">epoll/kqueue + 手工状态机。快，但写起来痛苦且容易出 bug。</p><span class="tag mt-s">回调地狱</span></div>
+      <div class="card card-accent"><h4>Async / await</h4><p class="dim">看起来像同步代码，编译成状态机。一根线程跑几千任务。</p><span class="tag mt-s">Rust 选这个</span></div>
     </div>
   </section>
 
@@ -88,6 +89,7 @@
   <section class="slide" data-title="Deep Dive 2" data-layout="two-column">
     <p class="kicker">deep-dive · 2 / 2</p>
     <h2 class="h2">Tokio 是一个偷任务的小工。</h2>
+    <p class="lede mt-m">每个 worker 有自己的本地队列；空了就去别人那里偷一半——负载均衡就这样发生。</p>
     <div class="grid g2 mt-l" style="align-items:start">
       <div>
         <p class="lede">Multi-thread runtime = N 个 worker，每个 worker 有自己的本地队列。空闲的 worker 会去别人队列里"偷"任务。</p>
@@ -137,6 +139,7 @@
     }
 }</pre>
     </div>
+    <p class="dim mt-m" style="font-size:15px">核心就是 poll 那一行——runtime 没有魔法，只是替你把 Waker 的回调跑成循环。</p>
   </section>
 
   <!-- 7. Takeaways -->
@@ -144,11 +147,12 @@
     <p class="kicker">// takeaways</p>
     <h2 class="h2">三件事带回去。</h2>
     <div class="grid g3 mt-l">
-      <div class="card card-accent"><h4>1 · async 是零成本抽象</h4><p class="dim">编译成状态机，没有运行时虚表，没有 GC。</p></div>
-      <div class="card card-accent"><h4>2 · Waker 是脉搏</h4><p class="dim">Future 不主动做事，运行时靠 waker 决定"什么时候再 poll"。</p></div>
-      <div class="card card-accent"><h4>3 · 别在 async 里阻塞</h4><p class="dim">一行 <span class="mono">std::fs::read</span> 能让整个 worker 停摆。用 <span class="mono">spawn_blocking</span>。</p></div>
+      <div class="card card-accent"><h4>1 · async 是零成本抽象</h4><p class="dim">async fn 在编译期变成状态机：没有运行时虚表、没有 GC，栈帧就是枚举体本身。</p></div>
+      <div class="card card-accent"><h4>2 · Waker 是脉搏</h4><p class="dim">Future 不主动做事：运行时靠 waker 决定"什么时候再 poll"。唤醒链路一旦断掉，这个任务就永久挂起——排查时要先看 wake 有没有真的被调用。</p></div>
+      <div class="card card-accent"><h4>3 · 别在 async 里阻塞</h4><p class="dim">一行 <span class="mono">std::fs::read</span> 就能让整个 worker 停摆：阻塞调用一律进 <span class="mono">spawn_blocking</span>，这是 async 代码评审的第一条。</p></div>
     </div>
-    <p class="lede mt-l">延伸阅读：<span class="mono">tokio.rs/blog/2019-10-scheduler</span> · <span class="mono">rust-lang.github.io/async-book</span></p>
+    <p class="lede mt-l">延伸阅读：<span class="mono">tokio.rs/blog/2019-10-scheduler</span> 与 async-book 的 Waker 章节——看完再回来对照第 7 页那份手写 runtime，逐行都能对上。</p>
+    <p class="dim mt-m" style="font-size:16px">链接与三条迁移清单也会贴在课程仓库 README 里，会后发群。</p>
   </section>
 
   <!-- 8. Q&A -->

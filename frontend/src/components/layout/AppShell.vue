@@ -22,6 +22,7 @@ onMounted(() => {
         </RouterLink>
         <nav class="flex items-center gap-1">
           <RouterLink to="/decks" class="nav-link">文稿</RouterLink>
+          <RouterLink to="/my-templates" class="nav-link">我的模板</RouterLink>
           <RouterLink to="/trace" class="nav-link">观测台</RouterLink>
           <RouterLink to="/settings" class="nav-link">设置</RouterLink>
         </nav>
