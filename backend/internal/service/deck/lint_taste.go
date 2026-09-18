@@ -47,7 +47,8 @@ func defaultLintCfg() LintCfg {
 		CJKBanned:    defaultCJKBan,
 		ENBanned:     defaultENBan,
 		TitleMax:     16, // 页标题字数上限（与 config DefaultTitleMaxChars 同源，deck 包内自持）
-		BulletMax:    28,
+		BulletMax:    60, // 曾是 28：把要点条压成一行小句是 deck-0031 过空的推手之一，
+		// 22-45 字的"一句论断+一句展开"才是卡片该有的密度（与契约区间一致）
 		EyebrowLimit: 3,
 	}
 }

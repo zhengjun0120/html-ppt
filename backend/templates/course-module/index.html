@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Module 04 · Recursion · CS101</title>
@@ -22,7 +22,8 @@
       <span class="pill-academic">prereq · functions, if/else</span>
       <span class="pill-academic">lang · Python</span>
     </div>
-    <div class="deck-footer"><span>Dr. A. Rivera · Spring 2026</span><span class="slide-number" data-current="1" data-total="7"></span></div>
+    <div class="ghost-num">04</div>
+    <div class="deck-footer"><span>Dr. A. Rivera · Spring 2026</span><span class="slide-number" data-current="1" data-total="10"></span></div>
   </section>
 
   <!-- 2. Objectives -->
@@ -112,7 +113,62 @@
     </div>
   </section>
 
-  <!-- 5. Exercise -->
+  <!-- 5. Divider -->
+  <section class="slide full" data-title="Divider" data-layout="divider">
+    <p class="kicker">第 2 节 · 共 3 节</p>
+    <h1 class="h1 mt-s">递归怎么跑起来</h1>
+    <p class="lede mt-m" style="max-width:56ch">这一节只回答一个问题：一次函数调用自己时，计算机内部到底发生了什么？</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="pill-academic">调用栈可视化</span>
+      <span class="pill-academic">base case 的位置</span>
+    </div>
+    <div class="ghost-num">2</div>
+    <div class="deck-footer"><span>Module 04 · Recursion</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">过渡页：先把上一节的定义放一放，看点动态的。</div>
+  </section>
+
+  <!-- 6. Stat -->
+  <section class="slide" data-title="Stat" data-layout="stat">
+    <aside class="sidebar">
+      <div class="brand">CS 101 · M04</div>
+      <h5>怎么读</h5>
+      <p class="dim" style="font-size:13px">三个数都来自同一台机器的实测，口径不同不能相加。</p>
+    </aside>
+    <div class="main">
+      <p class="kicker">key numbers</p>
+      <h2 class="h2 mt-s">递归到底有多贵</h2>
+      <div class="stat-row mt-l">
+        <div class="stat"><div class="stat-v">64<span class="stat-u">KB</span></div><div class="stat-l">默认栈帧预算</div><p class="stat-note">每层调用吃掉的估算值（gcc -O2）</p></div>
+        <div class="stat"><div class="stat-v">10<span class="stat-u">⁶</span></div><div class="stat-l">每秒可执行调用数</div><p class="stat-note">单核、尾调用优化开启</p></div>
+        <div class="stat"><div class="stat-v">1.8<span class="stat-u">×</span></div><div class="stat-l">循环版相对递归版提速</div><p class="stat-note">fact(20) 基准测试，同一编译器</p></div>
+      </div>
+      <p class="dim mt-m" style="font-size:14px">来源：课程基准测试仓库 lab02-results</p>
+    </div>
+    <div class="notes">让学生先猜再揭晓：递归不是不能写，是要知道代价。</div>
+  </section>
+
+  <!-- 7. Timeline -->
+  <section class="slide" data-title="Timeline" data-layout="timeline">
+    <aside class="sidebar">
+      <div class="brand">CS 101 · M04</div>
+      <h5>怎么看</h5>
+      <p class="dim" style="font-size:13px">从左到右是"问题变简单"的方向，不是时间。</p>
+    </aside>
+    <div class="main">
+      <p class="kicker">milestones</p>
+      <h2 class="h2 mt-s">一次 fact(4) 的一生</h2>
+      <div class="timeline mt-l">
+        <div class="tl-item"><div class="tl-t">发起</div><p class="tl-d">main 调用 fact(4)，栈帧入栈，等待返回值。</p></div>
+        <div class="tl-item"><div class="tl-t">展开</div><p class="tl-d">4 层调用依次入栈，每层记着自己的 n。</p></div>
+        <div class="tl-item"><div class="tl-t">触底</div><p class="tl-d">n==0 命中 base case，直接返回 1。</p></div>
+        <div class="tl-item"><div class="tl-t">回卷</div><p class="tl-d">逐层乘回去：1→1→2→6→24，栈清空。</p></div>
+      </div>
+      <div class="callout"><b>关键解读。</b>递归的成本全在"展开"那一段——砍不掉的栈深度就是它和循环的差距。</div>
+    </div>
+    <div class="notes">配合板书画栈，效果最好。</div>
+  </section>
+
+  <!-- 8. Exercise -->
   <section class="slide" data-title="Exercise" data-layout="exercise">
     <aside class="sidebar">
       <div class="brand">CS 101 · M04</div>
@@ -183,6 +239,7 @@
     <div class="callout mt-l">
       <b>Up next · Module 05.</b> Divide &amp; conquer: merge sort. We'll use everything you just learned — but on lists, not numbers.
     </div>
+    <div class="deck-footer"><span>CS 101 · Recursion</span><span class="slide-number" data-current="10" data-total="10"></span></div>
   </section>
 
 <!-- SLIDES:END --><!-- SLIDES:END -->

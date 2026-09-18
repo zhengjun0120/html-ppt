@@ -82,6 +82,9 @@ type Template struct {
 	// layoutClasses 版式 id → 该条目"合法类名："行声明的类名清单。
 	// 每页校验的权威清单（C202），base/template 两族是兜底并集。
 	layoutClasses map[string][]string
+	// layoutPatterns 版式 id → 视觉模式指纹（hero/stack/cards/...）。
+	// 显式声明（指纹：行）优先，缺失时按骨架类名推断。节奏守卫按它判视觉重复。
+	layoutPatterns map[string]string
 
 	// baseClasses / templateClasses 类名清单（manifest）：
 	// base 从 deck-v2/base.css 解析，template 从本模板 style.css + index.html 解析。
@@ -104,6 +107,21 @@ func (t *Template) Layout(id string) (string, bool) {
 // LayoutClassList 返回版式的合法类名清单（切片形式，给报错信息用）。
 func (t *Template) LayoutClassList(id string) []string {
 	return t.layoutClasses[id]
+}
+
+// Pattern 返回版式的视觉模式指纹；未登记的版式返回空串。
+func (t *Template) Pattern(id string) string {
+	return t.layoutPatterns[id]
+}
+
+// DistinctPatterns 模板登记版式的不同视觉模式数（节奏守卫判断该模板
+// 有没有足够的模式多样性可判——不足 4 种的模板按模式判重会无解）。
+func (t *Template) DistinctPatterns() int {
+	seen := map[string]bool{}
+	for _, p := range t.layoutPatterns {
+		seen[p] = true
+	}
+	return len(seen)
 }
 
 // AllowedClasses 版式的合法类名全集：base 原语 ∪ 模板类 ∪ 该版式显式声明。
@@ -312,6 +330,7 @@ func loadTemplate(dir, assetsDir string, baseClasses map[string]bool) (*Template
 		rulesMD:         rulesMD,
 		layoutSkeleton:  map[string]string{},
 		layoutClasses:   map[string][]string{},
+		layoutPatterns:  map[string]string{},
 		baseClasses:     baseClasses,
 		templateClasses: collectClasses(indexHTML, styleCSS),
 	}
@@ -354,8 +373,43 @@ func loadTemplate(dir, assetsDir string, baseClasses map[string]bool) (*Template
 				return nil, fmt.Errorf("版式 %q 声明的类名 .%s 不存在（base.css 与模板文件里都没有）", id, c)
 			}
 		}
+		// 骨架自洽：骨架里出现的类必须在「合法类名」清单里，否则 LLM 照抄骨架
+		// 写页会被 C202 拒收，而报错指向的是模板自己的 bug（weekly-report
+		// metrics-chart 用 .c/.l、CSS 却是 .b/.lbl 的实测教训）。
+		for _, cls := range htmlClassAttrRe.FindAllStringSubmatch(l.Skeleton, -1) {
+			for _, c := range strings.Fields(cls[1]) {
+				if !isClassToken(c) {
+					continue
+				}
+				ok := false
+				for _, d := range l.Classes {
+					if d == c {
+						ok = true
+						break
+					}
+				}
+				if !ok {
+					return nil, fmt.Errorf("版式 %q 骨架用了类 .%s，但「合法类名：」清单里没有", id, c)
+				}
+			}
+		}
+		// 指纹：显式声明必须在词汇表内；缺失时由 patternOf 从骨架推断（兼容旧模板）。
+		if l.Pattern != "" {
+			switch l.Pattern {
+			case "hero", "stack", "cards", "split", "code", "table", "chart", "quote":
+			default:
+				return nil, fmt.Errorf("版式 %q 的指纹 %q 不在词汇表（hero/stack/cards/split/code/table/chart/quote）", id, l.Pattern)
+			}
+		}
 		t.layoutSkeleton[id] = l.Skeleton
 		t.layoutClasses[id] = l.Classes
+		t.layoutPatterns[id] = patternOf(l)
+	}
+
+	// 网格陷阱：裸 .slide 无条件 grid 会把不含 .sidebar 包裹层的骨架碎片逐格
+	// 压进窄列（course-module deck-0031 十二页十坏的根源）。必须 :has(.sidebar) 触发。
+	if gridTrapRe.MatchString(t.styleCSS) {
+		return nil, fmt.Errorf("style.css 在裸 .slide 上无条件开 grid（且没有 :has(.sidebar) 守卫）")
 	}
 
 	// 变体 class 必须在 style.css 里真的定义过（用户选了变体却没生效，是最阴的静默失败）。
@@ -391,6 +445,8 @@ var (
 	sectionTagRe = regexp.MustCompile(`<section[^>]*>`)
 	dataLayoutRe = regexp.MustCompile(`data-layout="([^"]*)"`)
 	assetRefRe   = regexp.MustCompile(`(?:href|src)="(\/assets\/[^"]+)"`)
+	// gridTrapRe 裸 .slide 上的无条件 grid（负向豁免 :has 守卫在更早的 if 里判）
+	gridTrapRe = regexp.MustCompile(`\.tpl-[\w-]+ \.slide\{[^}]*display:\s*grid`)
 )
 
 // demoSegment 取挂载标记之间的内容（demo 页面区）。

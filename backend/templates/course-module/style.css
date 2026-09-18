@@ -10,8 +10,13 @@
   --shadow:0 12px 30px rgba(60,45,20,.07);
   font-family:'Inter','Noto Sans SC',sans-serif;
 }
-.tpl-course-module .slide{padding:64px 80px;background:var(--bg);display:grid;grid-template-columns:260px 1fr;gap:56px;align-content:start}
-.tpl-course-module .slide.full{grid-template-columns:1fr;display:flex;flex-direction:column;justify-content:center}
+/* 布局底盘：默认沿用 base.css 的 flex 纵向居中，只给 padding/背景。
+   两栏网格只在页面真的带 .sidebar 时启用（:has 守卫）——曾经无条件 grid
+   260px+1fr + align-content:start，骨架一旦没写 .sidebar/.main 包裹层，
+   散装子元素就逐格掉进 260px 窄列、下半页全空（deck-0031 事故的根源）。 */
+.tpl-course-module .slide{padding:64px 80px;background:var(--bg)}
+.tpl-course-module .slide:has(.sidebar){display:grid;grid-template-columns:260px 1fr;gap:56px;align-content:center}
+.tpl-course-module .slide.full{display:flex;flex-direction:column;justify-content:center}
 .tpl-course-module .sidebar{border-right:1px solid var(--border);padding-right:32px;position:relative}
 .tpl-course-module .sidebar .brand{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--accent)}
 .tpl-course-module .sidebar .brand::before{content:"✦ ";color:var(--accent-2)}
@@ -44,7 +49,30 @@
 .tpl-course-module .mcq.correct .letter{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
 .tpl-course-module .pill-academic{display:inline-block;padding:4px 12px;border-radius:4px;background:var(--surface-2);border:1px solid var(--border);font-size:12px;color:var(--text-2);font-family:'JetBrains Mono',monospace}
 .tpl-course-module .slide.full .h1{font-size:88px}
-.tpl-course-module .deck-footer{color:var(--text-3)}
+.tpl-course-module .deck-footer{color:var(--text-3);display:flex;justify-content:space-between;align-items:center;margin-top:auto;font-size:13px}
+
+/* ---- 章节幕（divider）：巨大幽灵章节数字当视觉锚点，右下角压住画面 ---- */
+.tpl-course-module .ghost-num{
+  position:absolute;right:64px;bottom:0;pointer-events:none;
+  font-family:'Playfair Display',serif;font-size:280px;line-height:1;font-weight:800;
+  color:transparent;-webkit-text-stroke:2px var(--accent);opacity:.3;
+}
+
+/* ---- 数据版式（stat / timeline）：数字是气候、进展类课程的主视觉，
+   不准把关键数字埋进正文句子里 ---- */
+.tpl-course-module .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;margin-top:8px}
+.tpl-course-module .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px 28px;box-shadow:var(--shadow)}
+.tpl-course-module .stat-v{font-family:'Playfair Display',serif;font-size:76px;line-height:1;font-weight:800;color:var(--accent);letter-spacing:-.02em}
+.tpl-course-module .stat-u{font-size:28px;font-weight:700;color:var(--accent);margin-left:6px}
+.tpl-course-module .stat-l{margin-top:14px;font-size:19px;font-weight:700;color:var(--text-1)}
+.tpl-course-module .stat-note{margin-top:6px;font-size:13px;color:var(--text-3);line-height:1.55}
+
+.tpl-course-module .timeline{display:flex;margin-top:16px;position:relative;counter-reset:tl}
+.tpl-course-module .timeline::before{content:"";position:absolute;left:7px;right:7px;top:8px;height:2px;background:var(--border-strong)}
+.tpl-course-module .tl-item{flex:1;padding:0 24px 0 0;position:relative}
+.tpl-course-module .tl-item::before{content:"";display:block;width:12px;height:12px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--accent-2);margin-bottom:16px;position:relative;z-index:1}
+.tpl-course-module .tl-t{font-family:'Playfair Display',serif;font-size:30px;font-weight:800;color:var(--accent)}
+.tpl-course-module .tl-d{margin-top:8px;font-size:14px;color:var(--text-2);line-height:1.65}
 
 .tpl-course-module.cm-warm{--accent:#ea580c}
 

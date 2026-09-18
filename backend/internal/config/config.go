@@ -72,7 +72,9 @@ type LintCfg struct {
 const (
 	DefaultBatchSize     = 3 // write_pages 每批页数（D14：2-4，默认 3）
 	DefaultTitleMaxChars = 16
-	DefaultBulletMaxChars = 28
+	// 28 会把要点条压成一行小句，是生成页过空的推手之一；60 与契约的
+	// "22-45 字一句论断+一句展开"区间同向（超 60 的整条仍是啰嗦，照样提示）。
+	DefaultBulletMaxChars = 60
 	DefaultEyebrowPerPages = 3
 )
 

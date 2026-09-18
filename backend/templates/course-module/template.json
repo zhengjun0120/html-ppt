@@ -38,68 +38,97 @@
     {
       "id": "cover",
       "name": "课程封面",
-      "use": "课程标题 + 侧栏课程导航出现",
+      "use": "开场页：大标题 + 一句话定位 + 课程信息胶囊 + 页脚",
       "roles": [
         "cover"
       ],
-      "constraints": "标题 ≤14 字；副标 ≤20 字"
+      "constraints": "标题 ≤14 字；lede 30-50 字；3 个胶囊"
     },
     {
       "id": "objectives",
       "name": "学习目标",
-      "use": "本模块学完后能做到的 3-4 条目标",
+      "use": "本模块学完后能做到的 3-4 条目标，每条带一句解释",
       "roles": [
         "toc"
       ],
-      "constraints": "3-4 条、每条动词开头 ≤20 字"
+      "constraints": "3-4 条；每条动词开头 ≤16 字 + 解释 18-36 字"
     },
     {
       "id": "concept",
       "name": "概念讲解",
-      "use": "核心概念 + 要点解释（concept-box 承载定义）",
+      "use": "核心概念一句话 + 两张并列要点卡（带例子）+ 易错点纠正",
       "roles": [
         "content"
       ],
-      "constraints": "定义 ≤40 字；要点 2-4 条、每条 ≤24 字"
+      "constraints": "定义 30-50 字；两张卡各 25-50 字 + 例子；callout 30-50 字"
     },
     {
       "id": "example",
       "name": "示例讲解",
-      "use": "代码/操作示例（.code 块承载，语法高亮可选）",
+      "use": "代码/操作示例（.code 块承载）+ 逐步拆解",
       "roles": [
         "code",
         "content"
       ],
-      "constraints": "代码 ≤16 行；配 1-2 句解说"
+      "constraints": "代码 8-16 行；拆解 40-80 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：巨大章节数字 + 本节回答的一个问题 + 2 个看点",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "标题 ≤12 字；lede 25-45 字；2 个看点胶囊"
+    },
+    {
+      "id": "stat",
+      "name": "关键数字",
+      "use": "2-4 张大数字卡回答一个量化问题；有数字就用它，别把数字埋进句子",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "2-4 张卡；数值 ≤6 字符 + 指标名 ≤12 字 + 口径 12-30 字；页尾标来源"
+    },
+    {
+      "id": "timeline",
+      "name": "时间线",
+      "use": "3-4 个节点的发展脉络（年份、阶段、步骤）+ 一句关键解读",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "3-4 节点；节点 ≤8 字 + 说明 20-40 字；解读 30-50 字"
     },
     {
       "id": "exercise",
       "name": "随堂练习",
-      "use": "学员动手的任务说明（exercise 容器）",
+      "use": "学员动手的任务说明（exercise 容器）+ 编号要求",
       "roles": [
         "content",
         "cta"
       ],
-      "constraints": "任务 ≤30 字；要求 2-3 条"
+      "constraints": "任务 ≤30 字；要求 3-4 条、每条 15-35 字"
     },
     {
       "id": "check",
       "name": "选择自测",
-      "use": "一道选择题（mcq 选项，correct 标正确项）",
+      "use": "一道选择题（mcq 选项，correct 标正确项），每项带对错解释",
       "roles": [
         "content"
       ],
-      "constraints": "恰好 1 题；题干 ≤30 字；4 个选项、每项 ≤20 字"
+      "constraints": "恰好 1 题；题干 ≤30 字；4 选项各 ≤20 字 + 解释 12-30 字"
     },
     {
       "id": "summary",
       "name": "模块小结",
-      "use": "小结 + 下一模块预告",
+      "use": "小结（✓ 记忆点阵列）+ 下一模块预告",
       "roles": [
         "content",
         "thanks"
       ],
-      "constraints": "3 条记忆点、每条 ≤20 字；预告 ≤16 字"
+      "constraints": "3-4 个记忆点、每卡 15-35 字；预告 16-30 字"
     }
   ],
   "fonts": [

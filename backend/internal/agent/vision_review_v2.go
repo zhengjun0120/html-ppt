@@ -34,8 +34,9 @@ func (a *AgentService) measureDeckV2(ctx context.Context, uid uint, deckID strin
 	b.WriteString("\n\n版面量测（自动跑的，只有数字，没有看图；固定画布 1920×1080）：\n")
 	b.WriteString(vision.DigestV2(d))
 	b.WriteString("\n溢出（⚠ 标记）的页必须修复：删内容或精简文字，不要缩字号糊弄。")
+	b.WriteString("\n填充率偏空（⚠ 标记）的页同样必须修复：给这页补实质内容（数据、例子、图表行），或改用信息密度更高的骨架重写整页——留白超过画布一半的页，观众会当成「没做完」。")
 	b.WriteString(fmt.Sprintf("\n要看画面：调 review_slides，pages 传 1 基页号（一次最多 %d 页），"+
-		"优先挑溢出页、最小字号偏小的页和底部空隙异常（过大 = 空得慌、过小 = 挤）的页。", maxReviewPages))
+		"优先挑溢出页、填充率偏空的页和最小字号偏小的页。", maxReviewPages))
 	return clipRunes(b.String(), reviewChars)
 }
 

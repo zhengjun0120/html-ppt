@@ -12,6 +12,7 @@ package deck
 
 import (
 	"errors"
+	"regexp"
 	"sort"
 	"fmt"
 	"strings"
@@ -221,6 +222,37 @@ func checkClassContract(sec *goquery.Selection, layoutID string, allowed map[str
 	return fmt.Errorf("页面使用了版式 %q 契约之外的类名：%s。只准使用 base 原语类、本模板 style.css 声明的类、与 layouts.md 该版式登记的类", layoutID, strings.Join(parts, "、"))
 }
 
+// ---------- 静态密度下限 ----------
+
+// minCharsByPattern 每种视觉模式的可见字数下限（不含 .notes 讲稿）。
+// hero 是封面/章节/收尾，字少是设计；code 的字数在代码 token 里；其余版式
+// 观众要读的正文低于 70 字，投到 1920×1080 上就是一页空白——deck-0031 实测
+// 12 页里 6 页不足 45 字，观众看到的和"生成失败"没有区别。
+var minCharsByPattern = map[string]int{
+	"hero":  15,
+	"code":  40,
+	"quote": 40,
+}
+
+const minCharsDefault = 70
+
+var latinWordRe = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9'’\-]*`)
+
+// visibleChars 页面可见文字量（CJK 字符逐个计 + 西文按词计，与 vision 量测同口径），
+// .notes 讲稿不算——它是给演讲者的，观众看不见。
+func visibleChars(sec *goquery.Selection) int {
+	clone := sec.Clone()
+	clone.Find(".notes").Remove()
+	text := strings.Join(strings.Fields(clone.Text()), " ")
+	cjk := 0
+	for _, r := range text {
+		if r >= 0x4e00 && r <= 0x9fff || r >= 0x3400 && r <= 0x4dbf {
+			cjk++
+		}
+	}
+	return cjk + len(latinWordRe.FindAllString(text, -1))
+}
+
 // ---------- 生成批写入（write_pages）----------
 
 // PageInput write_pages 的单页输入。
@@ -361,6 +393,17 @@ func (s *Service) writeOnePage(doc *goquery.Document, tpl *template.Template, ou
 	allowed := tpl.AllowedClasses(pg.Layout)
 	if err := checkClassContract(sec, pg.Layout, allowed); err != nil {
 		return false, err.Error(), "", nil
+	}
+	// 6. 静态密度下限：过空的页在写进门就拦（渲染量测要等批次结束才有，
+	// 而字数在这里零成本可判——deck-0031 的"一行字漂在虚空"页多数过不了这道）
+	floor := minCharsByPattern[tpl.Pattern(pg.Layout)]
+	if floor == 0 {
+		floor = minCharsDefault
+	}
+	if n := visibleChars(sec); n < floor {
+		return false, fmt.Sprintf(
+			"这页可见文字只有 %d 个（%s 型版式下限 %d）：观众会看到一页近乎空白的画面。补实质内容（数据、例子、解释），不要把短句拉长凑字；实在没内容这页该换成 hero 类版式",
+			n, tpl.Pattern(pg.Layout), floor), "", nil
 	}
 
 	// data-id 权威在后端：剥掉 LLM 写的，按大纲页码编号

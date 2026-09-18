@@ -9,10 +9,11 @@
 ---
 
 ## hero-quote（杂志封面）
+指纹：hero
 
 用途：刊头 + 大标题 + hero 区（可放一张图或纯排版）
 适用 role：cover。
-内容约束：标题 ≤12 字；副标 ≤22 字；kicker 是栏目名
+内容约束：标题 ≤12 字；副标 20-30 字；kicker 是栏目名
 
 ```html
 <section class="slide" data-layout="hero-quote">
@@ -21,8 +22,8 @@
   <div class="xw-page">
     <p class="xw-kicker">{{栏目名}}</p>
     <h1 class="xw-title">{{标题}}</h1>
-    <p class="xw-sub">{{副标}}</p>
-    <div class="xw-hero">{{hero 区（一句话或配图说明）}}</div>
+    <p class="xw-sub">{{副标，20-30 字}}</p>
+    <div class="xw-hero">{{hero 区（一句话 20-40 字或配图说明）}}</div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
@@ -34,10 +35,11 @@
 ---
 
 ## statement（单句页）
+指纹：quote
 
 用途：整页只放一句转场/观点，杂志翻页感
 适用 role：divider / quote。
-内容约束：单句 ≤24 字
+内容约束：单句 12-24 字
 
 ```html
 <section class="slide" data-layout="statement">
@@ -45,7 +47,7 @@
   <div class="xw-topbar"><span>{{刊名}}</span><span>{{页码}}</span></div>
   <div class="xw-page">
     <p class="xw-kicker">{{栏目}}</p>
-    <h1 class="xw-title">{{单句}}</h1>
+    <h1 class="xw-title">{{单句，12-24 字}}</h1>
   </div>
   <div class="xw-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
@@ -57,10 +59,11 @@
 ---
 
 ## quad-cards（马卡龙四卡）
+指纹：cards
 
 用途：四张浅色卡（soft-pink/blue/green/orange 各一，颜色即分类）
 适用 role：content。
-内容约束：恰好 4 卡；卡标题 ≤8 字；内容 ≤26 字；颜色与内容情感匹配
+内容约束：恰好 4 卡；卡标题 ≤8 字；卡内说明 22-40 字（一句论断 + 一句展开）；颜色与内容情感匹配
 
 ```html
 <section class="slide" data-layout="quad-cards">
@@ -68,10 +71,10 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{主题}}</h2>
     <div class="xw-grid-2 mt-l">
-      <div class="xw-card soft-pink"><h4>{{卡标题}}</h4><p>{{内容}}</p></div>
-      <div class="xw-card soft-blue"><h4>{{卡标题}}</h4><p>{{内容}}</p></div>
-      <div class="xw-card soft-green"><h4>{{卡标题}}</h4><p>{{内容}}</p></div>
-      <div class="xw-card soft-orange"><h4>{{卡标题}}</h4><p>{{内容}}</p></div>
+      <div class="xw-card soft-pink"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-blue"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-green"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-orange"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -84,10 +87,11 @@
 ---
 
 ## steps（步骤指南）
+指纹：table
 
 用途：操作/方法步骤（xw-step 编号步进）
 适用 role：content。
-内容约束：3-5 步；每步 ≤22 字、动词开头
+内容约束：3-5 步；每步 12-24 字、动词开头
 
 ```html
 <section class="slide" data-layout="steps">
@@ -95,9 +99,9 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{指南标题}}</h2>
     <div class="xw-steps mt-l">
-      <div class="xw-step">{{第 1 步}}</div>
-      <div class="xw-step">{{第 2 步}}</div>
-      <div class="xw-step">{{第 3 步}}</div>
+      <div class="xw-step">{{第 1 步，12-24 字}}</div>
+      <div class="xw-step">{{第 2 步，12-24 字}}</div>
+      <div class="xw-step">{{第 3 步，12-24 字}}</div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -110,10 +114,11 @@
 ---
 
 ## big-stat（大数字）
+指纹：chart
 
 用途：一个关键数字/结论的杂志式呈现（渐变大字）
 适用 role：data。
-内容约束：数字 ≤8 字符；来源说明 ≤20 字，无出处标“估算”
+内容约束：数字 ≤8 字符；来源/口径说明 20-40 字，无出处标“估算”
 
 ```html
 <section class="slide" data-layout="big-stat">
@@ -122,7 +127,7 @@
     <p class="xw-kicker">{{指标语境}}</p>
     <div class="xw-big-stat xw-grad mt-l">{{数字}}</div>
     <h2 class="xw-title-md">{{指标名}}</h2>
-    <p class="xw-sub">{{来源/口径说明}}</p>
+    <p class="xw-sub">{{来源/口径说明，20-40 字}}</p>
   </div>
   <div class="xw-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
@@ -134,10 +139,11 @@
 ---
 
 ## two-column（双栏对照）
+指纹：cards
 
 用途：两个角度/方案的双栏卡片
 适用 role：content。
-内容约束：恰好 2 卡；内容 ≤34 字
+内容约束：恰好 2 卡；卡内说明 22-45 字（一句论断 + 一句展开）
 
 ```html
 <section class="slide" data-layout="two-column">
@@ -145,8 +151,8 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{对照标题}}</h2>
     <div class="xw-grid-2 mt-l">
-      <div class="xw-card soft-blue"><h4>{{栏 A}}</h4><p>{{内容}}</p></div>
-      <div class="xw-card soft-purple"><h4>{{栏 B}}</h4><p>{{内容}}</p></div>
+      <div class="xw-card soft-blue"><h4>{{栏 A}}</h4><p>{{内容，22-45 字}}</p></div>
+      <div class="xw-card soft-purple"><h4>{{栏 B}}</h4><p>{{内容，22-45 字}}</p></div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -159,16 +165,17 @@
 ---
 
 ## quote（金句页）
+指纹：quote
 
 用途：一句金句/书中原话（xw-quote 衬线排版）
 适用 role：quote。
-内容约束：引文 ≤34 字；出处真实，没有就不写出处行
+内容约束：引文 15-34 字；出处真实，没有就不写出处行
 
 ```html
 <section class="slide" data-layout="quote">
   <div class="xw-topline"></div>
   <div class="xw-page">
-    <div class="xw-quote">{{引文}}</div>
+    <div class="xw-quote">{{引文，15-34 字}}</div>
     <p class="xw-sub">{{—— 出处}}</p>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -181,10 +188,11 @@
 ---
 
 ## grid-3（三栏要点）
+指纹：cards
 
 用途：三个并列要点的三栏卡（可混用马卡龙色）
 适用 role：content。
-内容约束：恰好 3 卡；内容 ≤26 字
+内容约束：恰好 3 卡；卡内说明 22-40 字（一句论断 + 一句展开）
 
 ```html
 <section class="slide" data-layout="grid-3">
@@ -192,9 +200,9 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{主题}}</h2>
     <div class="xw-grid-3 mt-l">
-      <div class="xw-card soft-blue"><h4>{{要点}}</h4><p>{{内容}}</p></div>
-      <div class="xw-card soft-green"><h4>{{要点}}</h4><p>{{内容}}</p></div>
-      <div class="xw-card soft-orange"><h4>{{要点}}</h4><p>{{内容}}</p></div>
+      <div class="xw-card soft-blue"><h4>{{要点}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-green"><h4>{{要点}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-orange"><h4>{{要点}}</h4><p>{{内容，22-40 字}}</p></div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>

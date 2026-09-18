@@ -42,7 +42,7 @@
       "roles": [
         "cover"
       ],
-      "constraints": "标题 ≤14 字；kicker 是周期（如“2026 年第 38 周”）"
+      "constraints": "标题 ≤14 字；一句话总览 20-40 字；kicker 是周期（如“2026 年第 38 周”）"
     },
     {
       "id": "kpi-grid",
@@ -60,7 +60,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "4-8 条；每条一句话 ≤30 字，可带状态 pill"
+      "constraints": "4-8 条；每条 12-24 字（写清做了什么），可带状态 pill"
     },
     {
       "id": "metrics-chart",
@@ -78,7 +78,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "1-4 条；每条说清“卡在哪 + 需要谁做什么”"
+      "constraints": "1-4 条；每条 22-45 字，说清“卡在哪 + 需要谁做什么”"
     },
     {
       "id": "next-week",
@@ -88,7 +88,7 @@
         "content",
         "cta"
       ],
-      "constraints": "3-6 条；每条 ≤24 字、动词开头"
+      "constraints": "3-6 条；每条 12-24 字、动词开头"
     },
     {
       "id": "thanks",
@@ -97,7 +97,7 @@
       "roles": [
         "thanks"
       ],
-      "constraints": "大字 ≤10 字；补充 ≤16 字"
+      "constraints": "大字 ≤10 字；补充 15-30 字"
     }
   ],
   "fonts": [

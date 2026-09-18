@@ -8,6 +8,9 @@ package deck
 //   R103 每 8 页无满版 hero 类    —— 提示（本模板的 hero 版式由 rules 语义约定）
 //   R104 左右图文交替连续 >2      —— 提示（左右由模板在版式名里约定，此处按名匹配）
 //   R105 实写页数 ≠ 大纲页数      —— 阻塞（写在 v2_pages 的页码范围校验里）
+//   R106 同视觉模式连续 ≥3        —— 阻塞（版式 id 不同但观感相同=假多样性；模板
+//                                     视觉模式 ≥4 种时才启用，否则小模板无解）
+//   R107 每 8 页 <3 种视觉模式    —— 提示
 
 import (
 	"fmt"
@@ -38,14 +41,29 @@ func nameHas(id string, names []string) bool {
 	return false
 }
 
+// patternNames 视觉模式的中文名（报错信息用；模型按名字理解"哪里重复了"）。
+var patternNames = map[string]string{
+	"hero": "满版大字（hero）", "stack": "纵向条列（stack）", "cards": "卡片阵列（cards）",
+	"split": "左右分栏（split）", "code": "代码主导（code）", "table": "表格行（table）",
+	"chart": "数据图表（chart）", "quote": "大段引用（quote）",
+}
+
+func patternLabel(p string) string {
+	if n, ok := patternNames[p]; ok {
+		return n
+	}
+	return p
+}
+
 // ValidateRhythm 对「页码 → 版式 id」序列做节奏校验。
-// layouts 是模板登记的全部版式 id（用于 R103 的存在性判断）。
-func ValidateRhythm(assignments map[int]string, order []int) []RhythmViolation {
+// patterns 是模板的 版式 id → 视觉模式指纹 映射（R106/R107 的判重依据）。
+func ValidateRhythm(assignments map[int]string, order []int, patterns map[string]string) []RhythmViolation {
 	var out []RhythmViolation
 	layouts := make([]string, 0, len(order))
 	for _, no := range order {
 		layouts = append(layouts, assignments[no])
 	}
+	patternOf := func(id string) string { return patterns[id] }
 
 	// R101 同版式连续 ≥3（阻塞）：滑动窗口线性扫
 	runStart := 0
@@ -59,6 +77,33 @@ func ValidateRhythm(assignments map[int]string, order []int) []RhythmViolation {
 				})
 			}
 			runStart = i
+		}
+	}
+
+	// R106 同视觉模式连续 ≥3（阻塞）：版式 id 不同不等于观感不同——
+	// objectives/concept/summary 三个 id 可以全是"callout 纵向堆"，观众看到的是
+	// 八连一样的页。模板自身提供 ≥4 种视觉模式才启用（否则小模板无论怎么排都无解）。
+	distinct := map[string]bool{}
+	for _, p := range patterns {
+		distinct[p] = true
+	}
+	if len(distinct) >= 4 {
+		runStart = 0
+		for i := 1; i <= len(layouts); i++ {
+			if i == len(layouts) || patternOf(layouts[i]) != patternOf(layouts[runStart]) {
+				if i-runStart >= 3 {
+					ids := make([]string, 0, i-runStart)
+					for _, l := range layouts[runStart:i] {
+						ids = append(ids, l)
+					}
+					out = append(out, RhythmViolation{
+						Rule: "R106", Block: true,
+						Msg: fmt.Sprintf("第 %d~%d 页连续 %d 页都是%s（%s）：版式 id 不同但观感相同，穿插 chart/split/hero 类版式换节奏",
+							order[runStart], order[i-1], i-runStart, patternLabel(patternOf(layouts[runStart])), strings.Join(ids, "、")),
+					})
+				}
+				runStart = i
+			}
 		}
 	}
 
@@ -80,6 +125,18 @@ func ValidateRhythm(assignments map[int]string, order []int) []RhythmViolation {
 			out = append(out, RhythmViolation{Rule: "R102", Block: false,
 				Msg: fmt.Sprintf("第 %d~%d 页只用了 %d 种版式（至少 4 种）：整份会显得单调",
 					start+1, end, len(distinct))})
+		}
+		// R107 视觉模式多样性（提示）：id 多样但模式单一仍是假多样性
+		if len(distinct) >= 4 {
+			pseen := map[string]bool{}
+			for _, l := range win {
+				pseen[patternOf(l)] = true
+			}
+			if len(pseen) < 3 {
+				out = append(out, RhythmViolation{Rule: "R107", Block: false,
+					Msg: fmt.Sprintf("第 %d~%d 页只有 %d 种视觉模式（至少 3 种）：id 换了但版面长得一样",
+						start+1, end, len(pseen))})
+			}
 		}
 		hasHero := false
 		for _, l := range win {
@@ -162,7 +219,14 @@ func (s *Service) SavePlanV2(userID uint, deckID string, assignments []PlanAssig
 		}
 	}
 
-	violations := ValidateRhythm(byNo, order)
+	// 模板的 版式 id → 视觉模式 映射（R106/R107 需要；含未用到的版式——
+	// 多样性判断看的是模板能力，不是本份计划用了几种）
+	patterns := map[string]string{}
+	for _, l := range tpl.Layouts {
+		patterns[l.ID] = tpl.Pattern(l.ID)
+	}
+
+	violations := ValidateRhythm(byNo, order, patterns)
 	for _, v := range violations {
 		if v.Block {
 			return violations, fmt.Errorf("节奏校验未通过：%s", v.Msg)

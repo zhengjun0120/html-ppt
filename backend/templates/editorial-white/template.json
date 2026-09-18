@@ -39,7 +39,7 @@
       "roles": [
         "cover"
       ],
-      "constraints": "标题 ≤12 字；副标 ≤22 字；kicker 是栏目名"
+      "constraints": "标题 ≤12 字；副标 20-30 字；kicker 是栏目名"
     },
     {
       "id": "statement",
@@ -49,7 +49,7 @@
         "divider",
         "quote"
       ],
-      "constraints": "单句 ≤24 字"
+      "constraints": "单句 12-24 字"
     },
     {
       "id": "quad-cards",
@@ -58,7 +58,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 4 卡；卡标题 ≤8 字；内容 ≤26 字；颜色与内容情感匹配"
+      "constraints": "恰好 4 卡；卡标题 ≤8 字；卡内说明 22-40 字；颜色与内容情感匹配"
     },
     {
       "id": "steps",
@@ -67,7 +67,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "3-5 步；每步 ≤22 字、动词开头"
+      "constraints": "3-5 步；每步 12-24 字、动词开头"
     },
     {
       "id": "big-stat",
@@ -76,7 +76,7 @@
       "roles": [
         "data"
       ],
-      "constraints": "数字 ≤8 字符；来源说明 ≤20 字，无出处标“估算”"
+      "constraints": "数字 ≤8 字符；来源/口径说明 20-40 字，无出处标“估算”"
     },
     {
       "id": "two-column",
@@ -85,7 +85,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 2 卡；内容 ≤34 字"
+      "constraints": "恰好 2 卡；卡内说明 22-45 字"
     },
     {
       "id": "quote",
@@ -94,7 +94,7 @@
       "roles": [
         "quote"
       ],
-      "constraints": "引文 ≤34 字；出处真实，没有就不写出处行"
+      "constraints": "引文 15-34 字；出处真实，没有就不写出处行"
     },
     {
       "id": "grid-3",
@@ -103,7 +103,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 3 卡；内容 ≤26 字"
+      "constraints": "恰好 3 卡；卡内说明 22-40 字"
     }
   ],
   "fonts": [

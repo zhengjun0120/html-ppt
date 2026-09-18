@@ -18,7 +18,19 @@
     <h1 class="h1 anim-fade-up" data-anim="fade-up">Rust 异步运行时<br>到底在<span style="background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">调度什么</span>?</h1>
     <p class="lede mt-m">从 <span class="mono">Future::poll</span> 到 tokio 的 work-stealing，一次讲清楚。</p>
     <div class="speaker"><div class="av"></div><div><b>@lewis</b><span>platform infra · 45 min + Q&amp;A</span></div></div>
-    <div class="deck-footer"><span class="mono">#async #rust #tokio</span><span class="slide-number" data-current="1" data-total="8"></span></div>
+    <div class="deck-footer"><span class="mono">#async #rust #tokio</span><span class="slide-number" data-current="1" data-total="9"></span></div>
+  </section>
+
+  <!-- 2.5 Divider -->
+  <section class="slide" data-title="Deep Dive 1" data-layout="section-divider">
+    <p class="kicker">part · 1 / 2</p>
+    <h2 class="h2">Future 与 Waker</h2>
+    <p class="lede mt-m">这一章回答一个问题：没有数据就绪时，是谁在替你等着事件到来？</p>
+    <div class="row mt-l">
+      <span class="tag">Future::poll 状态机</span>
+      <span class="tag">Waker 唤醒链路</span>
+    </div>
+    <div class="ghost-num">1</div>
   </section>
 
   <!-- 2. Agenda -->

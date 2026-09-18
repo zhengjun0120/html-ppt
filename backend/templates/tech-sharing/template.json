@@ -13,7 +13,7 @@
   "layouts": [
     { "id": "cover", "name": "封面", "use": "开场：大标题 + 一句话定位 + 讲者行", "roles": ["cover"] },
     { "id": "agenda", "name": "议程路线图", "use": "目录/议程：编号行列表 + 时长", "roles": ["toc"] },
-    { "id": "section-divider", "name": "章节幕", "use": "章节过渡：kicker 编号 + 大标题一句话", "roles": ["divider"] },
+    { "id": "section-divider", "name": "章节幕", "use": "章节过渡：幽灵章节数字 + 进度 + 本章问题与看点", "roles": ["divider"] },
     { "id": "cards-3", "name": "三卡要点", "use": "三个并列论点/方案对比（每卡标题+说明+结论标签）", "roles": ["content"] },
     { "id": "split-terminal", "name": "左文右终端", "use": "左边讲清概念、右边代码佐证", "roles": ["content", "code"] },
     { "id": "code-terminal", "name": "满版代码", "use": "一段需要逐行看的代码（≤22 行）", "roles": ["code"] },
@@ -21,7 +21,7 @@
     { "id": "stat-hero", "name": "数据大字报", "use": "单个核心指标的冲击力呈现", "roles": ["data"] },
     { "id": "kpi-grid", "name": "KPI 网格", "use": "4 个并列指标/特性的小卡阵列", "roles": ["data", "content"] },
     { "id": "big-quote", "name": "大引用", "use": "金句/权威结论/用户原话", "roles": ["quote"] },
-    { "id": "timeline", "name": "时间线", "use": "版本演进/里程碑/历史脉络", "roles": ["content"] },
+    { "id": "timeline", "name": "时间线", "use": "版本演进/里程碑/历史脉络", "roles": ["content", "data"] },
     { "id": "process-steps", "name": "流程步骤", "use": "3-5 步的执行流程/请求链路", "roles": ["content"] },
     { "id": "takeaways-3", "name": "三件事带回去", "use": "收束页：3 个记忆点 + 延伸阅读行", "roles": ["content", "cta"] },
     { "id": "qa", "name": "问答收尾", "use": "Q&A / 谢谢观看 + 联系方式标签", "roles": ["thanks", "cta"] }

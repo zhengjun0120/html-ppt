@@ -48,7 +48,7 @@
       "roles": [
         "divider"
       ],
-      "constraints": "标题 ≤12 字；副句 ≤22 字"
+      "constraints": "标题 ≤12 字；副句 20-30 字"
     },
     {
       "id": "dual-cards",
@@ -57,7 +57,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 2 卡；卡标题 ≤8 字；内容 ≤40 字"
+      "constraints": "恰好 2 卡；卡标题 ≤8 字；卡内说明 22-45 字"
     },
     {
       "id": "codebox",
@@ -76,7 +76,7 @@
         "quote",
         "divider"
       ],
-      "constraints": "宣言 ≤26 字"
+      "constraints": "宣言 12-26 字"
     },
     {
       "id": "big-num",
@@ -94,7 +94,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "洞见 ≤32 字；支撑 ≤40 字"
+      "constraints": "洞见 15-32 字；支撑说明 22-45 字"
     },
     {
       "id": "legend",
@@ -103,7 +103,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "3-5 个部件；每个 ≤12 字 + ≤16 字说明"
+      "constraints": "3-5 个部件；部件名 ≤12 字 + 部件说明 12-24 字"
     }
   ],
   "fonts": [

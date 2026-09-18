@@ -62,3 +62,13 @@
  * 这个 bug 在上游 demo 里不显形（demo cover 内容恰好占满），LLM 生成的短封面页必现。 */
 .tpl-tech-sharing .slide > .deck-footer,
 .tpl-tech-sharing .slide > .deck-header{position:absolute}
+
+/* 章节幕（section-divider）的幽灵章节数字：右下角的视觉锚点。
+ * 没有它 divider 就是"一行字漂在虚空"——deck-0030 实测，两页 divider 只有
+ * 8% 的画布有内容，观众以为渲染出了错。 */
+.tpl-tech-sharing .ghost-num{
+  position:absolute;right:64px;bottom:-16px;pointer-events:none;
+  font-family:'JetBrains Mono',monospace;font-size:360px;line-height:1;font-weight:800;
+  letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--accent);opacity:.35;
+}
+.tpl-tech-sharing .ghost-num::after{content:"";position:absolute;inset:0}

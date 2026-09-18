@@ -9,17 +9,18 @@
 ---
 
 ## cover（周报封面）
+指纹：hero
 
 用途：周报开头：周期徽章 + 大标题 + 汇报人
 适用 role：cover。
-内容约束：标题 ≤14 字；kicker 是周期（如“2026 年第 38 周”）
+内容约束：标题 ≤14 字；一句话总览 20-40 字；kicker 是周期（如“2026 年第 38 周”）
 
 ```html
 <section class="slide" data-layout="cover">
   <div class="cover-head"><div class="logo">{{团队/项目名}}</div><div class="week-chip">{{周期}}</div></div>
   <p class="kicker">{{汇报主题}}</p>
   <h1 class="h1 mt-s">{{本周标题}}</h1>
-  <p class="lede mt-m">{{一句话总览}}</p>
+  <p class="lede mt-m">{{一句话总览，20-40 字}}</p>
   <div class="deck-footer"><span class="meta">{{汇报人 · 日期}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
@@ -30,6 +31,7 @@
 ---
 
 ## kpi-grid（KPI 面板）
+指纹：chart
 
 用途：本周 4-8 个关键指标（good/warn/bad 状态色）
 适用 role：data。
@@ -54,19 +56,20 @@
 ---
 
 ## shipped-list（本周交付）
+指纹：table
 
 用途：本周完成的事项清单（ship-item 逐条）
 适用 role：content。
-内容约束：4-8 条；每条一句话 ≤30 字，可带状态 pill
+内容约束：4-8 条；每条 12-24 字（写清做了什么），可带状态 pill
 
 ```html
 <section class="slide" data-layout="shipped-list">
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{交付标题}}</h2>
   <div class="mt-l">
-    <div class="ship-item">{{完成事项（可带 <span class="pill">状态</span>）}}</div>
-    <div class="ship-item">{{完成事项}}</div>
-    <div class="ship-item">{{完成事项}}</div>
+    <div class="ship-item">{{完成事项，12-24 字（可带 <span class="pill">状态</span>）}}</div>
+    <div class="ship-item">{{完成事项，12-24 字}}</div>
+    <div class="ship-item">{{完成事项，12-24 字}}</div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
@@ -77,10 +80,11 @@
 ---
 
 ## metrics-chart（数据图表）
+指纹：chart
 
-用途：趋势柱状（chart-bars，高度/宽度按真实比例）
+用途：趋势柱状（chart-bars，高度按真实比例；数值写进 data-v 属性，显示在柱顶）
 适用 role：data。
-内容约束：3-6 根柱；柱高按真实比例给 style；每组 = 名称 + 数值
+内容约束：3-6 根柱；柱高按真实比例给 style；数值 ≤8 字符、名称 ≤10 字
 
 ```html
 <section class="slide" data-layout="metrics-chart">
@@ -88,9 +92,9 @@
   <h2 class="h2">{{趋势标题}}</h2>
   <div class="chart mt-l">
     <div class="chart-bars">
-      <div class="col"><div class="c" style="height:80%"><span>{{数值}}</span></div><span class="l">{{名称}}</span></div>
-      <div class="col"><div class="c" style="height:80%"><span>{{数值}}</span></div><span class="l">{{名称}}</span></div>
-      <div class="col"><div class="c" style="height:80%"><span>{{数值}}</span></div><span class="l">{{名称}}</span></div>
+      <div class="col"><div class="b" data-v="{{数值}}" style="height:80%"></div><div class="lbl">{{名称}}</div></div>
+      <div class="col"><div class="b" data-v="{{数值}}" style="height:65%"></div><div class="lbl">{{名称}}</div></div>
+      <div class="col"><div class="b" data-v="{{数值}}" style="height:45%"></div><div class="lbl">{{名称}}</div></div>
     </div>
   </div>
   <div class="notes">{{讲稿}}</div>
@@ -102,17 +106,18 @@
 ---
 
 ## blockers（阻塞与风险）
+指纹：stack
 
 用途：卡住的事、需要的支持（blocker 逐条）
 适用 role：content。
-内容约束：1-4 条；每条说清“卡在哪 + 需要谁做什么”
+内容约束：1-4 条；每条 22-45 字，说清“卡在哪 + 需要谁做什么”
 
 ```html
 <section class="slide" data-layout="blockers">
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{阻塞标题}}</h2>
   <div class="mt-l">
-    <div class="blocker">{{阻塞描述：卡在哪 + 需要什么支持}}</div>
+    <div class="blocker">{{阻塞描述，22-45 字：卡在哪 + 需要什么支持}}</div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
@@ -123,19 +128,20 @@
 ---
 
 ## next-week（下周计划）
+指纹：table
 
 用途：下周要做的事（next-row 逐条）
 适用 role：content / cta。
-内容约束：3-6 条；每条 ≤24 字、动词开头
+内容约束：3-6 条；每条 12-24 字、动词开头
 
 ```html
 <section class="slide" data-layout="next-week">
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{下周标题}}</h2>
   <div class="mt-l">
-    <div class="next-row">{{计划事项}}</div>
-    <div class="next-row">{{计划事项}}</div>
-    <div class="next-row">{{计划事项}}</div>
+    <div class="next-row">{{计划事项，12-24 字}}</div>
+    <div class="next-row">{{计划事项，12-24 字}}</div>
+    <div class="next-row">{{计划事项，12-24 字}}</div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
@@ -146,16 +152,17 @@
 ---
 
 ## thanks（收尾）
+指纹：hero
 
 用途：周报收尾：一句话 + 联系方式
 适用 role：thanks。
-内容约束：大字 ≤10 字；补充 ≤16 字
+内容约束：大字 ≤10 字；补充 15-30 字
 
 ```html
 <section class="slide" data-layout="thanks">
   <p class="kicker">{{周期}}</p>
   <h2 class="h2">{{收尾一句话}}</h2>
-  <p class="lede mt-m">{{补充}}</p>
+  <p class="lede mt-m">{{补充，15-30 字}}</p>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```

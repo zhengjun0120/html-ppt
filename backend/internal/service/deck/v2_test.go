@@ -127,8 +127,17 @@ func TestV2FullPipeline(t *testing.T) {
 
 	// 批写入：2 好 1 坏（未知类名），部分成功
 	pages := []PageInput{
-		{No: 1, Layout: "cover", HTML: `<section class="slide" data-layout="cover"><p class="kicker">test / 2026</p><h1 class="h1">Go 并发入门</h1><p class="lede mt-m">一次讲清楚。</p><div class="speaker"><div class="av"></div><div><b>@t</b><span>x · 15 min</span></div></div><div class="notes">讲稿</div></section>`},
-		{No: 4, Layout: "code-terminal", HTML: `<section class="slide" data-layout="code-terminal"><p class="kicker">main.go · 4 LOC</p><h2 class="h2">起一个 goroutine</h2><div class="terminal mt-m"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>main.go</span></div><pre><span class="kw">go</span> <span class="fn">worker</span>()</pre></div><div class="notes">讲稿</div></section>`},
+		{No: 1, Layout: "cover", HTML: `<section class="slide" data-layout="cover"><p class="kicker">tech-sharing / 2026-09</p><h1 class="h1">Go 并发入门</h1><p class="lede mt-m">从 goroutine 的诞生讲到优雅收场，15 分钟全是能改代码的东西。</p><div class="speaker"><div class="av"></div><div><b>@tester</b><span>backend team · 15 min</span></div></div><div class="deck-footer"><span class="mono">#golang #concurrency</span><span class="slide-number" data-current="1" data-total="6"></span></div><div class="notes">讲稿</div></section>`},
+		{No: 4, Layout: "code-terminal", HTML: `<section class="slide" data-layout="code-terminal"><p class="kicker">main.go · 12 LOC</p><h2 class="h2">起一个能收尸的 goroutine</h2><div class="terminal mt-m"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>main.go</span></div><pre><span class="cmt">// 用 sync.WaitGroup 等所有 worker 收尾</span>
+<span class="kw">var</span> wg sync.<span class="fn">WaitGroup</span>
+<span class="kw">for</span> i := <span class="num">0</span>; i &lt; <span class="num">4</span>; i++ {
+    wg.<span class="fn">Add</span>(<span class="num">1</span>)
+    <span class="kw">go func</span>(id <span class="fn">int</span>) {
+        <span class="kw">defer</span> wg.<span class="fn">Done</span>()
+        <span class="fn">worker</span>(ctx, id)
+    }(i)
+}
+wg.<span class="fn">Wait</span>()</pre></div><p class="dim mt-m" style="font-size:15px">关键在 defer Done：少写一行，panic 时 wg 永远等不到归零。</p><div class="notes">讲稿</div></section>`},
 		{No: 3, Layout: "cards-3", HTML: `<section class="slide" data-layout="cards-3"><h2 class="h2">标题</h2><div class="grid g3 mt-l"><div class="card ghost-class">x</div></div></section>`},
 	}
 	rep, err := s.WritePagesV2(uid, id, pages)
@@ -149,8 +158,8 @@ func TestV2FullPipeline(t *testing.T) {
 
 	// 修复第 3 页后重写 → 成功；页序保持 1,3,4
 	pagesFix := []PageInput{
-		{No: 3, Layout: "cards-3", HTML: `<section class="slide" data-layout="cards-3"><h2 class="h2">为什么需要并发</h2><div class="grid g3 mt-l"><div class="card card-accent"><h4>阻塞</h4><p class="dim">一个阻塞调用拖住整个线程。</p><span class="tag mt-s">成本高</span></div><div class="card card-accent"><h4>线程贵</h4><p class="dim">栈 2-8MB，万级连接就要几十 GB。</p><span class="tag mt-s">扛不住</span></div><div class="card card-accent"><h4>协程轻</h4><p class="dim">KB 级栈，一台机器百万个。</p><span class="tag mt-s">Go 选它</span></div></div><div class="notes">讲稿</div></section>`},
-		{No: 6, Layout: "qa", HTML: `<section class="slide center tc" data-layout="qa"><div><div class="mono" style="font-size:120px;color:var(--accent);font-weight:800">?</div><h2 class="h2">Questions?</h2><p class="lede" style="margin:14px auto">欢迎提问。</p><div class="row mt-l" style="justify-content:center"><span class="tag">repo</span></div></div><div class="notes">讲稿</div></section>`},
+		{No: 3, Layout: "cards-3", HTML: `<section class="slide" data-layout="cards-3"><p class="kicker">// why</p><h2 class="h2">为什么需要并发</h2><div class="grid g3 mt-l"><div class="card card-accent"><h4>阻塞拖垮一切</h4><p class="dim">一个阻塞调用拖住整个线程，排队请求跟着全部超时。</p><span class="tag mt-s">成本高</span></div><div class="card card-accent"><h4>线程内存贵</h4><p class="dim">每线程栈 2-8MB，万级连接就要几十 GB 内存。</p><span class="tag mt-s">扛不住</span></div><div class="card card-accent"><h4>协程 KB 级</h4><p class="dim">goroutine 栈只有 KB 级，一台机器轻松百万个。</p><span class="tag mt-s">Go 选它</span></div></div><div class="notes">讲稿</div></section>`},
+		{No: 6, Layout: "qa", HTML: `<section class="slide center tc" data-layout="qa"><div><div class="mono" style="font-size:120px;color:var(--accent);font-weight:800">?</div><h2 class="h2">Questions?</h2><p class="lede" style="margin:14px auto">今天讲的坑在你代码里都有，欢迎拿线上问题来对练。</p><div class="row mt-l" style="justify-content:center"><span class="tag">repo/internal-go-patterns</span><span class="tag">#backend</span></div></div><div class="notes">讲稿</div></section>`},
 	}
 	rep2, err := s.WritePagesV2(uid, id, pagesFix)
 	if err != nil {
@@ -238,6 +247,7 @@ func TestV2RhythmBlocking(t *testing.T) {
 	vs := ValidateRhythm(
 		map[int]string{1: "cards-3", 2: "cards-3", 3: "cards-3", 4: "cover", 5: "cover", 6: "cover", 7: "agenda", 8: "agenda", 9: "agenda"},
 		[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+		map[string]string{"cards-3": "cards", "cover": "hero", "agenda": "table"},
 	)
 	blocked := false
 	for _, v := range vs {
@@ -247,5 +257,43 @@ func TestV2RhythmBlocking(t *testing.T) {
 	}
 	if !blocked {
 		t.Fatalf("连续 3 页同版式必须触发阻塞级 R101: %+v", vs)
+	}
+}
+
+// TestV2RhythmPatternBlocking R106：版式 id 不同但视觉模式相同的假多样性必须被拦。
+// 这是 deck-0031 实测翻车点——objectives/concept/summary 三个 id 连排八页，
+// 观众看到的是八连一样的 callout 纵向堆，旧规则（只判 id）一条都不触发。
+func TestV2RhythmPatternBlocking(t *testing.T) {
+	patterns := map[string]string{
+		"cover": "hero", "objectives": "stack", "concept": "stack", "example": "code",
+		"exercise": "stack", "check": "stack", "summary": "hero",
+		"divider": "hero", "stat": "chart", "timeline": "chart",
+	}
+	// 2,3,4 连续三页 stack（id 全不同）——必须阻塞
+	vs := ValidateRhythm(
+		map[int]string{1: "concept", 2: "objectives", 3: "concept", 4: "check", 5: "stat", 6: "divider"},
+		[]int{1, 2, 3, 4, 5, 6},
+		patterns,
+	)
+	blocked := false
+	for _, v := range vs {
+		if v.Rule == "R106" && v.Block {
+			blocked = true
+		}
+	}
+	if !blocked {
+		t.Fatalf("id 不同但视觉模式连续 3 页相同必须触发阻塞级 R106: %+v", vs)
+	}
+
+	// 模式多样性不足 4 的模板不启用 R106（否则小模板无论怎么排都被自己卡死）
+	vs = ValidateRhythm(
+		map[int]string{1: "a", 2: "b", 3: "c"},
+		[]int{1, 2, 3},
+		map[string]string{"a": "stack", "b": "stack", "c": "hero"},
+	)
+	for _, v := range vs {
+		if v.Rule == "R106" {
+			t.Errorf("模式只有 2 种的模板不应启用 R106: %+v", v)
+		}
 	}
 }

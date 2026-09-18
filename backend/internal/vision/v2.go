@@ -49,6 +49,7 @@ type Slide2 struct {
 	Chars     int     `json:"chars"`     // 可见文字量（CJK 字符 + 西文单词）
 	Children  int     `json:"kids"`      // 直接子元素数
 	BottomGap float64 `json:"bottomGap"` // 画布底边距最后可见内容的空隙（px）
+	FillPct   float64 `json:"fillPct"`   // 内容纵向填充率（首尾可见内容的高差 / 画布高，%）
 	PNG       []byte  `json:"-"`         // 截图不进 JSON
 }
 
@@ -110,16 +111,21 @@ const v2MeasureAllJS = `(function(){
     var cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
     var latin = (text.match(/[A-Za-z0-9][A-Za-z0-9'’\-]*/g) || []).length;
     var hEl = sec.querySelector('h1, h2');
+    // getBoundingClientRect 受 transform scale 影响，除回去换算回设计像素
+    var scale = parseFloat(deck.style.getPropertyValue('--deck-scale')) || 1;
     var bottom = 0;
+    var top = h;
     for (var b = 0; b < sec.children.length; b++) {
       var c = sec.children[b];
       if (c.classList.contains('notes')) continue;
       var r = c.getBoundingClientRect();
       if (r.bottom > bottom) bottom = r.bottom;
+      if (r.bottom > r.top && r.top / scale < top) top = r.top / scale;
     }
-    // getBoundingClientRect 受 transform scale 影响，除回去换算回设计像素
-    var scale = parseFloat(deck.style.getPropertyValue('--deck-scale')) || 1;
     var bottomGap = (h - bottom / scale);
+    // 填充率 = 首尾可见内容的纵向跨度占画布高的比例。它与 bottomGap 互补：
+    // 居中排版的稀疏页 bottomGap 会"看起来还行"（上下各留一半），fillPct 不会说谎。
+    var fillPct = Math.max(0, Math.min(100, (bottom / scale - top) / h * 100));
 
     out.push({
       i: i,
@@ -130,7 +136,8 @@ const v2MeasureAllJS = `(function(){
       minFontPx: +minFont.toFixed(1),
       chars: cjk + latin,
       kids: kids,
-      bottomGap: +bottomGap.toFixed(1)
+      bottomGap: +bottomGap.toFixed(1),
+      fillPct: +fillPct.toFixed(1)
     });
   }
   return JSON.stringify({slides: out, w: w, h: h});
@@ -331,11 +338,18 @@ func DigestV2(d *Deck2) string {
 		if s.OverflowX {
 			flags = append(flags, "横向溢出")
 		}
-		if s.MinFontPx < 18 {
+		// MinFontPx==0 是"没量到"（测试夹具/无内容页），不是"小到 0"——把它当小字号会误报
+		if s.MinFontPx > 0 && s.MinFontPx < 18 {
 			flags = append(flags, fmt.Sprintf("最小字号 %.0fpx 偏小", s.MinFontPx))
 		}
-		line := fmt.Sprintf("第 %d 页 [%s] %s：字数 %d，最小字号 %.0fpx，底部空隙 %.0fpx，子元素 %d",
-			s.Index+1, s.Layout, s.Title, s.Chars, s.MinFontPx, s.BottomGap, s.Children)
+		if s.FillPct > 0 && s.FillPct < 55 {
+			flags = append(flags, fmt.Sprintf("填充率 %.0f%% 偏空（不到画布一半）", s.FillPct))
+		}
+		if d.CanvasH > 0 && s.BottomGap > float64(d.CanvasH)*0.35 {
+			flags = append(flags, "底部空隙过大")
+		}
+		line := fmt.Sprintf("第 %d 页 [%s] %s：字数 %d，最小字号 %.0fpx，底部空隙 %.0fpx，填充率 %.0f%%，子元素 %d",
+			s.Index+1, s.Layout, s.Title, s.Chars, s.MinFontPx, s.BottomGap, s.FillPct, s.Children)
 		if len(flags) > 0 {
 			line += " ⚠ " + strings.Join(flags, "、")
 		}
@@ -344,7 +358,7 @@ func DigestV2(d *Deck2) string {
 	return strings.Join(out, "\n")
 }
 
-// HardFindingsV2 程序硬判定（overflow / 过小字号）。给 ScopeFindingsV2 与 trace 用。
+// HardFindingsV2 程序硬判定（overflow / 过小字号 / 大面积留白）。给 ScopeFindingsV2 与 trace 用。
 func HardFindingsV2(d *Deck2) []string {
 	var out []string
 	for _, s := range d.Slides {
@@ -353,6 +367,11 @@ func HardFindingsV2(d *Deck2) []string {
 		}
 		if s.MinFontPx > 0 && s.MinFontPx < 14 {
 			out = append(out, fmt.Sprintf("第 %d 页最小字号 %.0fpx 低于投影下限（程序硬判定）", s.Index+1, s.MinFontPx))
+		}
+		// 大面积留白与溢出同样会让观众觉得"没做完"——deck-0031 实测教训：
+		// 12 页里最空的页只画了 8% 的画布，当时的量测体系对此完全沉默。
+		if s.FillPct > 0 && s.FillPct < 45 {
+			out = append(out, fmt.Sprintf("第 %d 页内容只覆盖画布的 %.0f%%，大面积留白（程序硬判定）", s.Index+1, s.FillPct))
 		}
 	}
 	return out

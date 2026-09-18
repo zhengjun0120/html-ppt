@@ -42,7 +42,7 @@
       "roles": [
         "cover"
       ],
-      "constraints": "主标题 ≤12 字；lede ≤24 字；kicker 是品牌短标签"
+      "constraints": "主标题 ≤12 字；lede 20-40 字；kicker 是品牌短标签"
     },
     {
       "id": "problem-cards",
@@ -51,7 +51,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 3 卡；卡标题 ≤10 字；说明 ≤36 字"
+      "constraints": "恰好 3 卡；卡标题 ≤10 字；说明 22-45 字（一句论断 + 一句展开）"
     },
     {
       "id": "pill-statement",
@@ -61,7 +61,7 @@
         "content",
         "divider"
       ],
-      "constraints": "宣言 ≤28 字；pill 3-5 个、每个 ≤6 字"
+      "constraints": "宣言 20-40 字（一句完整论断）；lede 补充 20-45 字；pill 3-5 个、每个 ≤6 字"
     },
     {
       "id": "feature-grid",
@@ -70,7 +70,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 4 卡；标题 ≤8 字；说明 ≤28 字"
+      "constraints": "恰好 4 卡；标题 ≤8 字；说明 22-45 字"
     },
     {
       "id": "market-metrics",
@@ -79,7 +79,7 @@
       "roles": [
         "data"
       ],
-      "constraints": "3 个指标；指标名 ≤8 字；数字 ≤6 字符；说明 ≤24 字（无出处标“估算”）"
+      "constraints": "3 个指标；指标名 ≤8 字；数字 ≤6 字符；说明 22-45 字（写口径/对比，无出处标“估算”）"
     },
     {
       "id": "business-model",
@@ -88,7 +88,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "2-3 列；列标题 ≤8 字；说明 ≤32 字"
+      "constraints": "2-3 列；列标题 ≤8 字；说明 22-45 字"
     },
     {
       "id": "traction-bars",
@@ -97,7 +97,7 @@
       "roles": [
         "data"
       ],
-      "constraints": "4-6 条；条目名 ≤10 字；宽度按真实比例给 style，数字标注在条目名后"
+      "constraints": "4-6 条；条目名 ≤10 字；宽度按真实比例给 style，数字标注在条目名后；口径说明 20-40 字（无来源标“估算”）"
     },
     {
       "id": "team-cards",
@@ -106,7 +106,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 3 卡；姓名 ≤6 字；背景 ≤30 字"
+      "constraints": "恰好 3 卡；姓名 ≤6 字；背景 22-40 字"
     },
     {
       "id": "ask-box",
@@ -115,7 +115,7 @@
       "roles": [
         "cta"
       ],
-      "constraints": "Ask 一句话 ≤30 字；支持点 ≤3 条、每条 ≤14 字"
+      "constraints": "Ask 一句话 20-30 字；用途说明 20-45 字；支持点 2-3 条、每条 12-24 字"
     },
     {
       "id": "thanks-mega",
@@ -125,7 +125,7 @@
         "thanks",
         "cta"
       ],
-      "constraints": "大字 ≤8 字；lede ≤20 字；pill ≤2 个"
+      "constraints": "大字 ≤8 字；一句话 15-30 字；pill ≤2 个"
     }
   ],
   "fonts": [

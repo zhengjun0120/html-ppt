@@ -38,7 +38,7 @@
       "roles": [
         "cover"
       ],
-      "constraints": "标题 ≤14 字；lede ≤24 字；kicker 是数据集/报告名"
+      "constraints": "标题 ≤14 字；lede 20-30 字；kicker 是数据集/报告名"
     },
     {
       "id": "context",
@@ -48,7 +48,7 @@
         "divider",
         "content"
       ],
-      "constraints": "标题 ≤14 字；lede ≤36 字"
+      "constraints": "标题 ≤14 字；lede 20-40 字"
     },
     {
       "id": "glass-grid",
@@ -58,7 +58,7 @@
         "data",
         "content"
       ],
-      "constraints": "3-4 卡；卡标题 ≤8 字；内容 ≤28 字；数字无出处标“估算”"
+      "constraints": "3-4 卡；卡标题 ≤8 字；卡内说明 22-40 字；数字无出处标“估算”"
     },
     {
       "id": "big-num",
@@ -67,7 +67,7 @@
       "roles": [
         "data"
       ],
-      "constraints": "数字 ≤8 字符；指标名 ≤12 字；口径说明 ≤20 字"
+      "constraints": "数字 ≤8 字符；指标名 ≤12 字；口径说明 20-40 字"
     },
     {
       "id": "terminal",
@@ -85,7 +85,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 2 列；每列 ≤34 字"
+      "constraints": "恰好 2 列；每列卡内说明 22-45 字"
     },
     {
       "id": "trend",
@@ -94,7 +94,7 @@
       "roles": [
         "data"
       ],
-      "constraints": "恰好 4 卡；每卡 ≤26 字"
+      "constraints": "恰好 4 卡；每卡说明 22-40 字"
     },
     {
       "id": "closing",
@@ -104,7 +104,7 @@
         "thanks",
         "cta"
       ],
-      "constraints": "结论 ≤20 字；lede ≤24 字"
+      "constraints": "结论 12-20 字；lede 20-30 字"
     }
   ],
   "fonts": [

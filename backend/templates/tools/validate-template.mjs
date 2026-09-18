@@ -14,6 +14,11 @@
  *   6. 每个 layouts.md 条目有"合法类名："行，且其中的类名 ⊆ index.html+style.css 出现过的类名
  *   7. variants[].class（非空时）在 style.css 中有对应选择器
  *   8. index.html 的 SLIDES 区间内每个 section 都带 data-layout，且 id 已登记
+ *   9. 每个版式有「指纹：」行，值在已知词汇表内（节奏守卫的判重依据）
+ *  10. 骨架里出现的每个 class token ∈ 该版式「合法类名：」清单——
+ *      否则模型照抄骨架也会被 C202 拒收（weekly-report metrics-chart 实测）
+ *  11. style.css 不得在裸 .slide 上无条件开 grid（会把不含 .sidebar 包裹层的
+ *      骨架碎片逐格压进窄列，course-module deck-0031 事故的根源）；要用 :has(.sidebar)
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -40,7 +45,8 @@ function collectClassNames(...texts) {
   return set;
 }
 
-// 解析 layouts.md：返回 Map<layoutId, {classes: string[]}>
+// 解析 layouts.md：返回 Map<layoutId, {classes: string[], pattern: string, skeleton: string}>
+const PATTERN_VOCAB = new Set(['hero', 'stack', 'cards', 'split', 'code', 'table', 'chart', 'quote']);
 function parseLayouts(md) {
   const out = new Map();
   const re = /^##\s+([A-Za-z][A-Za-z0-9_-]*)/gm;
@@ -51,7 +57,9 @@ function parseLayouts(md) {
     const body = md.slice(heads[i].start, i + 1 < heads.length ? heads[i + 1].start : md.length);
     const cm = /合法类名[：:]\s*(.+)/.exec(body);
     const classes = cm ? cm[1].split(/[，,\s]+/).map(s => s.trim()).filter(Boolean) : [];
-    out.set(heads[i].id, { classes, body });
+    const pm = /指纹[：:]\s*([A-Za-z][A-Za-z0-9_-]*)/.exec(body);
+    const sm = /```html\s*\n([\s\S]*?)```/.exec(body);
+    out.set(heads[i].id, { classes, pattern: pm ? pm[1] : '', skeleton: sm ? sm[1] : '', body });
   }
   return out;
 }
@@ -106,6 +114,32 @@ function validateTemplate(dir) {
     }
   }
   ok('各版式合法类名全部存在');
+
+  // 9. 指纹行：节奏守卫（R106/R107）的判重依据，缺失=该版式对视觉判重不可见
+  for (const [id, l] of layouts) {
+    if (!l.pattern) fail(dir, `版式 ${id} 缺「指纹：」行（hero/stack/cards/split/code/table/chart/quote 选一）`);
+    else if (!PATTERN_VOCAB.has(l.pattern)) fail(dir, `版式 ${id} 的指纹 "${l.pattern}" 不在词汇表内（hero/stack/cards/split/code/table/chart/quote）`);
+  }
+  ok('版式指纹检查通过');
+
+  // 10. 骨架自洽：骨架里出现的每个 class 必须已在该版式「合法类名：」清单里。
+  // 否则 LLM 照抄骨架写页 → C202 直接拒收，且报错指向的是模板自己的 bug。
+  for (const [id, l] of layouts) {
+    const declared = new Set(l.classes);
+    for (const m of l.skeleton.matchAll(/class="([^"]*)"/g)) {
+      for (const c of m[1].split(/\s+/)) {
+        if (c && !declared.has(c)) fail(dir, `版式 ${id} 骨架用了类 .${c}，但「合法类名：」清单里没有——照抄骨架必被 C202 拒收`);
+      }
+    }
+  }
+  ok('骨架与合法类名自洽');
+
+  // 11. 网格陷阱：裸 .slide 上无条件 display:grid 的模板，只要骨架没写
+  // .sidebar/.main 包裹层，内容就会逐格掉进窄列。必须用 :has(.sidebar) 触发。
+  if (/\.tpl-[\w-]+ \.slide\{[^}]*display:\s*grid/.test(css) && !/\.slide:has\(\.sidebar\)/.test(css)) {
+    fail(dir, 'style.css 在裸 .slide 上无条件开 grid（且没有 :has(.sidebar) 守卫）——骨架碎片会被压进窄列');
+  }
+  ok('slide 底盘无网格陷阱');
 
   for (const v of meta.variants) {
     if (v.class && !css.includes('.' + v.class)) fail(dir, `变体 ${v.id} 的 class .${v.class} 在 style.css 中无定义`);

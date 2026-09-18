@@ -42,7 +42,7 @@
       "roles": [
         "cover"
       ],
-      "constraints": "标题 ≤10 字；lede ≤20 字；kicker 是发布主题标签"
+      "constraints": "标题 ≤10 字；lede 20-30 字；kicker 是发布主题标签"
     },
     {
       "id": "introducing",
@@ -51,7 +51,7 @@
       "roles": [
         "divider"
       ],
-      "constraints": "宣言 ≤12 字；副句 ≤20 字"
+      "constraints": "宣言 ≤12 字；副句 15-30 字"
     },
     {
       "id": "feature-trio",
@@ -60,7 +60,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 3 卡；卡标题 ≤8 字；说明 ≤30 字"
+      "constraints": "恰好 3 卡；卡标题 ≤8 字；说明 22-45 字（写用户收益，一句论断 + 一句展开）"
     },
     {
       "id": "fit-cards",
@@ -69,7 +69,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 3 卡；说明 ≤28 字"
+      "constraints": "恰好 3 卡；说明 22-45 字"
     },
     {
       "id": "feature-duo",
@@ -78,7 +78,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 2 卡；卡标题 ≤10 字；说明 ≤48 字"
+      "constraints": "恰好 2 卡；卡标题 ≤10 字；说明 30-55 字（讲深一点）"
     },
     {
       "id": "how-it-works",
@@ -87,7 +87,7 @@
       "roles": [
         "content"
       ],
-      "constraints": "恰好 3 步；每步 ≤20 字、动词开头"
+      "constraints": "恰好 3 步；每步 12-24 字、动词开头"
     },
     {
       "id": "pricing",
@@ -97,7 +97,7 @@
         "content",
         "cta"
       ],
-      "constraints": "恰好 3 档；档名 ≤6 字；价格真实，没有定价就写“联系我们”"
+      "constraints": "恰好 3 档；档名 ≤6 字；每档包含项 3-4 条、每条 12-24 字；价格真实，没有定价就写“联系我们”"
     },
     {
       "id": "ship",
@@ -107,7 +107,7 @@
         "cta",
         "thanks"
       ],
-      "constraints": "号召 ≤10 字；lede ≤20 字"
+      "constraints": "号召 ≤10 字；lede 15-30 字"
     }
   ],
   "fonts": [
