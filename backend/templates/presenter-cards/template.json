@@ -1,0 +1,77 @@
+{
+  "id": "presenter-cards",
+  "name": "演讲者手卡",
+  "description": "深色 GitHub 风 + 逐字稿优先：每页在 notes 里配 150-300 字口语讲稿，为照着讲、不念稿的正式演讲设计",
+  "tags": ["演讲", "逐字稿", "深色", "技术分享"],
+  "scenario": ["技术分享", "产品发布", "课程讲授", "主讲演讲"],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "夜蓝",
+      "class": ""
+    },
+    {
+      "id": "ember",
+      "name": "暖橙",
+      "class": "v-ember"
+    },
+    {
+      "id": "lilac",
+      "name": "丁香",
+      "class": "v-lilac"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "封面",
+      "use": "开场：大标题（渐变点睛词）+ 一句话定位 + 讲者行 + 页脚话题标签",
+      "roles": ["cover"],
+      "constraints": "主标题两行内、每行 ≤12 字；lede 20-30 字；讲者行 = 名字 + 身份 · 时长"
+    },
+    {
+      "id": "agenda",
+      "name": "议程",
+      "use": "目录/议程：编号行列表，每行标题 + 预计时长",
+      "roles": ["toc"],
+      "constraints": "4-6 行；每行标题 10-20 字 + 时长（~Nmin）"
+    },
+    {
+      "id": "cards-3",
+      "name": "三卡论点",
+      "use": "三个并列论点/三类对比（accent 顶线卡）",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；卡标题 4-12 字；说明 25-45 字（一句论断 + 一句展开）"
+    },
+    {
+      "id": "feature-grid",
+      "name": "特性两列",
+      "use": "4 个特性/模块的两列清单（feature-row：序号 + 名称 + 一句说明）",
+      "roles": ["content", "data"],
+      "constraints": "恰好 4 条、g2 两列各 2 条；名称 ≤10 字；说明 18-30 字；序号用 blue/green/orange/purple 轮转"
+    },
+    {
+      "id": "rule-list",
+      "name": "铁律清单",
+      "use": "3-4 条方法论/铁律/步骤的大号编号行（rule-row）",
+      "roles": ["content"],
+      "constraints": "3-4 条；每条标题 ≤16 字（关键词用 accent）+ 说明 25-40 字"
+    },
+    {
+      "id": "demo-close",
+      "name": "命令演示 + 收尾",
+      "use": "安装/操作命令演示（code-block）+ 一句收尾 + 页脚 Q&A",
+      "roles": ["code", "cta", "thanks"],
+      "constraints": "代码 6-14 行、每行 ≤60 字符（转义）；收尾句 20-40 字；strong 标关键动作"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/presenter-mode-reveal",
+    "license": "MIT"
+  }
+}

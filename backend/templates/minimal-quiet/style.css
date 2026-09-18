@@ -1,0 +1,90 @@
+/* minimal-quiet — 高级实用极简 / 编辑风。
+ * 设计来源：taste-skill/skills/minimalist-skill（MIT，只借鉴设计思想，代码从零手写）。
+ * 暖骨白画布 + 白卡 + 1px #EAEAEA 细线；衬线大标题（Playfair/Georgia，中文走宋体系统回退）；
+ * 颜色是稀缺资源：洗过的粉彩只以「色卡 + 深字」成对出现。禁渐变、禁重投影、禁大容器药丸。 */
+.tpl-minimal-quiet{
+  --bg:#F7F6F3;            /* 暖骨白画布 */
+  --bg-soft:#F1F0EB;       /* 摘录面板底 */
+  --surface:#FFFFFF;       /* 卡片 */
+  --border:#EAEAEA;        /* 结构细线（唯一边框色） */
+  --border-strong:#DBDAD6;
+  --text-1:#2F3437;        /* 炭黑正文，禁纯黑 */
+  --text-2:#6F6E6A;        /* 次级灰（对 --bg 5.0:1） */
+  --text-3:#7F7E7A;        /* 家具小字，只用于页脚等装饰位 */
+  --accent:#1F6C9F;        /* 雾蓝墨 */
+  --accent-soft:#E1F3FE;   /* 淡蓝色卡（与深字成对） */
+  --accent-ink:#FFFFFF;    /* accent 实底上的文字 */
+  --font-serif:'Playfair Display','Noto Serif SC',Georgia,'Songti SC',SimSun,serif;
+  --shadow-quiet:0 18px 40px rgba(47,52,55,.045); /* 唯一阴影：极散、<0.05 */
+  font-family:'Inter','Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 变体：只换强调墨与它的色卡，底盘不动 ---- */
+.tpl-minimal-quiet.mq-clay{--accent:#9F2F2D;--accent-soft:#FDEBEC}
+.tpl-minimal-quiet.mq-moss{--accent:#346538;--accent-soft:#EDF3EC}
+
+/* ---- 底盘：沿用 base.css 的 flex 纵向居中，只改留白与底色。
+   留白要奢侈：内边距 88/120，区块间距靠 mt-l + 组件自带空隙。 ---- */
+.tpl-minimal-quiet .slide{padding:88px 120px;background:var(--bg)}
+
+/* ---- 字阶：衬线只给标题与数字，正文 Inter/Noto ---- */
+.tpl-minimal-quiet .h1{font-family:var(--font-serif);font-size:88px;line-height:1.08;font-weight:700;letter-spacing:-.03em;color:var(--text-1);margin:0}
+.tpl-minimal-quiet .h2{font-family:var(--font-serif);font-size:54px;line-height:1.15;font-weight:700;letter-spacing:-.025em;color:var(--text-1);margin:0}
+.tpl-minimal-quiet h4{color:var(--text-1)}
+.tpl-minimal-quiet .kicker{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.tpl-minimal-quiet .lede{font-size:24px;line-height:1.8;color:var(--text-2);font-weight:400;margin:0}
+.tpl-minimal-quiet .deck-footer{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text-3);letter-spacing:.02em}
+
+/* ---- 胶囊：粉彩色卡 + 深字，成对出现；小元素可用药丸形，容器禁用 ---- */
+.tpl-minimal-quiet .mq-chip{display:inline-block;padding:6px 16px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:15px;font-weight:600;letter-spacing:.03em;white-space:nowrap}
+.tpl-minimal-quiet .mq-chip-red{background:#FDEBEC;color:#9F2F2D}
+.tpl-minimal-quiet .mq-chip-blue{background:#E1F3FE;color:#1F6C9F}
+.tpl-minimal-quiet .mq-chip-green{background:#EDF3EC;color:#346538}
+.tpl-minimal-quiet .mq-chip-yellow{background:#FBF3DB;color:#956400}
+
+/* ---- 白卡：1px 细线 + 12px 圆角 + 24-40px 内边距 ---- */
+.tpl-minimal-quiet .mq-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:30px 32px;box-shadow:var(--shadow-quiet)}
+.tpl-minimal-quiet .mq-card h4{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em}
+
+/* ---- 目录 / 收尾行列表：细线分行，像一本书的目录页 ---- */
+.tpl-minimal-quiet .mq-toc{margin-top:8px}
+.tpl-minimal-quiet .mq-toc-row{display:flex;align-items:baseline;gap:28px;padding:26px 4px;border-bottom:1px solid var(--border)}
+.tpl-minimal-quiet .mq-toc-row:first-child{border-top:1px solid var(--border)}
+.tpl-minimal-quiet .mq-toc-n{flex:none;font-size:17px;color:var(--text-3)}
+.tpl-minimal-quiet .mq-toc-t{flex:none;width:420px;font-size:24px;font-weight:600;color:var(--text-1);letter-spacing:-.01em}
+.tpl-minimal-quiet .mq-toc-d{flex:1;font-size:18px;color:var(--text-2)}
+
+/* ---- 目标进度表：细线分行 + 右对齐 mono 进度 ---- */
+.tpl-minimal-quiet .mq-table{margin-top:8px}
+.tpl-minimal-quiet .mq-tr{display:grid;grid-template-columns:300px 1fr 130px 120px;gap:28px;align-items:center;padding:24px 4px;border-bottom:1px solid var(--border)}
+.tpl-minimal-quiet .mq-tr:first-child{border-top:1px solid var(--border)}
+.tpl-minimal-quiet .mq-tr-t{font-size:23px;font-weight:600;color:var(--text-1);letter-spacing:-.01em}
+.tpl-minimal-quiet .mq-tr-k{font-size:18px;color:var(--text-2);line-height:1.6}
+.tpl-minimal-quiet .mq-tr-num{font-size:26px;font-weight:700;color:var(--accent);text-align:right}
+
+/* ---- 关键数字：衬线炭黑大数（安静），口径注释是半内容 17px ---- */
+.tpl-minimal-quiet .mq-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:8px}
+.tpl-minimal-quiet .mq-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:30px 32px;box-shadow:var(--shadow-quiet)}
+.tpl-minimal-quiet .mq-stat-v{font-family:var(--font-serif);font-size:76px;line-height:1;font-weight:700;letter-spacing:-.02em;color:var(--text-1)}
+.tpl-minimal-quiet .mq-stat-u{font-family:'Inter','Noto Sans SC',sans-serif;font-size:28px;font-weight:600;color:var(--text-3);margin-left:6px}
+.tpl-minimal-quiet .mq-stat-l{margin-top:16px;font-size:22px;font-weight:600;color:var(--text-1)}
+.tpl-minimal-quiet .mq-stat-note{margin:8px 0 0;font-size:17px;color:var(--text-2);line-height:1.55}
+
+/* ---- 摘录面板：日志/记录佐证，等宽 17px ---- */
+.tpl-minimal-quiet .mq-panel{background:var(--bg-soft);border:1px solid var(--border);border-radius:12px;padding:26px 30px}
+.tpl-minimal-quiet .mq-panel-h{margin:0 0 14px;font-size:15px;color:var(--text-3);letter-spacing:.08em}
+.tpl-minimal-quiet .mq-panel pre{font-family:'JetBrains Mono',monospace;font-size:17px;line-height:1.95;color:var(--text-1);white-space:pre-wrap}
+
+/* ---- 笔记摘句：整页一句衬线话 ---- */
+.tpl-minimal-quiet .mq-quote{font-family:var(--font-serif);font-size:62px;line-height:1.4;letter-spacing:-.02em;font-weight:600;color:var(--text-1);max-width:24em;margin:0}
+.tpl-minimal-quiet .mq-quote-src{font-size:17px;color:var(--text-3);margin:0}
+
+/* ---- 章节幕：巨大描边数字压右下，细得像纸上的压痕。
+   外壳定高 + overflow:hidden 自剪裁：描边数字只是「从盒口露出来的压痕」，
+   字体加载瞬间的度量抖动（ascent/descent 变化）不可能把 slide 的 scrollHeight 撑出画布。 ---- */
+.tpl-minimal-quiet .mq-ghost{
+  position:absolute;right:96px;bottom:48px;width:420px;height:330px;overflow:hidden;
+  pointer-events:none;text-align:right;
+  font-family:var(--font-serif);font-size:320px;line-height:.94;font-weight:700;
+  color:transparent;-webkit-text-stroke:1.5px var(--accent);opacity:.18;
+}

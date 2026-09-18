@@ -1,0 +1,80 @@
+{
+  "id": "minimal-quiet",
+  "name": "静默极简",
+  "description": "暖骨白编辑风极简：衬线大标题、1px 细线卡片、洗过的粉彩点缀，安静而具体的复盘与汇报首选",
+  "tags": ["极简", "编辑风", "复盘", "亮色"],
+  "scenario": ["个人复盘", "季度总结", "OKR 回顾", "小团队汇报", "读书笔记"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "雾蓝", "class": "" },
+    { "id": "clay", "name": "陶红", "class": "mq-clay" },
+    { "id": "moss", "name": "苔绿", "class": "mq-moss" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "复盘封面",
+      "use": "开场页：衬线大标题 + 一句话定位 + 周期信息胶囊，垂直居中",
+      "roles": ["cover"],
+      "constraints": "标题 ≤12 字；lede 25-45 字；3 个 mono 胶囊（周期 / 身份 / 天数）"
+    },
+    {
+      "id": "agenda",
+      "name": "复盘路线",
+      "use": "目录：编号行列表，每行标题 + 一句看点 + 预计时长",
+      "roles": ["toc"],
+      "constraints": "3-5 行；行标题 4-10 字 + 看点 12-24 字；时长写 ~Nmin"
+    },
+    {
+      "id": "okr-table",
+      "name": "目标进度表",
+      "use": "3-4 行目标进度：目标 + 关键结果口径 + mono 百分比 + 状态胶囊",
+      "roles": ["data", "content"],
+      "constraints": "3-4 行；目标 ≤12 字 + 关键结果 18-36 字 + 状态 ≤6 字；页尾写口径"
+    },
+    {
+      "id": "metrics",
+      "name": "关键数字",
+      "use": "2-4 张大数字卡：衬线数字 + 指标名 + 口径注释，页尾标来源",
+      "roles": ["data", "content"],
+      "constraints": "2-4 卡；数值 ≤6 字符 + 指标名 ≤12 字 + 口径 12-30 字；必须标来源"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：巨大描边章节数字压右下角，左上是一个过渡问题，垂直居中",
+      "roles": ["divider"],
+      "constraints": "标题 ≤12 字；lede 25-45 字；2 个看点胶囊"
+    },
+    {
+      "id": "case-split",
+      "name": "案例左文右摘录",
+      "use": "左边把一个案例讲透（叙述 + 补充 + 数据胶囊），右边 mono 日志摘录面板",
+      "roles": ["content"],
+      "constraints": "左 lede 40-70 字 + 补充 20-40 字 + 2-3 个胶囊；右摘录 6-10 行、每行 ≤24 字"
+    },
+    {
+      "id": "reflections",
+      "name": "三卡经验",
+      "use": "恰好三张白卡，每张：定性粉彩胶囊 + 经验标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；胶囊 ≤4 字 + 标题 ≤10 字 + 说明 22-45 字"
+    },
+    {
+      "id": "quote-note",
+      "name": "笔记摘句",
+      "use": "整页一句自己写下的话，衬线排版 + 出处 + 一句后来怎么用上",
+      "roles": ["quote"],
+      "constraints": "引文 15-40 字；出处 ≤24 字；注释 20-45 字"
+    },
+    {
+      "id": "closing",
+      "name": "下期三件事",
+      "use": "收尾：编号列出下周期只做的那几件事 + 一句为什么，垂直居中",
+      "roles": ["content", "cta", "thanks"],
+      "constraints": "3-4 条、每条 12-24 字动词开头；lede 20-45 字"
+    }
+  ],
+  "fonts": ["Playfair Display", "Georgia", "Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": { "derived_from": "taste-skill/skills/minimalist-skill", "license": "MIT" }
+}

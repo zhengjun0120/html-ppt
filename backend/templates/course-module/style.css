@@ -20,7 +20,7 @@
 .tpl-course-module .sidebar{border-right:1px solid var(--border);padding-right:32px;position:relative}
 .tpl-course-module .sidebar .brand{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--accent)}
 .tpl-course-module .sidebar .brand::before{content:"✦ ";color:var(--accent-2)}
-.tpl-course-module .sidebar h5{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-3);margin:32px 0 12px}
+.tpl-course-module .sidebar h5{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-3);margin:32px 0 12px}
 .tpl-course-module .obj-list{list-style:none;padding:0;margin:0;font-size:18px;color:var(--text-2);line-height:1.5}
 .tpl-course-module .obj-list li{padding:8px 0 8px 22px;position:relative;border-bottom:1px dashed var(--border)}
 .tpl-course-module .obj-list li::before{content:"○";position:absolute;left:0;top:8px;color:var(--accent)}
@@ -54,7 +54,10 @@
 /* ---- 章节幕（divider）：巨大幽灵章节数字当视觉锚点，右下角压住画面 ---- */
 .tpl-course-module .ghost-num{
   position:absolute;right:64px;bottom:0;pointer-events:none;
-  font-family:'Playfair Display',serif;font-size:280px;line-height:1;font-weight:800;
+  font-family:'Playfair Display',serif;font-size:280px;font-weight:800;
+  /* 行盒自剪裁：回退字体加载期间行盒会高过 em、把 scrollHeight 顶出画布
+     （量测显示为幽灵溢出 flag）。定高 + 收紧行距让盒子永远在画布内。 */
+  height:230px;overflow:hidden;line-height:.82;
   color:transparent;-webkit-text-stroke:2px var(--accent);opacity:.3;
 }
 

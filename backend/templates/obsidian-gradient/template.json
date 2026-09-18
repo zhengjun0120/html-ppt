@@ -1,0 +1,125 @@
+{
+  "id": "obsidian-gradient",
+  "name": "黑曜渐变",
+  "description": "GitHub-dark 紫晕 + 居中排版 + 三停渐变字，开发者工作流 / MCP / Dev tool 教程首选",
+  "tags": [
+    "教程",
+    "开发者",
+    "工作流",
+    "暗色"
+  ],
+  "scenario": [
+    "工具教程",
+    "工作流分享",
+    "产品 changelog",
+    "开发者叙事"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "紫罗兰",
+      "class": ""
+    },
+    {
+      "id": "emerald",
+      "name": "翠青",
+      "class": "v-emerald"
+    },
+    {
+      "id": "sunset",
+      "name": "落日",
+      "class": "v-sunset"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "渐变封面",
+      "use": "开场页：胶囊眉标 + 渐变字大标题 + 一句话定位 + 能力胶囊",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "眉标 ≤20 字符；标题两行、每行 ≤14 字，渐变 span 只包一个短语；lede 30-55 字；3 个能力胶囊（≤12 字符）"
+    },
+    {
+      "id": "section",
+      "name": "章节幕",
+      "use": "章节过渡：章节眉标 + 巨大标题（渐变强调一个词）+ 一句过门",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "眉标 ≤16 字符；标题 ≤16 字符；lede 20-40 字（可两行）"
+    },
+    {
+      "id": "compare",
+      "name": "双卡对照",
+      "use": "两个方案/工具的对照（优劣、A vs B），右卡描边强调立场",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 2 卡；卡徽标 4-10 字符 + 卡标题 4-10 字 + 说明 3 条、每条 10-22 字（• 分行）；底部 hl 洞察 25-45 字"
+    },
+    {
+      "id": "steps",
+      "name": "步骤清单",
+      "use": "3-5 步的上手流程/配置步骤，编号圆点 + 标题 + 说明",
+      "roles": [
+        "content",
+        "cta"
+      ],
+      "constraints": "3-5 步；每步标题 8-16 字 + 说明 15-32 字；编号连续不跳"
+    },
+    {
+      "id": "config",
+      "name": "配置代码",
+      "use": "配置文件/命令整页呈现（oc-code 承载），配一句结果说明",
+      "roles": [
+        "code"
+      ],
+      "constraints": "代码 8-18 行、每行 ≤70 字符；kicker 写文件路径；代码下方一句验证结果 12-30 字"
+    },
+    {
+      "id": "metrics",
+      "name": "数据战果",
+      "use": "3 个大数字并列（用量/收益/降幅）+ 一句体感结论",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "恰好 3 卡；数字 ≤6 字符 + 指标说明 6-16 字；hl 结论 25-45 字；数字必须有口径或时间范围"
+    },
+    {
+      "id": "quote-cta",
+      "name": "金句行动",
+      "use": "一句立场金句 + 署名 + 下载/行动胶囊行",
+      "roles": [
+        "quote",
+        "cta"
+      ],
+      "constraints": "引文两行、每行 8-20 字；署名 ≤16 字；2-4 个行动胶囊（≤14 字符）"
+    },
+    {
+      "id": "thanks",
+      "name": "致谢页",
+      "use": "收尾页：渐变大字 Thanks + 资料仓库链接",
+      "roles": [
+        "thanks",
+        "cta"
+      ],
+      "constraints": "大标题 ≤10 字符；lede 20-45 字（资料链接要真实）"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Mono"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/obsidian-claude-gradient",
+    "license": "MIT"
+  }
+}

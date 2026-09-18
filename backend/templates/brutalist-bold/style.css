@@ -1,0 +1,144 @@
+/* brutalist-bold — Swiss Industrial Print（浅色工业印刷）
+ * 纸 #F4F4F0 · 墨 #111 · 全模板唯一强调色（默认警戒红 #E61919）
+ * 纪律：全部直角 90°、无渐变、无投影、无半透明（每个颜色都是实色）、单强调色
+ * 宏字体 Inter 900 全大写巨字（字距 -0.03~-0.06em / 行高 0.9-0.95）
+ * 微字体 JetBrains Mono 全大写宽字距，只做元数据/编号/标签（≥15px） */
+.tpl-brutalist-bold{
+  --paper:#F4F4F0;      /* 哑光纸底 */
+  --paper-2:#EAEAE3;    /* 纸面加深一档（代码区/铭牌底），实色 */
+  --ink:#111111;        /* 碳黑 */
+  --ink-2:#3E3E39;      /* 次级墨 */
+  --ink-3:#66665E;      /* 弱墨（对纸底 ≥4.5:1） */
+  --hair:#C9C9C0;       /* 蓝图细网格线（实色，非半透明） */
+  --accent:#E61919;     /* 唯一强调色：粗结构分隔线 / 删除线 / 关键数据高亮 */
+  --accent-ink:#F4F4F0; /* 强调色块上画的字 */
+  font-family:'Inter','Noto Sans SC',sans-serif;
+  color:var(--ink);
+}
+
+/* ---- 底盘：默认沿用 base.css 的 flex 纵向居中，只换纸底与蓝图网格。
+   刻意不在裸 .slide 上开 grid——内容页栅格都在内层 .b-cols/.b-blade 上。 ---- */
+.tpl-brutalist-bold .slide{
+  padding:72px 96px 96px;
+  color:var(--ink);
+  background:var(--paper) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><path d='M120 .5H0M.5 0V120' stroke='%23C9C9C0' fill='none'/></svg>") repeat;
+  background-size:120px 120px;
+}
+.tpl-brutalist-bold .slide.full{display:flex;flex-direction:column;justify-content:center}
+
+/* 蓝图交点十字：两颗实心 + 压在四角留白里，纯装饰（伪元素，不进内容量测） */
+.tpl-brutalist-bold .slide::before,.tpl-brutalist-bold .slide::after{
+  content:"+";position:absolute;z-index:3;pointer-events:none;line-height:1;
+  font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--ink-3)}
+.tpl-brutalist-bold .slide::before{top:46px;left:68px}
+.tpl-brutalist-bold .slide::after{bottom:120px;right:56px}
+
+/* ---- 宏字体：Inter 900 全大写巨字 ---- */
+.tpl-brutalist-bold .h1{
+  font-weight:900;text-transform:uppercase;
+  font-size:150px;line-height:.92;letter-spacing:-.045em;color:var(--ink)}
+.tpl-brutalist-bold .h2{
+  font-weight:900;text-transform:uppercase;
+  font-size:64px;line-height:.96;letter-spacing:-.035em;color:var(--ink)}
+.tpl-brutalist-bold h4{font-weight:800;color:var(--ink);margin:0}
+.tpl-brutalist-bold .kicker{
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.tpl-brutalist-bold .kicker b{color:var(--accent);font-weight:700}
+.tpl-brutalist-bold .lede{font-size:24px;line-height:1.6;font-weight:500;color:var(--ink-2);max-width:62ch}
+.tpl-brutalist-bold .dim{color:var(--ink-2)}
+
+/* ---- 微字体：mono 元数据 / 编号 / 条码 ---- */
+.tpl-brutalist-bold .b-meta{
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.tpl-brutalist-bold .b-code{
+  font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;
+  letter-spacing:1px;color:var(--ink);white-space:nowrap}
+
+/* ---- 结构件：顶栏编号 / 红色通栏粗线 / 红块强调 / 红色删除线 / 标签 ---- */
+.tpl-brutalist-bold .b-top{
+  display:flex;gap:28px;align-items:baseline;justify-content:space-between;
+  border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:14px}
+.tpl-brutalist-bold .b-rule{height:6px;background:var(--accent);border:0;padding:0;width:100%}
+.tpl-brutalist-bold .b-mark{
+  display:inline-block;background:var(--accent);color:var(--accent-ink);
+  padding:0 .12em;margin-left:.04em}
+.tpl-brutalist-bold .b-strike{position:relative}
+.tpl-brutalist-bold .b-strike::after{
+  content:"";position:absolute;left:-3%;right:-3%;top:50%;height:3px;
+  background:var(--accent);transform:translateY(-50%)}
+.tpl-brutalist-bold .b-tag{
+  display:inline-block;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink);
+  border:1.5px solid var(--ink);padding:8px 16px;background:var(--paper)}
+
+/* ---- 越界巨号数字：描边空心，压在标题层之下，一页最多一个 ---- */
+.tpl-brutalist-bold .slide.full>*:not(.b-num):not(.deck-footer){position:relative;z-index:1}
+.tpl-brutalist-bold .b-num{
+  font-family:'Inter','Noto Sans SC',sans-serif;font-weight:900;pointer-events:none;
+  font-size:360px;line-height:.85;letter-spacing:-.06em;
+  color:var(--paper);-webkit-text-stroke:3px var(--ink)}
+.tpl-brutalist-bold .slide.full .b-num{position:absolute;right:56px;top:-24px;z-index:0}
+
+/* ---- 页脚：mono 机械落款 + 2px 墨线 ---- */
+.tpl-brutalist-bold .deck-footer{
+  position:absolute;left:96px;right:96px;bottom:32px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:2px solid var(--ink);padding-top:12px;
+  font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-2)}
+
+/* ---- 刀锋细线容器：display:grid + 2px 墨底缝隙 = 实线分隔（无投影无圆角） ---- */
+.tpl-brutalist-bold .b-cols{display:grid;grid-template-columns:1fr 1.08fr;gap:64px;align-items:start}
+.tpl-brutalist-bold .b-blade{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--ink);border:2px solid var(--ink)}
+.tpl-brutalist-bold .b-blade-3{grid-template-columns:repeat(3,1fr)}
+.tpl-brutalist-bold .b-plate{
+  background:var(--paper);padding:28px 30px;min-height:234px;
+  display:flex;flex-direction:column;gap:12px}
+.tpl-brutalist-bold .b-hot{border-top:8px solid var(--accent)}
+
+/* ---- 铭牌内件：mono 参数名 / 900 巨值 / 口径注 ---- */
+.tpl-brutalist-bold .b-kv{
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.tpl-brutalist-bold .b-val{
+  font-family:'Inter','Noto Sans SC',sans-serif;font-weight:900;white-space:nowrap;
+  font-size:104px;line-height:.9;letter-spacing:-.04em;color:var(--ink)}
+.tpl-brutalist-bold .b-val-red{color:var(--accent)}
+.tpl-brutalist-bold .b-unit{font-size:30px;font-weight:800;letter-spacing:0;margin-left:6px}
+.tpl-brutalist-bold .b-note{margin:0;font-size:18px;line-height:1.55;color:var(--ink-2)}
+
+/* ---- 清单表：3px 顶栏 + 1px 行线，行内四列（序号/科目/口径/责任人） ---- */
+.tpl-brutalist-bold .b-table{border-top:3px solid var(--ink)}
+.tpl-brutalist-bold .b-tr{
+  display:grid;grid-template-columns:76px 260px 1fr 200px;gap:32px;
+  align-items:baseline;padding:22px 0;border-bottom:1px solid var(--ink)}
+.tpl-brutalist-bold .b-no{
+  font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;
+  letter-spacing:.06em;color:var(--ink-2)}
+.tpl-brutalist-bold .b-tt{font-size:27px;font-weight:800;letter-spacing:-.01em;text-transform:uppercase;color:var(--ink)}
+.tpl-brutalist-bold .b-td{margin:0;font-size:18px;line-height:1.55;color:var(--ink-2)}
+.tpl-brutalist-bold .b-own{
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.tpl-brutalist-bold .b-blade-red .b-no{color:var(--accent)}
+
+/* ---- 指令时序：纸面加深一档的实线代码框，红竖线压左边 ---- */
+.tpl-brutalist-bold .b-term{
+  background:var(--paper-2);border:2px solid var(--ink);border-left:10px solid var(--accent);
+  padding:26px 32px;font-family:'JetBrains Mono',monospace;
+  font-size:18px;line-height:1.75;color:var(--ink)}
+.tpl-brutalist-bold .b-term pre{margin:0;font-family:inherit;white-space:pre}
+.tpl-brutalist-bold .kw{font-weight:800;color:var(--ink)}
+.tpl-brutalist-bold .str{color:var(--ink-2)}
+.tpl-brutalist-bold .cmt{color:var(--ink-3)}
+
+/* ---- 收尾签发栏 ---- */
+.tpl-brutalist-bold .b-sig{
+  display:flex;gap:36px;align-items:center;
+  border-top:2px solid var(--ink);padding-top:20px}
+
+/* ---- 变体：整只替换唯一强调色，纪律不动（对比度均过 AA 大字 3:1） ---- */
+.tpl-brutalist-bold.v-blue{--accent:#1D4ED8}
+.tpl-brutalist-bold.v-green{--accent:#166534}

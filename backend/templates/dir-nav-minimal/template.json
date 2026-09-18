@@ -1,0 +1,91 @@
+{
+  "id": "dir-nav-minimal",
+  "name": "方向键极简",
+  "description": "一页一块整幅 mono 底色 + 巨大标题 + 单一 accent，keynote 式极简讲稿，一页只讲一件事",
+  "tags": ["极简", "keynote", "演讲", "深色"],
+  "scenario": ["公开演讲", "keynote", "观点分享", "产品发布"],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "八色轮换",
+      "class": ""
+    },
+    {
+      "id": "mono",
+      "name": "墨色单色",
+      "class": "v-mono"
+    },
+    {
+      "id": "amber",
+      "name": "琥珀统一",
+      "class": "v-amber"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "封面",
+      "use": "开场：巨大标题 + accent 短线 + 一句话定位，indigo 底",
+      "roles": ["cover"],
+      "constraints": "标题两行内、每行 4-10 字；lede 25-45 字；accent 词 ≤1 个"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：Chapter 号 + 大标题 + 这一章回答的一个问题，cream 底",
+      "roles": ["divider"],
+      "constraints": "章节号写进 eyebrow；标题 ≤8 字；lede 25-45 字"
+    },
+    {
+      "id": "list",
+      "name": "要点清单",
+      "use": "3-5 条痛点/要点的箭头清单（dk-list），crimson 底",
+      "roles": ["content", "toc"],
+      "constraints": "标题 ≤12 字；3-5 条、每条 12-24 字"
+    },
+    {
+      "id": "compare",
+      "name": "两栏对照",
+      "use": "× / ✓ 两个做法的对照（dk-grid-2 两栏），emerald 底",
+      "roles": ["content"],
+      "constraints": "恰好 2 栏；栏标题 ≤10 字（× / ✓ 开头）；每栏说明 15-30 字；lede 30-50 字"
+    },
+    {
+      "id": "code",
+      "name": "代码页",
+      "use": "一段配置/命令/代码（dk-code）+ 它带来什么，slate 底",
+      "roles": ["code", "content"],
+      "constraints": "代码 3-12 行、每行 ≤48 字符（转义 &lt; &gt; &amp;）；lede 30-50 字"
+    },
+    {
+      "id": "stat",
+      "name": "大数字",
+      "use": "单个关键数字 + SVG 进度条的冲击力呈现，violet 底",
+      "roles": ["data", "content"],
+      "constraints": "主数字 ≤6 字符；结论 40-60 字（含具体对比）；口径行 15-30 字；进度条宽度按占比"
+    },
+    {
+      "id": "cta",
+      "name": "行动号召",
+      "use": "号召 + 1-4 行可复制的起步命令（white 底、dk-code 承载命令）",
+      "roles": ["cta"],
+      "constraints": "标题两行内 ≤8 字/行；lede 25-40 字；命令 1-4 行"
+    },
+    {
+      "id": "thanks",
+      "name": "收尾页",
+      "use": "致谢 + 真实的出处/链接，charcoal 底",
+      "roles": ["thanks"],
+      "constraints": "标题 ≤6 字；lede 25-45 字，含真实链接或出处"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/dir-key-nav-minimal",
+    "license": "MIT"
+  }
+}

@@ -8,18 +8,27 @@
 - 使用方式：**vendor 并有改动**
   - `backend/web/assets/deck-v2/runtime.js` / `base.css` / `animations.css` 来自其
     `assets/` 目录，改动逐条记录于 `backend/web/assets/deck-v2/PATCHES.md`；
-  - `backend/templates/` 下 8 个模板由其 `templates/full-decks/` 对应模板适配而来，
-    每个模板目录内的 `ADAPTATION.md` 记录了完整改动清单；
+  - `backend/templates/` 下 15 个模板由其 `templates/full-decks/` 对应模板适配而来
+    （course-module、tech-sharing、pitch-deck、product-launch、weekly-report、
+    data-dark、editorial-white、knowledge-blueprint、hermes-terminal、
+    obsidian-gradient、xhs-pastel、xhs-post（810×1080 竖版）、dir-nav-minimal、
+    presenter-cards、safety-alert），每个模板目录内的 `ADAPTATION.md` 记录了完整
+    改动清单；
   - `backend/templates/<id>/style.css` 末尾的主题变体槽（variants）为本项目新增。
 - 原 License（MIT）随源码保留；感谢原作者。
 
 ## 2. taste-skill — MIT（思想借鉴，未复制代码）
 
 - 仓库：https://github.com/（tasteskill.dev）
-- 使用方式：其「AI 味禁令」（§9 AI Tells）与文案密度纪律被**中文化重写**进
+- 使用方式一：其「AI 味禁令」（§9 AI Tells）与文案密度纪律被**中文化重写**进
   `backend/internal/service/deck/lint_taste.go` 的 T001–T007 规则与
   `backend/internal/agent/prompts/shared.md` 的文案纪律。
   词表为本项目维护的中文版，非逐词翻译。
+- 使用方式二：其 `skills/{brutalist-skill, minimalist-skill, soft-skill}` 的设计
+  规范（工业粗野/高级极简/软结构主义）作为**设计思想输入**，由本项目原创实现了
+  3 个模板：`backend/templates/{brutalist-bold, minimal-quiet, soft-pastel}/`。
+  全部代码为本项目手写，未复制上游任何代码；各模板 `ADAPTATION.md` 记录了设计
+  决策与风格映射。
 
 ## 3. guizang-ppt-skill — AGPL-3.0（仅设计思想参考，零代码引入）
 

@@ -1,0 +1,83 @@
+{
+  "id": "xhs-pastel",
+  "name": "马卡龙柔色",
+  "description": "奶油底 + 柔光 blob + 衬线斜体大字 + 马卡龙整色大卡片，生活方式与轻内容的小红书杂志风",
+  "tags": ["小红书", "柔色", "生活方式", "杂志"],
+  "scenario": ["生活方式分享", "个人成长", "轻科普", "情感向内容", "好物与体验分享"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "奶油桃", "class": "" },
+    { "id": "minty", "name": "薄荷奶绿", "class": "v-minty" },
+    { "id": "lilac", "name": "丁香雪", "class": "v-lilac" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "柔色封面",
+      "use": "开场页：chip 顶条 + 衬线大标题（斜体强调词）+ 渐变小条 + 一句话定位",
+      "roles": ["cover"],
+      "constraints": "主标题 2-3 行、每行 ≤7 字；lede 30-55 字；chip 为小写英文短语"
+    },
+    {
+      "id": "chapter",
+      "name": "提问式章节页",
+      "use": "章节过渡：一个戳心的问句大字 + 一句展开，不带卡片",
+      "roles": ["divider"],
+      "constraints": "问句两行、每行 ≤8 字；展开 18-35 字；kicker 引导 4-8 字"
+    },
+    {
+      "id": "grid-2x2",
+      "name": "四事网格",
+      "use": "四件并列小事/小物：2×2 马卡龙卡阵列（斜体序号 + 标题 + 说明），本模板内容主力",
+      "roles": ["content"],
+      "constraints": "恰好 4 卡；卡标题 ≤14 字；卡内说明 22-45 字；序号 01-04"
+    },
+    {
+      "id": "checklist",
+      "name": "单列清单",
+      "use": "4-6 条要点清单/打卡列表：色点 + 一行一条的小卡纵列",
+      "roles": ["content", "toc"],
+      "constraints": "4-6 条；每条 12-24 字；页尾可加一句收束 16-32 字"
+    },
+    {
+      "id": "quote-card",
+      "name": "金句卡",
+      "use": "金句/态度宣言：白色大圆角卡承载衬线斜体金句 + 一段落地展开",
+      "roles": ["quote", "content"],
+      "constraints": "金句 15-35 字；展开 25-50 字；不用编造的引用"
+    },
+    {
+      "id": "prompt",
+      "name": "Prompt 卡",
+      "use": "一段可直接抄走的 prompt / 配置 / 短代码（深色圆角码箱承载）",
+      "roles": ["code", "content"],
+      "constraints": "代码 8-16 行、每行 ≤60 字符；kw/st/hl/cm 四类着色；首尾各一行注释"
+    },
+    {
+      "id": "donut-stat",
+      "name": "环形统计",
+      "use": "一组省出/花掉的时间或占比：SVG 环形图（中心总数）+ 右侧色点图例列",
+      "roles": ["data", "content"],
+      "constraints": "3-5 段；段长=占比%×6.28、各段 dashoffset 顺次累加；中心总数 ≤4 字符；每条图例 ≤14 字"
+    },
+    {
+      "id": "steps-3",
+      "name": "周末三步",
+      "use": "行动号召：三个时段/三步安排的横排马卡龙卡（emoji 作装饰序号）",
+      "roles": ["content", "cta"],
+      "constraints": "恰好 3 卡；卡标题 ≤12 字；卡内说明 22-40 字；emoji 只出现在 xp-num 位"
+    },
+    {
+      "id": "thanks",
+      "name": "居中收尾",
+      "use": "谢谢观看/互动引导：居中大字 + 渐变小条 + 一句评论区互动",
+      "roles": ["thanks"],
+      "constraints": "主文案 ≤8 字；互动一句 20-40 字；至多一个 ♡"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/xhs-pastel-card",
+    "license": "MIT"
+  }
+}

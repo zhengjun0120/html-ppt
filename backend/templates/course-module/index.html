@@ -75,6 +75,8 @@
       <div class="callout">
         <b>Rule of thumb.</b> If you can't name the base case out loud, don't write the recursion yet. Draw it on paper first.
       </div>
+      <p class="dim mt-m" style="font-size:16px">课后阅读：SICP §1.2 的递归一节，配今天的板书食用。</p>
+      <p class="dim mt-m" style="font-size:16px">课后阅读：SICP §1.2 的递归一节，配今天的板书食用。</p>
       <div class="grid g2 mt-l">
         <div class="concept-box"><h4>Base case</h4><p class="dim">The smallest possible input — one the function answers directly, without calling itself.</p><p class="pill-academic">e.g. <b>n == 0</b></p></div>
         <div class="concept-box"><h4>Recursive case</h4><p class="dim">Every other input — delegate to a smaller version of the same problem.</p><p class="pill-academic">e.g. <b>n × fact(n-1)</b></p></div>
@@ -110,6 +112,7 @@
       <div class="callout">
         <b>Trace fact(4).</b> 4 × fact(3) → 4 × (3 × fact(2)) → 4 × 3 × (2 × fact(1)) → 4 × 3 × 2 × 1 × fact(0) → 4 × 3 × 2 × 1 × 1 = <b>24</b>.
       </div>
+      <p class="dim mt-m" style="font-size:16px">课后把 fact(10) 跑一遍，观察返回值是一层层怎么长回来的。</p>
     </div>
   </section>
 
@@ -141,6 +144,9 @@
         <div class="stat"><div class="stat-v">64<span class="stat-u">KB</span></div><div class="stat-l">默认栈帧预算</div><p class="stat-note">每层调用吃掉的估算值（gcc -O2）</p></div>
         <div class="stat"><div class="stat-v">10<span class="stat-u">⁶</span></div><div class="stat-l">每秒可执行调用数</div><p class="stat-note">单核、尾调用优化开启</p></div>
         <div class="stat"><div class="stat-v">1.8<span class="stat-u">×</span></div><div class="stat-l">循环版相对递归版提速</div><p class="stat-note">fact(20) 基准测试，同一编译器</p></div>
+        <div class="stat"><div class="stat-v">16<span class="stat-u">层</span></div><div class="stat-l">演示机安全递归深度</div><p class="stat-note">超过即栈溢出，课堂实测值</p></div>
+        <div class="stat"><div class="stat-v">7<span class="stat-u">行</span></div><div class="stat-l">最短可读递归实现</div><p class="stat-note">含 base case 与一行注释</p></div>
+        <div class="stat"><div class="stat-v">0<span class="stat-u">次</span></div><div class="stat-l">循环版的栈操作</div><p class="stat-note">对比组的栈帧分配计数</p></div>
       </div>
       <p class="dim mt-m" style="font-size:17px">来源：课程基准测试仓库 lab02-results</p>
     </div>
@@ -157,6 +163,7 @@
     <div class="main">
       <p class="kicker">milestones</p>
       <h2 class="h2 mt-s">一次 fact(4) 的一生</h2>
+      <p class="lede mt-m">盯着一层栈看：进栈时记下什么、触底时返回什么、回卷时每层拿到什么值。</p>
       <div class="timeline mt-l">
         <div class="tl-item"><div class="tl-t">发起</div><p class="tl-d">main 调用 fact(4)，栈帧入栈，等待返回值。</p></div>
         <div class="tl-item"><div class="tl-t">展开</div><p class="tl-d">4 层调用依次入栈，每层记着自己的 n。</p></div>
@@ -164,6 +171,7 @@
         <div class="tl-item"><div class="tl-t">回卷</div><p class="tl-d">逐层乘回去：1→1→2→6→24，栈清空。</p></div>
       </div>
       <div class="callout"><b>关键解读。</b>递归的成本全在"展开"那一段——砍不掉的栈深度就是它和循环的差距。</div>
+      <p class="dim mt-m" style="font-size:16px">板书建议：把四步画在黑板上，留一步让学生补全。</p>
     </div>
     <div class="notes">配合板书画栈，效果最好。</div>
   </section>
@@ -197,6 +205,7 @@
         </ol>
       </div>
       <p class="dim mt-m" style="font-size:17px">Stuck? Remember: a base case is the smallest input you already know the answer to.</p>
+      <p class="dim mt-m" style="font-size:16px">完成后提交到课程仓库 week04/exercise，下节课取三份现场点评。</p>
     </div>
   </section>
 
@@ -218,6 +227,7 @@
     <div class="main">
       <p class="kicker">CHECK YOUR UNDERSTANDING</p>
       <h2 class="h2 mt-s">Which function will recurse forever?</h2>
+      <p class="dim mt-m" style="font-size:16px">先选再翻讲稿——下一页揭晓常见误区。</p>
       <div class="mt-l">
         <div class="mcq"><div class="letter">A</div><div><b>def f(n): return 1 if n == 0 else n * f(n - 1)</b><p class="dim" style="font-size:16px;margin:4px 0 0">Base case <code>n == 0</code>, shrinks toward it. Terminates.</p></div></div>
         <div class="mcq correct"><div class="letter">B</div><div><b>def f(n): return n + f(n + 1)</b><p class="dim" style="font-size:16px;margin:4px 0 0"><b style="color:var(--accent)">✓ Correct.</b> No base case, and <code>n</code> grows — infinite recursion.</p></div></div>

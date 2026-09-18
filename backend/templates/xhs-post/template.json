@@ -1,0 +1,69 @@
+{
+  "id": "xhs-post",
+  "name": "小红书图文",
+  "description": "810×1080 竖版九宫格图文：手帐便签卡 + 贴纸 + 硬阴影，封面-hook-痛点-干货-步骤-效果-CTA 的种草结构",
+  "tags": ["小红书", "竖版", "图文", "种草"],
+  "scenario": ["小红书图文", "微博九宫格", "公众号配图", "抖音图文", "生活经验分享"],
+  "canvas": { "w": 810, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "蜜桃粉", "class": "" },
+    { "id": "mint", "name": "清新薄荷", "class": "v-mint" },
+    { "id": "lav", "name": "薰衣草", "class": "v-lav" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "贴纸封面",
+      "use": "首图：两枚贴纸 + 栏目行 + 大标题（关键词荧光笔高亮）+ 底部账号条",
+      "roles": ["cover"],
+      "constraints": "主标题 2-3 行、每行 ≤9 字，1-2 个词包 cover-title；lede 12-20 字；贴纸各 ≤6 字"
+    },
+    {
+      "id": "hook",
+      "name": "钩子页",
+      "use": "第 2 图：大 emoji + 反问钩子 + 两三行共鸣 + 贴纸提示往下看",
+      "roles": ["divider", "content"],
+      "constraints": "反问 ≤12 字；共鸣 2-3 行、每行 ≤14 字；1 枚贴纸 ≤8 字"
+    },
+    {
+      "id": "pain",
+      "name": "痛点清单",
+      "use": "痛点共鸣：❌ 引子 + 短标题 + 3-4 张便签卡（每张一句症状 + 一句扎心）",
+      "roles": ["content"],
+      "constraints": "3-4 张卡；每条标题 ≤14 字（emoji 开头）+ 说明 12-22 字；引子 ≤10 字"
+    },
+    {
+      "id": "truth",
+      "name": "真相断言",
+      "use": "aha moment：💡 引子 + 荧光笔高亮的大字断言 + 两三行原理 + 一句关键方法",
+      "roles": ["quote", "content"],
+      "constraints": "断言两行、每行 ≤10 字、高亮 1 处；原理解释 2-3 行每行 ≤16 字；关键句 ≤8 字"
+    },
+    {
+      "id": "step",
+      "name": "干货步骤",
+      "use": "核心干货页（可重复多页）：num-circle 步骤号 + 公式/做法便签 + 浅底举例便签",
+      "roles": ["content"],
+      "constraints": "要点 ≤14 字 + 做法 20-45 字；举例便签例句 ≤20 字；步骤号 1-9"
+    },
+    {
+      "id": "result",
+      "name": "前后对比",
+      "use": "效果页：✅ 引子 + 2×2 便签格（每格一个变化 + 一句对比），末格可强调",
+      "roles": ["content"],
+      "constraints": "恰好 4 格；每格标题 ≤12 字 + 对比 12-24 字；引子 ≤12 字"
+    },
+    {
+      "id": "cta",
+      "name": "关注收尾",
+      "use": "末图：大 emoji + 收藏关注号召 + 下期预告 + 话题 tag 行 + 账号条",
+      "roles": ["cta", "thanks"],
+      "constraints": "引导 ≤8 字；号召 ≤8 字；预告两行每行 ≤14 字；3-4 个 # 话题"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/xhs-post",
+    "license": "MIT"
+  }
+}

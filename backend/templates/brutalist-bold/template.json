@@ -1,0 +1,126 @@
+{
+  "id": "brutalist-bold",
+  "name": "工业粗野",
+  "description": "浅色工业印刷：哑光纸底 + 碳黑实线 + 唯一警戒红，Inter 900 巨字 + mono 机械编号，通知/通报/复盘/演练这类硬核纪要首选",
+  "tags": [
+    "粗野主义",
+    "工业风",
+    "通报",
+    "高对比"
+  ],
+  "scenario": [
+    "内部通报",
+    "演练通知",
+    "事故复盘",
+    "验收清单"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "警戒红",
+      "class": ""
+    },
+    {
+      "id": "blue",
+      "name": "工程蓝",
+      "class": "v-blue"
+    },
+    {
+      "id": "green",
+      "name": "安全绿",
+      "class": "v-green"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "工业封面",
+      "use": "开场页：文件编号栏 + 巨字主标（红块压一个词）+ 红色通栏粗线 + 要素标签 + 条码",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "主标题 ≤10 字（1 个关键词套 b-mark）；lede 30-55 字（什么事 + 什么时间 + 谁必须执行）；3 个要素标签各 ≤12 字；顶栏 2 条 mono 编号"
+    },
+    {
+      "id": "manifest",
+      "name": "科目清单",
+      "use": "验收清单表：序号 + 科目 + 验收口径 + 责任人，4-5 行逐项过，清单类内容的主力版式",
+      "roles": [
+        "toc",
+        "content"
+      ],
+      "constraints": "4-5 行；标题 ≤12 字；每行科目 ≤8 字 + 验收口径 14-28 字（写时限与合格判据）+ 责任岗位 ≤10 字"
+    },
+    {
+      "id": "section",
+      "name": "章节幕",
+      "use": "章节过渡：[ SECTION N / M ] 进度标记 + 巨字章节名 + 红色粗线 + 描边巨号数字压角",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "kicker 为 [ SECTION N / M ] 式进度 ≤16 字符；标题 ≤10 字；lede 22-45 字；2 个看点标签各 ≤10 字"
+    },
+    {
+      "id": "split-spec",
+      "name": "参数对照",
+      "use": "左边一句硬判断讲透要求，右边 2×2 参数铭牌（数值 + 口径），含 1 块红色热板",
+      "roles": [
+        "content",
+        "data"
+      ],
+      "constraints": "判断句 ≤12 字；lede 30-55 字；2 个动作标签各 ≤8 字（其一可用 b-strike 划掉禁做项）；恰好 4 块参数板：数值 ≤4 字符 + 参数名 ≤8 字 + 口径 12-24 字"
+    },
+    {
+      "id": "stat-plate",
+      "name": "数据铭牌",
+      "use": "三块大数字铭牌回答一个底数问题：数值红色高亮 + 指标名 + 清点口径 + 来源行",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "恰好 3 板；数值 ≤4 字符 + 单位 + 指标名 ≤8 字 + 口径 12-24 字（写清点日期/范围）；页尾必须有 mono 来源行"
+    },
+    {
+      "id": "code-run",
+      "name": "指令时序",
+      "use": "时间戳调度序列/执行日志（b-term 承载），按秒执行的硬流程一页呈现",
+      "roles": [
+        "code",
+        "content"
+      ],
+      "constraints": "kicker 写日志名与规模（如 RUNBOOK.LOG · 7 步）；标题 ≤14 字；代码 8-14 行、每行 ≤64 字符；kw 加粗指令词、cmt 注释；lede 22-45 字写关键一步失败会怎样"
+    },
+    {
+      "id": "redline-cards",
+      "name": "红线三卡",
+      "use": "刀锋细线三卡并列：编号红色 + 红线名 + 判罚口径，违规/禁区/否决项的主力版式",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 卡；红线名 ≤6 字；判罚口径 22-45 字（写清怎么判罚 + 已做的准备）；lede 20-40 字写兜底裁决归属"
+    },
+    {
+      "id": "closing",
+      "name": "收尾铭牌",
+      "use": "收尾页：巨字断言（红块压关键词）+ 下一步安排 + 签发栏（单位 / 修订号 / 条码）",
+      "roles": [
+        "thanks",
+        "quote"
+      ],
+      "constraints": "断言拆两行、每行 ≤8 字（共 ≤14 字，1 个关键词套 b-mark）；lede 22-45 字（成绩何时出、不合格怎么办）；签发栏 2 条 mono + 条码"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Maple Mono"
+  ],
+  "source": {
+    "derived_from": "taste-skill/skills/brutalist-skill",
+    "license": "MIT"
+  }
+}

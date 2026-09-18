@@ -67,8 +67,10 @@
  * 没有它 divider 就是"一行字漂在虚空"——deck-0030 实测，两页 divider 只有
  * 8% 的画布有内容，观众以为渲染出了错。 */
 .tpl-tech-sharing .ghost-num{
-  position:absolute;right:64px;bottom:-16px;pointer-events:none;
-  font-family:'JetBrains Mono',monospace;font-size:360px;line-height:1;font-weight:800;
+  position:absolute;right:64px;bottom:0;pointer-events:none;
+  font-family:'JetBrains Mono',monospace;font-size:340px;font-weight:800;
   letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--accent);opacity:.35;
+  /* 行盒自剪裁：同 course-module ghost——防回退字体加载期的幽灵溢出 flag */
+  height:280px;overflow:hidden;line-height:.82;
 }
 .tpl-tech-sharing .ghost-num::after{content:"";position:absolute;inset:0}

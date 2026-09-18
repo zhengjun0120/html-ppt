@@ -1,0 +1,125 @@
+{
+  "id": "hermes-terminal",
+  "name": "终端实测",
+  "description": "暗底终端 + 扫描线 + 霓虹 glow 大字，开发者工具/CLI/agent 评测与 trace 复盘首选",
+  "tags": [
+    "终端",
+    "评测",
+    "开发者",
+    "暗色"
+  ],
+  "scenario": [
+    "工具评测",
+    "技术复盘",
+    "benchmark 汇报",
+    "开发者分享"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "磷光绿",
+      "class": ""
+    },
+    {
+      "id": "amber",
+      "name": "琥珀屏",
+      "class": "v-amber"
+    },
+    {
+      "id": "ice",
+      "name": "冰蓝",
+      "class": "v-ice"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "终端封面",
+      "use": "开场页：命令行 prompt + glow 大标题 + 评测立场一句话 + 分级标签",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "prompt 6-20 字符；标题两行、每行 ≤14 字符；lede 30-55 字；3-4 个标签（≤16 字符）"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：prompt 读档动作 + 巨大章节标题 + 一句过门",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "prompt 6-20 字符；标题 ≤12 字符；lede 20-40 字"
+    },
+    {
+      "id": "spec-cards",
+      "name": "实测数据卡",
+      "use": "3 张指标卡（数值+口径）+ 2 张正反结论卡，冷启动/跑分类数据的主力版式",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "3 指标卡：数值 ≤6 字符 + 口径说明 12-24 字；2 结论卡：结论 8-16 字 + 展开 20-40 字；数字必须有口径（几次平均/什么条件）"
+    },
+    {
+      "id": "trace",
+      "name": "执行 trace",
+      "use": "一段真实执行日志/代码逐行呈现（codebox），展示 agent 或工具干了什么",
+      "roles": [
+        "code"
+      ],
+      "constraints": "prompt 是触发命令 ≤60 字符；代码 8-16 行、每行 ≤70 字符；行数与耗时注释放末尾"
+    },
+    {
+      "id": "compare-chart",
+      "name": "对比柱状图",
+      "use": "两个方案/版本在同一组指标上的 SVG 柱状对比 + 图例",
+      "roles": [
+        "data"
+      ],
+      "constraints": "标题 ≤12 字；口径 lede 20-40 字；每组 2-4 根柱、共 ≤7 根；柱顶标数值、柱底标指标名（≤10 字符）；必须带图例与样本量（n=）"
+    },
+    {
+      "id": "verdict",
+      "name": "评分判决",
+      "use": "单个大分数 + 一句判决 + 优缺点两卡，收束评测结论",
+      "roles": [
+        "data",
+        "content"
+      ],
+      "constraints": "分数 ≤4 字符 + 判决 lede 12-24 字；两卡各 3 条要点、每条 8-20 字"
+    },
+    {
+      "id": "install",
+      "name": "上手命令",
+      "use": "CTA：让观众自己跑一遍的命令清单（codebox 承载）+ 环境标签",
+      "roles": [
+        "cta",
+        "code"
+      ],
+      "constraints": "标题 ≤12 字；lede 16-32 字；命令 4-10 行、每行 ≤70 字符、分步注释；2-3 个环境标签"
+    },
+    {
+      "id": "thanks",
+      "name": "会话收尾",
+      "use": "收尾页：exit 提示 + 感谢 + 资料仓库链接",
+      "roles": [
+        "thanks",
+        "cta"
+      ],
+      "constraints": "prompt ≤12 字符；大标题 ≤12 字符；lede 20-45 字（含真实链接，没有就写后续计划）"
+    }
+  ],
+  "fonts": [
+    "JetBrains Mono",
+    "Inter",
+    "Noto Sans SC"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/hermes-cyber-terminal",
+    "license": "MIT"
+  }
+}

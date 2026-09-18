@@ -273,8 +273,9 @@ func v2ShootPage(shoot []int, i int) bool {
 
 // PrintPDF2 用浏览器打印整份 deck 为 PDF（16:9 整页）。
 //
-// 依赖 base.css 的 @media print 规则：每页 .slide 一张纸（break-after:page）。
-// 纸张 13.333×7.5 英寸 = 1920×1080 @96dpi，打印出的每页就是设计画布的等比映射。
+// 纸张尺寸从页面上的 deck 画布（data-w/data-h）按 96dpi 等比换算：
+// 1920×1080 → 13.333×7.5 英寸；竖版画布（如 xhs-post 的 810×1080）→ 5.625×7.5，
+// 打印出的每页就是设计画布的等比映射。读不到画布时退回 16:9 默认。
 // PreferCSSPageSize=false：纸张尺寸由这里显式给定，不依赖页面声明 @page。
 func PrintPDF2(ctx context.Context, url, chromePath string, timeout time.Duration) ([]byte, error) {
 	if timeout == 0 {
@@ -306,11 +307,24 @@ func PrintPDF2(ctx context.Context, url, chromePath string, timeout time.Duratio
 	}
 	time.Sleep(v2ReadyDelay)
 
+	// 画布比例决定纸张比例（竖版模板导出横版纸会裁掉内容）
+	var canvas string
+	pw, ph := 13.333, 7.5
+	if err := chromedp.Run(runCtx, chromedp.Evaluate(
+		`(function(){var d=document.querySelector('.deck');return d?(d.getAttribute('data-w')||'')+'x'+(d.getAttribute('data-h')||''):''})()`,
+		&canvas)); err == nil && canvas != "" {
+		var w, h int
+		if _, err := fmt.Sscanf(canvas, "%dx%d", &w, &h); err == nil && w > 0 && h > 0 {
+			ph = 7.5
+			pw = 7.5 * float64(w) / float64(h)
+		}
+	}
+
 	var pdf []byte
 	if err := chromedp.Run(runCtx, chromedp.ActionFunc(func(c context.Context) error {
 		b, _, e := page.PrintToPDF().
-			WithPaperWidth(13.333).
-			WithPaperHeight(7.5).
+			WithPaperWidth(pw).
+			WithPaperHeight(ph).
 			WithPrintBackground(true).
 			WithPreferCSSPageSize(false).
 			Do(c)

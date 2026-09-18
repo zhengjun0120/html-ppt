@@ -1,0 +1,124 @@
+{
+  "id": "safety-alert",
+  "name": "安全警示",
+  "description": "白底红黑警示条纹 + strike 大字 + L1/L2/L3 分级色卡，安全/风控/事故复盘/红队测试首选",
+  "tags": [
+    "安全",
+    "风控",
+    "警示",
+    "测试"
+  ],
+  "scenario": [
+    "安全复盘",
+    "红队报告",
+    "上线评估",
+    "事故通报"
+  ],
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "variants": [
+    {
+      "id": "default",
+      "name": "警戒红",
+      "class": ""
+    },
+    {
+      "id": "amber",
+      "name": "琥珀",
+      "class": "v-amber"
+    },
+    {
+      "id": "blue",
+      "name": "警蓝",
+      "class": "v-blue"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "警示封面",
+      "use": "开场页：strike 否定旧问题 + 红色强调新问题 + 风险告警框",
+      "roles": [
+        "cover"
+      ],
+      "constraints": "kicker ≤16 字；标题 ≤3 行、每行 ≤12 字（strike 包否定短语、red 包核心判断）；lede 30-55 字；alert-box 标题 ≤10 字 + 正文 25-45 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：巨大标题（红色强调一个词）+ 一句过门",
+      "roles": [
+        "divider"
+      ],
+      "constraints": "kicker ≤14 字；标题 ≤10 字；lede 20-40 字、可两行"
+    },
+    {
+      "id": "risk-levels",
+      "name": "分级色卡",
+      "use": "3 档分级并列（绿/琥珀/红顶边）+ 一条告警框警告，分级/分类的主力版式",
+      "roles": [
+        "content"
+      ],
+      "constraints": "恰好 3 卡（顶边依次 --ts-green/--ts-amber/--ts-red）；卡 lbl ≤10 字符 + 档名 2-6 字 + 说明 2-3 行、每行 8-18 字（含一句加色策略）；alert-box 标题 ≤12 字 + 正文 20-40 字"
+    },
+    {
+      "id": "policy-code",
+      "name": "策略代码",
+      "use": "policy/配置代码整页呈现（codebox 承载），红线规则用代码管",
+      "roles": [
+        "code"
+      ],
+      "constraints": "kicker ≤16 字；标题 ≤12 字（可含 ts-highlight-red 强调块）；代码 10-20 行、每行 ≤70 字符；禁止项用 bad 标红"
+    },
+    {
+      "id": "incident-chart",
+      "name": "事故图表",
+      "use": "按月/按类的事故量 SVG 柱状图 + 图例注解，事故复盘的数据页",
+      "roles": [
+        "data"
+      ],
+      "constraints": "标题 ≤14 字（可含红色强调）；lede 20-40 字；柱 3-6 根、顶标总量；图例 ≤3 项（绿/琥珀/红对应分级）+ 2 行注解"
+    },
+    {
+      "id": "checklist",
+      "name": "红队清单",
+      "use": "上线前必过的问题清单，✓ 过 / ! 待办 两种状态",
+      "roles": [
+        "content",
+        "cta"
+      ],
+      "constraints": "5-7 条；每条 12-30 字、以问句收尾；ok（✓）与待办（!）混排，待办 ≥2 条"
+    },
+    {
+      "id": "tonight",
+      "name": "行动三卡",
+      "use": "CTA：今晚就能做的 2-3 件事（编号卡）+ 绿色告警框收原则",
+      "roles": [
+        "cta",
+        "content"
+      ],
+      "constraints": "2-3 卡；卡 lbl（编号·动作）≤10 字符 + 卡标题两行、每行 ≤8 字 + 说明 15-30 字；绿色 alert-box 标题 ≤12 字 + 正文 20-40 字"
+    },
+    {
+      "id": "thanks",
+      "name": "收尾页",
+      "use": "收尾：巨大感谢 + 资料获取方式",
+      "roles": [
+        "thanks",
+        "cta"
+      ],
+      "constraints": "kicker ≤14 字；标题 ≤12 字；lede 20-40 字（资料怎么拿，要真实可执行）"
+    }
+  ],
+  "fonts": [
+    "Inter",
+    "Noto Sans SC",
+    "JetBrains Mono"
+  ],
+  "source": {
+    "derived_from": "html-ppt-skill/templates/full-decks/testing-safety-alert",
+    "license": "MIT"
+  }
+}

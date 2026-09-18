@@ -1,0 +1,90 @@
+/* soft-pastel — 软结构主义 / 高级消费风。
+ * 设计来源：taste-skill/skills/soft-skill（「Soft Structuralism」原型 + Double-Bezel 组件规范，MIT，
+ * 只借鉴设计思想，代码从零手写）。
+ * 银灰白底 + 超大加粗标题 + 空气感浮动卡：所有「卡」走双层表圈（外壳层包白芯），
+ * 影只有一种——大 spread、极低透明度的环境影。禁把 1px 灰边框直接裸在底上。 */
+.tpl-soft-pastel{
+  --bg:#F4F5F7;             /* 银灰白画布 */
+  --bg-soft:#ECEEF2;
+  --surface:#FFFFFF;        /* 白芯 */
+  --shell:rgba(23,29,48,.045);      /* 外壳层底（黑 4%） */
+  --shell-line:rgba(23,29,48,.08);  /* 外壳发丝边 */
+  --border:rgba(23,29,48,.08);
+  --border-strong:rgba(23,29,48,.16);
+  --text-1:#232733;         /* 深墨，禁纯黑 */
+  --text-2:#5A6070;         /* 次级（对 --bg 5.7:1） */
+  --text-3:#8A90A0;         /* 家具小字，只用于页脚 */
+  --accent:#A93A66;         /* 莓红 */
+  --accent-soft:#FFD6E0;    /* 软粉（药丸底） */
+  --accent-ink:#FFFFFF;
+  --pastel-pink:#FFD6E0;    --pastel-pink-ink:#8E2F4F;
+  --pastel-blue:#CDE8FF;    --pastel-blue-ink:#1D5C93;
+  --pastel-yellow:#FFF1B8;  --pastel-yellow-ink:#7A5A00;
+  --radius-shell:32px;      /* 外壳 2rem */
+  --radius-core:24px;       /* 白芯 = 2rem - 8px，同心圆角 */
+  --shadow-ambient:0 32px 64px rgba(30,40,80,.09), 0 10px 24px rgba(30,40,80,.05); /* 极散环境影 */
+  font-family:'Inter','Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 变体：只换强调色与它的软底，粉彩三兄弟与底盘不动 ---- */
+.tpl-soft-pastel.sp-sage{--accent:#3F6849;--accent-soft:#DCEADF}
+.tpl-soft-pastel.sp-honey{--accent:#8F5B00;--accent-soft:#F5E7C4}
+
+/* ---- 底盘：沿用 base.css 的 flex 纵向居中，只改留白与底色。空气感 = 大留白 + 浮动卡 ---- */
+.tpl-soft-pastel .slide{padding:80px 110px;background:var(--bg)}
+
+/* ---- 字阶：超大加粗（Inter 800），中文走 Noto Sans SC 加粗 ---- */
+.tpl-soft-pastel .h1{font-size:96px;line-height:1.06;font-weight:800;letter-spacing:-.035em;color:var(--text-1)}
+.tpl-soft-pastel .h2{font-size:56px;line-height:1.12;font-weight:800;letter-spacing:-.03em;color:var(--text-1)}
+.tpl-soft-pastel h4{color:var(--text-1);font-weight:700}
+.tpl-soft-pastel .lede{font-size:25px;line-height:1.75;color:var(--text-2);font-weight:400}
+.tpl-soft-pastel .deck-footer{font-size:15px;color:var(--text-3);letter-spacing:.02em}
+
+/* ---- 眉标药丸：标题前的一枚壳层小徽章 ---- */
+.tpl-soft-pastel .sp-eyebrow{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;padding:8px 20px;border-radius:999px;background:var(--shell);border:1px solid var(--shell-line);font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2)}
+
+/* ---- 双层表圈：外壳（灰底 + 发丝边 + 8px 内衬 + 2rem 圆角）包白芯（同心 2rem-8px）---- */
+.tpl-soft-pastel .sp-shell{background:var(--shell);border:1px solid var(--shell-line);border-radius:var(--radius-shell);padding:8px;box-shadow:var(--shadow-ambient)}
+.tpl-soft-pastel .sp-core{background:var(--surface);border-radius:var(--radius-core);padding:30px 34px;height:100%}
+.tpl-soft-pastel .sp-core-row{display:flex;align-items:center;gap:18px;padding:20px 26px}
+
+/* ---- 粉彩药丸：更饱和的软粉 / 软蓝 / 软黄，配各自的深字 ---- */
+.tpl-soft-pastel .sp-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;font-size:15px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.tpl-soft-pastel .sp-pill-pink{background:var(--pastel-pink);color:var(--pastel-pink-ink)}
+.tpl-soft-pastel .sp-pill-blue{background:var(--pastel-blue);color:var(--pastel-blue-ink)}
+.tpl-soft-pastel .sp-pill-yellow{background:var(--pastel-yellow);color:var(--pastel-yellow-ink)}
+
+/* ---- 发布节奏行：白芯内的发丝分行 + 药丸圆号 ---- */
+.tpl-soft-pastel .sp-step{display:flex;align-items:center;gap:26px;padding:22px 6px;border-bottom:1px solid var(--border)}
+.tpl-soft-pastel .sp-step:first-child{padding-top:8px}
+.tpl-soft-pastel .sp-step:last-child{border-bottom:none;padding-bottom:8px}
+.tpl-soft-pastel .sp-step-n{flex:none;width:54px;height:54px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800}
+.tpl-soft-pastel .sp-step-t{flex:none;width:330px;font-size:23px;font-weight:700;color:var(--text-1);letter-spacing:-.01em}
+.tpl-soft-pastel .sp-step-d{flex:1;font-size:18px;color:var(--text-2);line-height:1.6}
+
+/* ---- 双壳数字卡：数字是主视觉，800 字重 + 收紧字距 ---- */
+.tpl-soft-pastel .sp-stat-v{font-size:84px;line-height:1;font-weight:800;letter-spacing:-.03em;color:var(--text-1)}
+.tpl-soft-pastel .sp-stat-u{font-size:26px;font-weight:700;color:var(--text-3);margin-left:6px}
+.tpl-soft-pastel .sp-stat-l{margin-top:16px;font-size:22px;font-weight:700;color:var(--text-1)}
+.tpl-soft-pastel .sp-stat-note{margin:8px 0 0;font-size:18px;color:var(--text-2);line-height:1.55}
+
+/* ---- 时间线：药丸圆点浮在淡线连接段上，只有圆点允许裸在底上。
+   连接段逐节点绘制（::before 从本节点圆点画到下一个圆点左缘），
+   线正好停在最后一个节点，不甩尾巴；依赖 gap:36px 与圆点直径 20px。 ---- */
+.tpl-soft-pastel .sp-tl{display:flex;gap:36px;margin-top:8px}
+.tpl-soft-pastel .sp-tl-item{flex:1;position:relative}
+.tpl-soft-pastel .sp-tl-item:not(:last-child)::before{content:"";position:absolute;top:9px;left:20px;right:-36px;height:2px;background:var(--border-strong)}
+.tpl-soft-pastel .sp-tl-dot{position:relative;z-index:1;width:20px;height:20px;border-radius:50%;background:var(--accent-soft);box-shadow:0 0 0 6px var(--bg)}
+.tpl-soft-pastel .sp-tl-t{margin-top:20px;font-size:24px;font-weight:800;letter-spacing:-.01em;color:var(--text-1)}
+.tpl-soft-pastel .sp-tl-d{margin-top:8px;font-size:18px;color:var(--text-2);line-height:1.6}
+
+/* ---- 用户原声：超大加粗引文 ---- */
+.tpl-soft-pastel .sp-quote{font-size:58px;line-height:1.45;font-weight:800;letter-spacing:-.02em;color:var(--text-1);max-width:24em;margin:0}
+.tpl-soft-pastel .sp-src{margin:0;font-size:18px;font-weight:500;color:var(--text-3)}
+
+/* ---- 药丸按钮：全圆角 + 右端嵌套小圆图标位（图标不裸放）---- */
+.tpl-soft-pastel .sp-btn{display:inline-flex;align-items:center;gap:18px;padding:14px 14px 14px 32px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:21px;font-weight:700;letter-spacing:.02em}
+.tpl-soft-pastel .sp-orb{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:20px}
+
+/* ---- 迷你步骤卡里的一句话 ---- */
+.tpl-soft-pastel .sp-mini-t{margin:0;font-size:20px;font-weight:600;color:var(--text-1);line-height:1.5}
