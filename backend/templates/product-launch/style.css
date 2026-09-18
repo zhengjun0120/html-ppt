@@ -30,11 +30,11 @@
 .tpl-product-launch .price-card{padding:40px 32px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface);text-align:left}
 .tpl-product-launch .price-card.pro{background:#0a0a12;color:#fff;border-color:#0a0a12;transform:scale(1.04);box-shadow:0 30px 80px rgba(255,90,54,.25)}
 .tpl-product-launch .price-card.pro .dim{color:rgba(255,255,255,.7)}
-.tpl-product-launch .price-card h4{font-size:16px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+.tpl-product-launch .price-card h4{font-size:24px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
 .tpl-product-launch .price-card.pro h4{color:var(--accent-2)}
 .tpl-product-launch .price-card .amount{font-size:64px;font-weight:900;letter-spacing:-.035em;margin:14px 0}
 .tpl-product-launch .price-card ul{list-style:none;padding:0;margin:20px 0 0}
-.tpl-product-launch .price-card li{padding:8px 0;font-size:15px;color:var(--text-2);border-top:1px solid var(--border)}
+.tpl-product-launch .price-card li{padding:8px 0;font-size:18px;color:var(--text-2);border-top:1px solid var(--border)}
 .tpl-product-launch .price-card.pro li{color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.12)}
 .tpl-product-launch .cta-btn{display:inline-block;padding:20px 40px;border-radius:999px;background:var(--grad);color:#fff;font-weight:700;font-size:20px;box-shadow:0 20px 50px rgba(255,90,54,.4)}
 .tpl-product-launch .testimonial{max-width:44ch;font-family:'Playfair Display',serif;font-size:44px;line-height:1.25;font-weight:500;letter-spacing:-.01em}

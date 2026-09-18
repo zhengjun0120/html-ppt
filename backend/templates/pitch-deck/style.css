@@ -25,7 +25,7 @@
 .tpl-pitch-deck .num-tag{font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:var(--accent);letter-spacing:.12em}
 .tpl-pitch-deck .big-q{font-family:'Playfair Display',serif;font-size:56px;line-height:1.15;font-weight:700;letter-spacing:-.02em;max-width:22ch}
 .tpl-pitch-deck .metric{display:flex;flex-direction:column;gap:6px}
-.tpl-pitch-deck .metric .n{font-size:72px;font-weight:900;letter-spacing:-.035em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+.tpl-pitch-deck .metric .n{font-size:80px;font-weight:900;letter-spacing:-.035em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
 .tpl-pitch-deck .metric .l{color:var(--text-2);font-size:16px}
 .tpl-pitch-deck .team-card{text-align:center;padding:32px 20px}
 .tpl-pitch-deck .avatar{width:96px;height:96px;border-radius:50%;margin:0 auto 14px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:32px}
@@ -34,8 +34,8 @@
 .tpl-pitch-deck .ask-box .dim{color:rgba(255,255,255,.85)}
 .tpl-pitch-deck .traction-bar{display:flex;align-items:flex-end;gap:14px;height:240px;margin-top:24px}
 .tpl-pitch-deck .traction-bar .bar{flex:1;background:var(--grad);border-radius:8px 8px 0 0;position:relative;min-height:20px}
-.tpl-pitch-deck .traction-bar .bar span{position:absolute;bottom:-28px;left:0;right:0;text-align:center;font-size:13px;color:var(--text-3)}
-.tpl-pitch-deck .traction-bar .bar em{position:absolute;top:-28px;left:0;right:0;text-align:center;font-size:14px;font-weight:700;font-style:normal;color:var(--text-1)}
+.tpl-pitch-deck .traction-bar .bar span{position:absolute;bottom:-28px;left:0;right:0;text-align:center;font-size:18px;color:var(--text-3)}
+.tpl-pitch-deck .traction-bar .bar em{position:absolute;top:-28px;left:0;right:0;text-align:center;font-size:18px;font-weight:700;font-style:normal;color:var(--text-1)}
 .tpl-pitch-deck .section-num{font-size:220px;font-weight:900;line-height:.9;color:var(--surface-2);position:absolute;right:72px;bottom:40px;z-index:0;letter-spacing:-.05em}
 .tpl-pitch-deck .slide > *{position:relative;z-index:1}
 .tpl-pitch-deck .deck-footer{color:var(--text-3)}

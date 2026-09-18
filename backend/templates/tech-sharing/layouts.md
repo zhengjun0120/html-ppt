@@ -123,7 +123,7 @@
   <div class="grid g2 mt-l" style="align-items:start">
     <div>
       <p class="lede">{{概念讲解，40-70 字，代码名词用 <span class="mono">}}</p>
-      <p class="dim mt-m" style="font-size:16px">{{补充：边界、代价或反例，20-40 字}}</p>
+      <p class="dim mt-m" style="font-size:18px">{{补充：边界、代价或反例，20-40 字}}</p>
       <div class="mt-l">
         <span class="tag">{{关键术语1}}</span> <span class="tag">{{关键术语2}}</span>
       </div>
@@ -156,7 +156,7 @@
     <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>{{文件名}}</span></div>
 <pre><span class="kw">{{代码 10-22 行，语法着色用 kw/fn/str/cmt/num}}</span></pre>
   </div>
-  <p class="dim mt-m" style="font-size:15px">{{这段代码的关键一行在做什么，20-40 字}}</p>
+  <p class="dim mt-m" style="font-size:17px">{{这段代码的关键一行在做什么，20-40 字}}</p>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```

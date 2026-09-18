@@ -99,7 +99,7 @@ const v2MeasureAllJS = `(function(){
     var all = sec.querySelectorAll('*');
     for (var a = 0; a < all.length; a++) {
       var el = all[a];
-      if (el.closest('.notes, .deck-footer, .deck-header, .kicker, .tag, .slide-number')) continue; // 讲稿、页脚页眉与 kicker/tag 是模板定死的小字设计，不参与最小字号判定（只看真实内容）
+      if (el.closest('.notes, .deck-footer, .deck-header, .kicker, .eyebrow, .tag, .slide-number')) continue; // 讲稿、页脚页眉与 kicker/眉标/tag 是模板定死的小字设计，不参与最小字号判定（只看真实内容）
       var fs = parseFloat(getComputedStyle(el).fontSize);
       if (fs > 0 && fs < minFont) minFont = fs;
     }
@@ -338,8 +338,9 @@ func DigestV2(d *Deck2) string {
 		if s.OverflowX {
 			flags = append(flags, "横向溢出")
 		}
-		// MinFontPx==0 是"没量到"（测试夹具/无内容页），不是"小到 0"——把它当小字号会误报
-		if s.MinFontPx > 0 && s.MinFontPx < 18 {
+		// 投影基准：1920 画布等比缩放后，14px 设计字≈9px 物理。全模板字号提级后
+		// 内容文字下限 16-18px，这里 15 起提示、13 起硬判（比提级前的 18/14 收紧了实际效果）。
+		if s.MinFontPx > 0 && s.MinFontPx < 15 {
 			flags = append(flags, fmt.Sprintf("最小字号 %.0fpx 偏小", s.MinFontPx))
 		}
 		if s.FillPct > 0 && s.FillPct < 55 {
@@ -365,7 +366,7 @@ func HardFindingsV2(d *Deck2) []string {
 		if s.OverflowY || s.OverflowX {
 			out = append(out, fmt.Sprintf("第 %d 页内容溢出画布（程序硬判定）", s.Index+1))
 		}
-		if s.MinFontPx > 0 && s.MinFontPx < 14 {
+		if s.MinFontPx > 0 && s.MinFontPx < 13 {
 			out = append(out, fmt.Sprintf("第 %d 页最小字号 %.0fpx 低于投影下限（程序硬判定）", s.Index+1, s.MinFontPx))
 		}
 		// 大面积留白与溢出同样会让观众觉得"没做完"——deck-0031 实测教训：

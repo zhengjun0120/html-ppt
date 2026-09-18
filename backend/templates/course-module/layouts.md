@@ -59,7 +59,7 @@
       <li>{{目标 4}}</li>
     </ul>
     <h5>进度</h5>
-    <p class="dim" style="font-size:13px">第 {{页码}} / {{总页数}} 页 · 约 {{分钟数}} 分钟</p>
+    <p class="dim" style="font-size:16px">第 {{页码}} / {{总页数}} 页 · 约 {{分钟数}} 分钟</p>
   </aside>
   <div class="main">
     <p class="kicker">objectives</p>
@@ -90,7 +90,7 @@
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
     <h5>Key terms</h5>
-    <p class="dim" style="font-size:13px">{{术语 a · 术语 b · 术语 c}}</p>
+    <p class="dim" style="font-size:16px">{{术语 a · 术语 b · 术语 c}}</p>
   </aside>
   <div class="main">
     <p class="kicker">core concept</p>
@@ -122,7 +122,7 @@
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
     <h5>Try it yourself</h5>
-    <p class="dim" style="font-size:13px">{{给学员的一句动手提示，15-30 字}}</p>
+    <p class="dim" style="font-size:16px">{{给学员的一句动手提示，15-30 字}}</p>
   </aside>
   <div class="main">
     <p class="kicker">worked example</p>
@@ -177,7 +177,7 @@
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
     <h5>怎么读</h5>
-    <p class="dim" style="font-size:13px">{{口径说明或容易误读的点，20-45 字}}</p>
+    <p class="dim" style="font-size:16px">{{口径说明或容易误读的点，20-45 字}}</p>
   </aside>
   <div class="main">
     <p class="kicker">key numbers</p>
@@ -187,7 +187,7 @@
       <div class="stat"><div class="stat-v">{{数值}}<span class="stat-u">{{单位}}</span></div><div class="stat-l">{{指标名，≤12 字}}</div><p class="stat-note">{{口径/年份，12-30 字}}</p></div>
       <div class="stat"><div class="stat-v">{{数值}}<span class="stat-u">{{单位}}</span></div><div class="stat-l">{{指标名，≤12 字}}</div><p class="stat-note">{{口径/年份，12-30 字}}</p></div>
     </div>
-    <p class="dim mt-m" style="font-size:14px">来源：{{数据来源}}</p>
+    <p class="dim mt-m" style="font-size:17px">来源：{{数据来源}}</p>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
@@ -209,7 +209,7 @@
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
     <h5>怎么看</h5>
-    <p class="dim" style="font-size:13px">{{读这条时间线的方法，15-35 字}}</p>
+    <p class="dim" style="font-size:16px">{{读这条时间线的方法，15-35 字}}</p>
   </aside>
   <div class="main">
     <p class="kicker">milestones</p>
@@ -242,21 +242,21 @@
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
     <h5>Time</h5>
-    <p class="dim" style="font-size:13px">{{时长 · 独立/组队}}</p>
+    <p class="dim" style="font-size:16px">{{时长 · 独立/组队}}</p>
   </aside>
   <div class="main">
     <p class="kicker">exercise</p>
     <h2 class="h2 mt-s">{{动手任务，≤14 字}}</h2>
     <p class="lede mt-m">{{任务描述，≤30 字}}</p>
     <div class="exercise mt-l">
-      <p style="margin:0;font-size:18px;color:var(--text-1)"><b>要求</b></p>
+      <p style="margin:0;font-size:20px;color:var(--text-1)"><b>要求</b></p>
       <ol style="color:var(--text-2);line-height:1.8;margin:10px 0 0">
         <li>{{要求 1，15-35 字}}</li>
         <li>{{要求 2，15-35 字}}</li>
         <li>{{要求 3，15-35 字}}</li>
       </ol>
     </div>
-    <p class="dim mt-m" style="font-size:14px">卡住了？{{一句提示}}</p>
+    <p class="dim mt-m" style="font-size:17px">卡住了？{{一句提示}}</p>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
@@ -278,16 +278,16 @@
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
     <h5>Self-assess</h5>
-    <p class="dim" style="font-size:13px">应该能拿到 1/1。</p>
+    <p class="dim" style="font-size:16px">应该能拿到 1/1。</p>
   </aside>
   <div class="main">
     <p class="kicker">check your understanding</p>
     <h2 class="h2 mt-s">{{题干，≤30 字}}</h2>
     <div class="stack mt-l">
-      <div class="mcq"><div class="letter">A</div><div><b>{{选项 A，≤20 字}}</b><p class="dim" style="font-size:13px;margin:4px 0 0">{{对/错的一句话解释}}</p></div></div>
-      <div class="mcq correct"><div class="letter">B</div><div><b>{{正确选项，≤20 字}}</b><p class="dim" style="font-size:13px;margin:4px 0 0"><b style="color:var(--accent)">✓ 正确。</b>{{为什么对}}</p></div></div>
-      <div class="mcq"><div class="letter">C</div><div><b>{{选项 C，≤20 字}}</b><p class="dim" style="font-size:13px;margin:4px 0 0">{{错在哪}}</p></div></div>
-      <div class="mcq"><div class="letter">D</div><div><b>{{选项 D，≤20 字}}</b><p class="dim" style="font-size:13px;margin:4px 0 0">{{错在哪}}</p></div></div>
+      <div class="mcq"><div class="letter">A</div><div><b>{{选项 A，≤20 字}}</b><p class="dim" style="font-size:16px;margin:4px 0 0">{{对/错的一句话解释}}</p></div></div>
+      <div class="mcq correct"><div class="letter">B</div><div><b>{{正确选项，≤20 字}}</b><p class="dim" style="font-size:16px;margin:4px 0 0"><b style="color:var(--accent)">✓ 正确。</b>{{为什么对}}</p></div></div>
+      <div class="mcq"><div class="letter">C</div><div><b>{{选项 C，≤20 字}}</b><p class="dim" style="font-size:16px;margin:4px 0 0">{{错在哪}}</p></div></div>
+      <div class="mcq"><div class="letter">D</div><div><b>{{选项 D，≤20 字}}</b><p class="dim" style="font-size:16px;margin:4px 0 0">{{错在哪}}</p></div></div>
     </div>
   </div>
   <div class="notes">{{讲稿：为什么对、其余错在哪}}</div>
