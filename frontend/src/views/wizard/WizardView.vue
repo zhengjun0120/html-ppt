@@ -38,8 +38,9 @@ const ROUTE_STEP: Record<string, WizardStep> = {
 
 const routeStep = computed<WizardStep>(() => ROUTE_STEP[route.name as string] ?? 'clarify')
 const deckId = computed(() => chat.deckId)
-const chatOpen = ref(false)
-const chatLocked = computed(() => routeStep.value === 'wizard-clarify') // 对话已是主区域
+// 抽屉默认态跟屏幕宽：桌面常驻右栏，移动端收起（浮动唤出钮）
+const chatOpen = ref(window.matchMedia('(min-width: 768px)').matches)
+const chatLocked = computed(() => routeStep.value === 'clarify') // 对话已是主区域
 
 const stopPreviewRefresh = usePreviewAutoRefresh(chat, () => {
   previewKey.value += 1
@@ -52,12 +53,22 @@ onMounted(async () => {
   await enforce()
 })
 
-// 阶段推进 → 自动前跳到规范路由（迭代 → /decks/:id）
+// 阶段推进 → 自动前跳到规范路由（迭代 → /decks/:id）。
+// 面板组件不做路由，这里是"大纲产出/确认大纲/选模板后换页"的唯一驱动。
 watch(
   () => wizard.step,
-  () => void enforce(),
+  (step) => {
+    if (!step) return
+    if (step === 'iterate' && wizard.deckId) {
+      void router.replace(STEP_ROUTES.iterate(wizard.deckId))
+      return
+    }
+    if (stepOrder(step) > stepOrder(routeStep.value)) {
+      void router.replace(STEP_ROUTES[step](wizard.deckId))
+    }
+  },
 )
-// 路由切换（stepper 点击）→ 校验目标步合法
+// 路由切换（stepper 点击回看）→ 只拦"超前"（跳到尚未到达的步骤），允许回看旧步骤
 watch(routeStep, () => void enforce())
 
 /** 守卫：目标步超前于 deck 实际阶段时，拉回当前阶段的规范路由 */
@@ -105,9 +116,9 @@ watch(
   },
 )
 
-const showOutline = computed(() => routeStep.value === 'wizard-outline')
-const showGallery = computed(() => routeStep.value === 'wizard-template')
-const showGenerating = computed(() => routeStep.value === 'wizard-generate')
+const showOutline = computed(() => routeStep.value === 'outline')
+const showGallery = computed(() => routeStep.value === 'template')
+const showGenerating = computed(() => routeStep.value === 'generate')
 const inputLockedHint = computed(() =>
   wizard.locksInput ? '请在模板页选择一个模板（这一步确定整套视觉，对话里做不了）' : '',
 )
@@ -152,11 +163,10 @@ const headTitle = computed(
       </div>
     </div>
 
-    <!-- 对话抽屉：非澄清步可展开（大纲修订通道 / 生成过程监控） -->
+    <!-- 对话抽屉：非澄清步展开（大纲修订通道 / 生成过程监控）。移动端全屏浮层，桌面右侧定宽栏 -->
     <aside
-      v-if="!chatLocked"
-      class="min-h-0 w-full shrink-0 flex-col border-l border-line bg-surface md:flex md:w-[380px]"
-      :class="chatOpen ? 'fixed inset-0 z-30 flex md:relative' : 'hidden'"
+      v-if="!chatLocked && chatOpen"
+      class="fixed inset-0 z-30 flex min-h-0 w-full flex-col bg-surface md:relative md:inset-auto md:z-auto md:w-[380px] md:shrink-0 md:border-l md:border-line"
     >
       <div class="flex items-center justify-between border-b border-line px-3 py-1.5">
         <span class="text-[12.5px] font-semibold text-ink-2">对话</span>

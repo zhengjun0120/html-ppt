@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 
-import { deckV2Api, OutlineConflictError, type DeckFile, type DeckStage, type Outline, type TemplateVariant } from '@/api/deckV2'
-import { templateApi, type TemplateMeta } from '@/api/templates'
+import { deckV2Api, OutlineConflictError, type DeckFile, type DeckStage, type Outline } from '@/api/deckV2'
+import { templateApi, type TemplateMeta, type TemplateVariant } from '@/api/templates'
 
 /**
  * deck-v2 向导状态：阶段、大纲、模板。
@@ -13,8 +13,8 @@ import { templateApi, type TemplateMeta } from '@/api/templates'
 
 export type WizardStep = 'clarify' | 'outline' | 'template' | 'generate' | 'iterate'
 
-const STAGE_TO_STEP: Record<DeckStage | 'clarifying', WizardStep> = {
-  clarifying: 'clarify',
+const STAGE_TO_STEP: Record<DeckStage, WizardStep> = {
+  draft: 'clarify',
   outlining: 'outline',
   outline_review: 'outline',
   selecting_template: 'template',
@@ -64,22 +64,32 @@ export const useWizardStore = defineStore('wizard', {
 
   getters: {
     isV2: (s) => s.format === 'v2',
-    step: (s): WizardStep | null => {
-      if (!s.isV2) return null
-      if (s.stage === 'outlining' || s.stage === 'outline_review') {
+    // 跨 getter 引用必须用 this（store 实例）：箭头写法 s.isV2 取的是 state，
+    // 恒为 undefined——会让整台阶段机哑火（step 恒 null，向导永远不跳页）。
+    step(): WizardStep | null {
+      if (!this.isV2 || !this.stage) return null
+      if (this.stage === 'outlining' || this.stage === 'outline_review') {
         // 有大纲可看 = 大纲步骤；还在聊需求 = 澄清步骤
-        return s.outline ? 'outline' : 'clarify'
+        return this.outline ? 'outline' : 'clarify'
       }
-      return STAGE_TO_STEP[s.stage] ?? null
+      return STAGE_TO_STEP[this.stage] ?? null
     },
     /** 向导接管输入框：选模板期间聊天锁定（D 系决策 R3：这一步在对话里做不了） */
-    locksInput: (s) => s.isV2 && s.stage === 'selecting_template',
+    locksInput(): boolean {
+      return this.isV2 && this.stage === 'selecting_template'
+    },
     /** 主区域显示大纲面板 */
-    showOutline: (s) => s.isV2 && s.stage === 'outline_review',
+    showOutline(): boolean {
+      return this.isV2 && this.stage === 'outline_review'
+    },
     /** 主区域显示模板画廊 */
-    showGallery: (s) => s.isV2 && s.stage === 'selecting_template',
+    showGallery(): boolean {
+      return this.isV2 && this.stage === 'selecting_template'
+    },
     /** 主区域显示生成进度 */
-    showGenerating: (s) => s.isV2 && s.stage === 'generating',
+    showGenerating(): boolean {
+      return this.isV2 && this.stage === 'generating'
+    },
     defaultVariantId: (s) => s.variants[0]?.id ?? 'default',
   },
 

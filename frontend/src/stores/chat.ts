@@ -206,8 +206,12 @@ export const useChatStore = defineStore('chat', {
             // 阶段迁移事件是向导刷新的权威信号：done 事件先于后端的阶段落库
             // 到达（runLoop 内 emit done → 返回后才 FinishGeneration），只靠
             // 流结束时的 refresh 会拉到旧阶段，主区域卡在生成进度页。
+            // 冷启动时向导 store 还没绑 deckId，refresh() 会空转，须走 syncFromChat。
             import('@/stores/wizard')
-              .then(({ useWizardStore }) => useWizardStore().refresh())
+              .then(({ useWizardStore }) => {
+                const w = useWizardStore()
+                return p.deck_id ? w.syncFromChat(p.deck_id) : w.refresh()
+              })
               .catch(() => {})
           }
           break

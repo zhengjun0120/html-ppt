@@ -1,4 +1,5 @@
 import { authedUrl, request } from './client'
+import type { TemplateVariant } from './templates'
 
 /** deck-v2 管线类型与接口（与 service/deck/v2.go 的 JSON 形状逐字段对齐） */
 
@@ -64,7 +65,7 @@ export const deckV2Api = {
 
   /** 面板直改大纲（整份替换 + 乐观锁）。409 = 版本冲突 */
   async putOutline(deckId: string, version: number, outline: Outline): Promise<{ version: number }> {
-    const res = await fetchWithAuth(`/api/decks/${deckId}/outline`, {
+    const res = await fetchWithAuth<{ version: number }>(`/api/decks/${deckId}/outline`, {
       method: 'PUT',
       body: JSON.stringify({ version, outline }),
     })

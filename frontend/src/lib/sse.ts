@@ -29,7 +29,7 @@ export async function* iterateSse(res: Response): AsyncGenerator<SseFrame> {
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
-      buffer += decoder.decode(value, { stream: true }).replaceAll('\r\n', '\n')
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
       let idx: number
       while ((idx = buffer.indexOf('\n\n')) !== -1) {
         const raw = buffer.slice(0, idx)

@@ -103,7 +103,7 @@ async function start() {
         class="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-[12px] transition-colors"
         :class="selected === ut.id ? 'border-accent bg-accent-soft text-ink' : 'border-line bg-surface text-ink-2 hover:border-accent'"
         :title="ut.name + '（' + (ut.visibility === 'public' ? '公开' : '私有') + '）'"
-        @click="pick(ut.id); selectedVariant = ut.variants?.[0]?.id ?? 'default'"
+        @click="pick(ut.id)"
       >
         {{ ut.name }}
         <span class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">我的</span>

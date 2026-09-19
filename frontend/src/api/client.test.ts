@@ -39,7 +39,7 @@ describe('api client', () => {
 
   it('成功返回数据本体，并带 Authorization 头', async () => {
     configureClient({ getToken: () => 'token-y' })
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
       new Response(JSON.stringify([{ id: 'deck-0001', title: 'T' }]), { status: 200 }),
     )
     vi.stubGlobal('fetch', fetchMock)

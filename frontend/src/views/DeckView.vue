@@ -106,7 +106,7 @@ function newConversation() {
         <select
           class="w-full cursor-pointer rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 outline-none focus-visible:border-accent"
           :value="chat.sessionId ?? 0"
-          @change="switchSession(deckId.value, (id) => wizardSync(id), Number(($event.target as HTMLSelectElement).value))"
+          @change="switchSession(deckId, (id) => wizardSync(id), Number(($event.target as HTMLSelectElement).value))"
         >
           <option v-if="chat.sessionId == null" :value="0">本次对话</option>
           <option v-for="s in sessions" :key="s.id" :value="s.id">
