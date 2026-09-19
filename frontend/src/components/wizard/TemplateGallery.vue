@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { PhCheck, PhCaretLeft, PhCaretRight, PhPresentationChart } from '@phosphor-icons/vue'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { PhCheck, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
-import { templateApi } from '@/api/templates'
-import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
-import { PhPlus } from '@phosphor-icons/vue'
+import { templateApi, type TemplateVariant } from '@/api/templates'
+import { userTemplateApi, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
 import { useChatStore } from '@/stores/chat'
 import { useWizardStore } from '@/stores/wizard'
 import { useToast } from '@/stores/toast'
 
 /**
  * 模板画廊（gate 2 的主区域）：必选一个模板 + 变体，确认后触发生成。
- * plan-v3 C2 升级：
- *   - 选中项的 live 预览走 /api/templates/:id/preview?variant=（服务端换肤，
- *     切变体只换 query，即时看效果）；
- *   - demo 支持 #/N 翻页（runtime 深链），预览不再只有封面；
- *   - 画布比例自适应（竖版模板如 xhs-post 也能正确缩放）。
+ * - 每张卡直接渲染模板 demo 第 1 页的缩略 iframe（loading=lazy 懒加载，
+ *   按 canvas 设计像素等比缩放），选中后切变体/翻页预览整本；
+ *   ——此前的占位图标让画廊没有任何一眼可见的视觉预览。
+ * - /api/templates 是"内置+用户层"合并视图：用户模板排在最前并带"我的"徽标，
+ *   其余按 id 排序。（此前用户模板是颗小 chip，点了之后预览渲染在屏幕外的
+ *   卡片里，看起来就像"没有预览"。）
  */
 
 const wizard = useWizardStore()
@@ -35,47 +35,88 @@ void wizard.loadTemplates().catch(() => toast.error('模板清单加载失败'))
 void userTemplateApi.list().then((r) => (userTemplates.value = r)).catch(() => {})
 void userTemplateApi.community().then((r) => (community.value = r)).catch(() => {})
 
-const selectedMeta = computed(() => wizard.templates.find((t) => t.id === selected.value))
-const canStart = computed(() => !!selected.value && !wizard.busy && !starting.value && chat.sessionId != null)
+interface GalleryCard {
+  id: string
+  name: string
+  description: string
+  scenario?: string[]
+  canvas: { w: number; h: number }
+  variants: TemplateVariant[]
+  mine?: boolean
+  published?: boolean
+}
+
+const mineInfo = computed(() => new Map(userTemplates.value.map((u) => [u.id, u])))
+const cards = computed<GalleryCard[]>(() => {
+  const all: GalleryCard[] = wizard.templates.map((t) => {
+    const ut = mineInfo.value.get(t.id)
+    return {
+      id: t.id,
+      name: ut ? ut.name : t.name,
+      description: ut ? ut.description : t.description,
+      scenario: ut ? undefined : t.scenario,
+      canvas: t.canvas,
+      variants: t.variants,
+      mine: !!ut,
+      published: ut?.status === 'published',
+    }
+  })
+  // 我的模板置顶，其余按 id 稳定排序
+  return [...all.filter((c) => c.mine), ...all.filter((c) => !c.mine)]
+})
+
+const selectedCard = computed(() => cards.value.find((c) => c.id === selected.value))
+const canStart = computed(
+  () => !!selectedCard.value && !wizard.busy && !starting.value && chat.sessionId != null,
+)
 
 function pick(id: string) {
   if (selected.value === id) return
   selected.value = id
   demoPage.value = 1
-  const tpl = wizard.templates.find((t) => t.id === id)
-  selectedVariant.value = tpl?.variants[0]?.id ?? 'default'
-  // 重新测量预览盒宽度（不同卡片宽度不同）
-  requestAnimationFrame(measure)
+  selectedVariant.value = selectedCard.value?.variants[0]?.id ?? 'default'
 }
 
-const previewBox = ref<HTMLElement | null>(null)
-const boxW = ref(0)
-let ro: ResizeObserver | null = null
-function measure() {
-  if (previewBox.value) boxW.value = previewBox.value.clientWidth
+// —— 每张卡的预览盒宽度测量（iframe 按 canvas 设计像素等比缩放要用）——//
+const boxWidths = ref<Record<string, number>>({})
+const boxEls = new Map<string, HTMLElement>()
+const ro = new ResizeObserver((es) => {
+  for (const e of es) {
+    const id = (e.target as HTMLElement).dataset.cardId
+    if (id) boxWidths.value[id] = e.contentRect.width
+  }
+})
+function setBoxRef(id: string) {
+  return (el: unknown) => {
+    if (el) {
+      const e = el as HTMLElement
+      boxEls.set(id, e)
+      ro.observe(e)
+    } else {
+      const old = boxEls.get(id)
+      if (old) ro.unobserve(old)
+      boxEls.delete(id)
+    }
+  }
 }
-onMounted(() => {
-  ro = new ResizeObserver((es) => {
-    for (const e of es) boxW.value = e.contentRect.width
-  })
-  if (previewBox.value) ro.observe(previewBox.value)
-})
-onBeforeUnmount(() => ro?.disconnect())
+onBeforeUnmount(() => ro.disconnect())
 
-/** iframe 按 canvas 设计像素渲染，scale 适配预览盒宽度（竖版/横版通吃） */
-const previewScale = computed(() => {
-  const w = selectedMeta.value?.canvas.w ?? 1920
-  return boxW.value > 0 ? boxW.value / w : 0.29
-})
+function scaleFor(c: GalleryCard): number {
+  const w = boxWidths.value[c.id]
+  return w && w > 0 ? w / c.canvas.w : 0.29
+}
+
 const previewSrc = computed(() =>
   selected.value ? templateApi.previewUrl(selected.value, selectedVariant.value, demoPage.value) : '',
 )
 
 async function start() {
-  if (!canStart.value || !selectedMeta.value) return
+  if (!canStart.value || !selectedCard.value) return
   starting.value = true
   try {
     await wizard.selectTemplate(selected.value, selectedVariant.value)
+    // 用户模板不在 store 的内置清单里，deck 元数据就绪前预览要用画布
+    wizard.canvas = selectedCard.value.canvas
     await chat.runGeneration(wizard.deckId)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '选择模板失败')
@@ -94,56 +135,39 @@ async function start() {
       </p>
     </div>
 
-    <!-- 我的模板（可用） -->
-    <div v-if="userTemplates.length" class="flex flex-wrap gap-2">
-      <button
-        v-for="ut in userTemplates"
-        :key="ut.id"
-        type="button"
-        class="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-[12px] transition-colors"
-        :class="selected === ut.id ? 'border-accent bg-accent-soft text-ink' : 'border-line bg-surface text-ink-2 hover:border-accent'"
-        :title="ut.name + '（' + (ut.visibility === 'public' ? '公开' : '私有') + '）'"
-        @click="pick(ut.id)"
-      >
-        {{ ut.name }}
-        <span class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">我的</span>
-      </button>
-    </div>
-
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       <button
-        v-for="t in wizard.templates"
-        :key="t.id"
+        v-for="c in cards"
+        :key="c.id"
         type="button"
         class="group flex cursor-pointer flex-col rounded-control border bg-surface text-left transition-all hover:border-accent"
-        :class="selected === t.id ? 'border-accent shadow-[0_0_0_3px_var(--ring)]' : 'border-line'"
-        @click="pick(t.id)"
+        :class="selected === c.id ? 'border-accent shadow-[0_0_0_3px_var(--ring)]' : 'border-line'"
+        @click="pick(c.id)"
       >
         <div
-          ref="previewBox"
+          :ref="setBoxRef(c.id)"
+          :data-card-id="c.id"
           class="relative w-full overflow-hidden rounded-t-control bg-surface-2"
-          :style="{ aspectRatio: `${t.canvas.w} / ${t.canvas.h}` }"
+          :style="{ aspectRatio: `${c.canvas.w} / ${c.canvas.h}` }"
         >
-          <!-- 选中即实时预览：服务端按变体换肤；iframe 按 canvas 设计像素等比缩放 -->
+          <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
           <iframe
-            v-if="selected === t.id"
-            :key="previewSrc"
-            :src="previewSrc"
+            :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1)"
+            :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
+            loading="lazy"
             class="pointer-events-none absolute left-0 top-0 border-0"
             :style="{
-              width: `${t.canvas.w}px`,
-              height: `${t.canvas.h}px`,
-              transform: `scale(${previewScale})`,
+              width: `${c.canvas.w}px`,
+              height: `${c.canvas.h}px`,
+              transform: `scale(${scaleFor(c)})`,
               transformOrigin: 'top left',
             }"
             sandbox="allow-scripts"
-            title="模板实时预览"
+            :title="c.name + ' 预览'"
+            aria-hidden="true"
           />
-          <div v-else class="flex h-full items-center justify-center text-ink-3">
-            <PhPresentationChart :size="28" />
-          </div>
           <span
-            v-if="selected === t.id"
+            v-if="selected === c.id"
             class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-on-accent"
           >
             <PhCheck :size="10" /> 已选
@@ -151,12 +175,14 @@ async function start() {
         </div>
         <div class="flex flex-col gap-1 p-3">
           <div class="flex items-center gap-2">
-            <span class="text-[13.5px] font-semibold text-ink">{{ t.name }}</span>
-            <span class="font-mono text-[10.5px] text-ink-3">{{ t.id }}</span>
+            <span class="text-[13.5px] font-semibold text-ink">{{ c.name }}</span>
+            <span v-if="c.mine" class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">我的模板</span>
+            <span v-if="c.mine && c.published" class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">已发布</span>
+            <span v-if="!c.mine" class="font-mono text-[10.5px] text-ink-3">{{ c.id }}</span>
           </div>
-          <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ t.description }}</p>
-          <div v-if="t.scenario?.length" class="flex flex-wrap gap-1">
-            <span v-for="s in t.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
+          <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ c.description }}</p>
+          <div v-if="c.scenario?.length" class="flex flex-wrap gap-1">
+            <span v-for="s in c.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
               {{ s }}
             </span>
           </div>
@@ -165,18 +191,20 @@ async function start() {
     </div>
 
     <div class="sticky bottom-0 mt-auto flex flex-wrap items-center gap-3 rounded-control border border-line bg-surface px-4 py-3">
-      <template v-if="selectedMeta">
-        <span class="text-[12.5px] text-ink-2">主题变体：</span>
-        <label
-          v-for="v in selectedMeta.variants"
-          :key="v.id"
-          class="flex cursor-pointer items-center gap-1.5 text-[12.5px]"
-          :class="selectedVariant === v.id ? 'font-semibold text-ink' : 'text-ink-3'"
-        >
-          <input v-model="selectedVariant" type="radio" :value="v.id" class="accent-[var(--accent)]" />
-          {{ v.name }}
-        </label>
-        <span class="mx-1 hidden h-4 w-px bg-line sm:inline-block" />
+      <template v-if="selectedCard">
+        <template v-if="selectedCard.variants.length">
+          <span class="text-[12.5px] text-ink-2">主题变体：</span>
+          <label
+            v-for="v in selectedCard.variants"
+            :key="v.id"
+            class="flex cursor-pointer items-center gap-1.5 text-[12.5px]"
+            :class="selectedVariant === v.id ? 'font-semibold text-ink' : 'text-ink-3'"
+          >
+            <input v-model="selectedVariant" type="radio" :value="v.id" class="accent-[var(--accent)]" />
+            {{ v.name }}
+          </label>
+          <span class="mx-1 hidden h-4 w-px bg-line sm:inline-block" />
+        </template>
         <span class="inline-flex items-center gap-1">
           <button
             class="cursor-pointer rounded border border-line px-1.5 py-0.5 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"

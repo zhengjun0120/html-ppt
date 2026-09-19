@@ -1,8 +1,10 @@
 import { request } from './client'
+import type { TemplateVariant } from './templates'
 
 /**
  * 用户自定义模板（plan-v3 B）：fork → 定制 → 门禁发布 → 社区使用。
- * 行类型与 store.UserTemplate 对齐。
+ * 行类型与 store.UserTemplate 对齐；canvas/variants 由后端从注册表补齐
+ * （画廊预览卡需要画布定比例、变体做换肤）。
  */
 export interface UserTemplateRow {
   id: string
@@ -16,6 +18,8 @@ export interface UserTemplateRow {
   publish_report?: string
   created_at: string
   updated_at: string
+  canvas?: { w: number; h: number }
+  variants?: TemplateVariant[]
 }
 
 export interface CommunityTemplate {
@@ -25,6 +29,8 @@ export interface CommunityTemplate {
   base_id: string
   author: string
   updated_at: string
+  canvas?: { w: number; h: number }
+  variants?: TemplateVariant[]
 }
 
 export interface PublishReport {
