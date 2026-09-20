@@ -24,7 +24,6 @@ import (
 
 const maxTurns = 20 //最大允许调用20轮llm请求
 
-
 // weekdayCN 给日期配一个中文星期：不配的话「上周末」「这周三」这类说法模型算不出来。
 // 数组下标直接就是 time.Weekday（周日=0），不需要转换。
 var weekdayCN = [...]string{"周日", "周一", "周二", "周三", "周四", "周五", "周六"}
@@ -344,6 +343,14 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		// 这一轮的所有事件（请求、工具、子过程）都归到 turn=i 下。
 		// 工具调用从 turnCtx 派生自己的工具作用域，兄弟工具之间不会互相污染
 		turnCtx := trace.WithTurn(ctx, i)
+		//预算将尽：提前吹哨，让模型把剩余轮次留给硬伤，而不是被硬掐后仓促收尾
+		if warn := scope.maxTurns - 4; warn > 0 && i == warn {
+			messages = append(messages, openai.UserMessage("工具调用预算还剩 4 轮：只修硬伤（溢出/截断/拒收的页），停止打磨性改动，然后准备收尾汇报"))
+			opt.Messages = messages
+			if err := as.persistSession(sess, messages); err != nil {
+				return false, rr, err
+			}
+		}
 		//预算花完了
 		if i > scope.maxTurns {
 			messages = append(messages, openai.UserMessage("工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"))
@@ -352,7 +359,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 			err := as.persistSession(sess, messages)
 			if err != nil {
 				return false, rr, err
-	}
+			}
 		}
 		msg, usage, streamErr := as.streamOnce(turnCtx, client, opt, &fullText, emit)
 		if streamErr != nil {
@@ -375,22 +382,22 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 			err := as.persistSession(sess, messages)
 			if err != nil {
 				return false, rr, err
-	}
+			}
 			// 汇总带上分项：扁平那四个字段保持"主循环口径"不动（前端契约），
 			// 真实总成本看 Usage.Total
 			summary := rec.Summary()
 			if emitErr := emit(StreamEvent{Type: EventTypeDone, Content: fullText.String(), PromptTokens: promptTokens, CompletionTokens: completionTokens, TotalTokens: totalTokens, CachedTokens: cachedTokens, Usage: &summary}); emitErr != nil {
 				return false, rr, fmt.Errorf("事件推送失败: %w", emitErr)
-	}
+			}
 			endRun(trace.StatusOK)
 			return false, rr, nil
-	}
+		}
 
 		messages = append(messages, msg.ToParam())
 		opt.Messages = messages
 		if err := as.persistSession(sess, messages); err != nil {
 			return false, rr, err
-	}
+		}
 
 		for _, tool := range msg.ToolCalls {
 			//判断是不是要调用提问用户
@@ -411,7 +418,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 						opt.Messages = messages
 						if err := as.persistSession(sess, messages); err != nil {
 							return false, rr, err
-	}
+						}
 						continue
 					}
 					//如果提问的问题大于6个小于1个 同上
@@ -421,7 +428,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 					opt.Messages = messages
 					if err := as.persistSession(sess, messages); err != nil {
 						return false, rr, err
-	}
+					}
 					continue
 				}
 				//如果要调用提问用户 则不可调用其他工具
@@ -444,14 +451,14 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				sess.PendingAsk = encodePendingAsk(pendingAsk{ToolCallID: tool.ID, RunID: rec.RunID()})
 				if err := as.persistSession(sess, messages); err != nil {
 					return false, rr, err
-	}
+				}
 				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments}); emitErr != nil {
 					return false, rr, fmt.Errorf("事件推送失败: %w", emitErr)
-	}
+				}
 				trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: `{"note":"已向用户提问，本轮暂停等回答"}`})
 				endRun(trace.StatusPaused)
 				return true, rr, nil
-	}
+			}
 			//普通工具调用
 			result, execErr := as.execTool(turnCtx, tool, emit, rr, scope)
 			if execErr != nil {
@@ -461,7 +468,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 			opt.Messages = messages
 			if err := as.persistSession(sess, messages); err != nil {
 				return false, rr, err
-	}
+			}
 		}
 		// 继续下一轮
 	}
@@ -469,12 +476,12 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 
 type emitKey struct{}
 
-func withEmit(ctx context.Context,emit func(StreamEvent) error) context.Context{
-	return context.WithValue(ctx,emitKey{},emit)
+func withEmit(ctx context.Context, emit func(StreamEvent) error) context.Context {
+	return context.WithValue(ctx, emitKey{}, emit)
 }
 
-func emitFrom(ctx context.Context) func(StreamEvent) error{
-	e,_ := ctx.Value(emitKey{}).(func(StreamEvent)error)
+func emitFrom(ctx context.Context) func(StreamEvent) error {
+	e, _ := ctx.Value(emitKey{}).(func(StreamEvent) error)
 	return e
 }
 
@@ -486,8 +493,8 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 	// 把归属挂进 ctx：工具内部（联网搜索的每一次子搜索、视觉审查的每一页截图）
 	// 因此不必知道自己在第几轮、call_id 是什么，只要 trace.Emit 就会自动归位
 	ctx = trace.WithTool(ctx, tool.Function.Name, tool.ID)
-	ctx = withEmit(ctx,func(e StreamEvent)error{
-		if e.ToolCallID == ""{
+	ctx = withEmit(ctx, func(e StreamEvent) error {
+		if e.ToolCallID == "" {
 			e.ToolCallID = tool.ID
 		}
 		return emit(e)
@@ -550,11 +557,11 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 	})
 
 	if callErr != "" {
-		if emitErr := emit(StreamEvent{Type: EventTypeToolError, Content: result,ToolCallID: tool.ID, ToolName: tool.Function.Name}); emitErr != nil {
+		if emitErr := emit(StreamEvent{Type: EventTypeToolError, Content: result, ToolCallID: tool.ID, ToolName: tool.Function.Name}); emitErr != nil {
 			return result, fmt.Errorf("事件推送失败: %w", emitErr)
 		}
 	} else {
-		if emitErr := emit(StreamEvent{Type: EventTypeToolCall, Content: result, ToolCallID: tool.ID,ToolName: tool.Function.Name}); emitErr != nil {
+		if emitErr := emit(StreamEvent{Type: EventTypeToolCall, Content: result, ToolCallID: tool.ID, ToolName: tool.Function.Name}); emitErr != nil {
 			// 这里原来写的是 `return result, err`，而那个 err 是上层已判为 nil 的变量，
 			// 于是"推送失败"被静默吞掉、循环拿着一个根本没发出去的工具结果继续往下跑
 			return result, fmt.Errorf("事件推送失败: %w", emitErr)
@@ -599,23 +606,23 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 			continue
 		}
 		delta := chunk.Choices[0].Delta
-		for _,tc :=range delta.ToolCalls {
+		for _, tc := range delta.ToolCalls {
 			idx := tc.Index
-			if idx < 0{
-				idx = 0	// 个别网关对单个工具调用用 -1，sdk 累加器内部就归到0
+			if idx < 0 {
+				idx = 0 // 个别网关对单个工具调用用 -1，sdk 累加器内部就归到0
 			}
-			if tc.ID != ""{
+			if tc.ID != "" {
 				// 只有首个片段会带id和完整name 后续片段只有index+arguments
-				if emitErr := emit(StreamEvent{Type:EventTypeToolStart,ToolIndex: idx,ToolCallID: tc.ID,ToolName: tc.Function.Name});emitErr != nil{
+				if emitErr := emit(StreamEvent{Type: EventTypeToolStart, ToolIndex: idx, ToolCallID: tc.ID, ToolName: tc.Function.Name}); emitErr != nil {
 					stream.Close()
-					return openai.ChatCompletionMessage{},openai.CompletionUsage{},fmt.Errorf("事件推送失败: %w",emitErr)
+					return openai.ChatCompletionMessage{}, openai.CompletionUsage{}, fmt.Errorf("事件推送失败: %w", emitErr)
 				}
 			}
 			// 流式推送参数
-			if tc.Function.Arguments != ""{
-				if emitErr := emit(StreamEvent{Type: EventTypeToolDelta,ToolIndex: idx,Content: tc.Function.Arguments});emitErr!=nil{
+			if tc.Function.Arguments != "" {
+				if emitErr := emit(StreamEvent{Type: EventTypeToolDelta, ToolIndex: idx, Content: tc.Function.Arguments}); emitErr != nil {
 					stream.Close()
-					return openai.ChatCompletionMessage{},openai.CompletionUsage{},fmt.Errorf("事件推送失败: %w",emitErr)
+					return openai.ChatCompletionMessage{}, openai.CompletionUsage{}, fmt.Errorf("事件推送失败: %w", emitErr)
 				}
 			}
 		}
