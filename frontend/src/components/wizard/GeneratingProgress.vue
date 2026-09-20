@@ -55,6 +55,17 @@ function stateOf(no: number): 'ok' | 'fail' | 'pending' {
       </div>
     </div>
 
+    <!-- 流被掐断（服务重启/网络中断）后进度会冻结在这里：run 走恢复端点，
+         从已写入的页继续，而不是让用户对着死进度干瞪眼 -->
+    <button
+      v-if="chat.canSend"
+      type="button"
+      class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-accent bg-accent-soft px-4 py-1.5 text-[12.5px] font-semibold text-ink transition-colors hover:border-accent"
+      @click="chat.runGeneration(wizard.deckId, true)"
+    >
+      {{ allDone ? '收尾中断了？继续生成' : '生成中断了？继续生成' }}
+    </button>
+
     <p class="text-[11.5px] text-ink-3">下方预览跟随写入实时生长；完成后自动进入「迭代」页继续修改。</p>
   </div>
 </template>

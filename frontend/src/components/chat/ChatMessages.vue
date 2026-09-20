@@ -11,7 +11,14 @@ import { useChatStore } from '@/stores/chat'
 const chat = useChatStore()
 const scrollBox = ref<HTMLElement | null>(null)
 
-// 追加/流式增长时贴底（签名 = 事件数 + 最后一条文本长度）
+// 追加/流式增长时跟随滚动，但只在用户本来就贴着底部时：往上翻了就让它停住，
+// 否则思考/长输出流式期间用户会被强制摁回底部，根本没法回看。
+// （签名 = 事件数 + 最后一条文本长度）
+const pinned = ref(true)
+function onScroll() {
+  const box = scrollBox.value
+  if (box) pinned.value = box.scrollHeight - box.scrollTop - box.clientHeight < 80
+}
 const growthSig = () => {
   const last = chat.events[chat.events.length - 1]
   return `${chat.events.length}:${last && 'text' in last ? last.text.length : 0}`
@@ -19,13 +26,30 @@ const growthSig = () => {
 watch(growthSig, () => {
   void nextTick(() => {
     const box = scrollBox.value
-    if (box) box.scrollTop = box.scrollHeight
+    if (box && pinned.value) box.scrollTop = box.scrollHeight
   })
 })
+// 切换/恢复会话：内容整体替换，重置为贴底
+watch(
+  () => chat.sessionId,
+  () => {
+    pinned.value = true
+    void nextTick(() => {
+      const box = scrollBox.value
+      if (box) box.scrollTop = box.scrollHeight
+    })
+  },
+)
+
+// 思考行的预览：流式期间显示最新一行，让"思考中…"变成可读的进度
+function thinkPreview(text: string): string {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  return lines.length ? lines[lines.length - 1] : ''
+}
 </script>
 
 <template>
-  <div ref="scrollBox" class="min-h-0 flex-1 overflow-y-auto p-3">
+  <div ref="scrollBox" class="min-h-0 flex-1 overflow-y-auto p-3" @scroll.passive="onScroll">
     <Empty
       v-if="chat.events.length === 0"
       title="开始与 agent 对话"
@@ -53,10 +77,10 @@ watch(growthSig, () => {
           <span v-if="e.streaming" class="mt-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-accent align-middle" />
         </div>
 
-        <!-- 思考块：折叠，闭合时不参与布局 -->
+        <!-- 思考块：折叠不占版面；流式期间折叠行显示最新一行思考（可读的进度感） -->
         <details v-else-if="e.kind === 'think'" class="max-w-[95%] self-start border-l-2 border-line-strong py-0.5 pl-2.5 text-[12px] text-ink-3">
-          <summary class="cursor-pointer select-none hover:text-ink-2">
-            {{ e.streaming ? '思考中…' : '已展开思考过程' }}
+          <summary class="block cursor-pointer select-none truncate hover:text-ink-2" :title="e.text">
+            {{ e.streaming ? thinkPreview(e.text) || '思考中…' : '已展开思考过程' }}
           </summary>
           <div class="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words">{{ e.text }}</div>
         </details>
