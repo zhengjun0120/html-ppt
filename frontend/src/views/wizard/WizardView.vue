@@ -52,7 +52,17 @@ onBeforeUnmount(stopPreviewRefresh)
 
 // 启动：恢复会话 + 同步向导状态，然后做一次守卫校正
 onMounted(async () => {
+  // /new 澄清入口 = 新建意图：清掉残留的向导状态（store 是全局单例，上一
+  // 文稿停在选模板时会锁输入框、stepper 高亮旧阶段）。?session 深链和非澄清
+  // 路由不动——后者是 DeckView 把半程文稿重定向过来的，deck 刚绑定好。
+  if (!route.query.session && routeStep.value === 'clarify') wizard.reset()
   await boot('', (id) => wizard.syncFromChat(id))
+  // 非澄清步进入时 chat 会话已被 boot('') 清空：把该 deck 最近的会话接回来，
+  // 右侧对话抽屉才能继续当修订通道
+  if (routeStep.value !== 'clarify' && wizard.deckId && chat.sessionId == null) {
+    await loadSessions(wizard.deckId)
+    if (sessions.value.length > 0) await chat.loadSession(sessions.value[0].id)
+  }
   await enforce()
   void probeResumable()
 })
@@ -70,7 +80,8 @@ function resumable(s: RecentSession): boolean {
 }
 
 async function probeResumable() {
-  if (route.query.session || chat.events.length > 0) return // 深链已恢复 / 已在聊
+  // 只在澄清入口探查：非澄清步是 DeckView 重定向进来的续稿场景，不该再弹横幅
+  if (route.query.session || routeStep.value !== 'clarify' || chat.events.length > 0) return
   try {
     const recent = await listRecentSessions(10)
     const hit = recent.find(resumable)

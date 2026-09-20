@@ -109,13 +109,10 @@ export const useWizardStore = defineStore('wizard', {
 
     /** chat.deckId 变化 / 会话恢复后调用：拉元数据同步阶段 */
     async syncFromChat(deckId: string) {
-      if (!deckId) {
-        // 无 deck 上下文 = 冷启动/新建意图：必须清掉残留状态。store 是全局单例，
-        // 上一个文稿的阶段（比如停在选模板）会泄漏给新会话——锁输入框、
-        // stepper 高亮旧阶段、守卫把人带进旧文稿的步骤页。
-        this.reset()
-        return
-      }
+      // 无 deck 上下文时不动现有状态：这里可能是 DeckView 重定向进向导
+      // （deck 刚在路由前绑定好，reset 会把半程文稿拉回 /new）。清理残留
+      // 是 /new 澄清入口自己的职责（WizardView 挂载时显式 reset）。
+      if (!deckId) return
       if (deckId === this.deckId) {
         // 同一 deck：refresh 但不折腾（阶段由后端守卫，本地只展示）
         await this.refresh()
