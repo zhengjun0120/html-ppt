@@ -151,10 +151,12 @@ const headTitle = computed(
         <OutlinePanel v-if="showOutline" class="h-full" />
         <TemplateGallery v-else-if="showGallery" class="h-full" />
         <GeneratingProgress v-else-if="showGenerating" class="h-full" />
-        <!-- 澄清步：对话即主区域 -->
+        <!-- 澄清步：对话即主区域。外层必须是 flex 列：ChatMessages 根节点的
+             flex-1/overflow-y-auto 依赖 flex 父级定高，否则消息区按内容长高、
+             被裁剪且无法滚动 -->
         <div v-else class="mx-auto flex h-full w-full max-w-[760px] flex-col">
-          <div class="min-h-0 flex-1 overflow-hidden px-4 pt-4">
-            <ChatMessages />
+          <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-4">
+            <ChatMessages class="min-h-0 flex-1" />
           </div>
           <div class="border-t border-line p-3">
             <ChatInput :locked-hint="inputLockedHint" />
