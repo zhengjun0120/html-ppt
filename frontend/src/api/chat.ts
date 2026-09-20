@@ -86,3 +86,20 @@ export async function listSessions(deckId: string): Promise<{ id: number; title:
   const { request } = await import('./client')
   return request(`/api/decks/${deckId}/chat/sessions`)
 }
+
+/** 跨 deck 的最近会话（/new 续接横幅用）。deck_stage 空 = 还没落 deck 的澄清对话 */
+export interface RecentSession {
+  id: number
+  deck_id: string
+  title: string
+  pending: boolean
+  deck_stage: string
+  deck_format: string
+  created_at: string
+  updated_at: string
+}
+
+export async function listRecentSessions(limit = 10): Promise<RecentSession[]> {
+  const { request } = await import('./client')
+  return request(`/api/chat/recent-sessions?limit=${limit}`)
+}

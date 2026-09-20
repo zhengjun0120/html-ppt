@@ -40,6 +40,27 @@ func (h *Handler) ListDeckSessions(c *gin.Context) {
 	response.OK(c, sessions)
 }
 
+// RecentSessions GET /api/chat/recent-sessions?limit=10 —— 用户跨 deck 的最近会话。
+//
+// /new 的"继续上次对话"横幅数据源：澄清中的会话在 write_outline 之前没有
+// deck 行，文稿列表和按 deck 查会话的接口都摸不到它，离开 /new 后唯一的
+// 入口就是这里。路径刻意用 recent-sessions 而不是 sessions/recent——
+// gin 的静态段与 :id 通配段同位会 panic（和 /templates/community 同一个坑）。
+func (h *Handler) RecentSessions(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	sessions, err := h.agent.RecentSessions(c.Request.Context(), uid, limit)
+	if err != nil {
+		response.Err(c, sessionErrStatus(err), err.Error())
+		return
+	}
+	response.OK(c, sessions)
+}
+
 // GetSessionMessages GET /api/chat/sessions/:id/messages?after_seq=N
 //
 // 返回一个会话的可回放消息列表（投影形状见 agent.Transcript）。

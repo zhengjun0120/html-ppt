@@ -73,6 +73,9 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			// 只读，不经过 agent 闸门——暂停中的会话照样能看历史。
 			guarded.GET("/decks/:id/chat/sessions", h.ListDeckSessions)
 			guarded.GET("/chat/sessions/:id/messages", h.GetSessionMessages)
+			// 跨 deck 最近会话（/new 续接横幅）。路径不能叫 /chat/sessions/recent：
+			// 与上面的 :id 通配段同位冲突。
+			guarded.GET("/chat/recent-sessions", h.RecentSessions)
 
 			guarded.GET("/decks/:id/history", h.ListDeckHistory)
 			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)

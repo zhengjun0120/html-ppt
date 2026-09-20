@@ -6,6 +6,8 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessages from '@/components/chat/ChatMessages.vue'
+import { listRecentSessions, type RecentSession } from '@/api/chat'
+import { useToast } from '@/stores/toast'
 import GeneratingProgress from '@/components/wizard/GeneratingProgress.vue'
 import OutlinePanel from '@/components/wizard/OutlinePanel.vue'
 import TemplateGallery from '@/components/wizard/TemplateGallery.vue'
@@ -27,6 +29,7 @@ import { useWizardStore, STEP_ROUTES, stepOrder, type WizardStep } from '@/store
 const route = useRoute()
 const router = useRouter()
 const wizard = useWizardStore()
+const toast = useToast()
 const { chat, sessions, previewKey, loadSessions, boot, switchSession } = useWorkspaceBoot()
 
 const ROUTE_STEP: Record<string, WizardStep> = {
@@ -51,7 +54,49 @@ onBeforeUnmount(stopPreviewRefresh)
 onMounted(async () => {
   await boot('', (id) => wizard.syncFromChat(id))
   await enforce()
+  void probeResumable()
 })
+
+// —— 续接横幅：澄清对话在 write_outline 之前没有 deck 行，文稿列表里
+// 看不见，离开 /new 后唯一入口。用户确认后才恢复，不自动抢占新对话。——
+
+const resumeBanner = ref<RecentSession | null>(null)
+
+/** 未走完向导的会话：还没落 deck（澄清中），或 deck 阶段还没到迭代 */
+const WIZARD_STAGES = new Set(['draft', 'outlining', 'outline_review', 'selecting_template', 'generating'])
+function resumable(s: RecentSession): boolean {
+  if (!s.deck_id) return true
+  return s.deck_format === 'v2' && WIZARD_STAGES.has(s.deck_stage)
+}
+
+async function probeResumable() {
+  if (route.query.session || chat.events.length > 0) return // 深链已恢复 / 已在聊
+  try {
+    const recent = await listRecentSessions(10)
+    const hit = recent.find(resumable)
+    const dismissed = sessionStorage.getItem('wizard.resumeDismissed')
+    if (hit && dismissed !== String(hit.id)) resumeBanner.value = hit
+  } catch { /* 拉不到就不出横幅 */ }
+}
+
+async function resumeLast() {
+  const s = resumeBanner.value
+  if (!s || chat.status !== 'idle') return
+  resumeBanner.value = null
+  sessionStorage.removeItem('wizard.resumeDismissed')
+  try {
+    await chat.loadSession(s.id)
+    // 有 deck 的会被阶段 watcher 带到对应步骤页；无 deck 的留在本页续聊
+    await wizard.syncFromChat(chat.deckId)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '恢复会话失败')
+  }
+}
+
+function dismissResume() {
+  if (resumeBanner.value) sessionStorage.setItem('wizard.resumeDismissed', String(resumeBanner.value.id))
+  resumeBanner.value = null
+}
 
 // 阶段推进 → 自动前跳到规范路由（迭代 → /decks/:id）。
 // 面板组件不做路由，这里是"大纲产出/确认大纲/选模板后换页"的唯一驱动。
@@ -155,6 +200,16 @@ const headTitle = computed(
              flex-1/overflow-y-auto 依赖 flex 父级定高，否则消息区按内容长高、
              被裁剪且无法滚动 -->
         <div v-else class="mx-auto flex h-full w-full max-w-[760px] flex-col">
+          <!-- 续接横幅：离开 /new 后未走完向导的对话从这里找回 -->
+          <div v-if="resumeBanner" class="mx-4 mt-3 flex items-center gap-3 rounded-control border border-accent-border bg-accent-soft px-3 py-2">
+            <span class="min-w-0 flex-1 truncate text-[12.5px] text-ink-2">
+              上次有进行中的对话：《{{ resumeBanner.title || '未命名对话' }}》{{ resumeBanner.pending ? '，还有一个提问等你回答' : '' }}
+            </span>
+            <Button size="sm" variant="primary" @click="resumeLast">继续对话</Button>
+            <button class="shrink-0 text-ink-3 transition-colors hover:text-ink-2" title="这次不续" @click="dismissResume">
+              <PhX :size="14" />
+            </button>
+          </div>
           <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-4">
             <ChatMessages class="min-h-0 flex-1" />
           </div>

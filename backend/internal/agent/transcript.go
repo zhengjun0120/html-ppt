@@ -90,6 +90,67 @@ func (as *AgentService) DeckSessions(ctx context.Context, userID uint, deckID st
 	return out, nil
 }
 
+// RecentSessionSummary 最近会话摘要 + 所属 deck 的阶段/格式。
+// DeckStage 为空 = 会话还没落到 deck（澄清中、大纲未产出）——这类会话
+// 在文稿列表里不可见，只能靠这里被发现。
+type RecentSessionSummary struct {
+	SessionSummary
+	DeckStage  string `json:"deck_stage"`
+	DeckFormat string `json:"deck_format"`
+}
+
+// RecentSessions 用户跨 deck 的最近会话（不含消息体，按活跃时间倒序）。
+// /new 的"继续上次对话"横幅靠它发现没走完向导的澄清/大纲会话：
+// 按 deck 查会话的接口（DeckSessions）在没有 deck 上下文的页面上无从下手。
+func (as *AgentService) RecentSessions(ctx context.Context, userID uint, limit int) ([]RecentSessionSummary, error) {
+	if as.st == nil {
+		return nil, ErrSessionStoreUnavailable
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+	var rows []store.ChatSession
+	err := as.st.DB.WithContext(ctx).
+		Select("id", "user_id", "deck_id", "pending_ask", "title", "created_at", "updated_at").
+		Where("user_id = ?", userID).
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询最近会话: %w", err)
+	}
+	// deck 阶段批量补齐（会话→deck 是多对一，去重后一次查询）
+	deckIDs := make([]string, 0, len(rows))
+	for i := range rows {
+		if rows[i].DeckID != "" {
+			deckIDs = append(deckIDs, rows[i].DeckID)
+		}
+	}
+	deckByID := map[string]store.Deck{}
+	if len(deckIDs) > 0 {
+		var decks []store.Deck
+		if err := as.st.DB.WithContext(ctx).
+			Select("id", "format", "stage").
+			Where("id IN ?", deckIDs).
+			Find(&decks).Error; err != nil {
+			return nil, fmt.Errorf("查询会话所属 deck: %w", err)
+		}
+		for _, d := range decks {
+			deckByID[d.ID] = d
+		}
+	}
+	out := make([]RecentSessionSummary, 0, len(rows))
+	for i := range rows {
+		s := RecentSessionSummary{SessionSummary: sessionSummary(&rows[i])}
+		if d, ok := deckByID[rows[i].DeckID]; ok {
+			s.DeckStage = d.Stage
+			s.DeckFormat = d.Format
+		}
+		out = append(out, s)
+	}
+	return out, nil
+}
+
 func sessionSummary(sess *store.ChatSession) SessionSummary {
 	return SessionSummary{
 		ID:        sess.ID,
