@@ -1,6 +1,7 @@
 package deck
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -74,9 +75,9 @@ func (s *Service) versionDiff(deckID,fromVersion,toVersion string)(*HistoryDiff,
 		from = m
 	}
 
-	fromHTML,err := os.ReadFile(filepath.Join(s.historyDir(deckID),from.Version+".html"))
-	if err !=nil{
-		return nil,fmt.Errorf("读取快照 %s 失败 err:%w",from.Version,err)
+	fromHTML, err := s.readSnapshotHTML(deckID, from.Version)
+	if err != nil {
+		return nil, fmt.Errorf("读取快照 %s 失败 err:%w", from.Version, err)
 	}
 
 	toLabel := "current"
@@ -92,11 +93,11 @@ func (s *Service) versionDiff(deckID,fromVersion,toVersion string)(*HistoryDiff,
 		if err !=nil{
 			return nil,err
 		}
-		b,err := os.ReadFile(filepath.Join(s.historyDir(deckID),m.Version+".html"))
+		b,err := s.readSnapshotHTML(deckID, m.Version)
 		if err !=nil{
 			return nil,fmt.Errorf("读取快照 %s 失败 err: %w",m.Version,err)
 		}
-		toLabel,toDetail,toHTML = m.Version,m.Detail,string(b)
+		toLabel,toDetail,toHTML = m.Version,m.Detail,b
 	}
 
 	if toLabel == from.Version{
@@ -106,6 +107,26 @@ func (s *Service) versionDiff(deckID,fromVersion,toVersion string)(*HistoryDiff,
 	return diffDecks(deckID,from.Version,toLabel,toDetail,string(fromHTML),toHTML),nil
 
 	
+}
+
+// readSnapshotHTML 读取某版本快照里的 index.html。v2 快照是 .json bundle
+// （index_html 内嵌其中），v1 是裸 .html——按磁盘上实际存在的格式读。
+// 此前硬读 .html，v2 deck 的历史目录里根本没有这个文件，diff 工具
+// 每次必失败（"读取快照 v000002 失败"）。
+func (s *Service) readSnapshotHTML(deckID, version string) (string, error) {
+	dir := s.historyDir(deckID)
+	if b, err := os.ReadFile(filepath.Join(dir, version+".json")); err == nil {
+		var snap snapshotV2
+		if err := json.Unmarshal(b, &snap); err != nil {
+			return "", fmt.Errorf("快照 %s 解析失败 err:%w", version, err)
+		}
+		return snap.IndexHTML, nil
+	}
+	b, err := os.ReadFile(filepath.Join(dir, version+".html"))
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 // lookupVersion 校验版本号格式并在索引中查找
@@ -266,10 +287,12 @@ func mapSlides(html string)(map[string]slideSnapshot,[]string){
 		log.Printf("解析html失败 err:%v",err)
 		return m,order
 	}
-	doc.Find(".slides > section").Each(func(_ int,sec *goquery.Selection){
+	doc.Find(".deck > section, .slides > section").Each(func(i int,sec *goquery.Selection){
+		// v2 页面挂在 .deck 下，v1 是 .slides；缺 data-id 时用序号兜底，
+		// 避免"整页重写没带 id"的页静默消失在 diff 之外
 		id := sec.AttrOr("data-id","")
 		if id == ""{
-			return
+			id = fmt.Sprintf("#%d", i+1)
 		}
 		outer,err := goquery.OuterHtml(sec)
 		if err !=nil{
