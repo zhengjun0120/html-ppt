@@ -185,6 +185,9 @@ type ReviewSlidesArgs struct {
 	// 页号留空不是错误：那是"先只给我数字"。描述里绝不能出现半角逗号：
 	// jsonschema 标签解析器按半角逗号切键值对，从那里往后整段描述会被静默吃掉。
 	Pages []int `json:"pages" jsonschema:"type=array,description=要看画面的页码（1 基，与 list_slides 返回的 position 一致）；例如 [2、5、7]；留空则只返回量测数字、不看图；一次最多 6 页"`
+	// Focus 把主模型的疑问带给看图调用。看图是一次隔离调用，拿不到主对话的
+	// 上下文——主模型在担心什么只有这一条通道能传进去，报告会优先回答它。
+	Focus string `json:"focus" jsonschema:"type=string,description=这次看图特别想验证的问题（一句具体的话：哪一页的哪一块、担心什么）；点名 pages 时建议填写；留空则做全面版面审查"`
 }
 
 // 页号归一：去重、排序，并把 0 基误传挡在门口。

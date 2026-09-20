@@ -399,59 +399,90 @@ const reviewPromptV2 = `你是网页幻灯片的版面审查员。这套幻灯�
 **只看给你的这几页**：没给你截图的页不要在报告里出现。你的任务：
 1. 用眼睛确认硬判定在画面上真的存在，并说清是哪一处（引用页面实际文字）。
 2. 找数字看不出来的问题：文字被裁、元素重叠、内容贴边、标题孤字换行、卡片高度不齐、代码块溢出、对比度不足、以及这一页内容与标题讲的不是一回事。
+3. 若某页前面给了「大纲意图」：这页内容没有表达出意图（漏了要点、放的不是这页该讲的东西）也算问题，问题类别写「内容切题」。
 
-不要提"建议补充内容"这类意见，只说版面。不要重写内容。
+不要提"建议补充内容"这类意见，只说版面与呈现。不要重写内容。
 
 **两条纪律，违反的代价是主模型陷入"改→再审→改"的无限返工：**
 - **每条问题分级**：【硬】= 投屏会翻车的（被裁/重叠/看不清/明显错位）；【软】= 审美打磨。拿不准算【软】。
 - **没把握就不报**：一页没问题就写没问题。报得准远比报得多有价值。
 
 输出格式（严格照做）：
-第 N 页｜【硬或软】｜问题类别｜具体是什么（引用页面实际文字）｜期望效果
+第 N 页｜【硬或软】｜问题类别｜具体是什么（引用页面实际文字）｜定位（哪一块/哪个元素）｜期望效果
 每页最多一行，只写有问题的页。最后一行：合计：N 页有问题（硬 M 页）
 都没问题则只输出一行：未发现问题
 
-"期望效果"只写改成什么样（如"该行换到下一行开头"），不要指定实现手段。`
+「定位」给主模型回到 HTML 能找到的锚点：元素类型 + 可见文字片段（如"页脚行 · 招生网链接"、"右侧数据卡的 58.2%"）。「期望效果」只写改成什么样（如"该行换到下一行开头"），不要指定实现手段。`
 
-// ReviewV2 让模型看 v2 deck 的指定页截图。findings 由调用方从整份 deck 算好传入。
-func ReviewV2(ctx context.Context, client *openai.Client, model string, d *Deck2, pages []int, onDelta func(string)) (*ReviewResult, error) {
+// ReviewContext 看图调用的附加上下文。看图是一次隔离调用，拿不到主对话的上下文——
+// 主模型在担心什么（Focus）、这页本来要讲什么（PageBriefs）都转述不进来，
+// 只能显式注入。这是"转述损耗"的补法，代价只是每个字段几十个字。
+type ReviewContext struct {
+	// Focus 主模型点名看图时想验证的问题（review_slides 的 focus 参数，可空）。
+	Focus string
+	// PageBriefs 页号（1 基）→ 该页大纲意图摘要（标题/要点，可空）。
+	// 有它，看图才能审"内容切不切题"，而不只是排版。
+	PageBriefs map[int]string
+}
+
+// reviewHead 组装看图调用的文本头部（纯函数：单测直接验证注入，不发网络请求）。
+func reviewHead(d *Deck2, pages []int, rc *ReviewContext) string {
+	var b strings.Builder
+	b.WriteString(reviewPromptV2)
+	fmt.Fprintf(&b, "\n\n你要看的页：第 %s 页（共 %d 张截图，deck 共 %d 页）\n", joinInts(pages), len(pages), len(d.Slides))
+	if rc != nil {
+		if focus := strings.TrimSpace(rc.Focus); focus != "" {
+			b.WriteString("\n主模型这次点名看图，特别想验证：\n" + focus + "\n（优先回答这些疑问；其他明显的问题仍然要报。）\n")
+		}
+	}
+	b.WriteString("\n程序已判定的硬问题：\n")
+	hard := HardFindingsV2(d)
+	if len(hard) == 0 {
+		b.WriteString("无")
+	} else {
+		b.WriteString(strings.Join(hard, "\n"))
+	}
+	b.WriteString("\n\n逐页量测（整份）：\n")
+	b.WriteString(DigestV2(d))
+	return b.String()
+}
+
+// pageLabel 每张截图前的文字标头（带该页大纲意图——如果调用方给了）。
+func pageLabel(no int, rc *ReviewContext) string {
+	s := fmt.Sprintf("\n第 %d 页：", no)
+	if rc != nil && rc.PageBriefs != nil {
+		if brief := strings.TrimSpace(rc.PageBriefs[no]); brief != "" {
+			s += "\n这页的大纲意图：" + brief
+		}
+	}
+	return s
+}
+
+// ReviewV2 让模型看 v2 deck 的指定页截图。findings 由调用方从整份 deck 算好传入；
+// rc 可为 nil（没有 focus、没有大纲意图的裸看图）。
+func ReviewV2(ctx context.Context, client *openai.Client, model string, d *Deck2, pages []int, rc *ReviewContext, onDelta func(string)) (*ReviewResult, error) {
 	if onDelta == nil {
 		onDelta = func(string) {}
 	}
 	var sel []Slide2
-	picked := map[int]bool{}
 	for _, p := range pages {
 		if p >= 1 && p <= len(d.Slides) {
 			sel = append(sel, d.Slides[p-1])
-			picked[p] = true
 		}
 	}
 	if len(sel) == 0 {
 		return nil, fmt.Errorf("没有可审查的页")
 	}
 
-	var head strings.Builder
-	head.WriteString(reviewPromptV2)
-	fmt.Fprintf(&head, "\n\n你要看的页：第 %s 页（共 %d 张截图，deck 共 %d 页）\n", joinInts(pages), len(sel), len(d.Slides))
-	hard := HardFindingsV2(d)
-	head.WriteString("\n程序已判定的硬问题：\n")
-	if len(hard) == 0 {
-		head.WriteString("无")
-	} else {
-		head.WriteString(strings.Join(hard, "\n"))
-	}
-	head.WriteString("\n\n逐页量测（整份）：\n")
-	head.WriteString(DigestV2(d))
-
-	parts := []openai.ChatCompletionContentPartUnionParam{openai.TextContentPart(head.String())}
+	head := reviewHead(d, pages, rc)
+	parts := []openai.ChatCompletionContentPartUnionParam{openai.TextContentPart(head)}
 	for _, s := range sel {
-		parts = append(parts, openai.TextContentPart(fmt.Sprintf("\n第 %d 页：", s.Index+1)))
+		parts = append(parts, openai.TextContentPart(pageLabel(s.Index+1, rc)))
 		parts = append(parts, openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
 			URL:    "data:image/png;base64," + base64.StdEncoding.EncodeToString(s.PNG),
 			Detail: "auto",
 		}))
 	}
-	_ = picked
 
 	// 空报告重试一次（与 v1 Review 同一纪律：reasoning 吃光 completion 是概率行为）
 	tryReview := func() (string, openai.CompletionUsage, error) {
@@ -498,7 +529,7 @@ func ReviewV2(ctx context.Context, client *openai.Client, model string, d *Deck2
 	if report == "" {
 		return nil, fmt.Errorf("模型返回了空报告（completion=%d）", usage.CompletionTokens)
 	}
-	return &ReviewResult{Report: report, Prompt: head.String(), Images: len(sel), Usage: usage}, nil
+	return &ReviewResult{Report: report, Prompt: head, Images: len(sel), Usage: usage}, nil
 }
 
 func joinInts(xs []int) string {

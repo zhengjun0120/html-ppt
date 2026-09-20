@@ -510,11 +510,11 @@ func (a *AgentService) buildToolsV2(stage string) map[string]Tool {
 		}
 	}
 	mountReview := func() {
-		if a.Vision {
-			mountTool[ReviewSlidesArgs](tools, "review_slides",
-				"渲染并量测整份 deck（免费、几秒）；可用 pages 点名几页真正看图（一次 run 最多 3 次，慢且贵，留给最可疑的页）。pages 留空 = 只回数字、不占配额、随时可调。",
-				a.toolReviewSlidesV2, reviewQuotaPerRun)
-		}
+			if a.Vision {
+				mountTool[ReviewSlidesArgs](tools, "review_slides",
+					"渲染并量测整份 deck（免费、几秒）；可用 pages 点名几页真正看图（一次 run 最多 3 次，慢且贵，留给最可疑的页）。pages 留空 = 只回数字、不占配额、随时可调。点名时把想验证的问题写进 focus（一句具体的话：哪一页的哪一块、担心什么），报告会优先回答它。",
+					a.toolReviewSlidesV2, reviewQuotaPerRun)
+			}
 	}
 	mountSlideReads := func() {
 		mountTool[deckIDArgs](tools, "list_slides", "查看已写入的页面目录（自查页序与版式用）。", a.toolListSlidesV2, 0)

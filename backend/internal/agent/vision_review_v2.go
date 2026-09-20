@@ -14,6 +14,7 @@ import (
 	"log"
 	"strings"
 
+	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
 )
@@ -167,7 +168,13 @@ func (a *AgentService) toolReviewSlidesV2(ctx context.Context, arguments string)
 	}
 
 	client := a.clientFor(ctx)
-	rr, err := vision.ReviewV2(ctx, client, a.ModelID, d, pages, onDelta)
+	// 主模型关注点 + 逐页大纲意图随图注入：看图是一次隔离调用，主对话的上下文
+	// 它拿不到——focus 不传就只做泛泛审查，大纲意图不给就审不了"内容切题"。
+	rc := &vision.ReviewContext{Focus: args.Focus, PageBriefs: a.outlineBriefs(uid, args.DeckID)}
+	if rc.Focus == "" && len(rc.PageBriefs) == 0 {
+		rc = nil
+	}
+	rr, err := vision.ReviewV2(ctx, client, a.ModelID, d, pages, rc, onDelta)
 	if err != nil {
 		log.Printf("[warn] 视觉审查(v2)：看图失败，只回量测 err:%v", err)
 		trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{
@@ -179,7 +186,7 @@ func (a *AgentService) toolReviewSlidesV2(ctx context.Context, arguments string)
 
 	trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{
 		Name: "vision", Stage: "review_prompt", Text: rr.Prompt,
-		Data: map[string]any{"images": rr.Images, "model": a.ModelID, "pages": pages},
+		Data: map[string]any{"images": rr.Images, "model": a.ModelID, "pages": pages, "focus": args.Focus},
 	}})
 	trace.Usage(ctx, trace.CompVision, usagePartFrom(rr.Usage))
 	trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{
@@ -189,4 +196,36 @@ func (a *AgentService) toolReviewSlidesV2(ctx context.Context, arguments string)
 	b.WriteString(visionReportMarker)
 	b.WriteString(rr.Report)
 	return clipRunes(b.String(), reviewChars), nil
+}
+
+// outlineBriefs 每页的大纲意图摘要（页号 → 标题+要点+备注）。看图调用拿不到
+// 主对话的上下文，这几十个字是它判断"内容切不切题"的唯一依据。
+// 读大纲失败返回 nil（裸看图，不阻塞审查——大纲是增强，不是前置条件）。
+func (a *AgentService) outlineBriefs(uid uint, deckID string) map[int]string {
+	o, err := a.DeckService.ReadOutline(uid, deckID)
+	if err != nil {
+		return nil
+	}
+	out := make(map[int]string, len(o.Pages))
+	for _, p := range o.Pages {
+		out[p.No] = briefOf(p)
+	}
+	return out
+}
+
+// briefOf 单页摘要（纯函数，截断到 ~160 字：意图够了，别把看图提示词撑胖）。
+func briefOf(p deck.OutlinePage) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "标题「%s」", p.Title)
+	if len(p.Points) > 0 {
+		b.WriteString("；要点：" + strings.Join(p.Points, "；"))
+	}
+	if p.Notes != "" {
+		b.WriteString("；备注：" + p.Notes)
+	}
+	s := b.String()
+	if r := []rune(s); len(r) > 160 {
+		s = string(r[:160]) + "…"
+	}
+	return s
 }

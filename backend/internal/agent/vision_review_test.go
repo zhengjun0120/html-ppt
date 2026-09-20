@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"html-ppt/backend/internal/authctx"
+	"html-ppt/backend/internal/service/deck"
 )
 
 // 开关没开时**安静**（这一项本来就不该出现在工具结果里），
@@ -57,3 +58,25 @@ func TestNormalizePagesDedupesAndSorts(t *testing.T) {
 }
 
 
+
+// briefOf 把大纲页压成看图调用能用的意图摘要。截断是刻意的：
+// 意图几十字就够，全文灌进去会把看图提示词撑胖、还会把量测数字挤出注意力。
+func TestBriefOfJoinsAndTruncates(t *testing.T) {
+	p := deck.OutlinePage{Title: "毕业去向", Points: []string{"九成留粤", "升学 58.2%"}, Notes: "口径：2024 届"}
+	got := briefOf(p)
+	for _, want := range []string{"标题「毕业去向」", "要点：九成留粤；升学 58.2%", "备注：口径：2024 届"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("briefOf 缺少 %q: %q", want, got)
+		}
+	}
+
+	long := make([]string, 0, 40)
+	for i := 0; i < 40; i++ {
+		long = append(long, "这条要点特别长专门用来触发截断")
+	}
+	got = briefOf(deck.OutlinePage{Title: "T", Points: long})
+	r := []rune(got)
+	if len(r) > 161 || !strings.HasSuffix(got, "…") {
+		t.Errorf("briefOf 未按 160 字截断: len=%d tail=%q", len(r), got[len(got)-20:])
+	}
+}
