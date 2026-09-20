@@ -20,7 +20,7 @@
 .tpl-dir-key-nav-minimal .t-charcoal{background:linear-gradient(135deg,#111827 0%,#1f2937 100%);color:#f3f4f6}
 
 /* [deck-v2] 装饰小字统一提到 14px 字号地板（源 11-12px，投影不可读） */
-.tpl-dir-key-nav-minimal .dk-snum{position:absolute;top:30px;right:48px;font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:var(--dk-mono)}
+.tpl-dir-key-nav-minimal .dk-snum{position:absolute;top:30px;right:48px;font-size: 16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:var(--dk-mono)}
 .tpl-dir-key-nav-minimal .t-cream .dk-snum,
 .tpl-dir-key-nav-minimal .t-white .dk-snum{color:#999}
 .tpl-dir-key-nav-minimal .t-indigo .dk-snum,
@@ -30,7 +30,7 @@
 .tpl-dir-key-nav-minimal .t-violet .dk-snum,
 .tpl-dir-key-nav-minimal .t-charcoal .dk-snum{color:rgba(255,255,255,.38)}
 
-.tpl-dir-key-nav-minimal .dk-eyebrow{font-size:14px;font-weight:700;letter-spacing:3.5px;text-transform:uppercase;opacity:.55;margin-bottom:22px;display:flex;align-items:center;gap:14px}
+.tpl-dir-key-nav-minimal .dk-eyebrow{font-size: 16px;font-weight:700;letter-spacing:3.5px;text-transform:uppercase;opacity:.55;margin-bottom:22px;display:flex;align-items:center;gap:14px}
 .tpl-dir-key-nav-minimal .dk-eyebrow::after{content:'';flex:1;max-width:120px;height:1px;background:currentColor;opacity:.3}
 .tpl-dir-key-nav-minimal .dk-h0{font-size:160px;font-weight:900;line-height:.9;letter-spacing:-5px;margin:0 0 20px}
 .tpl-dir-key-nav-minimal .dk-h1{font-size:100px;font-weight:900;line-height:.98;letter-spacing:-3px;margin:0 0 18px}
@@ -55,12 +55,12 @@
 .tpl-dir-key-nav-minimal .dk-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:36px}
 .tpl-dir-key-nav-minimal .dk-col h3{font-size:28px;font-weight:700;margin-bottom:10px}
 .tpl-dir-key-nav-minimal .dk-col p{font-size:19px;line-height:1.55;opacity:.72;font-weight:300}
-.tpl-dir-key-nav-minimal .dk-code{font-family:var(--dk-mono);font-size:17px;line-height:1.9;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:24px 28px;margin-top:24px;white-space:pre}
+.tpl-dir-key-nav-minimal .dk-code{font-family:var(--dk-mono);font-size: 18px;line-height:1.9;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:24px 28px;margin-top:24px;white-space:pre}
 .tpl-dir-key-nav-minimal .t-cream .dk-code,
 .tpl-dir-key-nav-minimal .t-white .dk-code{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.1)}
-.tpl-dir-key-nav-minimal .dk-keyhint{position:absolute;bottom:34px;left:104px;font-family:var(--dk-mono);font-size:14px;letter-spacing:2px;text-transform:uppercase;opacity:.45}
-.tpl-dir-key-nav-minimal .dk-keyhint kbd{display:inline-block;padding:2px 10px;margin:0 3px;border:1px solid currentColor;border-radius:4px;font-size:14px}
-.tpl-dir-key-nav-minimal .dk-page{position:absolute;bottom:34px;right:48px;font-family:var(--dk-mono);font-size:14px;letter-spacing:2px;opacity:.45}
+.tpl-dir-key-nav-minimal .dk-keyhint{position:absolute;bottom:34px;left:104px;font-family:var(--dk-mono);font-size: 16px;letter-spacing:2px;text-transform:uppercase;opacity:.45}
+.tpl-dir-key-nav-minimal .dk-keyhint kbd{display:inline-block;padding:2px 10px;margin:0 3px;border:1px solid currentColor;border-radius:4px;font-size: 16px}
+.tpl-dir-key-nav-minimal .dk-page{position:absolute;bottom:34px;right:48px;font-family:var(--dk-mono);font-size: 16px;letter-spacing:2px;opacity:.45}
 
 /* [deck-v2] 主题变体槽（template.json variants[] 的实现）：
  * 只动全局 accent（.dk-accent 一个钩子），八张底色轮换保持不变；换变体 = body 挂 class。

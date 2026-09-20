@@ -26,8 +26,8 @@
 .tpl-obsidian-claude-gradient .oc-cbg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 28% 38%,rgba(var(--oc-accent-rgb),.25) 0%,transparent 60%),radial-gradient(ellipse at 72% 62%,rgba(88,166,255,.18) 0%,transparent 60%)}
 .tpl-obsidian-claude-gradient .oc-cgrid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(48,54,61,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(48,54,61,.4) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse at center,black 35%,transparent 80%)}
 .tpl-obsidian-claude-gradient .slide > *{position:relative;z-index:2}
-.tpl-obsidian-claude-gradient .oc-snum{position:absolute;top:24px;right:36px;color:var(--oc-dimmer);font-size:14px;letter-spacing:.1em;z-index:3}
-.tpl-obsidian-claude-gradient .oc-tag{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--oc-accent3);background:rgba(var(--oc-accent-rgb),.14);border:1px solid rgba(var(--oc-accent2-rgb),.3);padding:5px 16px;border-radius:999px;margin-bottom:22px}
+.tpl-obsidian-claude-gradient .oc-snum{position:absolute;top:24px;right:36px;color:var(--oc-dimmer);font-size: 16px;letter-spacing:.1em;z-index:3}
+.tpl-obsidian-claude-gradient .oc-tag{display:inline-flex;align-items:center;gap:6px;font-size: 16px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--oc-accent3);background:rgba(var(--oc-accent-rgb),.14);border:1px solid rgba(var(--oc-accent2-rgb),.3);padding:5px 16px;border-radius:999px;margin-bottom:22px}
 .tpl-obsidian-claude-gradient .oc-h1{font-size:72px;font-weight:800;line-height:1.08;letter-spacing:-.02em;margin:0 0 10px;color:var(--oc-text)}
 .tpl-obsidian-claude-gradient .oc-h2{font-size:44px;font-weight:700;line-height:1.18;letter-spacing:-.015em;margin:0 0 14px}
 .tpl-obsidian-claude-gradient .oc-sub{font-size:19px;color:var(--oc-dim);line-height:1.65;max-width:720px;margin-top:14px}
@@ -38,12 +38,12 @@
 .tpl-obsidian-claude-gradient .oc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--oc-accent2-rgb),.4),transparent)}
 .tpl-obsidian-claude-gradient .oc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:100%;max-width:1000px;margin-top:24px}
 .tpl-obsidian-claude-gradient .oc-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;width:100%;max-width:1080px;margin-top:24px}
-.tpl-obsidian-claude-gradient .oc-badge{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:600;padding:3px 11px;border-radius:999px;margin-bottom:10px}
+.tpl-obsidian-claude-gradient .oc-badge{display:inline-flex;align-items:center;gap:5px;font-size: 16px;font-weight:600;padding:3px 11px;border-radius:999px;margin-bottom:10px}
 .tpl-obsidian-claude-gradient .oc-bp{background:rgba(var(--oc-accent2-rgb),.15);color:var(--oc-accent3)}
 .tpl-obsidian-claude-gradient .oc-bb{background:rgba(88,166,255,.15);color:var(--oc-blue)}
 .tpl-obsidian-claude-gradient .oc-bg{background:rgba(63,185,80,.15);color:var(--oc-green)}
 .tpl-obsidian-claude-gradient .oc-bo{background:rgba(249,115,22,.15);color:var(--oc-orange)}
-.tpl-obsidian-claude-gradient .oc-code{background:#010409;border:1px solid var(--oc-border);border-radius:12px;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:17px;line-height:1.85;width:100%;max-width:860px;text-align:left;color:#e6edf3}
+.tpl-obsidian-claude-gradient .oc-code{background:#010409;border:1px solid var(--oc-border);border-radius:12px;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size: 18px;line-height:1.85;width:100%;max-width:860px;text-align:left;color:#e6edf3}
 .tpl-obsidian-claude-gradient .oc-code .cp{color:var(--oc-green)}
 .tpl-obsidian-claude-gradient .oc-code .cc{color:var(--oc-blue)}
 .tpl-obsidian-claude-gradient .oc-code .ca{color:var(--oc-accent3)}
@@ -53,14 +53,14 @@
 .tpl-obsidian-claude-gradient .oc-steps{display:flex;flex-direction:column;gap:0;width:100%;max-width:820px;text-align:left}
 .tpl-obsidian-claude-gradient .oc-step{display:flex;gap:20px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--oc-border)}
 .tpl-obsidian-claude-gradient .oc-step:last-child{border-bottom:none}
-.tpl-obsidian-claude-gradient .oc-sn{width:36px;height:36px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;background:linear-gradient(135deg,var(--oc-accent),var(--oc-blue));color:#fff}
+.tpl-obsidian-claude-gradient .oc-sn{width:36px;height:36px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size: 17px;background:linear-gradient(135deg,var(--oc-accent),var(--oc-blue));color:#fff}
 .tpl-obsidian-claude-gradient .oc-sc h4{font-size:20px;font-weight:600;margin-bottom:6px;color:var(--oc-text)}
 .tpl-obsidian-claude-gradient .oc-sc p{font-size:18px;color:var(--oc-dim);line-height:1.6}
-.tpl-obsidian-claude-gradient .oc-pill{display:inline-flex;align-items:center;gap:8px;background:var(--oc-surface2);border:1px solid var(--oc-border);border-radius:999px;padding:7px 18px;font-size:16px;font-weight:500;color:var(--oc-text);margin:4px 6px 4px 0}
+.tpl-obsidian-claude-gradient .oc-pill{display:inline-flex;align-items:center;gap:8px;background:var(--oc-surface2);border:1px solid var(--oc-border);border-radius:999px;padding:7px 18px;font-size: 18px;font-weight:500;color:var(--oc-text);margin:4px 6px 4px 0}
 .tpl-obsidian-claude-gradient .oc-quote{max-width:800px}
 .tpl-obsidian-claude-gradient .oc-quote blockquote{font-size:26px;font-weight:500;line-height:1.6;position:relative;padding:0 36px;margin:0;color:var(--oc-text)}
 .tpl-obsidian-claude-gradient .oc-quote blockquote::before{content:'"';position:absolute;left:-6px;top:-22px;font-size:78px;color:var(--oc-accent);opacity:.4;font-family:Georgia,serif;line-height:1}
-.tpl-obsidian-claude-gradient .oc-quote .attr{margin-top:20px;font-size:15px;color:var(--oc-dim)}
+.tpl-obsidian-claude-gradient .oc-quote .attr{margin-top:20px;font-size: 17px;color:var(--oc-dim)}
 .tpl-obsidian-claude-gradient .oc-big{font-size:140px;font-weight:900;line-height:.95;letter-spacing:-.04em}
 
 /* variants：翠青（GitHub 绿） / 落日（橙粉金）。只换 accent 与渐变三停，对比度均过 AA */

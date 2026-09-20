@@ -38,10 +38,10 @@
 .tpl-soft-pastel .h2{font-size:56px;line-height:1.12;font-weight:800;letter-spacing:-.03em;color:var(--text-1)}
 .tpl-soft-pastel h4{color:var(--text-1);font-weight:700}
 .tpl-soft-pastel .lede{font-size:25px;line-height:1.75;color:var(--text-2);font-weight:400}
-.tpl-soft-pastel .deck-footer{font-size:15px;color:var(--text-3);letter-spacing:.02em}
+.tpl-soft-pastel .deck-footer{font-size: 17px;color:var(--text-3);letter-spacing:.02em}
 
 /* ---- 眉标药丸：标题前的一枚壳层小徽章 ---- */
-.tpl-soft-pastel .sp-eyebrow{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;padding:8px 20px;border-radius:999px;background:var(--shell);border:1px solid var(--shell-line);font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2)}
+.tpl-soft-pastel .sp-eyebrow{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;padding:8px 20px;border-radius:999px;background:var(--shell);border:1px solid var(--shell-line);font-size: 17px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2)}
 
 /* ---- 双层表圈：外壳（灰底 + 发丝边 + 8px 内衬 + 2rem 圆角）包白芯（同心 2rem-8px）---- */
 .tpl-soft-pastel .sp-shell{background:var(--shell);border:1px solid var(--shell-line);border-radius:var(--radius-shell);padding:8px;box-shadow:var(--shadow-ambient)}
@@ -49,7 +49,7 @@
 .tpl-soft-pastel .sp-core-row{display:flex;align-items:center;gap:18px;padding:20px 26px}
 
 /* ---- 粉彩药丸：更饱和的软粉 / 软蓝 / 软黄，配各自的深字 ---- */
-.tpl-soft-pastel .sp-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;font-size:15px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.tpl-soft-pastel .sp-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;font-size: 17px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
 .tpl-soft-pastel .sp-pill-pink{background:var(--pastel-pink);color:var(--pastel-pink-ink)}
 .tpl-soft-pastel .sp-pill-blue{background:var(--pastel-blue);color:var(--pastel-blue-ink)}
 .tpl-soft-pastel .sp-pill-yellow{background:var(--pastel-yellow);color:var(--pastel-yellow-ink)}

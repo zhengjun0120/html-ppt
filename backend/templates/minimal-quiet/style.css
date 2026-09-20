@@ -31,12 +31,12 @@
 .tpl-minimal-quiet .h1{font-family:var(--font-serif);font-size:88px;line-height:1.08;font-weight:700;letter-spacing:-.03em;color:var(--text-1);margin:0}
 .tpl-minimal-quiet .h2{font-family:var(--font-serif);font-size:54px;line-height:1.15;font-weight:700;letter-spacing:-.025em;color:var(--text-1);margin:0}
 .tpl-minimal-quiet h4{color:var(--text-1)}
-.tpl-minimal-quiet .kicker{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.tpl-minimal-quiet .kicker{font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
 .tpl-minimal-quiet .lede{font-size:24px;line-height:1.8;color:var(--text-2);font-weight:400;margin:0}
-.tpl-minimal-quiet .deck-footer{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text-3);letter-spacing:.02em}
+.tpl-minimal-quiet .deck-footer{font-family:'JetBrains Mono',monospace;font-size: 17px;color:var(--text-3);letter-spacing:.02em}
 
 /* ---- 胶囊：粉彩色卡 + 深字，成对出现；小元素可用药丸形，容器禁用 ---- */
-.tpl-minimal-quiet .mq-chip{display:inline-block;padding:6px 16px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:15px;font-weight:600;letter-spacing:.03em;white-space:nowrap}
+.tpl-minimal-quiet .mq-chip{display:inline-block;padding:6px 16px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size: 17px;font-weight:600;letter-spacing:.03em;white-space:nowrap}
 .tpl-minimal-quiet .mq-chip-red{background:#FDEBEC;color:#9F2F2D}
 .tpl-minimal-quiet .mq-chip-blue{background:#E1F3FE;color:#1F6C9F}
 .tpl-minimal-quiet .mq-chip-green{background:#EDF3EC;color:#346538}
@@ -50,7 +50,7 @@
 .tpl-minimal-quiet .mq-toc{margin-top:8px}
 .tpl-minimal-quiet .mq-toc-row{display:flex;align-items:baseline;gap:28px;padding:26px 4px;border-bottom:1px solid var(--border)}
 .tpl-minimal-quiet .mq-toc-row:first-child{border-top:1px solid var(--border)}
-.tpl-minimal-quiet .mq-toc-n{flex:none;font-size:17px;color:var(--text-3)}
+.tpl-minimal-quiet .mq-toc-n{flex:none;font-size: 18px;color:var(--text-3)}
 .tpl-minimal-quiet .mq-toc-t{flex:none;width:420px;font-size:24px;font-weight:600;color:var(--text-1);letter-spacing:-.01em}
 .tpl-minimal-quiet .mq-toc-d{flex:1;font-size:18px;color:var(--text-2)}
 
@@ -68,16 +68,16 @@
 .tpl-minimal-quiet .mq-stat-v{font-family:var(--font-serif);font-size:76px;line-height:1;font-weight:700;letter-spacing:-.02em;color:var(--text-1)}
 .tpl-minimal-quiet .mq-stat-u{font-family:'Inter','Noto Sans SC',sans-serif;font-size:28px;font-weight:600;color:var(--text-3);margin-left:6px}
 .tpl-minimal-quiet .mq-stat-l{margin-top:16px;font-size:22px;font-weight:600;color:var(--text-1)}
-.tpl-minimal-quiet .mq-stat-note{margin:8px 0 0;font-size:17px;color:var(--text-2);line-height:1.55}
+.tpl-minimal-quiet .mq-stat-note{margin:8px 0 0;font-size: 18px;color:var(--text-2);line-height:1.55}
 
 /* ---- 摘录面板：日志/记录佐证，等宽 17px ---- */
 .tpl-minimal-quiet .mq-panel{background:var(--bg-soft);border:1px solid var(--border);border-radius:12px;padding:26px 30px}
-.tpl-minimal-quiet .mq-panel-h{margin:0 0 14px;font-size:15px;color:var(--text-3);letter-spacing:.08em}
-.tpl-minimal-quiet .mq-panel pre{font-family:'JetBrains Mono',monospace;font-size:17px;line-height:1.95;color:var(--text-1);white-space:pre-wrap}
+.tpl-minimal-quiet .mq-panel-h{margin:0 0 14px;font-size: 17px;color:var(--text-3);letter-spacing:.08em}
+.tpl-minimal-quiet .mq-panel pre{font-family:'JetBrains Mono',monospace;font-size: 18px;line-height:1.95;color:var(--text-1);white-space:pre-wrap}
 
 /* ---- 笔记摘句：整页一句衬线话 ---- */
 .tpl-minimal-quiet .mq-quote{font-family:var(--font-serif);font-size:62px;line-height:1.4;letter-spacing:-.02em;font-weight:600;color:var(--text-1);max-width:24em;margin:0}
-.tpl-minimal-quiet .mq-quote-src{font-size:17px;color:var(--text-3);margin:0}
+.tpl-minimal-quiet .mq-quote-src{font-size: 18px;color:var(--text-3);margin:0}
 
 /* ---- 章节幕：巨大描边数字压右下，细得像纸上的压痕。
    外壳定高 + overflow:hidden 自剪裁：描边数字只是「从盒口露出来的压痕」，

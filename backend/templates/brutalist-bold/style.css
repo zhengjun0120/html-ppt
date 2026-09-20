@@ -42,7 +42,7 @@
   font-size:64px;line-height:.96;letter-spacing:-.035em;color:var(--ink)}
 .tpl-brutalist-bold h4{font-weight:800;color:var(--ink);margin:0}
 .tpl-brutalist-bold .kicker{
-  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .tpl-brutalist-bold .kicker b{color:var(--accent);font-weight:700}
 .tpl-brutalist-bold .lede{font-size:24px;line-height:1.6;font-weight:500;color:var(--ink-2);max-width:62ch}
@@ -50,7 +50,7 @@
 
 /* ---- 微字体：mono 元数据 / 编号 / 条码 ---- */
 .tpl-brutalist-bold .b-meta{
-  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .tpl-brutalist-bold .b-code{
   font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;
@@ -69,7 +69,7 @@
   content:"";position:absolute;left:-3%;right:-3%;top:50%;height:3px;
   background:var(--accent);transform:translateY(-50%)}
 .tpl-brutalist-bold .b-tag{
-  display:inline-block;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  display:inline-block;font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--ink);
   border:1.5px solid var(--ink);padding:8px 16px;background:var(--paper)}
 
@@ -86,7 +86,7 @@
   position:absolute;left:96px;right:96px;bottom:32px;
   display:flex;justify-content:space-between;align-items:center;
   border-top:2px solid var(--ink);padding-top:12px;
-  font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.06em;
+  font-family:'JetBrains Mono',monospace;font-size: 17px;letter-spacing:.06em;
   text-transform:uppercase;color:var(--ink-2)}
 
 /* ---- 刀锋细线容器：display:grid + 2px 墨底缝隙 = 实线分隔（无投影无圆角） ---- */
@@ -100,7 +100,7 @@
 
 /* ---- 铭牌内件：mono 参数名 / 900 巨值 / 口径注 ---- */
 .tpl-brutalist-bold .b-kv{
-  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .tpl-brutalist-bold .b-val{
   font-family:'Inter','Noto Sans SC',sans-serif;font-weight:900;white-space:nowrap;
@@ -120,7 +120,7 @@
 .tpl-brutalist-bold .b-tt{font-size:27px;font-weight:800;letter-spacing:-.01em;text-transform:uppercase;color:var(--ink)}
 .tpl-brutalist-bold .b-td{margin:0;font-size:18px;line-height:1.55;color:var(--ink-2)}
 .tpl-brutalist-bold .b-own{
-  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:700;
   letter-spacing:.06em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
 .tpl-brutalist-bold .b-blade-red .b-no{color:var(--accent)}
 

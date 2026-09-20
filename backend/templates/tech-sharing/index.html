@@ -102,7 +102,7 @@
       </div>
       <div class="card" style="padding:32px">
         <h4 class="mono" style="color:var(--accent-2)">scheduler tick loop</h4>
-        <div class="stack mt-m" style="font-family:'JetBrains Mono',monospace;font-size:17px;line-height:1.9;color:var(--text-2)">
+        <div class="stack mt-m" style="font-family:'JetBrains Mono',monospace;font-size: 18px;line-height:1.9;color:var(--text-2)">
           <div><span style="color:var(--accent)">1.</span> pop from LIFO slot</div>
           <div><span style="color:var(--accent)">2.</span> else pop from local queue</div>
           <div><span style="color:var(--accent)">3.</span> else drain global queue (every 61 ticks)</div>
@@ -139,7 +139,7 @@
     }
 }</pre>
     </div>
-    <p class="dim mt-m" style="font-size:15px">核心就是 poll 那一行——runtime 没有魔法，只是替你把 Waker 的回调跑成循环。</p>
+    <p class="dim mt-m" style="font-size: 17px">核心就是 poll 那一行——runtime 没有魔法，只是替你把 Waker 的回调跑成循环。</p>
   </section>
 
   <!-- 7. Takeaways -->
@@ -152,7 +152,7 @@
       <div class="card card-accent"><h4>3 · 别在 async 里阻塞</h4><p class="dim">一行 <span class="mono">std::fs::read</span> 就能让整个 worker 停摆：阻塞调用一律进 <span class="mono">spawn_blocking</span>，这是 async 代码评审的第一条。</p></div>
     </div>
     <p class="lede mt-l">延伸阅读：<span class="mono">tokio.rs/blog/2019-10-scheduler</span> 与 async-book 的 Waker 章节——看完再回来对照第 7 页那份手写 runtime，逐行都能对上。</p>
-    <p class="dim mt-m" style="font-size:16px">链接与三条迁移清单也会贴在课程仓库 README 里，会后发群。</p>
+    <p class="dim mt-m" style="font-size: 18px">链接与三条迁移清单也会贴在课程仓库 README 里，会后发群。</p>
   </section>
 
   <!-- 8. Q&A -->

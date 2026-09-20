@@ -35,7 +35,7 @@
 .tpl-xhs-post .h1{font-size:72px;line-height:1.1;font-weight:900;letter-spacing:-.02em;color:var(--text-1)}
 .tpl-xhs-post .h2{font-size:54px;line-height:1.15;font-weight:800;letter-spacing:-.015em;color:var(--text-1)}
 .tpl-xhs-post .h3{font-size:36px;font-weight:800;color:var(--text-1)}
-.tpl-xhs-post .page-dot{position:absolute;top:40px;right:48px;background:var(--text-1);color:#fff;border-radius:999px;padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;z-index:2}
+.tpl-xhs-post .page-dot{position:absolute;top:40px;right:48px;background:var(--text-1);color:#fff;border-radius:999px;padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size: 17px;font-weight:700;z-index:2}
 .tpl-xhs-post .sticker{position:absolute;padding:10px 18px;background:#fff;border:2.5px dashed var(--text-1);border-radius:18px;font-weight:800;font-size:18px;color:var(--text-1);transform:rotate(-3deg);box-shadow:4px 4px 0 var(--text-1)}
 .tpl-xhs-post .sticker.pink{background:#ffd3e0}
 .tpl-xhs-post .sticker.yellow{background:#ffe788}
@@ -49,10 +49,10 @@
 .tpl-xhs-post .step-card h4{font-size:28px;font-weight:800;margin:0 0 6px}
 .tpl-xhs-post .step-card p{font-size:18px;color:var(--text-2);margin:0}
 .tpl-xhs-post .tag-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
-.tpl-xhs-post .ht{background:#fff;color:var(--accent);border:2px solid var(--text-1);padding:6px 14px;border-radius:999px;font-weight:700;font-size:16px}
+.tpl-xhs-post .ht{background:#fff;color:var(--accent);border:2px solid var(--text-1);padding:6px 14px;border-radius:999px;font-weight:700;font-size: 18px}
 .tpl-xhs-post .cover-title{background:linear-gradient(180deg,transparent 60%,var(--accent-3) 60%,var(--accent-3) 92%,transparent 92%);padding:0 10px}
 .tpl-xhs-post .heart{color:var(--accent);font-size:28px}
-.tpl-xhs-post .bottom-bar{position:absolute;bottom:40px;left:64px;right:64px;display:flex;justify-content:space-between;align-items:center;font-size:15px;color:var(--text-3);font-family:'JetBrains Mono',monospace;z-index:2}
+.tpl-xhs-post .bottom-bar{position:absolute;bottom:40px;left:64px;right:64px;display:flex;justify-content:space-between;align-items:center;font-size: 17px;color:var(--text-3);font-family:'JetBrains Mono',monospace;z-index:2}
 .tpl-xhs-post .avatar{width:54px;height:54px;border-radius:50%;background:var(--grad);border:2.5px solid var(--text-1);box-shadow:3px 3px 0 var(--text-1);display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:var(--text-1)}
 
 /* ---- [deck-v2] 主题变体槽（template.json variants[] 的实现）。

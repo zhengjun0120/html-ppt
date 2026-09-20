@@ -31,7 +31,7 @@
 
 .tpl-presenter-mode-reveal .kicker {
   font-family: var(--font-mono, monospace);
-  font-size: 15px;
+  font-size: 17px;
   color: var(--text-3);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -86,10 +86,10 @@
 }
 .tpl-presenter-mode-reveal .speaker b {
   display: block;
-  font-size: 16px;
+  font-size: 18px;
 }
 .tpl-presenter-mode-reveal .speaker span {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-3);
 }
 
@@ -107,7 +107,7 @@
 }
 .tpl-presenter-mode-reveal .agenda-row .num {
   font-family: var(--font-mono, monospace);
-  font-size: 16px;
+  font-size: 18px;
   color: var(--accent, #58a6ff);
   font-weight: 700;
 }
@@ -118,7 +118,7 @@
 }
 .tpl-presenter-mode-reveal .agenda-row .d {
   font-family: var(--font-mono, monospace);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-3);
 }
 
@@ -214,7 +214,7 @@
   border-radius: 12px;
   padding: 20px 26px;
   font-family: var(--font-mono, "SF Mono", monospace);
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.8;
   color: #e6edf3;
   white-space: pre-wrap;
