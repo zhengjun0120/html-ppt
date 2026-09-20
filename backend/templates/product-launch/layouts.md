@@ -51,6 +51,7 @@
 
 ## feature-trio（特性三连）
 指纹：cards
+数量：feature-card=3
 
 用途：三个核心特性（feature-card 逐卡）
 适用 role：content。
@@ -75,6 +76,7 @@
 
 ## fit-cards（场景适配）
 指纹：cards
+数量：card=3
 
 用途：适用场景/人群三卡（暗色页变体）
 适用 role：content。
@@ -99,6 +101,7 @@
 
 ## feature-duo（深度两卡）
 指纹：cards
+数量：feature-card=2
 
 用途：两个重点能力各占一卡，讲深一点
 适用 role：content。
@@ -122,6 +125,7 @@
 
 ## how-it-works（三步上手）
 指纹：table
+数量：step=3
 
 用途：使用流程三步（step 逐行）
 适用 role：content。
@@ -146,6 +150,7 @@
 
 ## pricing（定价卡）
 指纹：cards
+数量：price-card=3
 
 用途：定价三档（price-card，可标推荐档）
 适用 role：content / cta。

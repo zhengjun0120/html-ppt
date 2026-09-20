@@ -132,6 +132,21 @@
       logoEl.style.display = (slide && slide.hasAttribute('data-no-logo')) ? 'none' : '';
     }
 
+    /* ===== ambient letterbox =====
+     * Contain 缩放（min(vw/w, vh/h)）在非 16:9 视口必然露边。把 letterbox
+     * 底色同步成当前页的实际底色，边就"融"进页面：深色封面整屏看着都是
+     * 深色，浅色内容页看着是全白，不再出现深色卡片浮在白边里的割裂感。
+     * 页面自身透明时逐级回退（slide → deck → 不动）。 */
+    function syncAmbient(slide){
+      if (!slide) return;
+      const opaque = (c) => c && c !== 'transparent' && !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)/.test(c);
+      let c = getComputedStyle(slide).backgroundColor;
+      if (!opaque(c)) c = getComputedStyle(deck).backgroundColor;
+      if (!opaque(c)) return;
+      document.body.style.backgroundColor = c;
+      document.documentElement.style.backgroundColor = c;
+    }
+
     const previewOnlyIdx = getPreviewIdx();
     const isPreviewMode = previewOnlyIdx >= 0 && previewOnlyIdx < slides.length;
 
@@ -148,6 +163,7 @@
             s.style.pointerEvents = 'auto';
           }
         });
+        syncAmbient(slides[i]);
       }
       showSlide(previewOnlyIdx);
       syncLogo(slides[previewOnlyIdx]);
@@ -316,6 +332,7 @@
       });
       idx = n;
       syncLogo(slides[n]);
+      syncAmbient(slides[n]);
       barFill.style.width = ((n+1)/total*100)+'%';
       const numEl = document.querySelector('.slide-number');
       if (numEl) { numEl.setAttribute('data-current', n+1); numEl.setAttribute('data-total', total); }

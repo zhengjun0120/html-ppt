@@ -85,6 +85,9 @@ type Template struct {
 	// layoutPatterns 版式 id → 视觉模式指纹（hero/stack/cards/...）。
 	// 显式声明（指纹：行）优先，缺失时按骨架类名推断。节奏守卫按它判视觉重复。
 	layoutPatterns map[string]string
+	// layoutRepeats 版式 id → 「数量：」行声明的精确数量契约（class → 恰好 N 个）。
+	// 写入门按它拦"把 11 条要点塞进三步版式"的文字堆积页；未登记的版式不受限。
+	layoutRepeats map[string]map[string]int
 
 	// baseClasses / templateClasses 类名清单（manifest）：
 	// base 从 deck-v2/base.css 解析，template 从本模板 style.css + index.html 解析。
@@ -112,6 +115,11 @@ func (t *Template) LayoutClassList(id string) []string {
 // Pattern 返回版式的视觉模式指纹；未登记的版式返回空串。
 func (t *Template) Pattern(id string) string {
 	return t.layoutPatterns[id]
+}
+
+// Repeats 返回版式的精确数量契约（class → 恰好 N 个）；未登记返回 nil。
+func (t *Template) Repeats(layoutID string) map[string]int {
+	return t.layoutRepeats[layoutID]
 }
 
 // DistinctPatterns 模板登记版式的不同视觉模式数（节奏守卫判断该模板
@@ -425,6 +433,7 @@ func loadTemplate(dir, assetsDir string, baseClasses map[string]bool) (*Template
 		layoutSkeleton:  map[string]string{},
 		layoutClasses:   map[string][]string{},
 		layoutPatterns:  map[string]string{},
+		layoutRepeats:   map[string]map[string]int{},
 		baseClasses:     baseClasses,
 		templateClasses: collectClasses(indexHTML, styleCSS),
 	}
@@ -494,6 +503,29 @@ func loadTemplate(dir, assetsDir string, baseClasses map[string]bool) (*Template
 			default:
 				return nil, fmt.Errorf("版式 %q 的指纹 %q 不在词汇表（hero/stack/cards/split/code/table/chart/quote）", id, l.Pattern)
 			}
+		}
+		// 数量契约：「数量：」行声明的类必须已登记、次数必须与骨架一致。
+		// 契约与骨架互相矛盾的模板本身就是坏的，启动期拦住——错契约比没契约更糟。
+		if len(l.Repeats) > 0 {
+			skelCounts := skeletonClassCounts(l.Skeleton)
+			reps := map[string]int{}
+			for _, r := range l.Repeats {
+				declared := false
+				for _, c := range l.Classes {
+					if c == r.Class {
+						declared = true
+						break
+					}
+				}
+				if !declared {
+					return nil, fmt.Errorf("版式 %q 的「数量：」行声明了未登记的类 .%s", id, r.Class)
+				}
+				if skelCounts[r.Class] != r.Count {
+					return nil, fmt.Errorf("版式 %q 的「数量：」行说 .%s 恰好 %d 个，骨架里实际出现 %d 次——契约与骨架矛盾", id, r.Class, r.Count, skelCounts[r.Class])
+				}
+				reps[r.Class] = r.Count
+			}
+			t.layoutRepeats[id] = reps
 		}
 		t.layoutSkeleton[id] = l.Skeleton
 		t.layoutClasses[id] = l.Classes

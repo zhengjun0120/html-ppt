@@ -236,6 +236,27 @@ func checkClassContract(sec *goquery.Selection, layoutID string, allowed map[str
 	return fmt.Errorf("页面使用了版式 %q 契约之外的类名：%s。只准使用 base 原语类、本模板 style.css 声明的类、与 layouts.md 该版式登记的类", layoutID, strings.Join(parts, "、"))
 }
 
+// checkRepeatCounts C203：layouts.md「数量：」行登记的类，元素个数必须一字不差。
+// 拦的是"往三步版式里塞 11 条"这类合法类名堆积页——类名全对、结构在，
+// 但骨架的重复次数本身就是版式容量；超了就拆页，不许挤在一页里。
+func checkRepeatCounts(sec *goquery.Selection, layoutID string, repeats map[string]int) error {
+	classes := make([]string, 0, len(repeats))
+	for c := range repeats {
+		classes = append(classes, c)
+	}
+	sort.Strings(classes)
+	for _, c := range classes {
+		want := repeats[c]
+		got := sec.Find("." + c).Length()
+		if got != want {
+			return fmt.Errorf(
+				"版式 %q 要求 .%s 恰好 %d 个（骨架重复几次就是几次），你提交了 %d 个。先 read_layout 对齐骨架结构再填；内容超出容量就重新 plan_pages 拆成多页——不要堆进同一页",
+				layoutID, c, want, got)
+		}
+	}
+	return nil
+}
+
 // ---------- 静态密度下限 ----------
 
 // minCharsByPattern 每种视觉模式的可见字数下限（不含 .notes 讲稿）。
@@ -408,6 +429,10 @@ func (s *Service) writeOnePage(doc *goquery.Document, tpl *template.Template, ou
 	if err := checkClassContract(sec, pg.Layout, allowed); err != nil {
 		return false, err.Error(), "", nil
 	}
+	// 5b. 数量契约（C203）
+	if err := checkRepeatCounts(sec, pg.Layout, tpl.Repeats(pg.Layout)); err != nil {
+		return false, err.Error(), "", nil
+	}
 	// 6. 静态密度下限：过空的页在写进门就拦（渲染量测要等批次结束才有，
 	// 而字数在这里零成本可判——deck-0031 的"一行字漂在虚空"页多数过不了这道）
 	floor := minCharsByPattern[tpl.Pattern(pg.Layout)]
@@ -556,6 +581,9 @@ func (s *Service) UpdateSlideV2(userID uint, deckID, slideID, newHTML, fingerpri
 	if err := checkClassContract(sec, layoutID, tpl.AllowedClasses(layoutID)); err != nil {
 		return "", err
 	}
+	if err := checkRepeatCounts(sec, layoutID, tpl.Repeats(layoutID)); err != nil {
+		return "", err
+	}
 	// data-id 不可变（页的身份），与被替换页一致
 	got := sec.AttrOr("data-id", "")
 	if got != slideID {
@@ -626,6 +654,9 @@ func (s *Service) InsertSlideV2(userID uint, deckID, afterSlideID, newHTML strin
 		return "", "", fmt.Errorf("版式 %q 未登记", layoutID)
 	}
 	if err := checkClassContract(sec, layoutID, tpl.AllowedClasses(layoutID)); err != nil {
+		return "", "", err
+	}
+	if err := checkRepeatCounts(sec, layoutID, tpl.Repeats(layoutID)); err != nil {
 		return "", "", err
 	}
 

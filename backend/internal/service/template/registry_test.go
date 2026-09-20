@@ -203,6 +203,14 @@ func TestLoadRejectsBadTemplates(t *testing.T) {
 			overwrite(t, d, "template.json", strings.Replace(mustRead(t, d, "template.json"),
 				`"id":"fixture"`, `"id":"other"`, 1))
 		}, "不一致"},
+		{"数量行与骨架矛盾", func(t *testing.T, d string) {
+			overwrite(t, d, "layouts.md", strings.Replace(mustRead(t, d, "layouts.md"),
+				"合法类名：slide, h1", "合法类名：slide, h1\n数量：h1=2", 1))
+		}, "矛盾"},
+		{"数量行声明未登记的类", func(t *testing.T, d string) {
+			overwrite(t, d, "layouts.md", strings.Replace(mustRead(t, d, "layouts.md"),
+				"合法类名：slide, h1", "合法类名：slide, h1\n数量：ghost=1", 1))
+		}, "未登记的类"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -226,4 +234,42 @@ func mustRead(t *testing.T, dir, name string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// 「数量：」行 → 解析 → 骨架交叉校验 → Repeats 访问器的端到端检查。
+// 真实模板用 product-launch（数量契约的首个用户），夹具验证 happy path。
+func TestRepeatsContract(t *testing.T) {
+	dir, assets := repoTemplatesDir(t)
+	reg, err := NewRegistry(dir, assets)
+	if err != nil {
+		t.Fatalf("真实模板注册失败: %v", err)
+	}
+	pl, err := reg.Get("product-launch")
+	if err != nil {
+		t.Fatalf("product-launch 未注册: %v", err)
+	}
+	if got := pl.Repeats("how-it-works"); got["step"] != 3 {
+		t.Errorf("how-it-works 的数量契约应为 step=3，得到 %v", got)
+	}
+	if got := pl.Repeats("feature-duo"); got["feature-card"] != 2 {
+		t.Errorf("feature-duo 的数量契约应为 feature-card=2，得到 %v", got)
+	}
+	if got := pl.Repeats("pricing"); got["price-card"] != 3 {
+		t.Errorf("pricing 的数量契约应为 price-card=3，得到 %v", got)
+	}
+	if got := pl.Repeats("cover"); len(got) != 0 {
+		t.Errorf("cover 未登记数量契约，应返回空，得到 %v", got)
+	}
+	if got := pl.Repeats("no-such-layout"); got != nil {
+		t.Errorf("未登记版式应返回 nil，得到 %v", got)
+	}
+
+	fix := fixture(t)
+	tpl, err := loadTemplate(fix, assets, map[string]bool{"slide": true, "h1": true})
+	if err != nil {
+		t.Fatalf("夹具应通过: %v", err)
+	}
+	if got := tpl.Repeats("cover"); len(got) != 0 {
+		t.Errorf("未写「数量：」行的版式应无契约，得到 %v", got)
+	}
 }

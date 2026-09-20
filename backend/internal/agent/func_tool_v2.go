@@ -232,7 +232,8 @@ func (a *AgentService) toolReadLayout(ctx context.Context, arguments string) (st
 		"layout":   args.Layout,
 		"skeleton": skel,
 		"classes":  tpl.LayoutClassList(args.Layout),
-		"note":     "骨架里的 {{占位符}} 换成真实内容；只准用列出的类名；data-id 不要写。",
+		"repeats":  tpl.Repeats(args.Layout),
+		"note":     "骨架里的 {{占位符}} 换成真实内容；只准用列出的类名；repeats 里登记的类必须恰好 N 个（骨架重复几次就是几次，多了拆页不要堆）；data-id 不要写。",
 	})
 }
 

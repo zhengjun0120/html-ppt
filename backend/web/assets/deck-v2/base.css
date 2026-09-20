@@ -50,7 +50,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text-1);
    Every px in a slide therefore means the same thing in the browser, in the
    presenter preview, in the overview thumbnail and in a headless render. */
 body{width:100vw;height:100vh;overflow:hidden;
-  display:flex;align-items:center;justify-content:center}
+  display:flex;align-items:center;justify-content:center;
+  /* 翻页时 letterbox 底色跟着当前页换色（runtime.js syncAmbient），
+     过渡与 .slide 的交叉淡入同节奏，深浅页切换不跳。 */
+  transition:background-color .5s var(--ease)}
 img,svg,video{max-width:100%;display:block}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
