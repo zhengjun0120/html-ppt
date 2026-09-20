@@ -99,9 +99,12 @@ async function remove(row: UserTemplateRow) {
   }
 }
 
-// —— 预览缩放的按卡测量（与 TemplateGallery 同一套：画布设计像素等比缩到盒宽）——
+// —— 预览缩放（与 TemplateGallery 同一套）：按卡测量盒宽，等比 contain 居中。
+// 统一缩略高度是关键：竖版模板（小红书图文 810×1080）若按原始比例出盒，
+// CSS grid 会把同行的横版卡拉伸到一样高，卡内拖出大片死空间。
 const boxWidths = ref<Record<string, number>>({})
 const boxEls = new Map<string, HTMLElement>()
+const THUMB_H = 220
 const ro = new ResizeObserver((es) => {
   for (const e of es) {
     const id = (e.target as HTMLElement).dataset.cardId
@@ -124,7 +127,8 @@ function setBoxRef(id: string) {
 onBeforeUnmount(() => ro.disconnect())
 function scaleFor(id: string, canvas: { w: number; h: number }): number {
   const w = boxWidths.value[id]
-  return w && w > 0 ? w / canvas.w : 0.29
+  const byWidth = w && w > 0 ? w / canvas.w : 0.29
+  return Math.min(byWidth, THUMB_H / canvas.h)
 }
 
 onMounted(load)
@@ -161,17 +165,15 @@ onMounted(load)
         <div
           :ref="setBoxRef(row.id)"
           :data-card-id="row.id"
-          class="relative w-full overflow-hidden border-b border-line bg-surface-2"
-          :style="{ aspectRatio: `${(row.canvas?.w ?? 1920)} / ${(row.canvas?.h ?? 1080)}` }"
+          class="relative h-[220px] w-full overflow-hidden border-b border-line bg-surface-2"
         >
           <iframe
             :src="userTemplatePreviewUrl(row.id)"
-            class="pointer-events-none absolute left-0 top-0 border-0"
+            class="pointer-events-none absolute left-1/2 top-1/2 border-0"
             :style="{
               width: `${row.canvas?.w ?? 1920}px`,
               height: `${row.canvas?.h ?? 1080}px`,
-              transform: `scale(${scaleFor(row.id, row.canvas ?? { w: 1920, h: 1080 })})`,
-              transformOrigin: 'top left',
+              transform: `translate(-50%, -50%) scale(${scaleFor(row.id, row.canvas ?? { w: 1920, h: 1080 })})`,
             }"
             sandbox="allow-scripts"
             loading="lazy"
@@ -250,17 +252,15 @@ onMounted(load)
           <div
             :ref="setBoxRef('base-' + b.id)"
             :data-card-id="'base-' + b.id"
-            class="relative w-full overflow-hidden border-b border-line bg-surface-2"
-            :style="{ aspectRatio: `${b.canvas.w} / ${b.canvas.h}` }"
+            class="relative h-[220px] w-full overflow-hidden border-b border-line bg-surface-2"
           >
             <iframe
               :src="templateApi.previewUrl(b.id, '', 1)"
-              class="pointer-events-none absolute left-0 top-0 border-0"
+              class="pointer-events-none absolute left-1/2 top-1/2 border-0"
               :style="{
                 width: `${b.canvas.w}px`,
                 height: `${b.canvas.h}px`,
-                transform: `scale(${scaleFor('base-' + b.id, b.canvas)})`,
-                transformOrigin: 'top left',
+                transform: `translate(-50%, -50%) scale(${scaleFor('base-' + b.id, b.canvas)})`,
               }"
               sandbox="allow-scripts"
               loading="lazy"

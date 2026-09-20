@@ -77,9 +77,12 @@ function pick(id: string) {
   selectedVariant.value = selectedCard.value?.variants[0]?.id ?? 'default'
 }
 
-// —— 每张卡的预览盒宽度测量（iframe 按 canvas 设计像素等比缩放要用）——//
+// —— 每张卡的预览盒宽度测量 + 统一缩略高度——//
+// 竖版模板（xhs-post 810×1080）若按原始比例出盒，CSS grid 会把同行的横版卡
+// 拉伸到一样高、卡内拖出大片死空间；所以固定盒高、等比 contain 居中（信箱式）。
 const boxWidths = ref<Record<string, number>>({})
 const boxEls = new Map<string, HTMLElement>()
+const THUMB_H = 220
 const ro = new ResizeObserver((es) => {
   for (const e of es) {
     const id = (e.target as HTMLElement).dataset.cardId
@@ -103,7 +106,8 @@ onBeforeUnmount(() => ro.disconnect())
 
 function scaleFor(c: GalleryCard): number {
   const w = boxWidths.value[c.id]
-  return w && w > 0 ? w / c.canvas.w : 0.29
+  const byWidth = w && w > 0 ? w / c.canvas.w : 0.29
+  return Math.min(byWidth, THUMB_H / c.canvas.h)
 }
 
 const previewSrc = computed(() =>
@@ -147,20 +151,18 @@ async function start() {
         <div
           :ref="setBoxRef(c.id)"
           :data-card-id="c.id"
-          class="relative w-full overflow-hidden rounded-t-control bg-surface-2"
-          :style="{ aspectRatio: `${c.canvas.w} / ${c.canvas.h}` }"
+          class="relative h-[220px] w-full overflow-hidden rounded-t-control bg-surface-2"
         >
           <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
           <iframe
             :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1)"
             :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
             loading="lazy"
-            class="pointer-events-none absolute left-0 top-0 border-0"
+            class="pointer-events-none absolute left-1/2 top-1/2 border-0"
             :style="{
               width: `${c.canvas.w}px`,
               height: `${c.canvas.h}px`,
-              transform: `scale(${scaleFor(c)})`,
-              transformOrigin: 'top left',
+              transform: `translate(-50%, -50%) scale(${scaleFor(c)})`,
             }"
             sandbox="allow-scripts"
             :title="c.name + ' 预览'"
