@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { PhArrowClockwise, PhGlobe, PhGlobeHemisphereWest, PhPencilSimple, PhPlus, PhSpinner, PhTrash } from '@phosphor-icons/vue'
-import { onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { templateApi, type TemplateMeta } from '@/api/templates'
 import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
@@ -11,12 +12,15 @@ import { useToast } from '@/stores/toast'
 /**
  * 我的模板（plan-v3 B3）：克隆/定制/发布/下架/删除的管理页。
  * 发布跑自动门禁（结构校验 + demo 渲染量测），结果与失败原因就地展示。
+ * 「从内置模板派生」直接展示内置模板卡片（真实缩略 + 中文名 + 适用场景标签）——
+ * 派生是挑"视觉起点"，看不见起点就没法挑。
  */
 
 const router = useRouter()
 const toast = useToast()
 const mine = ref<UserTemplateRow[]>([])
 const community = ref<CommunityTemplate[]>([])
+const templates = ref<TemplateMeta[]>([])
 const loading = ref(true)
 const busyId = ref('')
 const publishReport = ref('')
@@ -25,12 +29,21 @@ const STATUS_LABELS: Record<string, string> = {
   draft: '草稿', publishing: '门禁运行中', published: '已公开', failed: '门禁未过',
 }
 
+const metaOf = computed(() => new Map(templates.value.map((t) => [t.id, t])))
+/** 可派生的内置模板（注册表合并视图里的用户模板不算"内置"） */
+const builtins = computed(() => templates.value.filter((t) => !t.id.startsWith('ut-')))
+/** base_id → 中文名（内置模板都有中文名；查不到兜底原 id） */
+function baseName(id: string): string {
+  return metaOf.value.get(id)?.name ?? id
+}
+
 async function load() {
   loading.value = true
   try {
-    const [m, c] = await Promise.all([userTemplateApi.list(), userTemplateApi.community()])
+    const [m, c, t] = await Promise.all([userTemplateApi.list(), userTemplateApi.community(), templateApi.list()])
     mine.value = m
     community.value = c
+    templates.value = t
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '模板加载失败')
   } finally {
@@ -42,10 +55,10 @@ async function fork(baseId: string) {
   busyId.value = 'fork:' + baseId
   try {
     const row = await userTemplateApi.fork(baseId)
-    toast.info(`已从 ${row.base_id} 克隆：${row.id}`)
+    toast.info(`已从「${baseName(row.base_id)}」派生，去定制工作台改出你的风格`)
     await router.push(`/my-templates/${row.id}/edit`)
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : '克隆失败')
+    toast.error(e instanceof Error ? e.message : '派生失败')
   } finally {
     busyId.value = ''
   }
@@ -86,6 +99,34 @@ async function remove(row: UserTemplateRow) {
   }
 }
 
+// —— 预览缩放的按卡测量（与 TemplateGallery 同一套：画布设计像素等比缩到盒宽）——
+const boxWidths = ref<Record<string, number>>({})
+const boxEls = new Map<string, HTMLElement>()
+const ro = new ResizeObserver((es) => {
+  for (const e of es) {
+    const id = (e.target as HTMLElement).dataset.cardId
+    if (id) boxWidths.value[id] = e.contentRect.width
+  }
+})
+function setBoxRef(id: string) {
+  return (el: unknown) => {
+    if (el) {
+      const e = el as HTMLElement
+      boxEls.set(id, e)
+      ro.observe(e)
+    } else {
+      const old = boxEls.get(id)
+      if (old) ro.unobserve(old)
+      boxEls.delete(id)
+    }
+  }
+}
+onBeforeUnmount(() => ro.disconnect())
+function scaleFor(id: string, canvas: { w: number; h: number }): number {
+  const w = boxWidths.value[id]
+  return w && w > 0 ? w / canvas.w : 0.29
+}
+
 onMounted(load)
 </script>
 
@@ -117,11 +158,21 @@ onMounted(load)
     </Empty>
     <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="row in mine" :key="row.id" class="overflow-hidden rounded-card border border-line bg-surface">
-        <div class="relative h-[130px] overflow-hidden border-b border-line bg-surface-2">
+        <div
+          :ref="setBoxRef(row.id)"
+          :data-card-id="row.id"
+          class="relative w-full overflow-hidden border-b border-line bg-surface-2"
+          :style="{ aspectRatio: `${(row.canvas?.w ?? 1920)} / ${(row.canvas?.h ?? 1080)}` }"
+        >
           <iframe
             :src="userTemplatePreviewUrl(row.id)"
-            class="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
-            :style="{ width: '1920px', height: '1080px', transform: 'scale(0.107)' }"
+            class="pointer-events-none absolute left-0 top-0 border-0"
+            :style="{
+              width: `${row.canvas?.w ?? 1920}px`,
+              height: `${row.canvas?.h ?? 1080}px`,
+              transform: `scale(${scaleFor(row.id, row.canvas ?? { w: 1920, h: 1080 })})`,
+              transformOrigin: 'top left',
+            }"
             sandbox="allow-scripts"
             loading="lazy"
             title="模板预览"
@@ -143,7 +194,7 @@ onMounted(load)
               {{ STATUS_LABELS[row.status] ?? row.status }}
             </span>
           </div>
-          <p class="font-mono text-[10.5px] text-ink-3">{{ row.id }} · base {{ row.base_id }}</p>
+          <p class="text-[11px] text-ink-3">派生自「{{ baseName(row.base_id) }}」</p>
           <p v-if="row.publish_error" class="line-clamp-3 rounded bg-[#FDEBEC] p-1.5 text-[11px] text-[#9F2F2D]" :title="row.publish_error">
             {{ row.publish_error }}
           </p>
@@ -180,7 +231,7 @@ onMounted(load)
           class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-ink-2"
         >
           {{ c.name }}
-          <span class="text-ink-3">by {{ c.author }}</span>
+          <span class="text-ink-3">来自 {{ c.author }}</span>
           <button class="cursor-pointer font-semibold text-accent hover:underline" @click="fork(c.id)">
             <PhPlus :size="11" class="inline" />
             派生
@@ -194,17 +245,44 @@ onMounted(load)
     <div class="mt-8">
       <h2 class="text-[14px] font-bold">从内置模板派生</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <button
-          v-for="b in ['tech-sharing', 'course-module', 'data-dark', 'editorial-white', 'knowledge-blueprint', 'pitch-deck', 'product-launch', 'weekly-report', 'hermes-terminal', 'obsidian-gradient', 'minimal-quiet', 'soft-pastel', 'brutalist-bold', 'xhs-pastel', 'xhs-post', 'dir-nav-minimal', 'presenter-cards', 'safety-alert']"
-          :key="b"
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-ink-2 transition-colors hover:border-accent hover:text-ink"
-          :disabled="busyId === 'fork:' + b"
-          @click="fork(b)"
-        >
-          <PhPlus :size="11" />
-          {{ b }}
-        </button>
+      <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="b in builtins" :key="b.id" class="overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
+          <div
+            :ref="setBoxRef('base-' + b.id)"
+            :data-card-id="'base-' + b.id"
+            class="relative w-full overflow-hidden border-b border-line bg-surface-2"
+            :style="{ aspectRatio: `${b.canvas.w} / ${b.canvas.h}` }"
+          >
+            <iframe
+              :src="templateApi.previewUrl(b.id, '', 1)"
+              class="pointer-events-none absolute left-0 top-0 border-0"
+              :style="{
+                width: `${b.canvas.w}px`,
+                height: `${b.canvas.h}px`,
+                transform: `scale(${scaleFor('base-' + b.id, b.canvas)})`,
+                transformOrigin: 'top left',
+              }"
+              sandbox="allow-scripts"
+              loading="lazy"
+              :title="b.name + ' 预览'"
+            />
+          </div>
+          <div class="space-y-2 p-3">
+            <p class="text-[13.5px] font-semibold">{{ b.name }}</p>
+            <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ b.description }}</p>
+            <div v-if="b.scenario?.length" class="flex flex-wrap gap-1">
+              <span v-for="s in b.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
+                {{ s }}
+              </span>
+            </div>
+            <div class="pt-1">
+              <Button size="sm" :loading="busyId === 'fork:' + b.id" @click="fork(b.id)">
+                <PhPlus :size="12" />
+                从这个派生
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
