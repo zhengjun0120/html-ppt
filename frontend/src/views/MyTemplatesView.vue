@@ -99,12 +99,11 @@ async function remove(row: UserTemplateRow) {
   }
 }
 
-// —— 预览缩放（与 TemplateGallery 同一套）：按卡测量盒宽，等比 contain 居中。
-// 统一缩略高度是关键：竖版模板（小红书图文 810×1080）若按原始比例出盒，
-// CSS grid 会把同行的横版卡拉伸到一样高，卡内拖出大片死空间。
+// —— 预览缩放的按卡测量：画布设计像素等比缩到盒宽（预览盒按画布比例出盒）。
+// 布局是 CSS 多列瀑布流（columns + break-inside-avoid）：卡片天然不等高、
+// 按列紧密排布，竖版模板不会拉伸同行卡片，也不需要信箱式裁边。
 const boxWidths = ref<Record<string, number>>({})
 const boxEls = new Map<string, HTMLElement>()
-const THUMB_H = 220
 const ro = new ResizeObserver((es) => {
   for (const e of es) {
     const id = (e.target as HTMLElement).dataset.cardId
@@ -127,8 +126,7 @@ function setBoxRef(id: string) {
 onBeforeUnmount(() => ro.disconnect())
 function scaleFor(id: string, canvas: { w: number; h: number }): number {
   const w = boxWidths.value[id]
-  const byWidth = w && w > 0 ? w / canvas.w : 0.29
-  return Math.min(byWidth, THUMB_H / canvas.h)
+  return w && w > 0 ? w / canvas.w : 0.29
 }
 
 onMounted(load)
@@ -160,20 +158,22 @@ onMounted(load)
     >
       <template #icon><PhGlobeHemisphereWest /></template>
     </Empty>
-    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div v-for="row in mine" :key="row.id" class="overflow-hidden rounded-card border border-line bg-surface">
+    <div v-else class="columns-1 gap-4 sm:columns-2 lg:columns-3">
+      <div v-for="row in mine" :key="row.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface">
         <div
           :ref="setBoxRef(row.id)"
           :data-card-id="row.id"
-          class="relative h-[220px] w-full overflow-hidden border-b border-line bg-surface-2"
+          class="relative w-full overflow-hidden border-b border-line bg-surface-2"
+          :style="{ aspectRatio: `${(row.canvas?.w ?? 1920)} / ${(row.canvas?.h ?? 1080)}` }"
         >
           <iframe
             :src="userTemplatePreviewUrl(row.id)"
-            class="pointer-events-none absolute left-1/2 top-1/2 border-0"
+            class="pointer-events-none absolute left-0 top-0 border-0"
             :style="{
               width: `${row.canvas?.w ?? 1920}px`,
               height: `${row.canvas?.h ?? 1080}px`,
-              transform: `translate(-50%, -50%) scale(${scaleFor(row.id, row.canvas ?? { w: 1920, h: 1080 })})`,
+              transform: `scale(${scaleFor(row.id, row.canvas ?? { w: 1920, h: 1080 })})`,
+              transformOrigin: 'top left',
             }"
             sandbox="allow-scripts"
             loading="lazy"
@@ -247,20 +247,22 @@ onMounted(load)
     <div class="mt-8">
       <h2 class="text-[14px] font-bold">从内置模板派生</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
-      <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div v-for="b in builtins" :key="b.id" class="overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
+      <div class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
+        <div v-for="b in builtins" :key="b.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
           <div
             :ref="setBoxRef('base-' + b.id)"
             :data-card-id="'base-' + b.id"
-            class="relative h-[220px] w-full overflow-hidden border-b border-line bg-surface-2"
+            class="relative w-full overflow-hidden border-b border-line bg-surface-2"
+            :style="{ aspectRatio: `${b.canvas.w} / ${b.canvas.h}` }"
           >
             <iframe
               :src="templateApi.previewUrl(b.id, '', 1)"
-              class="pointer-events-none absolute left-1/2 top-1/2 border-0"
+              class="pointer-events-none absolute left-0 top-0 border-0"
               :style="{
                 width: `${b.canvas.w}px`,
                 height: `${b.canvas.h}px`,
-                transform: `translate(-50%, -50%) scale(${scaleFor('base-' + b.id, b.canvas)})`,
+                transform: `scale(${scaleFor('base-' + b.id, b.canvas)})`,
+                transformOrigin: 'top left',
               }"
               sandbox="allow-scripts"
               loading="lazy"
