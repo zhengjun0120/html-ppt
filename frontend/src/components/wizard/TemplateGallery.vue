@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhCheck, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
 import { templateApi, type TemplateVariant } from '@/api/templates'
@@ -77,12 +77,32 @@ function pick(id: string) {
   selectedVariant.value = selectedCard.value?.variants[0]?.id ?? 'default'
 }
 
-// —— 每张卡的预览盒宽度测量 + 统一缩略高度——//
-// 竖版模板（xhs-post 810×1080）若按原始比例出盒，CSS grid 会把同行的横版卡
-// 拉伸到一样高、卡内拖出大片死空间；所以固定盒高、等比 contain 居中（信箱式）。
+// —— 瀑布流布局：卡片按"最短列"分配到 N 个纵向列（N 跟随视口宽度）。——//
+// 不用 CSS columns：它按列填充，会把「我的模板」沉进第一列；按列高分配
+// 保住从左到右的阅读顺序（我的模板仍在最上面一排）。列高估算 = 预览相对高
+//（画布高宽比）+ 文本块常数，零测量、够用。
+const columnCount = ref(1)
+function updateColumns() {
+  const w = window.innerWidth
+  columnCount.value = w >= 1280 ? 3 : w >= 768 ? 2 : 1
+}
+const columns = computed<GalleryCard[][]>(() => {
+  const cols: GalleryCard[][] = Array.from({ length: columnCount.value }, () => [])
+  const heights = new Array<number>(columnCount.value).fill(0)
+  for (const c of cards.value) {
+    let i = 0
+    for (let k = 1; k < heights.length; k++) {
+      if (heights[k] < heights[i]) i = k
+    }
+    cols[i].push(c)
+    heights[i] += c.canvas.h / c.canvas.w + 0.6
+  }
+  return cols
+})
+
+// —— 每张卡的预览盒宽度测量：iframe 按 canvas 设计像素等比缩到盒宽，盒按画布比例出盒
 const boxWidths = ref<Record<string, number>>({})
 const boxEls = new Map<string, HTMLElement>()
-const THUMB_H = 220
 const ro = new ResizeObserver((es) => {
   for (const e of es) {
     const id = (e.target as HTMLElement).dataset.cardId
@@ -102,12 +122,18 @@ function setBoxRef(id: string) {
     }
   }
 }
-onBeforeUnmount(() => ro.disconnect())
+onMounted(() => {
+  updateColumns()
+  window.addEventListener('resize', updateColumns)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateColumns)
+  ro.disconnect()
+})
 
 function scaleFor(c: GalleryCard): number {
   const w = boxWidths.value[c.id]
-  const byWidth = w && w > 0 ? w / c.canvas.w : 0.29
-  return Math.min(byWidth, THUMB_H / c.canvas.h)
+  return w && w > 0 ? w / c.canvas.w : 0.29
 }
 
 const previewSrc = computed(() =>
@@ -139,57 +165,61 @@ async function start() {
       </p>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-      <button
-        v-for="c in cards"
-        :key="c.id"
-        type="button"
-        class="group flex cursor-pointer flex-col rounded-control border bg-surface text-left transition-all hover:border-accent"
-        :class="selected === c.id ? 'border-accent shadow-[0_0_0_3px_var(--ring)]' : 'border-line'"
-        @click="pick(c.id)"
-      >
-        <div
-          :ref="setBoxRef(c.id)"
-          :data-card-id="c.id"
-          class="relative h-[220px] w-full overflow-hidden rounded-t-control bg-surface-2"
+    <div class="mt-3 flex items-start gap-3">
+      <div v-for="(col, ci) in columns" :key="ci" class="flex min-w-0 flex-1 flex-col gap-3">
+        <button
+          v-for="c in col"
+          :key="c.id"
+          type="button"
+          class="group flex cursor-pointer flex-col rounded-control border bg-surface text-left transition-all hover:border-accent"
+          :class="selected === c.id ? 'border-accent shadow-[0_0_0_3px_var(--ring)]' : 'border-line'"
+          @click="pick(c.id)"
         >
-          <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
-          <iframe
-            :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1)"
-            :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
-            loading="lazy"
-            class="pointer-events-none absolute left-1/2 top-1/2 border-0"
-            :style="{
-              width: `${c.canvas.w}px`,
-              height: `${c.canvas.h}px`,
-              transform: `translate(-50%, -50%) scale(${scaleFor(c)})`,
-            }"
-            sandbox="allow-scripts"
-            :title="c.name + ' 预览'"
-            aria-hidden="true"
-          />
-          <span
-            v-if="selected === c.id"
-            class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-on-accent"
+          <div
+            :ref="setBoxRef(c.id)"
+            :data-card-id="c.id"
+            class="relative w-full overflow-hidden rounded-t-control bg-surface-2"
+            :style="{ aspectRatio: `${c.canvas.w} / ${c.canvas.h}` }"
           >
-            <PhCheck :size="10" /> 已选
-          </span>
-        </div>
-        <div class="flex flex-col gap-1 p-3">
-          <div class="flex items-center gap-2">
-            <span class="text-[13.5px] font-semibold text-ink">{{ c.name }}</span>
-            <span v-if="c.mine" class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">我的模板</span>
-            <span v-if="c.mine && c.published" class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">已发布</span>
-            <span v-if="!c.mine" class="font-mono text-[10.5px] text-ink-3">{{ c.id }}</span>
-          </div>
-          <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ c.description }}</p>
-          <div v-if="c.scenario?.length" class="flex flex-wrap gap-1">
-            <span v-for="s in c.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
-              {{ s }}
+            <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
+            <iframe
+              :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1)"
+              :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
+              loading="lazy"
+              class="pointer-events-none absolute left-0 top-0 border-0"
+              :style="{
+                width: `${c.canvas.w}px`,
+                height: `${c.canvas.h}px`,
+                transform: `scale(${scaleFor(c)})`,
+                transformOrigin: 'top left',
+              }"
+              sandbox="allow-scripts"
+              :title="c.name + ' 预览'"
+              aria-hidden="true"
+            />
+            <span
+              v-if="selected === c.id"
+              class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-on-accent"
+            >
+              <PhCheck :size="10" /> 已选
             </span>
           </div>
-        </div>
-      </button>
+          <div class="flex flex-col gap-1 p-3">
+            <div class="flex items-center gap-2">
+              <span class="text-[13.5px] font-semibold text-ink">{{ c.name }}</span>
+              <span v-if="c.mine" class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">我的模板</span>
+              <span v-if="c.mine && c.published" class="rounded bg-surface-2 px-1 text-[10px] text-ink-3">已发布</span>
+              <span v-if="!c.mine" class="font-mono text-[10.5px] text-ink-3">{{ c.id }}</span>
+            </div>
+            <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ c.description }}</p>
+            <div v-if="c.scenario?.length" class="flex flex-wrap gap-1">
+              <span v-for="s in c.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
+                {{ s }}
+              </span>
+            </div>
+          </div>
+        </button>
+      </div>
     </div>
 
     <div class="sticky bottom-0 mt-auto flex flex-wrap items-center gap-3 rounded-control border border-line bg-surface px-4 py-3">
