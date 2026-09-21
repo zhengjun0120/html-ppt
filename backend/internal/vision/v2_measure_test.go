@@ -52,29 +52,39 @@ func TestMeasureKeysMatchSlide2Struct(t *testing.T) {
 	}
 }
 
-// fillPct 的分段判定：45 以下是硬伤，55 以下是提示，之上正常。
-// 阈值分两档是有意的——硬判定进 review 的"程序已判定"区（模型必须回应），
-// 提示档只在摘要里挂 ⚠。两档写反了要么_model 被硬判定轰炸，要么空页漏网。
+// fillPct 的判定：45 以下才告警，与上传门禁（usertpl 内容版式 ≥45%）同一把尺；
+// hero/quote 版式豁免——它们的留白是设计。曾经摘要档用 55、又不看版式，46%~54%
+// 的正常页与天生稀疏的宣言页全被挂 ⚠，agent 为消警把卡片注水到 300+ 字
+//（deck-0061 实测 5 轮修复全因此）。
 func TestFillPctThresholds(t *testing.T) {
-	d := &Deck2{CanvasW: 1920, CanvasH: 1080, Slides: []Slide2{
-		{Index: 0, FillPct: 92},
-		{Index: 1, FillPct: 50},
-		{Index: 2, FillPct: 8},
-	}}
+	d := &Deck2{CanvasW: 1920, CanvasH: 1080,
+		Patterns: map[string]string{"cover": "hero", "quote-big": "quote"},
+		Slides: []Slide2{
+			{Index: 0, FillPct: 92},
+			{Index: 1, FillPct: 50},
+			{Index: 2, FillPct: 8},
+			{Index: 3, Layout: "cover", FillPct: 10},
+			{Index: 4, Layout: "quote-big", FillPct: 30, BottomGap: 600},
+		}}
 	hard := HardFindingsV2(d)
 	if n := len(hard); n != 1 {
-		t.Errorf("只有第 3 页（8%%）该进硬判定，实际 %d 条：%v", n, hard)
+		t.Errorf("只有第 3 页（8%%）该进硬判定（hero/quote 豁免），实际 %d 条：%v", n, hard)
 	}
 	digest := DigestV2(d)
-	if !strings.Contains(digest, "填充率 50") || !strings.Contains(digest, "填充率 8") {
-		t.Errorf("第 2、3 页该在摘要里挂填充率提示：%s", digest)
-	}
-	if strings.Contains(digest, "第 1 页") && strings.Contains(digest, "92") && strings.Contains(digest, "⚠") {
-		// 第 1 页 92% 不该有任何 ⚠（该行不含 ⚠ 即可，这里做兜底检查）
+	flagged := func(prefix string) bool {
 		for _, line := range strings.Split(digest, "\n") {
-			if strings.HasPrefix(line, "第 1 页") && strings.Contains(line, "⚠") {
-				t.Errorf("填充率 92%% 的页不该被标记：%s", line)
+			if strings.HasPrefix(line, prefix) && strings.Contains(line, "⚠") {
+				return true
 			}
+		}
+		return false
+	}
+	if !flagged("第 3 页") {
+		t.Errorf("第 3 页（8%%）该在摘要里挂填充率提示：%s", digest)
+	}
+	for _, no := range []string{"第 1 页", "第 2 页", "第 4 页", "第 5 页"} {
+		if flagged(no) {
+			t.Errorf("%s 不该被标记（50%% 已过 45 线；hero/quote 豁免）：%s", no, digest)
 		}
 	}
 }

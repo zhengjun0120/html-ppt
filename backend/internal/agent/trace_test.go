@@ -311,8 +311,9 @@ func TestOpenTraceRecorderGatingAndLivePolicy(t *testing.T) {
 	}
 }
 
-// 每页修改次数闸：同一页第 4 次 update_slide 不执行、给自愈指令；
-// 成功调用按 slide_id 计数（失败不计）。
+// 每页写入/修改次数闸：同一页第 4 次 update_slide 不执行、给自愈指令；
+// 成功调用按 pageKey(slide_id)="p<页码>" 计数（失败不计）——与 write_pages
+// 的整页重写共用同一张预算表。
 func TestExecToolPerSlideUpdateCap(t *testing.T) {
 	c := &collector{}
 	calls := 0
@@ -324,7 +325,7 @@ func TestExecToolPerSlideUpdateCap(t *testing.T) {
 	}}
 
 	// 已达上限：不执行、不算错误、给替代路径
-	scope := &runScope{exec: as.Exec, updates: map[string]int{"s3": maxUpdatesPerSlide}}
+	scope := &runScope{exec: as.Exec, updates: map[string]int{"p3": maxUpdatesPerSlide}}
 	result, execErr := as.execTool(context.Background(),
 		toolCall("c1", "update_slide", `{"deck_id":"d","slide_id":"s3"}`), c.emit, newRunRecorder(), scope)
 	if execErr != nil {
@@ -345,10 +346,70 @@ func TestExecToolPerSlideUpdateCap(t *testing.T) {
 	as.execTool(ctx, toolCall("c2", "update_slide", `{"slide_id":"s5"}`), c.emit, newRunRecorder(), scope2)
 	as.execTool(ctx, toolCall("c3", "update_slide", `{"slide_id":"s5"}`), c.emit, newRunRecorder(), scope2)
 	as.execTool(ctx, toolCall("c4", "update_slide", `{"slide_id":"s6"}`), c.emit, newRunRecorder(), scope2)
-	if scope2.updates["s5"] != 2 || scope2.updates["s6"] != 1 {
+	if scope2.updates["p5"] != 2 || scope2.updates["p6"] != 1 {
 		t.Errorf("计数错误: %+v", scope2.updates)
 	}
 	if calls != 3 {
 		t.Errorf("三次调用都应执行，实际 %d", calls)
+	}
+}
+
+// TestExecToolWritePagesRewriteCap write_pages 的整页重写与 update_slide 共用每页预算：
+// 超预算的页从批里剔除（其余页照常落盘、以单页错误并进返回）；被质量闸拒收的页
+// 不占预算——deck-0061 的修复循环全走 write_pages，p3/p4 各重写 3 次绕开了旧闸门。
+func TestExecToolWritePagesRewriteCap(t *testing.T) {
+	c := &collector{}
+	var gotArgs string
+	resp := `{"results":[{"no":4,"ok":true}],"written":1,"slides":4}`
+	as := &AgentService{Exec: map[string]ToolFunc{
+		"write_pages": func(ctx context.Context, args string) (string, error) {
+			gotArgs = args
+			return resp, nil
+		},
+	}}
+	ctx := context.Background()
+
+	// p3 已达上限：批里 3、4 两页，只有 4 该执行；拒因带页号与替代路径
+	scope := &runScope{exec: as.Exec, updates: map[string]int{"p3": maxUpdatesPerSlide}}
+	result, execErr := as.execTool(ctx, toolCall("c1", "write_pages",
+		`{"deck_id":"d","pages":[{"no":3,"layout":"a","html":"<section></section>"},{"no":4,"layout":"b","html":"<section></section>"}]}`),
+		c.emit, newRunRecorder(), scope)
+	if execErr != nil {
+		t.Fatalf("次数闸是策略结果，不该返回错误: %v", execErr)
+	}
+	if !strings.Contains(gotArgs, `"no":4`) || strings.Contains(gotArgs, `"no":3`) {
+		t.Errorf("只有第 4 页该交给工具，实际参数 %s", gotArgs)
+	}
+	if !strings.Contains(result, `"no":3`) || !strings.Contains(result, "delete_slide") {
+		t.Errorf("被拒页要以单页错误并进返回: %s", result)
+	}
+	if !strings.Contains(result, `"no":4`) {
+		t.Errorf("好页的结果不能被合并弄丢: %s", result)
+	}
+	if scope.updates["p4"] != 1 || scope.updates["p3"] != maxUpdatesPerSlide {
+		t.Errorf("只有落盘成功的页计数: %+v", scope.updates)
+	}
+
+	// 整批都超预算：不执行、给替代路径
+	scope2 := &runScope{exec: as.Exec, updates: map[string]int{"p7": maxUpdatesPerSlide}}
+	gotArgs = ""
+	result, execErr = as.execTool(ctx, toolCall("c2", "write_pages",
+		`{"deck_id":"d","pages":[{"no":7,"layout":"a","html":"<section></section>"}]}`),
+		c.emit, newRunRecorder(), scope2)
+	if execErr != nil || gotArgs != "" {
+		t.Fatalf("整批超预算不应执行: err=%v args=%s", execErr, gotArgs)
+	}
+	if !strings.Contains(result, "delete_slide") || !strings.Contains(result, "7") {
+		t.Errorf("拦截信息缺页号与替代路径: %s", result)
+	}
+
+	// 被质量闸拒收的页（ok:false）不占预算
+	resp = `{"results":[{"no":5,"ok":false,"error":"密度下限"}],"written":0}`
+	scope3 := &runScope{exec: as.Exec}
+	as.execTool(ctx, toolCall("c3", "write_pages",
+		`{"deck_id":"d","pages":[{"no":5,"layout":"a","html":"<section></section>"}]}`),
+		c.emit, newRunRecorder(), scope3)
+	if n := scope3.updates["p5"]; n != 0 {
+		t.Errorf("落盘失败的页不该计数: %+v", scope3.updates)
 	}
 }

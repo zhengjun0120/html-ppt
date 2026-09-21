@@ -95,6 +95,14 @@ func BuildStagePrompt(stage, deckID string, tpl *template.Template, o *deck.Outl
 		if stage == deck.StageGenerating {
 			b.WriteString("\n\n## 大纲（已确认，页数与内容以此为准）\n")
 			b.WriteString(o.ToPromptText())
+			// 大纲标题超长预检：T005（标题字数上限）在写页时才报，而大纲是模板
+			// 选定之前写的、看不到这条约束——deck-0061 实测首批 4 页全部命中，
+			// 返工从第一批就开始。这里提前点名，首批就把标题写短。
+			if over := overlongOutlineTitles(o.Pages, deck.TitleMax()); len(over) > 0 {
+				fmt.Fprintf(&b, "\n\n**标题预检**：以下页的大纲标题超过上限 %d 字，写页时直接改短"+
+					"（主标 ≤%d 字，修饰成分挪进 lede 副句），不要照抄：%s。",
+					deck.TitleMax(), deck.TitleMax(), strings.Join(over, "；"))
+			}
 		} else {
 			b.WriteString("\n\n## 大纲索引（页码 · role · 标题）\n")
 			for _, pg := range o.Pages {
@@ -125,4 +133,15 @@ func appendDate(msg string) string {
 	return msg + fmt.Sprintf("\n\n当前日期：%s（%s）。涉及「今天」「本月」「最近」这类时间说法时以它为准——"+
 		"你的训练数据有截止时间，不要按它推断当前时间，也不要为了确认日期去联网搜索。",
 		now.Format("2006-01-02"), weekdayCN[int(now.Weekday())])
+}
+
+// overlongOutlineTitles 按 T005 同口径（去空格计 rune 数）找出超长的大纲标题。
+func overlongOutlineTitles(pages []deck.OutlinePage, max int) []string {
+	var out []string
+	for _, p := range pages {
+		if n := len([]rune(strings.ReplaceAll(p.Title, " ", ""))); n > max {
+			out = append(out, fmt.Sprintf("第 %d 页「%s」（%d 字）", p.No, p.Title, n))
+		}
+	}
+	return out
 }

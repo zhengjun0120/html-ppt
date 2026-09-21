@@ -34,15 +34,70 @@ type runScope struct {
 	exec      map[string]ToolFunc
 	maxPerRun map[string]int
 	maxTurns  int
-	// updates 记录本 run 每页（slide_id）成功修改的次数；maxUpdatesPerSlide 是
-	// 硬闸。实测 soft-pastel 的引文页被连改 6 次、weekly-report 四页各改 3-4 次
-	// ——主观打磨循环没有自然出口，和 review 循环一样要计数器拦。
+	// updates 记录本 run 每页成功写入/修改的次数（write_pages 的整页重写与
+	// update_slide 合并计数，键 pageKey/pageKeyNo 统一为 p<页码>）。
+	// 实测 soft-pastel 的引文页被连改 6 次、weekly-report 四页各改 3-4 次；
+	// update_slide 闸门加上后，deck-0061 的修复循环又全改走 write_pages（p3/p4
+	// 各重写 3 次绕开闸门）——主观打磨循环没有自然出口，计数必须覆盖两条通道。
 	updates map[string]int
 }
 
-// maxUpdatesPerSlide 单次 run 里同一页允许成功 update_slide 的最多次数。
-// 两轮审查×每轮一修是修复循环的正常形态；第 4 次起就是打磨，闸掉。
+// maxUpdatesPerSlide 单次 run 里同一页允许成功写入/修改的最多次数
+//（write_pages 重写 + update_slide 合并计）。首写占 1 次，两轮审查×每轮一修
+// 是修复循环的正常形态；第 4 次起就是打磨，闸掉。
 const maxUpdatesPerSlide = 3
+
+// pageKey 每页写入/修改预算的统一键。update_slide 拿到的是 slide_id（s3）、
+// write_pages 拿到的是页码（3），同一页必须落进同一格才谈得上合并预算；
+// 非 s<数字> 形态的 id 退化为带前缀的原样键——宁可分开数，不能把不同页算进同一格。
+func pageKey(slideID string) string {
+	if strings.HasPrefix(slideID, "s") {
+		if n, err := strconv.Atoi(strings.TrimPrefix(slideID, "s")); err == nil {
+			return "p" + strconv.Itoa(n)
+		}
+	}
+	return "page:" + slideID
+}
+
+func pageKeyNo(no int) string { return "p" + strconv.Itoa(no) }
+
+// pageNosJoin 页号列表 → "第 3 页、第 4 页"（拦截信息里点名用）。
+func pageNosJoin(nos []int) string {
+	parts := make([]string, len(nos))
+	for i, n := range nos {
+		parts[i] = "第 " + strconv.Itoa(n) + " 页"
+	}
+	return strings.Join(parts, "、")
+}
+
+// mergeRefusedPages 把因超预算被拒的页以单页错误并进 write_pages 的返回 JSON。
+// 返回体不是预期形状（理论上不会）就退化为在文末追加说明——别把好页的结果弄丢。
+func mergeRefusedPages(result string, refused []int) string {
+	reason := func(no int) string {
+		return fmt.Sprintf("第 %d 页在本 run 里已写入/修改 %d 次，本次未执行。反复打磨同一页是预算黑洞："+
+			"接受当前版本并在最终汇报里说明遗留，或用 delete_slide + insert_slide 换版式整页重建。",
+			no, maxUpdatesPerSlide)
+	}
+	var rep deck.WritePagesReport
+	if err := json.Unmarshal([]byte(result), &rep); err != nil || rep.Results == nil {
+		var b strings.Builder
+		b.WriteString(result)
+		for _, no := range refused {
+			b.WriteString("\n" + reason(no))
+		}
+		return b.String()
+	}
+	merged := make([]deck.PageWriteResult, 0, len(rep.Results)+len(refused))
+	for _, no := range refused {
+		merged = append(merged, deck.PageWriteResult{No: no, OK: false, Error: reason(no)})
+	}
+	merged = append(merged, rep.Results...)
+	rep.Results = merged
+	if out, err := json.Marshal(rep); err == nil {
+		return string(out)
+	}
+	return result
+}
 
 // v2 各阶段的默认轮数预算（config deck_v2.max_turns 可覆盖）。
 var defaultStageMaxTurns = map[string]int{
@@ -553,24 +608,89 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 		result = fmt.Sprintf("配额用完：%s 在一次 run 里最多执行 %d 次，已用尽（本次调用未执行）。"+
 			"不要再调用它——基于已有的结果继续完成任务，剩余想检查/想打磨的点在最终汇报里说明。",
 			tool.Function.Name, as.MaxPerRun[tool.Function.Name])
+	case tool.Function.Name == "write_pages":
+		// 每页写入预算：write_pages 的整页重写与 update_slide 合并计数（同一张
+		// scope.updates 表，键统一为 p<页码>）。deck-0061 实测：修复循环全走
+		// write_pages，p3/p4 各被重写 3 次——update_slide 的闸门管不到这条通道。
+		// 超预算的页从本批剔除、以单页错误并进返回，批内其余页照常落盘。
+		var wp struct {
+			DeckID string           `json:"deck_id"`
+			Pages  []map[string]any `json:"pages"`
+		}
+		_ = json.Unmarshal([]byte(tool.Function.Arguments), &wp)
+		pageNoOf := func(m map[string]any) int {
+			if f, ok := m["no"].(float64); ok {
+				return int(f)
+			}
+			return 0
+		}
+		var kept []map[string]any
+		var refused []int
+		for _, p := range wp.Pages {
+			if scope.updates != nil && scope.updates[pageKeyNo(pageNoOf(p))] >= maxUpdatesPerSlide {
+				refused = append(refused, pageNoOf(p))
+				continue
+			}
+			kept = append(kept, p)
+		}
+		if len(wp.Pages) > 0 && len(kept) == 0 {
+			// 整批都超预算：与 update_slide 的闸同性质——策略结果，不算 callErr。
+			result = fmt.Sprintf("本批每一页（%s）在本 run 里都已写入/修改 %d 次，本次全部未执行。"+
+				"反复打磨同一页是预算黑洞：要么接受当前版本并在最终汇报里说明遗留，"+
+				"要么认定版式不合适，用 delete_slide + insert_slide 换版式整页重建；"+
+				"各页的最新量测数字直接读最近一次工具返回。",
+				pageNosJoin(refused), maxUpdatesPerSlide)
+			break
+		}
+		if len(refused) > 0 {
+			if b, merr := json.Marshal(map[string]any{"deck_id": wp.DeckID, "pages": kept}); merr == nil {
+				tool.Function.Arguments = string(b) // 只把预算内的页交给工具
+			}
+		}
+		runTool()
+		if callErr == "" {
+			if scope.updates == nil {
+				scope.updates = map[string]int{}
+			}
+			// 只数真正落盘的页：被密度/类名闸拒收的页不占预算——改了重来的成本
+			// 不该由它承担。
+			var rep struct {
+				Results []struct {
+					No int  `json:"no"`
+					OK bool `json:"ok"`
+				} `json:"results"`
+			}
+			if json.Unmarshal([]byte(result), &rep) == nil {
+				for _, r := range rep.Results {
+					if r.OK {
+						scope.updates[pageKeyNo(r.No)]++
+					}
+				}
+			}
+			if len(refused) > 0 {
+				result = mergeRefusedPages(result, refused)
+			}
+		}
 	case tool.Function.Name == "update_slide":
 		var us struct {
 			SlideID string `json:"slide_id"`
 		}
 		_ = json.Unmarshal([]byte(tool.Function.Arguments), &us)
-		if us.SlideID != "" && scope.updates != nil && scope.updates[us.SlideID] >= maxUpdatesPerSlide {
-			// 每页修改次数闸：与配额闸同性质——策略结果，不算 callErr。
-			result = fmt.Sprintf("同一页（%s）在本 run 里已经成功修改 %d 次，本次调用未执行。"+
+		key := pageKey(us.SlideID)
+		if us.SlideID != "" && scope.updates != nil && scope.updates[key] >= maxUpdatesPerSlide {
+			// 每页写入/修改次数闸：与 write_pages 的整页重写共用同一预算（pageKey
+			// 统一键），与配额闸同性质——策略结果，不算 callErr。
+			result = fmt.Sprintf("同一页（%s）在本 run 里已经写入/修改 %d 次，本次调用未执行。"+
 				"反复打磨同一页是预算黑洞：要么接受当前版本并在最终汇报里说明，"+
 				"要么认定版式不合适，用 delete_slide + insert_slide 换版式整页重建；"+
-				"该页的新鲜量测数字直接读最近一次工具返回。", us.SlideID, scope.updates[us.SlideID])
+				"该页的新鲜量测数字直接读最近一次工具返回。", us.SlideID, scope.updates[key])
 		} else {
 			runTool()
 			if callErr == "" && us.SlideID != "" {
 				if scope.updates == nil {
 					scope.updates = map[string]int{}
 				}
-				scope.updates[us.SlideID]++
+				scope.updates[key]++
 			}
 		}
 	default:

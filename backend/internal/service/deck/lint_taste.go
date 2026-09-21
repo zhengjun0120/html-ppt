@@ -56,6 +56,10 @@ func defaultLintCfg() LintCfg {
 // lintCfg 当前生效的词表（WithLintConfig 覆盖；并发只读，装载期写一次）。
 var lintCfg = defaultLintCfg()
 
+// TitleMax 当前生效的页标题字数上限（T005 的同一来源）。生成提示词的大纲
+// 标题预检用它——大纲在模板选定之前写、看不到这条约束，别在别的包抄常量。
+func TitleMax() int { return lintCfg.TitleMax }
+
 // WithLintConfig 注入配置词表（main 启动时调一次；nil 值字段保留默认）。
 func WithLintConfig(cfg LintCfg) {
 	if len(cfg.CJKBanned) > 0 {

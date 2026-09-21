@@ -58,7 +58,17 @@ type Deck2 struct {
 	Slides  []Slide2
 	CanvasW int
 	CanvasH int
+	// Patterns 版式 id → 视觉模式指纹（hero/stack/cards/...）。CaptureV2 只见渲染
+	// 页面、不知道模板，由调用方（agent 侧 captureDeckV2）从模板注册表补上；nil =
+	// 不豁免。hero/quote 是刻意的稀疏页，填充率/底部空隙告警跳过它们——没有这份
+	// 名单，留白型模板的宣言页会被每轮量测追着补内容（deck-0061 实测：5 轮修复
+	// 全是被它逼出来的）。
+	Patterns map[string]string `json:"-"`
 }
+
+// isSparsePattern hero/quote（封面/章节/收尾/宣言/引言）是刻意的稀疏页：留白是
+// 设计，质量靠溢出/字号项与看图审查兜底。上传门禁（usertpl）按同一口径豁免。
+func isSparsePattern(p string) bool { return p == "hero" || p == "quote" }
 
 // OptionsV2 捕获参数。
 type OptionsV2 struct {
@@ -357,10 +367,14 @@ func DigestV2(d *Deck2) string {
 		if s.MinFontPx > 0 && s.MinFontPx < 15 {
 			flags = append(flags, fmt.Sprintf("最小字号 %.0fpx 偏小", s.MinFontPx))
 		}
-		if s.FillPct > 0 && s.FillPct < 55 {
-			flags = append(flags, fmt.Sprintf("填充率 %.0f%% 偏空（不到画布一半）", s.FillPct))
+		// 填充率下限 45：与上传门禁（usertpl 内容版式 ≥45%）同一把尺。曾经这里
+		// 单独用 55 当"提示档"，46%~54% 的正常页也被挂 ⚠，agent 为消警把卡片
+		// 注水到 300+ 字、反超模板自己 100-200 字的密度上限（deck-0061 实测）。
+		exempt := isSparsePattern(d.Patterns[s.Layout])
+		if s.FillPct > 0 && s.FillPct < 45 && !exempt {
+			flags = append(flags, fmt.Sprintf("填充率 %.0f%% 偏空（大面积留白）", s.FillPct))
 		}
-		if d.CanvasH > 0 && s.BottomGap > float64(d.CanvasH)*0.35 {
+		if d.CanvasH > 0 && s.BottomGap > float64(d.CanvasH)*0.35 && !exempt {
 			flags = append(flags, "底部空隙过大")
 		}
 		line := fmt.Sprintf("第 %d 页 [%s] %s：字数 %d，最小字号 %.0fpx，底部空隙 %.0fpx，填充率 %.0f%%，子元素 %d",
@@ -385,7 +399,8 @@ func HardFindingsV2(d *Deck2) []string {
 		}
 		// 大面积留白与溢出同样会让观众觉得"没做完"——deck-0031 实测教训：
 		// 12 页里最空的页只画了 8% 的画布，当时的量测体系对此完全沉默。
-		if s.FillPct > 0 && s.FillPct < 45 {
+		// hero/quote 豁免：它们的留白是设计（与摘要 ⚠、上传门禁同口径）。
+		if s.FillPct > 0 && s.FillPct < 45 && !isSparsePattern(d.Patterns[s.Layout]) {
 			out = append(out, fmt.Sprintf("第 %d 页内容只覆盖画布的 %.0f%%，大面积留白（程序硬判定）", s.Index+1, s.FillPct))
 		}
 	}

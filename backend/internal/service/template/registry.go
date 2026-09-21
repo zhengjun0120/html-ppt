@@ -122,6 +122,12 @@ func (t *Template) Repeats(layoutID string) map[string]int {
 	return t.layoutRepeats[layoutID]
 }
 
+// Patterns 返回全部版式的视觉模式指纹（版式 id → hero/stack/cards/...，只读视图）。
+// 生成侧量测按它给 hero/quote 豁免填充率告警；单版式查询用 Pattern。
+func (t *Template) Patterns() map[string]string {
+	return t.layoutPatterns
+}
+
 // DistinctPatterns 模板登记版式的不同视觉模式数（节奏守卫判断该模板
 // 有没有足够的模式多样性可判——不足 4 种的模板按模式判重会无解）。
 func (t *Template) DistinctPatterns() int {

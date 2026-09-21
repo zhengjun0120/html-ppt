@@ -157,6 +157,23 @@ func (s *Service) templateFor(df *DeckFile) (*template.Template, error) {
 	return s.templates.Get(df.TemplateID)
 }
 
+// LayoutPatterns deck 所用模板的「版式 id → 视觉模式指纹」（hero/stack/cards/...）。
+// 生成侧量测按它给 hero/quote 豁免填充率/底部空隙告警（与上传门禁同一份判断来源）。
+func (s *Service) LayoutPatterns(userID uint, id string) (map[string]string, error) {
+	if err := s.authorize(userID, id); err != nil {
+		return nil, err
+	}
+	df, err := s.readDeckFile(id)
+	if err != nil {
+		return nil, err
+	}
+	tpl, err := s.templateFor(df)
+	if err != nil {
+		return nil, err
+	}
+	return tpl.Patterns(), nil
+}
+
 // deckFilePath / outlineFilePath：v2 的两个数据文件。
 func (s *Service) deckFilePath(id string) string {
 	return filepath.Join(s.decksDir, id, "deck.json")

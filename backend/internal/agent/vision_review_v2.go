@@ -35,7 +35,7 @@ func (a *AgentService) measureDeckV2(ctx context.Context, uid uint, deckID strin
 	b.WriteString("\n\n版面量测（自动跑的，只有数字，没有看图；固定画布 1920×1080）：\n")
 	b.WriteString(vision.DigestV2(d))
 	b.WriteString("\n溢出（⚠ 标记）的页必须修复：删内容或精简文字，不要缩字号糊弄。")
-	b.WriteString("\n填充率偏空（⚠ 标记）的页同样必须修复：给这页补实质内容（数据、例子、图表行），或改用信息密度更高的骨架重写整页——留白超过画布一半的页，观众会当成「没做完」。")
+	b.WriteString("\n填充率偏空（⚠ 标记）的页优先补实质内容（数据、例子、图表行），或换信息密度更高的版式重写；补不动就如实汇报遗留——为凑填充率注水，比留白更伤观感。")
 	b.WriteString(fmt.Sprintf("\n要看画面：调 review_slides，pages 传 1 基页号（一次最多 %d 页），"+
 		"优先挑溢出页、填充率偏空的页和最小字号偏小的页。", maxReviewPages))
 	return clipRunes(b.String(), reviewChars)
@@ -71,6 +71,12 @@ func (a *AgentService) captureDeckV2(ctx context.Context, uid uint, deckID strin
 			Name: "vision", Stage: "error", Text: "渲染/量测失败: " + err.Error(),
 		}})
 		return nil, fmt.Errorf("渲染/量测失败: %w", err)
+	}
+
+	// 版式指纹从模板注册表补进量测结果：hero/quote 的填充率告警豁免要按模板判。
+	// 拿不到（deck 还没选模板/读失败）就保持 nil，退化为不豁免——少一个优化，不出错。
+	if pats, perr := a.DeckService.LayoutPatterns(uid, deckID); perr == nil {
+		d.Patterns = pats
 	}
 
 	// 观测：量测数字与截图进 trace（与 v1 同一形态，页字段不同）

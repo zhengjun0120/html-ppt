@@ -521,7 +521,7 @@ func (a *AgentService) buildToolsV2(stage string) map[string]Tool {
 		mountTool[deckIDArgs](tools, "list_slides", "查看已写入的页面目录（自查页序与版式用）。", a.toolListSlidesV2, 0)
 		mountTool[slideIDArgs](tools, "read_slide", "读取某页当前 HTML 与指纹（修复页之前先读）。slide_id 是 list_slides 返回的形如 s3 的 id，不是纯数字页码；不要自己猜测。", a.toolReadSlideV2, 0)
 		mountTool[updateSlideArgsV2](tools, "update_slide",
-			"修复/修改页：整页替换（保留原 data-id 与 data-layout；fingerprint 从 read_slide 原样传来）。同一页在一次 run 里最多成功修改 3 次——反复打磨同一页会被闸门拦下。", a.toolUpdateSlideV2, 0)
+			"修复/修改页：整页替换（保留原 data-id 与 data-layout；fingerprint 从 read_slide 原样传来）。同一页在一次 run 里最多写入/修改 3 次（与 write_pages 的重写合并计数）——反复打磨同一页会被闸门拦下。", a.toolUpdateSlideV2, 0)
 	}
 
 	switch stage {
@@ -557,7 +557,7 @@ func (a *AgentService) buildToolsV2(stage string) map[string]Tool {
 			"取模板专属质量规则全文。开始写页之前读一次。",
 			a.toolReadGuidelines, 0)
 		mountTool[writePagesArgs](tools, "write_pages",
-			"分批写入页面（每批 2-4 页）。返回每页的写入结果与量测数字；溢出页必须修复。",
+			"分批写入页面（每批 2-4 页）。返回每页的写入结果与量测数字；溢出页必须修复。每页一次 run 最多写入 3 次（首写算 1 次，与 update_slide 合并计数），反复重写同一页会被闸掉。",
 			a.toolWritePages, 0)
 	case deck.StageIterating:
 		mountCommon()

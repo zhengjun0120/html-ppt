@@ -180,6 +180,11 @@ func run() error {
 	var utplSvc usertpl.Service
 	if st != nil && templateReg != nil {
 		utplSvc = *usertpl.New(templateReg, st, userTplRoot, cfg.Vision.ChromePath, loopback)
+		// base 侧修了结构契约（骨架/数量行）后，旧 fork 的 layouts.md 也要跟上。
+		// 必须在下面的重挂循环之前落盘，挂载时读到的才是新文件。骨架的公共类
+		// （grid/notes 等）由外壳 base.css 提供，覆盖判定要把它算进来。
+		shellCSS, _ := os.ReadFile(filepath.Join(cfg.Assets.Dir, "deck-v2", "base.css"))
+		utplSvc.SyncLayoutsFromBase(shellCSS)
 		// 重启后重挂全部用户模板目录：私有的也要挂（owner 可用性由 DB 校验把守）
 		if ents, err := os.ReadDir(userTplRoot); err == nil {
 			for _, e := range ents {
