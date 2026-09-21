@@ -34,7 +34,15 @@ type runScope struct {
 	exec      map[string]ToolFunc
 	maxPerRun map[string]int
 	maxTurns  int
+	// updates 记录本 run 每页（slide_id）成功修改的次数；maxUpdatesPerSlide 是
+	// 硬闸。实测 soft-pastel 的引文页被连改 6 次、weekly-report 四页各改 3-4 次
+	// ——主观打磨循环没有自然出口，和 review 循环一样要计数器拦。
+	updates map[string]int
 }
+
+// maxUpdatesPerSlide 单次 run 里同一页允许成功 update_slide 的最多次数。
+// 两轮审查×每轮一修是修复循环的正常形态；第 4 次起就是打磨，闸掉。
+const maxUpdatesPerSlide = 3
 
 // v2 各阶段的默认轮数预算（config deck_v2.max_turns 可覆盖）。
 var defaultStageMaxTurns = map[string]int{
@@ -545,6 +553,26 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 		result = fmt.Sprintf("配额用完：%s 在一次 run 里最多执行 %d 次，已用尽（本次调用未执行）。"+
 			"不要再调用它——基于已有的结果继续完成任务，剩余想检查/想打磨的点在最终汇报里说明。",
 			tool.Function.Name, as.MaxPerRun[tool.Function.Name])
+	case tool.Function.Name == "update_slide":
+		var us struct {
+			SlideID string `json:"slide_id"`
+		}
+		_ = json.Unmarshal([]byte(tool.Function.Arguments), &us)
+		if us.SlideID != "" && scope.updates != nil && scope.updates[us.SlideID] >= maxUpdatesPerSlide {
+			// 每页修改次数闸：与配额闸同性质——策略结果，不算 callErr。
+			result = fmt.Sprintf("同一页（%s）在本 run 里已经成功修改 %d 次，本次调用未执行。"+
+				"反复打磨同一页是预算黑洞：要么接受当前版本并在最终汇报里说明，"+
+				"要么认定版式不合适，用 delete_slide + insert_slide 换版式整页重建；"+
+				"该页的新鲜量测数字直接读最近一次工具返回。", us.SlideID, scope.updates[us.SlideID])
+		} else {
+			runTool()
+			if callErr == "" && us.SlideID != "" {
+				if scope.updates == nil {
+					scope.updates = map[string]int{}
+				}
+				scope.updates[us.SlideID]++
+			}
+		}
 	default:
 		runTool()
 	}

@@ -59,6 +59,7 @@
 ---
 
 ## quad-cards（马卡龙四卡）
+数量：xw-card=4
 指纹：cards
 
 用途：四张浅色卡（soft-pink/blue/green/orange 各一，颜色即分类）
@@ -139,6 +140,7 @@
 ---
 
 ## two-column（双栏对照）
+数量：xw-card=2
 指纹：cards
 
 用途：两个角度/方案的双栏卡片
@@ -188,6 +190,7 @@
 ---
 
 ## grid-3（三栏要点）
+数量：xw-card=3
 指纹：cards
 
 用途：三个并列要点的三栏卡（可混用马卡龙色）

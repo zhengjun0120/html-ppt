@@ -94,6 +94,7 @@
 ---
 
 ## compare（两栏对照）
+数量：dk-col=2
 指纹：cards
 
 用途：× / ✓ 两个做法的正反对照（dk-grid-2 两栏）。emerald 底。

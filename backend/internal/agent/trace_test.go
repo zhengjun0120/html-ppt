@@ -310,3 +310,45 @@ func TestOpenTraceRecorderGatingAndLivePolicy(t *testing.T) {
 		t.Errorf("剔除 messages 后要留下字节数，页面靠它表达\"上下文多大\"，实际 %d", got.Bytes)
 	}
 }
+
+// 每页修改次数闸：同一页第 4 次 update_slide 不执行、给自愈指令；
+// 成功调用按 slide_id 计数（失败不计）。
+func TestExecToolPerSlideUpdateCap(t *testing.T) {
+	c := &collector{}
+	calls := 0
+	as := &AgentService{Exec: map[string]ToolFunc{
+		"update_slide": func(ctx context.Context, args string) (string, error) {
+			calls++
+			return `{"ok":true}`, nil
+		},
+	}}
+
+	// 已达上限：不执行、不算错误、给替代路径
+	scope := &runScope{exec: as.Exec, updates: map[string]int{"s3": maxUpdatesPerSlide}}
+	result, execErr := as.execTool(context.Background(),
+		toolCall("c1", "update_slide", `{"deck_id":"d","slide_id":"s3"}`), c.emit, newRunRecorder(), scope)
+	if execErr != nil {
+		t.Fatalf("次数闸是策略结果，不该返回错误: %v", execErr)
+	}
+	if calls != 0 {
+		t.Fatalf("已达上限的第 4 次调用不应执行")
+	}
+	for _, want := range []string{"s3", "3 次", "delete_slide"} {
+		if !strings.Contains(result, want) {
+			t.Errorf("拦截信息缺 %q: %q", want, result)
+		}
+	}
+
+	// 未达上限：执行并按页计数；失败不计
+	scope2 := &runScope{exec: as.Exec}
+	ctx := context.Background()
+	as.execTool(ctx, toolCall("c2", "update_slide", `{"slide_id":"s5"}`), c.emit, newRunRecorder(), scope2)
+	as.execTool(ctx, toolCall("c3", "update_slide", `{"slide_id":"s5"}`), c.emit, newRunRecorder(), scope2)
+	as.execTool(ctx, toolCall("c4", "update_slide", `{"slide_id":"s6"}`), c.emit, newRunRecorder(), scope2)
+	if scope2.updates["s5"] != 2 || scope2.updates["s6"] != 1 {
+		t.Errorf("计数错误: %+v", scope2.updates)
+	}
+	if calls != 3 {
+		t.Errorf("三次调用都应执行，实际 %d", calls)
+	}
+}

@@ -513,15 +513,15 @@ func (a *AgentService) buildToolsV2(stage string) map[string]Tool {
 	mountReview := func() {
 			if a.Vision {
 				mountTool[ReviewSlidesArgs](tools, "review_slides",
-					"渲染并量测整份 deck；可用 pages 点名几页真正看图（一次 run 最多 3 次，慢且贵，留给最可疑的页）。注意：write_pages / update_slide 的返回里已经带了刚改动页面的量测数字——纯量测直接读那个返回，不要再调本工具；只有需要真的看图判断视觉问题时才点名 pages，并把想验证的问题写进 focus（一句具体的话：哪一页的哪一块、担心什么），报告会优先回答它。",
+					"渲染并量测整份 deck；可用 pages 点名几页真正看图（一次 run 最多 3 次，慢且贵，留给最可疑的页）。注意：write_pages / update_slide 的返回里已经带了刚改动页面的量测数字——纯量测直接读那个返回，不要再调本工具；整份 deck 的数字复查（不带 pages）一次 run 最多 1 次；只有需要真的看图判断视觉问题时才点名 pages，并把想验证的问题写进 focus（一句具体的话：哪一页的哪一块、担心什么），报告会优先回答它。",
 					a.toolReviewSlidesV2, reviewQuotaPerRun)
 			}
 	}
 	mountSlideReads := func() {
 		mountTool[deckIDArgs](tools, "list_slides", "查看已写入的页面目录（自查页序与版式用）。", a.toolListSlidesV2, 0)
-		mountTool[slideIDArgs](tools, "read_slide", "读取某页当前 HTML 与指纹（修复页之前先读），请调用 list_slides 来获取 slide_id，不要自己猜测slide_id。", a.toolReadSlideV2, 0)
+		mountTool[slideIDArgs](tools, "read_slide", "读取某页当前 HTML 与指纹（修复页之前先读）。slide_id 是 list_slides 返回的形如 s3 的 id，不是纯数字页码；不要自己猜测。", a.toolReadSlideV2, 0)
 		mountTool[updateSlideArgsV2](tools, "update_slide",
-			"修复/修改页：整页替换（保留原 data-id 与 data-layout；fingerprint 从 read_slide 原样传来）。", a.toolUpdateSlideV2, 0)
+			"修复/修改页：整页替换（保留原 data-id 与 data-layout；fingerprint 从 read_slide 原样传来）。同一页在一次 run 里最多成功修改 3 次——反复打磨同一页会被闸门拦下。", a.toolUpdateSlideV2, 0)
 	}
 
 	switch stage {
