@@ -272,16 +272,16 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{标题}}</h2>
   <div class="stack mt-l">
-    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件，12-24 字}}</span></div>
-    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件，12-24 字}}</span></div>
-    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件，12-24 字}}</span></div>
-    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件，12-24 字}}</span></div>
+    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件，12-24 字}}</span><span class="d">{{口径或负责人}}</span></div>
+    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件}}</span><span class="d">{{口径}}</span></div>
+    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件}}</span><span class="d">{{口径}}</span></div>
+    <div class="agenda-row"><span class="num">{{时间点}}</span><span class="t">{{事件}}</span><span class="d">{{口径}}</span></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, stack, mt-l, agenda-row, num, t, notes
+合法类名：slide, kicker, h2, stack, mt-l, agenda-row, num, t, d, notes
 
 ---
 

@@ -72,10 +72,10 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{主题}}</h2>
     <div class="xw-grid-2 mt-l">
-      <div class="xw-card soft-pink"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
-      <div class="xw-card soft-blue"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
-      <div class="xw-card soft-green"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
-      <div class="xw-card soft-orange"><h4>{{卡标题}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-pink"><div class="xw-label">{{栏目标签，2-4 字}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚，10-20 字}}</div></div>
+      <div class="xw-card soft-blue"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+      <div class="xw-card soft-green"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+      <div class="xw-card soft-orange"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -83,7 +83,7 @@
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-pink, soft-blue, soft-green, soft-orange, h4, xw-footer, notes
+合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-pink, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes
 
 ---
 
@@ -153,8 +153,8 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{对照标题}}</h2>
     <div class="xw-grid-2 mt-l">
-      <div class="xw-card soft-blue"><h4>{{栏 A}}</h4><p>{{内容，22-45 字}}</p></div>
-      <div class="xw-card soft-purple"><h4>{{栏 B}}</h4><p>{{内容，22-45 字}}</p></div>
+      <div class="xw-card soft-blue"><div class="xw-label">{{栏 A 标签}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚}}</div></div>
+      <div class="xw-card soft-purple"><div class="xw-label">{{栏 B 标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -162,7 +162,7 @@
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-blue, soft-purple, h4, xw-footer, notes
+合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-blue, soft-purple, xw-label, main, desc, xw-footer, notes
 
 ---
 
@@ -203,9 +203,9 @@
   <div class="xw-page">
     <h2 class="xw-title-md">{{主题}}</h2>
     <div class="xw-grid-3 mt-l">
-      <div class="xw-card soft-blue"><h4>{{要点}}</h4><p>{{内容，22-40 字}}</p></div>
-      <div class="xw-card soft-green"><h4>{{要点}}</h4><p>{{内容，22-40 字}}</p></div>
-      <div class="xw-card soft-orange"><h4>{{要点}}</h4><p>{{内容，22-40 字}}</p></div>
+      <div class="xw-card soft-blue"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚}}</div></div>
+      <div class="xw-card soft-green"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+      <div class="xw-card soft-orange"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
     </div>
   </div>
   <div class="xw-footer">{{页脚}}</div>
@@ -213,4 +213,4 @@
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-3, mt-l, xw-card, soft-blue, soft-green, soft-orange, h4, xw-footer, notes
+合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-3, mt-l, xw-card, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes

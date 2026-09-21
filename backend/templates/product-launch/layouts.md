@@ -62,15 +62,15 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{特性主题}}</h2>
   <div class="grid g3 mt-l">
-    <div class="feature-card"><h4>{{特性}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
-    <div class="feature-card"><h4>{{特性}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
-    <div class="feature-card"><h4>{{特性}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
+    <div class="feature-card"><div class="icon">{{符号，如 ♪}}</div><h4>{{特性}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
+    <div class="feature-card"><div class="icon">{{符号}}</div><h4>{{特性}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
+    <div class="feature-card"><div class="icon">{{符号}}</div><h4>{{特性}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, grid, g3, mt-l, feature-card, h4, dim, notes
+合法类名：slide, kicker, h2, grid, g3, mt-l, feature-card, icon, h4, dim, notes
 
 ---
 
@@ -112,14 +112,14 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{能力标题}}</h2>
   <div class="grid g2 mt-l">
-    <div class="feature-card"><h4>{{能力}}</h4><p class="dim">{{说明，30-55 字}}</p></div>
-    <div class="feature-card"><h4>{{能力}}</h4><p class="dim">{{说明，30-55 字}}</p></div>
+    <div class="feature-card"><div class="icon">{{符号，如 ✦}}</div><h4>{{能力}}</h4><p class="dim">{{说明，30-55 字}}</p></div>
+    <div class="feature-card"><div class="icon">{{符号}}</div><h4>{{能力}}</h4><p class="dim">{{说明，30-55 字}}</p></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, grid, g2, mt-l, feature-card, h4, dim, notes
+合法类名：slide, kicker, h2, grid, g2, mt-l, feature-card, icon, h4, dim, notes
 
 ---
 
@@ -136,15 +136,15 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{流程标题}}</h2>
   <div class="stack mt-l">
-    <div class="step">{{第 1 步，12-24 字}}</div>
-    <div class="step">{{第 2 步，12-24 字}}</div>
-    <div class="step">{{第 3 步，12-24 字}}</div>
+    <div class="step"><div class="n">1</div><div><h4>{{第 1 步，动词开头 ≤8 字}}</h4><p class="dim">{{展开一句，12-24 字}}</p></div></div>
+    <div class="step"><div class="n">2</div><div><h4>{{第 2 步}}</h4><p class="dim">{{展开一句}}</p></div></div>
+    <div class="step"><div class="n">3</div><div><h4>{{第 3 步}}</h4><p class="dim">{{展开一句}}</p></div></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, stack, mt-l, step, notes
+合法类名：slide, kicker, h2, stack, mt-l, step, n, h4, dim, notes
 
 ---
 

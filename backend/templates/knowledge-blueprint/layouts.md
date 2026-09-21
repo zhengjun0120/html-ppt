@@ -72,13 +72,13 @@
     <div class="kb-card"><div class="kb-kicker">{{卡标签}}</div><p>{{内容，22-45 字}}</p></div>
     <div class="kb-card"><div class="kb-kicker">{{卡标签}}</div><p>{{内容，22-45 字}}</p></div>
   </div>
-  <div class="kb-legend mt-l">{{图例/口径说明}}</div>
+  <div class="kb-legend mt-l"><div class="d"><span class="b"></span>{{图例说明 1}}</div><div class="d"><span class="b rust"></span>{{图例说明 2}}</div></div>
   <div class="kb-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kb-kicker, kb-h1, kb-grid-2, mt-l, kb-card, kb-legend, kb-footer, notes
+合法类名：slide, kb-kicker, kb-h1, kb-grid-2, mt-l, kb-card, kb-legend, d, b, rust, kb-footer, notes
 
 ---
 
@@ -154,7 +154,7 @@
 ```html
 <section class="slide" data-layout="insight">
   <div class="kb-kicker">{{引导语}}</div>
-  <div class="kb-insight mt-l">{{洞见一句话，15-32 字}}</div>
+  <div class="kb-insight mt-l"><span class="kk">{{标签，2-6 字}}</span>{{洞见一句话，15-32 字}}</div>
   <h1 class="kb-h1">{{洞见标题}}</h1>
   <p class="kb-sub">{{支撑说明，22-45 字}}</p>
   <div class="kb-footer">{{页脚}}</div>
@@ -162,7 +162,7 @@
 </section>
 ```
 
-合法类名：slide, kb-kicker, kb-insight, mt-l, kb-h1, kb-sub, kb-footer, notes
+合法类名：slide, kb-kicker, kb-insight, kk, mt-l, kb-h1, kb-sub, kb-footer, notes
 
 ---
 
@@ -182,10 +182,10 @@
     <div class="kb-step">{{部件 2}}</div>
     <div class="kb-step">{{部件 3}}</div>
   </div>
-  <div class="kb-legend mt-l">{{部件间的衔接说明}}</div>
+  <div class="kb-legend mt-l"><div class="d"><span class="b"></span>{{衔接说明 1}}</div><div class="d"><span class="b rust"></span>{{衔接说明 2}}</div></div>
   <div class="kb-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kb-kicker, kb-h1, kb-pipeline, mt-l, kb-step, kb-legend, kb-footer, notes
+合法类名：slide, kb-kicker, kb-h1, kb-pipeline, mt-l, kb-step, kb-legend, d, b, rust, kb-footer, notes

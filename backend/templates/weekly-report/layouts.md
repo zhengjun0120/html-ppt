@@ -67,15 +67,15 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{交付标题}}</h2>
   <div class="mt-l">
-    <div class="ship-item">{{完成事项，12-24 字（可带 <span class="pill">状态</span>）}}</div>
-    <div class="ship-item">{{完成事项，12-24 字}}</div>
-    <div class="ship-item">{{完成事项，12-24 字}}</div>
+    <div class="ship-item"><span class="tag feat">{{类型 FEAT/FIX/EXP/INFRA}}</span><div><b>{{事项标题，≤16 字}}</b><p class="dim">{{一句说明，12-24 字}}</p></div><span class="owner">{{负责人}}</span></div>
+    <div class="ship-item"><span class="tag fix">{{类型}}</span><div><b>{{事项标题}}</b><p class="dim">{{一句说明}}</p></div><span class="owner">{{负责人}}</span></div>
+    <div class="ship-item"><span class="tag infra">{{类型}}</span><div><b>{{事项标题}}</b><p class="dim">{{一句说明}}</p></div><span class="owner">{{负责人}}</span></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, mt-l, ship-item, pill, notes
+合法类名：slide, kicker, h2, mt-l, ship-item, tag, feat, exp, fix, infra, owner, pill, dim, notes
 
 ---
 
@@ -117,13 +117,13 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{阻塞标题}}</h2>
   <div class="mt-l">
-    <div class="blocker">{{阻塞描述，22-45 字：卡在哪 + 需要什么支持}}</div>
+    <div class="blocker"><h4>{{卡在哪，一句话}}</h4><p>{{现状与需要的支持，20-40 字}}</p><div class="meta">owner: {{谁}} · ETA: {{何时}}</div></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, mt-l, blocker, notes
+合法类名：slide, kicker, h2, mt-l, blocker, h4, meta, notes
 
 ---
 
@@ -139,15 +139,15 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{下周标题}}</h2>
   <div class="mt-l">
-    <div class="next-row">{{计划事项，12-24 字}}</div>
-    <div class="next-row">{{计划事项，12-24 字}}</div>
-    <div class="next-row">{{计划事项，12-24 字}}</div>
+    <div class="next-row"><span class="owner">{{负责人/专项线，2-4 字}}</span><p class="task">{{任务，动词开头 12-24 字}}</p></div>
+    <div class="next-row"><span class="owner">{{负责人/专项线}}</span><p class="task">{{任务，动词开头 12-24 字}}</p></div>
+    <div class="next-row"><span class="owner">{{负责人/专项线}}</span><p class="task">{{任务，动词开头 12-24 字}}</p></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, mt-l, next-row, notes
+合法类名：slide, kicker, h2, mt-l, next-row, owner, task, notes
 
 ---
 
