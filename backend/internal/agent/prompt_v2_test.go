@@ -21,16 +21,23 @@ func TestPromptTitlePrecheck(t *testing.T) {
 	if !strings.Contains(got, "标题预检") || !strings.Contains(got, "第 1 页") {
 		t.Errorf("超长标题该被点名（%d 字上限）", max)
 	}
-	if !strings.Contains(got, "「"+long+"」") {
-		t.Errorf("预检要列出原标题让 agent 对照改写")
+	if !strings.Contains(got, "逐字母算") {
+		t.Errorf("标题计数口径要常驻写死——deck-0062 实测 agent 按「英文单词算 1 个词」自数，首写仍超限")
+	}
+	if !strings.Contains(got, "可拆成主标「GitHub 入门」") {
+		t.Errorf("冒号能拆的要给现成拆法（主标 + lede 承接）")
 	}
 	if strings.Contains(got, "第 2 页「短标题」") {
 		t.Errorf("达标标题不该出现在预检里")
 	}
 
-	// 全部达标时不注入（别白白打断前缀缓存）
+	// 没有超长页时不注入预检，但计数口径的规则行常驻（别让 agent 猜上限）
 	o2 := &deck.Outline{Pages: []deck.OutlinePage{{No: 1, Role: "cover", Title: "短标题"}}}
-	if got2 := BuildStagePrompt(deck.StageGenerating, "deck-0001", nil, o2); strings.Contains(got2, "标题预检") {
+	got2 := BuildStagePrompt(deck.StageGenerating, "deck-0001", nil, o2)
+	if strings.Contains(got2, "标题预检") {
 		t.Errorf("没有超长标题时不该有预检段")
+	}
+	if !strings.Contains(got2, "页标题硬上限") {
+		t.Errorf("标题规则应常驻（没有超限页也要让 agent 知道上限与口径）")
 	}
 }

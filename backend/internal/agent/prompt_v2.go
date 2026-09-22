@@ -93,15 +93,19 @@ func BuildStagePrompt(stage, deckID string, tpl *template.Template, o *deck.Outl
 	//（页码+role+标题，改哪页对哪页）。outline 为 nil 时跳过（v1 路径不会到这里）。
 	if o != nil {
 		if stage == deck.StageGenerating {
-			b.WriteString("\n\n## 大纲（已确认，页数与内容以此为准）\n")
+			// 标题规则常驻：T005 只在写页后才报，而大纲是模板选定之前写的、看不到
+			// 这条约束。deck-0062 实测：只说「≤16 字」agent 会按“英文单词算 1 个词”
+			// 的口径自数出 12 字，T005 实际逐字符计数出 17 字——首写照样超限，白烧
+			// 一轮修复。口径必须写死：去空格后逐字符计，英文逐字母算。
+			fmt.Fprintf(&b, "\n\n## 大纲（已确认，页数与内容以此为准）\n"+
+				"页标题硬上限 %d 字：按去掉空格后的字符数计，英文单词也逐字母算（GitHub 算 6 字，不是 1 个词）。"+
+				"主标写短，修饰成分挪进 lede 副句；页内其余 h2 小标题同限。\n", deck.TitleMax())
 			b.WriteString(o.ToPromptText())
-			// 大纲标题超长预检：T005（标题字数上限）在写页时才报，而大纲是模板
-			// 选定之前写的、看不到这条约束——deck-0061 实测首批 4 页全部命中，
-			// 返工从第一批就开始。这里提前点名，首批就把标题写短。
+			// 超限预检：点名具体页，冒号能拆的附上现成拆法（主标 + lede 承接），
+			// 让 agent 首批一次写对。
 			if over := overlongOutlineTitles(o.Pages, deck.TitleMax()); len(over) > 0 {
-				fmt.Fprintf(&b, "\n\n**标题预检**：以下页的大纲标题超过上限 %d 字，写页时直接改短"+
-					"（主标 ≤%d 字，修饰成分挪进 lede 副句），不要照抄：%s。",
-					deck.TitleMax(), deck.TitleMax(), strings.Join(over, "；"))
+				fmt.Fprintf(&b, "\n**标题预检**：以下大纲标题超限，写页时直接改短、不要照抄：%s。",
+					strings.Join(over, "；"))
 			}
 		} else {
 			b.WriteString("\n\n## 大纲索引（页码 · role · 标题）\n")
@@ -135,13 +139,39 @@ func appendDate(msg string) string {
 		now.Format("2006-01-02"), weekdayCN[int(now.Weekday())])
 }
 
-// overlongOutlineTitles 按 T005 同口径（去空格计 rune 数）找出超长的大纲标题。
+// overlongOutlineTitles 按 T005 同口径（去空格计 rune 数）找出超长的大纲标题；
+// 冒号能拆出「达标主标 + 副句」的附上现成拆法——deck-0062 的教训：只报字数不给
+// 拆法，agent 首写还是超。
 func overlongOutlineTitles(pages []deck.OutlinePage, max int) []string {
 	var out []string
 	for _, p := range pages {
-		if n := len([]rune(strings.ReplaceAll(p.Title, " ", ""))); n > max {
-			out = append(out, fmt.Sprintf("第 %d 页「%s」（%d 字）", p.No, p.Title, n))
+		n := len([]rune(strings.ReplaceAll(p.Title, " ", "")))
+		if n <= max {
+			continue
 		}
+		entry := fmt.Sprintf("第 %d 页「%s」（%d 字）", p.No, p.Title, n)
+		if head, tail, ok := splitTitleCandidate(p.Title, max); ok {
+			entry += fmt.Sprintf("，可拆成主标「%s」+ lede 承接「%s」", head, tail)
+		}
+		out = append(out, entry)
 	}
 	return out
+}
+
+// splitTitleCandidate 在第一个冒号处把标题拆成 主标候选 + 副句；主标候选仍超限
+// 或冒号两侧有空就放弃——宁可不给建议，不给一个过不了的候选。
+func splitTitleCandidate(title string, max int) (string, string, bool) {
+	idx := strings.IndexAny(title, "：:")
+	if idx < 0 {
+		return "", "", false
+	}
+	head := strings.TrimSpace(title[:idx])
+	tail := strings.TrimSpace(strings.TrimLeft(title[idx:], "：:"))
+	if head == "" || tail == "" {
+		return "", "", false
+	}
+	if len([]rune(strings.ReplaceAll(head, " ", ""))) > max {
+		return "", "", false
+	}
+	return head, tail, true
 }
