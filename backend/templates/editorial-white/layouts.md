@@ -18,19 +18,17 @@
 ```html
 <section class="slide" data-layout="hero-quote">
   <div class="xw-topline"></div>
-  <div class="xw-topbar"><span>{{刊名}}</span><span>{{期号/日期}}</span></div>
-  <div class="xw-page">
-    <p class="xw-kicker">{{栏目名}}</p>
-    <h1 class="xw-title">{{标题}}</h1>
-    <p class="xw-sub">{{副标，20-30 字}}</p>
-    <div class="xw-hero">{{hero 区（一句话 20-40 字或配图说明）}}</div>
-  </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <p class="xw-kicker">{{栏目名}}</p>
+  <h1 class="xw-title">{{标题主干}}<br><span class="xw-grad">{{重点短语}}</span></h1>
+  <p class="xw-sub">{{副标，20-30 字，关键处可用 <span class="xw-focus">重点标注</span>}}</p>
+  <div class="xw-hero"><div class="xw-quote">{{金句，18-36 字，可带 <span class="xw-focus-orange">橙色重点</span>}}</div></div>
+  <div class="xw-footer"><span>{{刊名/栏目}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-topbar, xw-page, xw-kicker, xw-title, xw-sub, xw-hero, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-kicker, xw-title, xw-grad, xw-sub, xw-focus, xw-hero, xw-quote, xw-focus-orange, xw-footer, notes
 
 ---
 
@@ -44,17 +42,15 @@
 ```html
 <section class="slide" data-layout="statement">
   <div class="xw-topline"></div>
-  <div class="xw-topbar"><span>{{刊名}}</span><span>{{页码}}</span></div>
-  <div class="xw-page">
-    <p class="xw-kicker">{{栏目}}</p>
-    <h1 class="xw-title">{{单句，12-24 字}}</h1>
-  </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <p class="xw-kicker">{{栏目}}</p>
+  <h1 class="xw-title">{{单句，12-24 字}}</h1>
+  <div class="xw-footer"><span>{{刊名/栏目}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-topbar, xw-page, xw-kicker, xw-title, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-kicker, xw-title, xw-footer, notes
 
 ---
 
@@ -69,21 +65,20 @@
 ```html
 <section class="slide" data-layout="quad-cards">
   <div class="xw-topline"></div>
-  <div class="xw-page">
-    <h2 class="xw-title-md">{{主题}}</h2>
-    <div class="xw-grid-2 mt-l">
-      <div class="xw-card soft-pink"><div class="xw-label">{{栏目标签，2-4 字}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚，10-20 字}}</div></div>
-      <div class="xw-card soft-blue"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
-      <div class="xw-card soft-green"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
-      <div class="xw-card soft-orange"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
-    </div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <h2 class="xw-title-md">{{主题}}</h2>
+  <div class="xw-grid-2 mt-l">
+    <div class="xw-card soft-pink"><div class="xw-label">{{栏目标签，2-4 字}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚，10-20 字}}</div></div>
+    <div class="xw-card soft-blue"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+    <div class="xw-card soft-green"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+    <div class="xw-card soft-orange"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
   </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-footer"><span>{{栏目名}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-pink, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-pink, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes
 
 ---
 
@@ -97,20 +92,21 @@
 ```html
 <section class="slide" data-layout="steps">
   <div class="xw-topline"></div>
-  <div class="xw-page">
-    <h2 class="xw-title-md">{{指南标题}}</h2>
-    <div class="xw-steps mt-l">
-      <div class="xw-step">{{第 1 步，12-24 字}}</div>
-      <div class="xw-step">{{第 2 步，12-24 字}}</div>
-      <div class="xw-step">{{第 3 步，12-24 字}}</div>
-    </div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <h2 class="xw-title-md">{{标题主干}}<span class="xw-grad">{{重点词，2-6 字}}</span>{{尾缀（可空）}}</h2>
+  <div class="xw-steps mt-l">
+    <div class="xw-step"><div class="xw-num">1</div><div class="xw-txt">{{第 1 步，12-24 字}}</div></div>
+    <div class="xw-step"><div class="xw-num">2</div><div class="xw-txt">{{第 2 步，12-24 字}}</div></div>
+    <div class="xw-step"><div class="xw-num">3</div><div class="xw-txt">{{第 3 步，12-24 字}}</div></div>
+    <div class="xw-step"><div class="xw-num">4</div><div class="xw-txt">{{第 4 步，12-24 字}}</div></div>
   </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-hero"><div class="xw-quote">{{收束金句，18-36 字}}</div></div>
+  <div class="xw-footer"><span>{{栏目名}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-steps, mt-l, xw-step, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grad, xw-steps, mt-l, xw-step, xw-num, xw-txt, xw-hero, xw-quote, xw-footer, notes
 
 ---
 
@@ -124,18 +120,17 @@
 ```html
 <section class="slide" data-layout="big-stat">
   <div class="xw-topline"></div>
-  <div class="xw-page">
-    <p class="xw-kicker">{{指标语境}}</p>
-    <div class="xw-big-stat xw-grad mt-l">{{数字}}</div>
-    <h2 class="xw-title-md">{{指标名}}</h2>
-    <p class="xw-sub">{{来源/口径说明，20-40 字}}</p>
-  </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 05 / 08}}</div></div>
+  <p class="xw-kicker">{{指标语境}}</p>
+  <div class="xw-big-stat xw-grad mt-l">{{数字}}</div>
+  <h2 class="xw-title-md">{{指标名}}</h2>
+  <p class="xw-sub">{{来源/口径说明，20-40 字}}</p>
+  <div class="xw-footer"><span>{{栏目名}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-kicker, xw-big-stat, xw-grad, mt-l, xw-title-md, xw-sub, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-kicker, xw-big-stat, xw-grad, mt-l, xw-title-md, xw-sub, xw-footer, notes
 
 ---
 
@@ -150,19 +145,18 @@
 ```html
 <section class="slide" data-layout="two-column">
   <div class="xw-topline"></div>
-  <div class="xw-page">
-    <h2 class="xw-title-md">{{对照标题}}</h2>
-    <div class="xw-grid-2 mt-l">
-      <div class="xw-card soft-blue"><div class="xw-label">{{栏 A 标签}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚}}</div></div>
-      <div class="xw-card soft-purple"><div class="xw-label">{{栏 B 标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
-    </div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <h2 class="xw-title-md">{{对照标题}}</h2>
+  <div class="xw-grid-2 mt-l">
+    <div class="xw-card soft-blue"><div class="xw-label">{{栏 A 标签}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚}}</div></div>
+    <div class="xw-card soft-purple"><div class="xw-label">{{栏 B 标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
   </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-footer"><span>{{栏目名}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-blue, soft-purple, xw-label, main, desc, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-blue, soft-purple, xw-label, main, desc, xw-footer, notes
 
 ---
 
@@ -176,16 +170,20 @@
 ```html
 <section class="slide" data-layout="quote">
   <div class="xw-topline"></div>
-  <div class="xw-page">
-    <div class="xw-quote">{{引文，15-34 字}}</div>
-    <p class="xw-sub">{{—— 出处}}</p>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <h2 class="xw-title-md">{{标题主干}}<br>开始练 <span class="xw-grad">{{重点词}}</span></h2>
+  <div class="xw-grid-3 mt-l">
+    <div class="xw-card soft-purple"><div class="xw-label">{{时间标签 1，如 Tonight}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚，10-20 字}}</div></div>
+    <div class="xw-card soft-blue"><div class="xw-label">{{时间标签 2}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+    <div class="xw-card soft-green"><div class="xw-label">{{时间标签 3}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
   </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-hero"><div class="xw-quote">{{收束金句，18-36 字，可带 <span class="xw-focus">重点标注</span>}}</div></div>
+  <div class="xw-footer"><span>{{栏目名}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-quote, xw-sub, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grad, xw-grid-3, mt-l, xw-card, soft-purple, soft-blue, soft-green, xw-label, main, desc, xw-hero, xw-quote, xw-focus, xw-footer, notes
 
 ---
 
@@ -200,17 +198,16 @@
 ```html
 <section class="slide" data-layout="grid-3">
   <div class="xw-topline"></div>
-  <div class="xw-page">
-    <h2 class="xw-title-md">{{主题}}</h2>
-    <div class="xw-grid-3 mt-l">
-      <div class="xw-card soft-blue"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚}}</div></div>
-      <div class="xw-card soft-green"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
-      <div class="xw-card soft-orange"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
-    </div>
+  <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
+  <h2 class="xw-title-md">{{主题}}</h2>
+  <div class="xw-grid-3 mt-l">
+    <div class="xw-card soft-blue"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚}}</div></div>
+    <div class="xw-card soft-green"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
+    <div class="xw-card soft-orange"><div class="xw-label">{{要点标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
   </div>
-  <div class="xw-footer">{{页脚}}</div>
+  <div class="xw-footer"><span>{{栏目名}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-page, xw-title-md, xw-grid-3, mt-l, xw-card, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grid-3, mt-l, xw-card, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes

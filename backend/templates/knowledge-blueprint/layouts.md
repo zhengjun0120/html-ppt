@@ -13,25 +13,26 @@
 
 用途：整条链路的全景图（kb-step 逐站，hero 标当前站）
 适用 role：content / divider。
-内容约束：3-5 站；每站 ≤8 字；hero 标 1 个
+内容约束：3-5 站；每站=小标签+站名（≤8 字）+一句说明，三层都要写；hero 标 1 个
 
 ```html
 <section class="slide" data-layout="pipeline-overview">
   <div class="kb-kicker">{{引导语}}</div>
   <h1 class="kb-h1">{{链路名}}</h1>
   <p class="kb-sub">{{链路一句话}}</p>
+  <div class="kb-section-label">{{段标签，如 PIPELINE · 端到端}}</div>
   <div class="kb-pipeline mt-l">
-    <div class="kb-step">{{站点 1}}</div>
-    <div class="kb-step">{{站点 2}}</div>
-    <div class="kb-step hero">{{当前站点}}</div>
-    <div class="kb-step">{{站点 4}}</div>
+    <div class="kb-step"><div class="kb-step-num">{{站 1 标签，如 STEP 01}}</div><div class="kb-step-title">{{站名，≤8 字}}</div><div class="kb-step-body">{{一句说明，10-24 字}}</div></div>
+    <div class="kb-step"><div class="kb-step-num">{{站 2 标签}}</div><div class="kb-step-title">{{站名}}</div><div class="kb-step-body">{{一句说明}}</div></div>
+    <div class="kb-step hero"><div class="kb-step-num">{{当前站标签，如 STEP 03 · CORE}}</div><div class="kb-step-title">{{站名}}</div><div class="kb-step-body">{{一句说明}}</div></div>
+    <div class="kb-step"><div class="kb-step-num">{{站 4 标签}}</div><div class="kb-step-title">{{站名}}</div><div class="kb-step-body">{{一句说明}}</div></div>
   </div>
   <div class="kb-footer">{{页脚：模块名 · 页码}}</div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kb-kicker, kb-h1, kb-sub, kb-pipeline, mt-l, kb-step, hero, kb-footer, notes
+合法类名：slide, kb-kicker, kb-h1, kb-sub, kb-section-label, kb-pipeline, mt-l, kb-step, kb-step-num, kb-step-title, kb-step-body, hero, kb-footer, notes
 
 ---
 
@@ -93,13 +94,14 @@
 <section class="slide" data-layout="codebox">
   <div class="kb-kicker">{{文件/场景}}</div>
   <h1 class="kb-h1">{{代码在做什么}}</h1>
+  <p class="kb-sub">{{这段代码解决什么，20-40 字}}</p>
   <pre class="kb-codebox mt-l"><span class="kw">{{代码（转义 &lt; &gt; &amp;）}}</span></pre>
   <div class="kb-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kb-kicker, kb-h1, kb-codebox, mt-l, kw, st, kb-footer, notes
+合法类名：slide, kb-kicker, kb-h1, kb-sub, kb-codebox, mt-l, kw, st, kb-footer, notes
 
 ---
 
@@ -133,14 +135,22 @@
 ```html
 <section class="slide" data-layout="big-num">
   <div class="kb-kicker">{{指标语境}}</div>
-  <div class="kb-big-num mt-l">{{数字}}</div>
   <h1 class="kb-h1">{{指标名}}</h1>
+  <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:24px;margin-top:28px;align-items:center">
+    <div style="text-align:center"><div class="kb-big-num">{{主数字}}</div><p style="font-size:18px;color:#666;margin-top:6px;letter-spacing:.1em;text-transform:uppercase">{{主数字口径，一句}}</p></div>
+    <div class="kb-card"><h4>{{对比数字 1}}</h4><p>{{说明，12-24 字}}</p></div>
+    <div class="kb-card"><h4>{{对比数字 2}}</h4><p>{{说明，12-24 字}}</p></div>
+  </div>
+  <div class="kb-grid-2" style="margin-top:18px">
+    <div class="kb-card"><h4>{{补充事实 1}}</h4><p>{{说明，20-40 字}}</p></div>
+    <div class="kb-card"><h4>{{补充事实 2}}</h4><p>{{说明，20-40 字}}</p></div>
+  </div>
   <div class="kb-footer">{{页脚}}</div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kb-kicker, kb-big-num, mt-l, kb-h1, kb-footer, notes
+合法类名：slide, kb-kicker, kb-h1, kb-big-num, mt-l, kb-grid-2, kb-card, kb-footer, notes
 
 ---
 

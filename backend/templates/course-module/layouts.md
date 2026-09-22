@@ -89,6 +89,13 @@
 <section class="slide" data-layout="concept">
   <aside class="sidebar">
     <div class="brand">{{课程简称}}</div>
+    <h5>Learning objectives</h5>
+    <ul class="obj-list">
+      <li class="done">{{已掌握的目标}}</li>
+      <li class="current">{{本节要达成的目标}}</li>
+      <li>{{后续目标 1}}</li>
+      <li>{{后续目标 2}}</li>
+    </ul>
     <h5>Key terms</h5>
     <p class="dim" style="font-size:16px">{{术语 a · 术语 b · 术语 c}}</p>
   </aside>
@@ -106,7 +113,7 @@
 </section>
 ```
 
-合法类名：slide, sidebar, brand, main, kicker, h2, mt-s, lede, mt-m, grid, g2, mt-l, concept-box, dim, pill-academic, callout, notes
+合法类名：slide, sidebar, brand, obj-list, done, current, main, kicker, h2, mt-s, lede, mt-m, grid, g2, mt-l, concept-box, dim, pill-academic, callout, notes
 
 ---
 
@@ -157,11 +164,12 @@
     <span class="pill-academic">{{本节看点 2}}</span>
   </div>
   <div class="ghost-num">{{X}}</div>
+  <div class="deck-footer"><span>{{模块名}}</span><span class="slide-number" data-current="{{N}}" data-total="{{总页数}}"></span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, full, kicker, h1, mt-s, lede, mt-m, row, mt-l, pill-academic, ghost-num, notes
+合法类名：slide, full, kicker, h1, mt-s, lede, mt-m, row, mt-l, pill-academic, ghost-num, deck-footer, slide-number, notes
 
 ---
 
@@ -214,6 +222,7 @@
   <div class="main">
     <p class="kicker">milestones</p>
     <h2 class="h2 mt-s">{{时间线标题，≤14 字}}</h2>
+    <p class="lede mt-m">{{一句引导：这条线怎么看，20-40 字}}</p>
     <div class="timeline mt-l">
       <div class="tl-item"><div class="tl-t">{{节点 1，≤8 字}}</div><p class="tl-d">{{发生了什么 / 要发生什么，20-40 字}}</p></div>
       <div class="tl-item"><div class="tl-t">{{节点 2，≤8 字}}</div><p class="tl-d">{{说明，20-40 字}}</p></div>
@@ -226,7 +235,7 @@
 </section>
 ```
 
-合法类名：slide, sidebar, brand, main, kicker, h2, mt-s, timeline, mt-l, tl-item, tl-t, tl-d, callout, dim, notes
+合法类名：slide, sidebar, brand, main, kicker, h2, mt-s, lede, mt-m, timeline, mt-l, tl-item, tl-t, tl-d, callout, dim, notes
 
 ---
 

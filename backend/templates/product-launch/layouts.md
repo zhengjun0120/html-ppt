@@ -17,6 +17,7 @@
 
 ```html
 <section class="slide dark" data-layout="cover">
+  <div class="hero-shot"></div>
   <p class="kicker">{{发布标签}}</p>
   <h1 class="h1 anim-fade-up" data-anim="fade-up">{{产品名/主张}}</h1>
   <p class="lede mt-m">{{一句话主张，20-30 字}}</p>
@@ -25,7 +26,7 @@
 </section>
 ```
 
-合法类名：slide, dark, kicker, h1, anim-fade-up, lede, mt-m, deck-footer, brand, slide-number, notes
+合法类名：slide, dark, hero-shot, kicker, h1, anim-fade-up, lede, mt-m, deck-footer, brand, slide-number, notes
 
 ---
 
@@ -161,15 +162,15 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{定价标题}}</h2>
   <div class="grid g3 mt-l">
-    <div class="price-card"><span class="amount">{{价格}}</span><h4>{{档名}}</h4><ul><li>{{包含内容，12-24 字}}</li></ul></div>
-    <div class="price-card"><span class="amount">{{价格}}</span><h4>{{档名}}</h4><ul><li>{{包含内容，12-24 字}}</li></ul></div>
-    <div class="price-card"><span class="amount">{{价格}}</span><h4>{{档名}}</h4><ul><li>{{包含内容，12-24 字}}</li></ul></div>
+    <div class="price-card"><h4>{{档名}}</h4><div class="amount">{{价格}}</div><p class="dim">{{一句定位，12-28 字}}</p><ul><li>{{包含内容，12-24 字}}</li><li>{{包含内容}}</li><li>{{包含内容}}</li></ul></div>
+    <div class="price-card pro"><h4>{{推荐档名}}</h4><div class="amount">{{价格}}</div><p class="dim">{{一句定位}}</p><ul><li>{{包含内容}}</li><li>{{包含内容}}</li><li>{{包含内容}}</li><li>{{包含内容}}</li></ul></div>
+    <div class="price-card"><h4>{{档名}}</h4><div class="amount">{{价格}}</div><p class="dim">{{一句定位}}</p><ul><li>{{包含内容}}</li><li>{{包含内容}}</li></ul></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, grid, g3, mt-l, price-card, amount, h4, notes
+合法类名：slide, kicker, h2, grid, g3, mt-l, price-card, pro, amount, h4, dim, notes
 
 ---
 
@@ -181,12 +182,22 @@
 内容约束：号召 ≤10 字；lede 15-30 字
 
 ```html
-<section class="slide center tc" data-layout="ship">
-  <p class="kicker">{{发布日期}}</p>
-  <h1 class="h1">{{号召语}}</h1>
-  <p class="lede">{{获取方式，15-30 字}}</p>
+<section class="slide dark" data-layout="ship">
+  <p class="kicker">{{发布日期 / one more thing}}</p>
+  <div class="row" style="gap:80px;align-items:center">
+    <div style="flex:1">
+      <p class="testimonial">{{用户原话/最有分量的一句，20-40 字}}</p>
+      <p class="dim mt-m">—— {{署名/出处}}</p>
+    </div>
+    <div style="flex:0 0 auto;text-align:center">
+      <p class="dim mt-m">{{可得时间/渠道}}</p>
+      <div style="font-size:96px;font-weight:900;letter-spacing:-.04em">{{价格或关键数字}}</div>
+      <a class="cta-btn mt-l" href="#">{{行动号召，≤12 字}} →</a>
+      <p class="dim mt-m" style="font-size:18px">{{保障/补充一句，≤20 字}}</p>
+    </div>
+  </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, center, tc, kicker, h1, lede, notes
+合法类名：slide, dark, kicker, row, testimonial, dim, mt-m, cta-btn, mt-l, notes

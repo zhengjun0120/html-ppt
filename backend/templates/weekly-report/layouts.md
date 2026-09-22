@@ -42,16 +42,16 @@
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{指标面板标题}}</h2>
   <div class="grid g4 mt-l">
-    <div class="kpi good"><span class="value">{{数字}}</span><span class="label">{{指标名}} <span class="delta">{{环比}}</span></span></div>
-    <div class="kpi warn"><span class="value">{{数字}}</span><span class="label">{{指标名}} <span class="delta">{{环比}}</span></span></div>
-    <div class="kpi bad"><span class="value">{{数字}}</span><span class="label">{{指标名}} <span class="delta">{{环比}}</span></span></div>
-    <div class="kpi"><span class="value">{{数字}}</span><span class="label">{{指标名}} <span class="delta">{{环比}}</span></span></div>
+    <div class="kpi good"><div class="label">{{指标名}}</div><div class="value">{{数字}}</div><div class="delta up">▲ {{环比，如 +0.4 pts}}</div></div>
+    <div class="kpi good"><div class="label">{{指标名}}</div><div class="value">{{数字}}</div><div class="delta up">▲ {{环比}}</div></div>
+    <div class="kpi"><div class="label">{{指标名}}</div><div class="value">{{数字}}</div><div class="delta flat">— {{环比}}</div></div>
+    <div class="kpi bad"><div class="label">{{指标名}}</div><div class="value">{{数字}}</div><div class="delta down">▼ {{环比}}</div></div>
   </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, grid, g4, mt-l, kpi, good, warn, bad, value, label, delta, notes
+合法类名：slide, kicker, h2, grid, g4, mt-l, kpi, good, warn, bad, label, value, delta, up, flat, down, notes
 
 ---
 
@@ -159,12 +159,18 @@
 内容约束：大字 ≤10 字；补充 15-30 字
 
 ```html
-<section class="slide" data-layout="thanks">
-  <p class="kicker">{{周期}}</p>
-  <h2 class="h2">{{收尾一句话}}</h2>
-  <p class="lede mt-m">{{补充，15-30 字}}</p>
+<section class="slide center tc" data-layout="thanks">
+  <div>
+    <p class="kicker">{{收尾标签，如 FIN · 第 N 周}}</p>
+    <h1 class="h1">{{收尾一句话，≤14 字}}</h1>
+    <p class="lede" style="margin:16px auto">{{补充，15-30 字}}</p>
+    <div class="row mt-l" style="justify-content:center;gap:16px">
+      <span class="week-chip">{{下次汇报时间}}</span>
+      <span class="week-chip">{{答疑渠道}}</span>
+    </div>
+  </div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, kicker, h2, lede, mt-m, notes
+合法类名：slide, center, tc, kicker, h1, lede, row, mt-l, week-chip, notes

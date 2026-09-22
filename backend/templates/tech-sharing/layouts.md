@@ -97,6 +97,7 @@
 <section class="slide" data-layout="cards-3">
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{标题：一句话点破这页在对比什么}}</h2>
+  <p class="lede mt-m">{{一句导语，20-40 字}}</p>
   <div class="grid g3 mt-l">
     <div class="card card-accent"><h4>{{卡标题}}</h4><p class="dim">{{说明，25-45 字}}</p><span class="tag mt-s">{{结论标签}}</span></div>
     <div class="card card-accent"><h4>{{卡标题}}</h4><p class="dim">{{说明，25-45 字}}</p><span class="tag mt-s">{{结论标签}}</span></div>
@@ -106,7 +107,7 @@
 </section>
 ```
 
-合法类名：slide, kicker, h2, grid, g3, mt-l, card, card-accent, h4, dim, tag, mt-s, notes
+合法类名：slide, kicker, h2, lede, grid, g3, mt-l, card, card-accent, h4, dim, tag, mt-s, mt-m, notes
 
 ---
 
@@ -178,6 +179,7 @@
 <section class="slide" data-layout="two-column">
   <p class="kicker">{{引导语}}</p>
   <h2 class="h2">{{对比标题}}</h2>
+  <p class="lede mt-m">{{一句导语，20-40 字}}</p>
   <div class="grid g2 mt-l">
     <div class="card"><h4>{{列标题A}}</h4><p class="dim">{{说明，30-55 字}}</p><span class="tag mt-s">{{结论}}</span></div>
     <div class="card card-accent"><h4>{{列标题B}}</h4><p class="dim">{{说明，30-55 字}}</p><span class="tag mt-s">{{结论}}</span></div>
@@ -186,7 +188,7 @@
 </section>
 ```
 
-合法类名：slide, kicker, h2, grid, g2, mt-l, card, card-accent, h4, dim, tag, mt-s, notes
+合法类名：slide, kicker, h2, lede, grid, g2, mt-l, card, card-accent, h4, dim, tag, mt-s, mt-m, notes
 
 ---
 
