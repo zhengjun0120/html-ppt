@@ -44,13 +44,14 @@
   <div class="xw-topline"></div>
   <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
   <p class="xw-kicker">{{栏目}}</p>
-  <h1 class="xw-title">{{单句，12-24 字}}</h1>
+  <h1 class="xw-title">{{单句主干}}<span class="xw-grad">{{重点词}}</span></h1>
+  <p class="xw-sub">{{副句，15-30 字}}</p>
   <div class="xw-footer"><span>{{刊名/栏目}}</span><span>{{页码}}</span></div>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-kicker, xw-title, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-kicker, xw-title, xw-grad, xw-sub, xw-footer, notes
 
 ---
 
@@ -66,7 +67,7 @@
 <section class="slide" data-layout="quad-cards">
   <div class="xw-topline"></div>
   <div class="xw-topbar"><div class="xw-tag"><span class="dot"></span>{{页标签，2-8 字}}</div><div class="xw-page">{{页码，如 04 / 08}}</div></div>
-  <h2 class="xw-title-md">{{主题}}</h2>
+  <h2 class="xw-title-md">{{主题主干}}<span class="xw-grad">{{重点词}}</span></h2>
   <div class="xw-grid-2 mt-l">
     <div class="xw-card soft-pink"><div class="xw-label">{{栏目标签，2-4 字}}</div><div class="main">{{主体，8-14 字}}</div><div class="desc">{{一句注脚，10-20 字}}</div></div>
     <div class="xw-card soft-blue"><div class="xw-label">{{栏目标签}}</div><div class="main">{{主体}}</div><div class="desc">{{注脚}}</div></div>
@@ -78,7 +79,7 @@
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-pink, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grad, xw-grid-2, mt-l, xw-card, soft-pink, soft-blue, soft-green, soft-orange, xw-label, main, desc, xw-footer, notes
 
 ---
 
@@ -106,7 +107,7 @@
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grad, xw-steps, mt-l, xw-step, xw-num, xw-txt, xw-hero, xw-quote, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grad, xw-focus, xw-focus-blue, xw-steps, mt-l, xw-step, xw-num, xw-txt, xw-hero, xw-quote, xw-footer, notes
 
 ---
 
@@ -156,7 +157,7 @@
 </section>
 ```
 
-合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-blue, soft-purple, xw-label, main, desc, xw-footer, notes
+合法类名：slide, xw-topline, xw-topbar, xw-tag, dot, xw-page, xw-title-md, xw-grid-2, mt-l, xw-card, soft-blue, soft-purple, xw-label, main, desc, xw-focus-pink, xw-focus-green, xw-footer, notes
 
 ---
 
