@@ -17,7 +17,7 @@
   --accent: #58a6ff;
   --accent-2: #bc8cff;
   --accent-ink: #0b1024;
-  --grad: linear-gradient(135deg, #58a6ff, #bc8cff 55%, #f0883e);
+  --grad: linear-gradient(135deg, #1f6feb, #58a6ff);
   background: var(--bg);
   color: var(--text-1);
 }
@@ -82,7 +82,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent, #58a6ff), #bc8cff);
+  background: linear-gradient(135deg, var(--accent, #58a6ff), color-mix(in srgb, var(--accent, #58a6ff) 55%, #ffffff));
 }
 .tpl-presenter-mode-reveal .speaker b {
   display: block;
@@ -244,10 +244,10 @@
 .tpl-presenter-mode-reveal.v-ember {
   --accent: #f0883e;
   --accent-2: #ffa657;
-  --grad: linear-gradient(135deg, #f0883e, #ffa657 55%, #bc8cff);
+  --grad: linear-gradient(135deg, #d96a1f, #f0883e);
 }
 .tpl-presenter-mode-reveal.v-lilac {
   --accent: #bc8cff;
   --accent-2: #79c0ff;
-  --grad: linear-gradient(135deg, #bc8cff, #79c0ff 55%, #f0883e);
+  --grad: linear-gradient(135deg, #8957e5, #bc8cff);
 }
