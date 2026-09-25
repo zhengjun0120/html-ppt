@@ -146,15 +146,16 @@
   <p class="num-tag">{{引导语}}</p>
   <h2 class="h2 mt-s">{{模式标题}}</h2>
   <div class="grid g3 mt-l">
-    <div class="card card-accent"><h4>{{模式1}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
-    <div class="card card-accent"><h4>{{模式2}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
-    <div class="card card-accent"><h4>{{模式3}}</h4><p class="dim">{{说明，22-45 字}}</p></div>
+    <div class="card"><h4>{{模式 1}}</h4><div class="metric mt-s"><div class="n">{{数字/价格}}</div><div class="l">{{口径说明，10-20 字}}</div></div></div>
+    <div class="card card-accent"><h4>{{模式 2（主推）}}</h4><div class="metric mt-s"><div class="n">{{数字/价格}}</div><div class="l">{{口径说明}}</div></div></div>
+    <div class="card"><h4>{{模式 3}}</h4><div class="metric mt-s"><div class="n">{{数字/比例}}</div><div class="l">{{口径说明}}</div></div></div>
   </div>
+  <p class="dim mt-l">{{单位经济模型一句话，20-40 字}}</p>
   <div class="notes">{{讲稿}}</div>
 </section>
 ```
 
-合法类名：slide, section-num, num-tag, h2, mt-s, grid, g3, mt-l, card, card-accent, h4, dim, notes
+合法类名：slide, section-num, num-tag, h2, mt-s, grid, g3, mt-l, card, card-accent, h4, metric, n, l, dim, notes
 
 ---
 

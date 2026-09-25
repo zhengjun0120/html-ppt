@@ -74,7 +74,7 @@
 </section>
 ```
 
-合法类名：slide, gd-ambient, gd-snum, gd-eyebrow, gd-h2, gd-grid-3, mt-l, gd-glass, gd-glass-blue, gd-glass-green, gd-glass-warm, gd-tag, notes
+合法类名：slide, gd-ambient, gd-snum, gd-eyebrow, gd-h2, gd-grid-3, mt-l, gd-glass, gd-glass-blue, gd-glass-green, gd-glass-warm, gd-tag, notes, gd-dim
 
 ---
 

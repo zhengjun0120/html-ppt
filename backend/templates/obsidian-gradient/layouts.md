@@ -81,7 +81,7 @@
   <div class="oc-cgrid"></div>
   <div class="oc-snum">{{页码}}</div>
   <div class="oc-tag">{{● 眉标，如 ● COMPARE}}</div>
-  <h2 class="oc-h2">{{对比标题，≤16 字}}</h2>
+  <h2 class="oc-h2">{{对比标题主干，≤12 字}} <span class="oc-g">{{重点词}}</span></h2>
   <div class="oc-grid-2">
     <div class="oc-card">
       <span class="oc-badge oc-bb">{{方案 A 名，4-10 字符}}</span>
