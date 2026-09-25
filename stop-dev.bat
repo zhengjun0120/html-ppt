@@ -6,10 +6,14 @@ rem  一键关闭本地前后端服务(按端口查找,存在才关闭)
 rem  后端: Go server  端口 8080
 rem  前端: Vite       端口 5173
 rem  双击运行,或在终端里执行: stop-dev.bat
+rem  可选参数指定端口: stop-dev.bat [后端端口] [前端端口]
+rem  例(与其他分支并行的端口隔离实例): stop-dev.bat 8081 5174
 rem ==============================================
 
-set "BACKEND_PORT=8080"
-set "FRONTEND_PORT=5173"
+set "BACKEND_PORT=%1"
+if "%BACKEND_PORT%"=="" set "BACKEND_PORT=8080"
+set "FRONTEND_PORT=%2"
+if "%FRONTEND_PORT%"=="" set "FRONTEND_PORT=5173"
 
 echo 正在查找并关闭服务...
 echo.

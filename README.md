@@ -43,6 +43,29 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 浏览器打开 http://localhost:5173 → 注册/登录 → 「新文稿」→ 描述需求 → 跟着向导走。
 
+### 与 backend 分支的实例分工（默认跑法）
+
+本仓库（frontend 分支）与 backend 分支的 checkout **各跑一半，端口互不冲突**：
+
+- 本 checkout 只跑前端：`cd frontend && npm run dev`（5173，代理默认指向 8080）
+- backend 分支 checkout 只跑后端：`cd backend && go run ./cmd/server`（8080）
+- 停止：`stop-dev.bat`（默认关 8080 + 5173 这一对）
+
+注意：deck 文件、模板、提示词都跟着**后端所在的 checkout** 走——经 5173 创建的
+deck 落在 backend 分支的 `backend/data/`，本分支对 `backend/templates`、
+`internal/agent` 的改动在 8080 实例上**不会生效**。
+
+### 验证本分支的后端改动（备用跑法）
+
+需要跑本分支自己的后端时，用 8081 隔离（`backend/config.yaml` 已按 8081 +
+5174 origins 配好，gitignored）：
+
+```bash
+cd backend && go run ./cmd/server                                       # 8081
+cd frontend && BACKEND_ADDR=http://127.0.0.1:8081 npm run dev -- --port 5174
+停止：stop-dev.bat 8081 5174
+```
+
 ## 文档
 
 - `docs/refactor-plan.md` — deck-v2 重构执行蓝图（架构、契约、决策记录 D1-D14）

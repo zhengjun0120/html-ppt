@@ -183,7 +183,7 @@ async function start() {
           >
             <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
             <iframe
-              :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1)"
+              :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1, 1)"
               :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
               loading="lazy"
               class="pointer-events-none absolute left-0 top-0 border-0"
@@ -193,7 +193,7 @@ async function start() {
                 transform: `scale(${scaleFor(c)})`,
                 transformOrigin: 'top left',
               }"
-              sandbox="allow-scripts"
+              :sandbox="c.mine ? 'allow-scripts' : 'allow-scripts allow-same-origin'"
               :title="c.name + ' 预览'"
               aria-hidden="true"
             />

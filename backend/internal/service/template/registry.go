@@ -65,6 +65,9 @@ type Meta struct {
 	Layouts     []LayoutMeta `json:"layouts"`
 	Fonts       []string     `json:"fonts,omitempty"`
 	Source      Source       `json:"source"`
+	// DemoPages demo 页数（顶层 section 数，装载时统计，不入 template.yaml）。
+	// 预览弹窗显示"第 X / N 页"、翻到尾页收手，靠它；0 = 未知（前端退化为不显示总数）。
+	DemoPages int `json:"demo_pages,omitempty"`
 }
 
 // Template 是一个已通过校验的模板：元数据 + 文件内容 + 类名清单。
@@ -176,6 +179,47 @@ func (t *Template) DemoHTML(variant string) string {
 }
 
 var bodyClassRe = regexp.MustCompile(`<body class="([^"]*)">`)
+
+// TrimToSlide 把 demo HTML 裁到只剩第 n 页（1-based）。画廊缩略卡只渲染
+// 第一页，却常年为整本 demo（十几页 × 1920×1080）付 HTML 解析和布局的
+// CPU 账——这笔账是"画廊一开 × N 张卡"的乘法，裁掉后单卡成本降一个量级。
+//
+// 结构上只按顶层 <section>…</section> 边界切（模板契约：一页一个顶层
+// section，内部不嵌套 section），头（<head>/封面注释）尾（runtime.js 等
+// <script>）原样保留；任何一处边界找不到或页码超界都返回原样——fail-open，
+// 裁剪失手顶多回到"慢"，不能回到"渲染不出来"。
+func TrimToSlide(html string, n int) string {
+	if n < 1 || !strings.Contains(html, "<section") {
+		return html
+	}
+	start := strings.Index(html, "<section")
+	last := strings.LastIndex(html, "</section>")
+	if start < 0 || last < 0 {
+		return html
+	}
+	end := last + len("</section>")
+	if n > countTopLevelSections(html) {
+		return html
+	}
+	// Split 后每段缺自己的收尾 </section>（最后一段是收尾之后的尾巴），逐段补回
+	parts := strings.Split(html[start:end], "</section>")
+	return html[:start] + parts[n-1] + "</section>" + html[end:]
+}
+
+// countTopLevelSections 数 demo 的顶层 <section>…</section> 数量（= 页数）。
+// 与 TrimToSlide 同一结构契约：一页一个顶层 section，内部不嵌套。
+func countTopLevelSections(html string) int {
+	start := strings.Index(html, "<section")
+	if start < 0 {
+		return 0
+	}
+	last := strings.LastIndex(html, "</section>")
+	if last < 0 {
+		return 0
+	}
+	// Split 后每段缺收尾 </section>，最后一段是收尾之后的尾巴，段数-1 即页数
+	return len(strings.Split(html[start:last+len("</section>")], "</section>")) - 1
+}
 
 // VariantClass 返回变体 id 对应的 class（未找到时返回 ""，调用方决定是否报错）。
 func (t *Template) VariantClass(variantID string) (string, bool) {
@@ -428,6 +472,9 @@ func loadTemplate(dir, assetsDir string, baseClasses map[string]bool) (*Template
 	if err != nil {
 		return nil, err
 	}
+
+	// demo 页数在构造前填：t 嵌入的是 meta 的拷贝，构造后再改只改到局部变量。
+	meta.DemoPages = countTopLevelSections(indexHTML)
 
 	t := &Template{
 		Meta:            meta,

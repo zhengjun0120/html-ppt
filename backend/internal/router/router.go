@@ -2,6 +2,7 @@ package router
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -143,14 +144,33 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 //
 // 刻意不用"长缓存 + 内容哈希"：deck.html 引用 /assets/xxx.css 时不带指纹，一旦长缓存就再也换不掉。
 // no-cache 不等于不缓存，只是每次都问一句，命中 304 时开销极小。
-func noCacheHeader() gin.HandlerFunc {
+//
+// 例外是字体：字体文件几 MB 起、只在 vendored 字体升级时才变（文件名跟着变），
+// 每次回源问一句在"预览页一屏十几个 iframe"的场景里也会放大成可感知的延迟，
+// 所以给 7 天 max-age；真要换字体就换文件名，缓存放不掉。
+func revalidateStatic() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header("Cache-Control", "no-cache")
+		if isFontAsset(c.Request.URL.Path) {
+			c.Header("Cache-Control", "public, max-age=604800, must-revalidate")
+		} else {
+			c.Header("Cache-Control", "no-cache")
+		}
 		c.Next()
 	}
 }
 
-func revalidateStatic() gin.HandlerFunc {
+// isFontAsset 判断路径是否指向字体文件（只看后缀，静态路由下路径即文件路径）。
+func isFontAsset(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".woff2", ".woff", ".ttf", ".otf":
+		return true
+	}
+	return false
+}
+
+// noCacheHeader 用户自定义模板 demo 专用：定制对话会改 style.css，
+// 一律回源校验，绝不让预览/量测拿到旧样式。
+func noCacheHeader() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
 		c.Next()

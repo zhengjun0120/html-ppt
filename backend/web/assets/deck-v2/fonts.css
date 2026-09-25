@@ -12,14 +12,22 @@
  * 授权：Inter / Noto Sans SC / JetBrains Maple Mono 均为 SIL OFL-1.1，
  * 授权全文随字体放在同目录（INTER-OFL.txt / JETBRAINS-MAPLE-OFL.txt / NOTO-OFL.txt）。
  * 所有字体栈都保留系统回退：字体加载失败时渲染仍然成立，只是细节退化。
+ *
+ * unicode-range 分段（性能，见 PATCHES.md「拉丁子集」一节）：
+ * 每个家族按"拉丁(U+0000-2E7F) / CJK 及以上(U+2E80-10FFFF)"拆成两条 @font-face，
+ * 浏览器只下载页面实际用到的分段——纯拉丁页不再触发数 MB 的 CJK 字体
+ * （等宽全量文件 6MB+，是预览首屏最大的加载成本）。两条 range 拼起来是
+ * 全平面，任何字符都恰好落在其中一条上，字形与拆分前完全一致。
  */
 
+/* 拉丁区（Basic Latin / 拉丁扩展 / 希腊 / 西里尔 / 标点 / 箭头 / 数学符号……）*/
 /* ---- Inter（拉丁，可变字重 100-900）---- */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
+  unicode-range: U+0000-2E7F;
   src: url('/assets/deck-v2/fonts/inter-latin-wght-normal.woff2') format('woff2');
 }
 @font-face {
@@ -27,15 +35,19 @@
   font-style: italic;
   font-weight: 100 900;
   font-display: swap;
+  unicode-range: U+0000-2E7F;
   src: url('/assets/deck-v2/fonts/inter-latin-italic-wght-normal.woff2') format('woff2');
 }
 
-/* ---- Noto Sans SC（简体子集，覆盖 CJK；拉丁由 Inter 兜住）---- */
+/* ---- Noto Sans SC（简体子集，覆盖 CJK；拉丁由 Inter 兜住）----
+ * 声明 CJK range 后，纯拉丁文本不再触发 Noto 下载（此前任何中文栈元素里的
+ * 西文字符都会白白拉 3×1.2MB）。 */
 @font-face {
   font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  unicode-range: U+2E80-10FFFF;
   src: url('/assets/deck-v2/fonts/noto-sans-sc-400.woff2') format('woff2');
 }
 @font-face {
@@ -43,6 +55,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
+  unicode-range: U+2E80-10FFFF;
   src: url('/assets/deck-v2/fonts/noto-sans-sc-500.woff2') format('woff2');
 }
 @font-face {
@@ -50,17 +63,40 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
+  unicode-range: U+2E80-10FFFF;
   src: url('/assets/deck-v2/fonts/noto-sans-sc-700.woff2') format('woff2');
 }
 
 /* ---- JetBrains Maple Mono（JetBrains Mono 拉丁 + Maple 中日韩）----
  * 家族名刻意声明为 'JetBrains Mono'：模板字体栈里写的就是它，
- * Maple 层对用户透明（它是 JetBrains Mono 的 CJK 补全）。 */
+ * Maple 层对用户透明（它是 JetBrains Mono 的 CJK 补全）。
+ *
+ * 拉丁段是全量文件的 U+0000-2E7F 子集（约 100-200KB），由
+ * `python -m fontTools.subset <full>.woff2 --unicodes=U+0000-2E7F
+ *  --flavor=woff2 --output-file=<name>-latin.woff2` 生成——上游字体更新后
+ * 需要重跑这两条命令。中文等高位字符走下面的全量文件。 */
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  unicode-range: U+0000-2E7F;
+  src: url('/assets/deck-v2/fonts/JetBrainsMapleMono-Regular-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0000-2E7F;
+  src: url('/assets/deck-v2/fonts/JetBrainsMapleMono-Bold-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+2E80-10FFFF;
   src: url('/assets/deck-v2/fonts/JetBrainsMapleMono-Regular.woff2') format('woff2');
 }
 @font-face {
@@ -68,5 +104,6 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
+  unicode-range: U+2E80-10FFFF;
   src: url('/assets/deck-v2/fonts/JetBrainsMapleMono-Bold.woff2') format('woff2');
 }
