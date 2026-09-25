@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { PhArrowClockwise, PhGlobe, PhGlobeHemisphereWest, PhPencilSimple, PhPlus, PhSpinner, PhTrash } from '@phosphor-icons/vue'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { PhArrowClockwise, PhArrowsOutSimple, PhGlobe, PhGlobeHemisphereWest, PhPencilSimple, PhPlus, PhSpinner, PhTrash } from '@phosphor-icons/vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { templateApi, type TemplateMeta } from '@/api/templates'
 import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
+import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal.vue'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
+import Pagination from '@/components/ui/Pagination.vue'
 import { useToast } from '@/stores/toast'
 
 /**
@@ -44,11 +46,38 @@ async function load() {
     mine.value = m
     community.value = c
     templates.value = t
+    // 刷新后列表变短，当前页可能越界
+    const clamp = (p: { value: number }, n: number) => {
+      if (p.value > n) p.value = n
+    }
+    clamp(minePage, Math.max(1, Math.ceil(m.length / MINE_PER_PAGE)))
+    clamp(builtinPage, Math.max(1, Math.ceil(builtins.value.length / BUILTIN_PER_PAGE)))
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '模板加载失败')
   } finally {
     loading.value = false
   }
+}
+
+// —— 两个卡片区各自纯前端分页（列表本就全量拉回，切片即可）：
+// 9/页对齐三列瀑布流的 3 行；切页后滚回区块顶部，不然新页卡片在视口外。——//
+const MINE_PER_PAGE = 9
+const BUILTIN_PER_PAGE = 9
+const minePage = ref(1)
+const builtinPage = ref(1)
+const minePageCount = computed(() => Math.max(1, Math.ceil(mine.value.length / MINE_PER_PAGE)))
+const builtinPageCount = computed(() => Math.max(1, Math.ceil(builtins.value.length / BUILTIN_PER_PAGE)))
+const pagedMine = computed(() => mine.value.slice((minePage.value - 1) * MINE_PER_PAGE, minePage.value * MINE_PER_PAGE))
+const pagedBuiltins = computed(() => builtins.value.slice((builtinPage.value - 1) * BUILTIN_PER_PAGE, builtinPage.value * BUILTIN_PER_PAGE))
+const mineSection = ref<HTMLElement>()
+const builtinSection = ref<HTMLElement>()
+function setMinePage(p: number) {
+  minePage.value = p
+  nextTick(() => mineSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
+function setBuiltinPage(p: number) {
+  builtinPage.value = p
+  nextTick(() => builtinSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
 }
 
 async function fork(baseId: string) {
@@ -130,6 +159,45 @@ function scaleFor(id: string, canvas: { w: number; h: number }): number {
 }
 
 onMounted(load)
+
+// —— 预览弹窗：放大查看整本 demo，逐页翻看。——//
+// 页数：内置模板取 meta.demo_pages；用户模板取基模板的（fork 时 index.html
+// 原样拷贝、定制只改 style.css，页数必然一致；基模板查不到就未知，翻页由
+// runtime.js 的 go() 钳在最后一页兜底）。沙箱：内置模板内容是仓库静态文件，
+// 放开 same-origin 共享缓存；用户模板是用户内容，保持 scripts-only。
+interface PreviewTarget {
+  kind: 'builtin' | 'user'
+  id: string
+  name: string
+  canvas: { w: number; h: number }
+  pages?: number
+}
+const preview = ref<PreviewTarget | null>(null)
+const previewSandbox = computed(() =>
+  preview.value?.kind === 'user' ? 'allow-scripts' : 'allow-scripts allow-same-origin',
+)
+/** 预览模式 src：?preview=1 激活 runtime 协议，之后翻页走 preview-goto
+ * postMessage（无刷新、带过渡）。不再需要 #/N 深链。 */
+const previewSrc = computed(() => {
+  const t = preview.value
+  if (!t) return ''
+  return t.kind === 'builtin'
+    ? `/api/templates/${t.id}/preview?preview=1`
+    : `/user-templates/${t.id}/index.html?preview=1`
+})
+function openBuiltinPreview(b: TemplateMeta) {
+  preview.value = { kind: 'builtin', id: b.id, name: b.name, canvas: b.canvas, pages: b.demo_pages }
+}
+function openUserPreview(row: UserTemplateRow) {
+  const base = row.base_id ? metaOf.value.get(row.base_id) : undefined
+  preview.value = {
+    kind: 'user',
+    id: row.id,
+    name: row.name,
+    canvas: row.canvas ?? { w: 1920, h: 1080 },
+    pages: base?.demo_pages,
+  }
+}
 </script>
 
 <template>
@@ -158,8 +226,9 @@ onMounted(load)
     >
       <template #icon><PhGlobeHemisphereWest /></template>
     </Empty>
-    <div v-else class="columns-1 gap-4 sm:columns-2 lg:columns-3">
-      <div v-for="row in mine" :key="row.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface">
+    <div v-else ref="mineSection" class="scroll-mt-4">
+      <div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
+        <div v-for="row in pagedMine" :key="row.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface">
         <div
           :ref="setBoxRef(row.id)"
           :data-card-id="row.id"
@@ -185,6 +254,15 @@ onMounted(load)
           >
             {{ row.visibility === 'public' ? '已公开' : '私有' }}
           </span>
+          <button
+            type="button"
+            class="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ink-2 shadow-sm backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+            title="放大预览"
+            @click="openUserPreview(row)"
+          >
+            <PhArrowsOutSimple :size="11" />
+            预览
+          </button>
         </div>
         <div class="space-y-2 p-3">
           <div class="flex items-center justify-between gap-2">
@@ -220,6 +298,14 @@ onMounted(load)
           </div>
         </div>
       </div>
+      </div>
+      <Pagination
+        v-if="mine.length > MINE_PER_PAGE"
+        class="mt-6"
+        :model-value="minePage"
+        :page-count="minePageCount"
+        @update:model-value="setMinePage"
+      />
     </div>
 
     <!-- 社区模板 -->
@@ -244,11 +330,11 @@ onMounted(load)
     </div>
 
     <!-- 从内置模板派生 -->
-    <div class="mt-8">
+    <div ref="builtinSection" class="mt-8 scroll-mt-4">
       <h2 class="text-[14px] font-bold">从内置模板派生</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
       <div class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
-        <div v-for="b in builtins" :key="b.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
+        <div v-for="b in pagedBuiltins" :key="b.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
           <div
             :ref="setBoxRef('base-' + b.id)"
             :data-card-id="'base-' + b.id"
@@ -256,7 +342,7 @@ onMounted(load)
             :style="{ aspectRatio: `${b.canvas.w} / ${b.canvas.h}` }"
           >
             <iframe
-              :src="templateApi.previewUrl(b.id, '', 1)"
+              :src="templateApi.previewUrl(b.id, '', 1, 1)"
               class="pointer-events-none absolute left-0 top-0 border-0"
               :style="{
                 width: `${b.canvas.w}px`,
@@ -264,10 +350,19 @@ onMounted(load)
                 transform: `scale(${scaleFor('base-' + b.id, b.canvas)})`,
                 transformOrigin: 'top left',
               }"
-              sandbox="allow-scripts"
+              sandbox="allow-scripts allow-same-origin"
               loading="lazy"
               :title="b.name + ' 预览'"
             />
+            <button
+              type="button"
+              class="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ink-2 shadow-sm backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+              title="放大预览"
+              @click="openBuiltinPreview(b)"
+            >
+              <PhArrowsOutSimple :size="11" />
+              预览
+            </button>
           </div>
           <div class="space-y-2 p-3">
             <p class="text-[13.5px] font-semibold">{{ b.name }}</p>
@@ -286,6 +381,24 @@ onMounted(load)
           </div>
         </div>
       </div>
+      <Pagination
+        v-if="builtins.length > BUILTIN_PER_PAGE"
+        class="mt-6"
+        :model-value="builtinPage"
+        :page-count="builtinPageCount"
+        @update:model-value="setBuiltinPage"
+      />
     </div>
+
+    <!-- 模板预览弹窗：放大 + 逐页翻看（单 iframe，postMessage 无刷新翻页） -->
+    <TemplatePreviewModal
+      :open="preview != null"
+      :title="preview?.name ?? ''"
+      :canvas="preview?.canvas ?? { w: 1920, h: 1080 }"
+      :pages="preview?.pages"
+      :sandbox="previewSandbox"
+      :src="previewSrc"
+      @close="preview = null"
+    />
   </div>
 </template>

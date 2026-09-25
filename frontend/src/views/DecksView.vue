@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { PhArrowClockwise, PhCards, PhPlus, PhPresentation } from '@phosphor-icons/vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
+import { thumbUrl } from '@/api/deckV2'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
+import Pagination from '@/components/ui/Pagination.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
-import { thumbUrl } from '@/api/deckV2'
 import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 
@@ -17,6 +18,21 @@ const toast = useToast()
 
 /** 封面加载失败的 deck id（无缩略图/未渲染时回退图标位） */
 const coverFailed = ref<Record<string, boolean>>({})
+
+// —— 纯前端分页：/api/decks 本就全量返回，切片即可；缩略图 loading=lazy，
+// 每页只挂 12 张封面，首屏不用再等 40+ 个 iframe 式的 img 解析。——//
+const PER_PAGE = 12
+const page = ref(1)
+const pageCount = computed(() => Math.max(1, Math.ceil(deckStore.list.length / PER_PAGE)))
+const pagedDecks = computed(() => deckStore.list.slice((page.value - 1) * PER_PAGE, page.value * PER_PAGE))
+// 删除/刷新后列表变短，当前页可能越界
+watch(pageCount, (n) => {
+  if (page.value > n) page.value = n
+})
+function setPage(p: number) {
+  page.value = p
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 onMounted(async () => {
   try {
@@ -66,7 +82,7 @@ onMounted(async () => {
     <!-- 卡片网格：封面用第一页缩略图（首次访问会触发后端渲染，之后走缓存） -->
     <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <button
-        v-for="d in deckStore.list"
+        v-for="d in pagedDecks"
         :key="d.id"
         class="group cursor-pointer overflow-hidden rounded-card border border-line bg-surface text-left transition-[transform,border-color] hover:-translate-y-0.5 hover:border-line-strong"
         @click="router.push(`/decks/${d.id}`)"
@@ -89,8 +105,16 @@ onMounted(async () => {
       </button>
     </div>
 
-    <p v-if="deckStore.list.length" class="mt-6 text-center text-[11.5px] text-ink-3">
-      点开任意文稿继续迭代；封面是第一页实时快照，内容更新后自动刷新。
+    <Pagination
+      v-if="deckStore.list.length"
+      class="mt-6"
+      :model-value="page"
+      :page-count="pageCount"
+      @update:model-value="setPage"
+    />
+
+    <p v-if="deckStore.list.length" class="mt-4 text-center text-[11.5px] text-ink-3">
+      共 {{ deckStore.list.length }} 份文稿 · 点开任意文稿继续迭代；封面是第一页实时快照，内容更新后自动刷新。
     </p>
   </div>
 </template>

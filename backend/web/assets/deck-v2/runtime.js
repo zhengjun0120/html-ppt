@@ -152,16 +152,15 @@
 
     /* ===== Preview-only mode: show one slide, hide everything else ===== */
     if (isPreviewMode) {
+      /* [deck-v2 patch] showSlide 改为与正常模式一致的 class 切换（原实现用
+       * display:none 硬切，杀死了 .slide 自带的 opacity/transform 过渡——
+       * 外部 preview-goto 翻页时只有突兀的瞬间替换）。slide 本就 absolute
+       * 叠放 + opacity:0 隐藏，is-active/is-prev 两个 class 即可让 base.css
+       * 的 .5s 淡入+方向位移过渡生效，与 go() 的观感一致。 */
       function showSlide(i) {
         slides.forEach((s, j) => {
-          const active = (j === i);
-          s.classList.toggle('is-active', active);
-          s.style.display = active ? '' : 'none';
-          if (active) {
-            s.style.opacity = '1';
-            s.style.transform = 'none';
-            s.style.pointerEvents = 'auto';
-          }
+          s.classList.toggle('is-active', j === i);
+          s.classList.toggle('is-prev', j < i);
         });
         syncAmbient(slides[i]);
       }

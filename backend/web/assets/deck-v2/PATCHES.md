@@ -16,6 +16,31 @@
    SecurityError 并打断 go() 的后续状态更新（进度条/激活页切换）。深链语义由
    location.hash 赋值承担（沙箱内允许自导航），replaceState 只服务地址栏展示。
 
+1b. runtime.js 预览模式 showSlide（2026-09-25）：去掉逐 slide 的 display:none 硬切，
+    改为 is-active/is-prev class 切换（与 go() 同款）。原因：模板预览弹窗经
+    preview-goto postMessage 无刷新翻页，display 切换会杀死 .slide 自带的
+    .5s opacity/transform 过渡，观感是"闪一下再突兀替换"。slide 本就 absolute
+    叠放 + opacity:0 隐藏，class 切换即得淡入+方向位移过渡，正常模式同款观感。
+
+2. fonts.css unicode-range 分段 + 等宽拉丁子集（2026-09-25，性能）。原因：画廊/
+   预览的字体成本实测撑爆首屏——sandboxed iframe 是独立不透明源，Chrome 按
+   源分区 HTTP 缓存，同一批字体被每张卡全量重复下载（单次画廊打开 91 次字体
+   请求 / ~180MB）；且 @font-face 无 range 时页面里任何"中文栈元素中的西文"
+   都会触发 6MB+ 的 CJK 等宽全量文件。改法：
+   - 各家族按"拉丁 U+0000-2E7F / CJK 及以上 U+2E80-10FFFF"拆两条 @font-face，
+     浏览器按需下载所在分段；
+   - 新增 JetBrainsMapleMono-{Regular,Bold}-latin.woff2（58/60KB，由全量文件
+     `python -m fontTools.subset <full>.woff2 --unicodes=U+0000-2E7F
+     --flavor=woff2 --output-file=<out>` 生成）。**上游字体更新后必须重跑**
+     这两条命令再生成子集，否则拉丁字形停在上旧版本。
+   效果实测：单次画廊打开字体请求 91 → 9（首次，之后 max-age 内 0 次），
+   传输量 ~180MB → ~17MB；纯拉丁等宽页不再触碰 CJK 全量文件。
+   配套（非本目录）：router.revalidateStatic 对字体给 7 天 max-age；
+   画廊内置模板 iframe 加 allow-same-origin 恢复缓存共享（内容是仓库静态
+   文件，与宿主同源可信；用户模板 ut-* 保持 scripts-only 沙箱不变）；
+   /api/templates/:id/preview?slide=N 只返回第 N 页（缩略卡不再为整本
+   demo 付解析/布局账，TrimToSlide fail-open）。
+
 ## 上游版本
 
 - 导入日期：2026-09-17
