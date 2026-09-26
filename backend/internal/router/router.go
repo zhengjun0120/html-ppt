@@ -63,6 +63,8 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/decks/:id/export", h.ExportDeck)
 			guarded.GET("/decks/:id/exports/:file", h.DownloadExport)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
+			// 编辑器手动保存：全量覆盖 index.html 并记一条 edit 版本（deck-editor-plan §4.1）
+			guarded.PUT("/decks/:id/file", h.SaveDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer", h.AskUser)
 			// 暂停中的提问（页面刷新后重建提问卡片用；没有则 questions 为空串）

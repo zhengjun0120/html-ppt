@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +43,41 @@ func (h *Handler) GetDeckFile(c *gin.Context) {
 	}
 	deckPageHeaders(c)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+}
+
+// maxEditBodyBytes 手动编辑保存的 body 上限。index.html 实测量级是几十 KB，
+// 2MB 已经放宽了一个数量级还多；再大基本可以断定不是编辑器序列化产物。
+const maxEditBodyBytes = 2 << 20
+
+// SaveDeckFile PUT /api/decks/:id/file —— 编辑器全量保存（docs/deck-editor-plan.md §4.1）。
+// body 是原始 HTML（编辑器在 iframe 内序列化 DOM 的产物，父页原样搬运），
+// 不是 JSON，所以直接读 body 不走 binding。校验从宽：结构粗检 + 大小上限——
+// 内容本来就是用户自己的稿子，语义层面的把关交给前端的 serialize 清理清单。
+func (h *Handler) SaveDeckFile(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, maxEditBodyBytes))
+	if err != nil {
+		response.Err(c, http.StatusRequestEntityTooLarge, "内容超限或读取失败")
+		return
+	}
+	if len(bytes.TrimSpace(body)) == 0 {
+		response.Err(c, http.StatusBadRequest, "空内容")
+		return
+	}
+	if !bytes.Contains(body, []byte("<section")) {
+		response.Err(c, http.StatusBadRequest, "内容不含 <section>，疑似非 deck HTML")
+		return
+	}
+	if err := h.decks.SaveHTML(uid, c.Param("id"), string(body), c.Query("detail")); err != nil {
+		// 与 GetDeckFile 同口径：不存在/别人的/非 v2 一律 404，不泄露存在性
+		response.Err(c, http.StatusNotFound, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
 }
 
 func deckPageHeaders(c *gin.Context) {
