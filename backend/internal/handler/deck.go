@@ -41,6 +41,13 @@ func (h *Handler) GetDeckFile(c *gin.Context) {
 		response.Err(c, http.StatusNotFound, "deck 不存在")
 		return
 	}
+	if c.Query("edit") == "1" {
+		// 编辑模式：注入编辑器脚本（deck-editor-plan §4.3）。v1 deck 不注入——
+		// 编辑弹窗靠 editor-ready 超时兜底提示"不支持编辑"。
+		if h.decks.IsV2(c.Param("id")) {
+			html = injectEditorScript(html)
+		}
+	}
 	deckPageHeaders(c)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }

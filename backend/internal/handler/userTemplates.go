@@ -1,7 +1,13 @@
 package handler
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -120,6 +126,79 @@ type userTemplateView struct {
 	store.UserTemplate
 	Canvas   *template.Canvas   `json:"canvas,omitempty"`
 	Variants []template.Variant `json:"variants,omitempty"`
+}
+
+// GetUserTemplateEditor GET /api/user-templates/:id/editor —— 编辑模式的 demo 读取端点
+// （docs/deck-editor-plan.md §4.2）。
+//
+// 为什么不走公开静态路由：/user-templates/:id/index.html 是纯文件服务，没有
+// 服务端钩子，注入编辑器脚本只能走受保护端点。除注入外，相对引用重写与
+// PreviewTemplate 同一套；响应头与 deck 预览同一条（deckPageHeaders），
+// 保证"编辑看到的页面"和"用户看到的页面"同构。仅属主可读——协作编辑不存在。
+func (h *Handler) GetUserTemplateEditor(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	row, err := h.usertpl.GetOwned(uid, c.Param("id"))
+	if err != nil {
+		response.Err(c, http.StatusNotFound, "模板不存在或无权编辑")
+		return
+	}
+	raw, err := os.ReadFile(filepath.Join(h.usertpl.Dir(row.ID), "index.html"))
+	if err != nil {
+		response.Err(c, http.StatusNotFound, "模板 demo 缺失")
+		return
+	}
+	// 相对引用 → 静态路由的绝对引用（与 PreviewTemplate 同一套）
+	base := "/user-templates/" + row.ID + "/"
+	html := strings.ReplaceAll(string(raw), `href="style.css"`, `href="`+base+`style.css"`)
+	html = injectEditorScript(html)
+	deckPageHeaders(c) // 含 Cache-Control: no-store
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+}
+
+// SaveUserTemplateFile PUT /api/user-templates/:id/file —— 编辑器全量保存模板
+// index.html（docs/deck-editor-plan.md §4.2）。覆盖前服务端自动滚动备份最近 5 版；
+// published 状态拒绝（409，先下架再编辑）。
+func (h *Handler) SaveUserTemplateFile(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, maxEditBodyBytes))
+	if err != nil {
+		response.Err(c, http.StatusRequestEntityTooLarge, "内容超限或读取失败")
+		return
+	}
+	if len(strings.TrimSpace(string(body))) == 0 {
+		response.Err(c, http.StatusBadRequest, "空内容")
+		return
+	}
+	if !bytes.Contains(body, []byte("<section")) {
+		response.Err(c, http.StatusBadRequest, "内容不含 <section>，疑似非模板 HTML")
+		return
+	}
+	backups, err := h.usertpl.SaveIndexHTML(uid, c.Param("id"), string(body))
+	if errors.Is(err, usertpl.ErrPublished) {
+		response.Err(c, http.StatusConflict, err.Error())
+		return
+	}
+	if err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true, "backups": backups})
 }
 
 // UpdateUserTemplate PUT /api/user-templates/:id —— 改名/描述。
