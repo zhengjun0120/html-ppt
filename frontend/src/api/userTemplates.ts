@@ -53,6 +53,13 @@ export const userTemplateApi = {
       body: { name, description },
     }),
   remove: (id: string) => request<{ ok: boolean }>(`/api/user-templates/${id}`, { method: 'DELETE' }),
+  /** 编辑器全量保存 index.html（raw HTML；服务端滚动备份最近 5 版） */
+  saveFile: (id: string, html: string) =>
+    request<{ ok: boolean; backups: number }>(`/api/user-templates/${id}/file`, {
+      method: 'PUT',
+      body: html,
+      raw: true,
+    }),
   publish: (id: string) => request<PublishReport>(`/api/user-templates/${id}/publish`, { method: 'POST' }),
   unpublish: (id: string) => request<{ ok: boolean }>(`/api/user-templates/${id}/unpublish`, { method: 'POST' }),
   community: () => request<CommunityTemplate[]>('/api/community-templates'),

@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { templateApi, type TemplateMeta } from '@/api/templates'
 import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal.vue'
+import DeckEditModal from '@/components/editor/DeckEditModal.vue'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
 import Pagination from '@/components/ui/Pagination.vue'
@@ -198,6 +199,9 @@ function openUserPreview(row: UserTemplateRow) {
     pages: base?.demo_pages,
   }
 }
+
+// —— 编辑弹窗（deck-editor-plan §4.6）：仅用户模板可编辑，内置卡只读。——//
+const editing = ref<UserTemplateRow | null>(null)
 </script>
 
 <template>
@@ -262,6 +266,16 @@ function openUserPreview(row: UserTemplateRow) {
           >
             <PhArrowsOutSimple :size="11" />
             预览
+          </button>
+          <!-- 编辑入口：改的是模板 demo 本身（保存滚动备份 5 版；已发布模板需先下架） -->
+          <button
+            type="button"
+            class="absolute bottom-2 right-[74px] inline-flex cursor-pointer items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ink-2 shadow-sm backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+            title="手动编辑 demo"
+            @click="editing = row"
+          >
+            <PhPencilSimple :size="11" />
+            编辑
           </button>
         </div>
         <div class="space-y-2 p-3">
@@ -399,6 +413,17 @@ function openUserPreview(row: UserTemplateRow) {
       :sandbox="previewSandbox"
       :src="previewSrc"
       @close="preview = null"
+    />
+
+    <!-- 编辑弹窗：用户模板 demo 手改；保存后刷新列表（模板卡 iframe 是 no-cache，重挂即新版） -->
+    <DeckEditModal
+      :open="editing != null"
+      kind="usertpl"
+      :id="editing?.id ?? ''"
+      :title="editing?.name ?? ''"
+      :canvas="editing?.canvas ?? { w: 1920, h: 1080 }"
+      @close="editing = null"
+      @saved="load()"
     />
   </div>
 </template>

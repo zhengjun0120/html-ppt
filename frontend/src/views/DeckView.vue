@@ -8,9 +8,11 @@ import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessages from '@/components/chat/ChatMessages.vue'
 import HistoryDrawer from '@/components/preview/HistoryDrawer.vue'
 import DeckPreview from '@/components/preview/DeckPreview.vue'
+import DeckEditModal from '@/components/editor/DeckEditModal.vue'
 import WizardStepper from '@/components/wizard/WizardStepper.vue'
 import { usePreviewAutoRefresh } from '@/lib/previewRefresh'
 import { useWorkspaceBoot } from '@/lib/workspaceBoot'
+import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 import { useWizardStore, STEP_ROUTES } from '@/stores/wizard'
 
@@ -28,6 +30,9 @@ const isNew = String(route.params.id) === 'new'
 const routeDeckId = isNew ? '' : String(route.params.id)
 const { chat, sessions, previewKey, loadSessions, boot, switchSession } = useWorkspaceBoot()
 const historyOpen = ref(false)
+const editOpen = ref(false)
+const deckStore = useDeckStore()
+const deckStoreTitle = computed(() => deckStore.titleOf(deckId.value) || '编辑文稿')
 
 const deckId = computed(() => chat.deckId || routeDeckId)
 const stopPreviewRefresh = usePreviewAutoRefresh(chat, () => {
@@ -87,6 +92,7 @@ function newConversation() {
       :deck-id="deckId"
       class="h-full"
       @history="historyOpen = true"
+      @edit="editOpen = true"
     />
     <div v-else class="flex min-w-0 flex-1 items-center justify-center p-6 text-[13px] text-ink-3">
       文稿不存在或尚未创建。
@@ -129,6 +135,18 @@ function newConversation() {
       :deck-id="deckId"
       @close="historyOpen = false"
       @restored="onRestored"
+    />
+
+    <!-- 手动编辑弹窗：保存后刷新预览（deck 文件是 no-store，重挂 iframe 即拿到新版） -->
+    <DeckEditModal
+      v-if="deckId"
+      :open="editOpen"
+      kind="deck"
+      :id="deckId"
+      :title="deckStoreTitle"
+      :canvas="{ w: 1920, h: 1080 }"
+      @close="editOpen = false"
+      @saved="previewKey += 1"
     />
   </div>
 </template>

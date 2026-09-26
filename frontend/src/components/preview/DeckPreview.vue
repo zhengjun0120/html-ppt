@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhDownload, PhExport } from '@phosphor-icons/vue'
+import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhDownload, PhExport, PhPencilSimple } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { authedUrl } from '@/api/client'
@@ -9,7 +9,7 @@ import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 
 const props = defineProps<{ deckId: string }>()
-const emit = defineEmits<{ history: [] }>()
+const emit = defineEmits<{ history: []; edit: [] }>()
 
 const deckStore = useDeckStore()
 const toast = useToast()
@@ -119,6 +119,14 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
           @click="emit('history')"
         >
           <PhClockCounterClockwise :size="12" /> 历史
+        </button>
+        <!-- 编辑器入口（deck-editor-plan §4.6）：弹窗内直接手改文稿 -->
+        <button
+          v-if="props.deckId"
+          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-ink"
+          @click="emit('edit')"
+        >
+          <PhPencilSimple :size="12" /> 编辑
         </button>
         <button
           v-if="props.deckId"
