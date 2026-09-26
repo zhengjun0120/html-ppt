@@ -1,6 +1,6 @@
 # deck 手动编辑器（PPT 式手改）施工方案
 
-> 状态：方案已与用户对齐（2026-09-26 两轮问答），**未开工**。
+> 状态：**已实现并验收**（2026-09-26，frontend 分支提交 fa710c7 → 8e519af；E2E 十三条验收全过，见 §7）。
 > 本文档是施工蓝图：所有现状事实都已在仓库里核实过并标注出处；实现时若发现与文内事实不符，先回来改文档再动手。
 > 仓库约定：本 checkout（D:\go_files\html-ppt-frontend，frontend 分支）只跑前端 5173 + 测试后端 8081；backend 分支 checkout 在 D:\go_files\html-ppt（后端 8080，用户正式环境）。**前端改动在 frontend 分支提交，后端改动既改本 checkout 的 backend/ 也同步到 backend 分支 checkout**（历史上后端文件两边同内容，合并线一致）。
 
