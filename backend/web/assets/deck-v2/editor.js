@@ -556,8 +556,11 @@
     var root = document.documentElement.cloneNode(true);
 
     // 1. 编辑器自身痕迹
-    var styles = root.querySelector('#ed-styles');
-    if (styles) styles.parentNode.removeChild(styles);
+    // 双保险用 querySelectorAll：历史文件里可能已经落盘过一个 #ed-styles
+    // （v000002 双实例事故），加上本次注入的，同屏可能有两份
+    root.querySelectorAll('#ed-styles').forEach(function (n) {
+      n.parentNode.removeChild(n);
+    });
     // 注入的 editor.js <script> 是"每请求由服务端注入"的运行态，不是内容——
     // 不剥掉就会随保存落盘，下次 ?edit=1 加载被双重注入（所有事件跑两遍）
     root.querySelectorAll('script[src="/assets/deck-v2/editor.js"]').forEach(function (n) {
@@ -581,9 +584,11 @@
       s.classList.remove('is-active', 'is-prev');
     });
     root.removeAttribute('data-preview');
+    root.removeAttribute('style'); // runtime syncAmbient 同时给 <html> 和 <body> 写背景色
     var body = root.querySelector('body');
     if (body) {
       body.removeAttribute('data-preview');
+      body.removeAttribute('style'); // runtime syncAmbient 写的 background-color 等运行态
       body.classList.remove('ed-busy');
     }
     var deck = root.querySelector('.deck');
@@ -620,6 +625,11 @@
   /* ===================== 样式注入 ===================== */
 
   function injectStyles() {
+    // 自愈：历史保存产物里可能残留一份 #ed-styles（双实例事故的产物），
+    // 先清掉再注入，保证全文档只有一份
+    document.querySelectorAll('#ed-styles').forEach(function (n) {
+      n.parentNode.removeChild(n);
+    });
     var style = document.createElement('style');
     style.id = 'ed-styles';
     style.textContent =
