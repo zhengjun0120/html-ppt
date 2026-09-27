@@ -333,12 +333,36 @@
   /* ===================== 流式 → 绝对定位 + 占位块（决策 5 的核心） ===================== */
 
   // 元素第一次被拖/缩/微移时调用：原 DOM 位次插等大占位块顶住流式空间，
-  // 元素转绝对定位（包含块 = .slide 的 padding box，slideLocalRect 直接可用），
-  // append 到 slide 末位——后画的在上层，无需 z-index。
+  // 元素原地转绝对定位（不搬出原父容器！）。
+  //
+  // 为什么不 append 到 slide 末尾：模板装饰样式全是层级选择器
+  // （.tpl-x .terminal .bar .dot{...}），搬出容器后选择器不再命中——
+  // 终端标题条的三个圆点、底色当场裸奔（0079 实测事故）。
+  // 代价：若原容器 overflow:hidden，拖出容器边界的部分会被裁掉——
+  // CSS 完整性优先，跨容器拖移作为后续课题。
+  // 包含块：最近的 position != static 的祖先；没有则 slide 的 padding box。
+  function containingBlockOf(el, slide) {
+    var cb = el.parentElement;
+    while (cb && cb !== slide && getComputedStyle(cb).position === 'static') {
+      cb = cb.parentElement;
+    }
+    if (!cb || cb === document.body) cb = slide;
+    return cb;
+  }
+
   function transformToAbsolute(el, slide) {
-    if (el.style.position === 'absolute' && el.parentElement === slide) return;
+    if (el.style.position === 'absolute') return;
     var r = slideLocalRect(slide, el);
     var m = getComputedStyle(el);
+
+    var cb = containingBlockOf(el, slide);
+    var cbRect = cb.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    var k = slideScale(slide);
+    var cbBorderL = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
+    var cbBorderT = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
+    var x = (elRect.left - cbRect.left - cbBorderL) / k;
+    var y = (elRect.top - cbRect.top - cbBorderT) / k;
 
     // 占位块 = 原元素的浅克隆（类名/结构属性全保留）：布局算法看到的是和原元素
     // 完全相同的盒子（display/flex 分配/min-width/伪元素钩子类一应俱全），
@@ -372,13 +396,14 @@
     el.parentNode.insertBefore(ph, el);
 
     el.style.position = 'absolute';
-    el.style.left = r.x + 'px';
-    el.style.top = r.y + 'px';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
     el.style.width = r.w + 'px';
     el.style.height = r.h + 'px';
     el.style.margin = '0';
-    slide.appendChild(el);
-    invalidateCandidates(); // DOM 结构变了（占位块+搬家），候选集重建
+    // 不搬家：留在原父容器，层级选择器继续命中，装饰与子孙样式无损
+    invalidateCandidates(); // DOM 结构变了（占位块），候选集重建
+    return { cb: cb, x: x, y: y };
   }
 
   /* ===================== 智能参考线 ===================== */
@@ -455,12 +480,31 @@
 
   function beginDrag(e, el, slide) {
     var k = slideScale(slide);
-    var r = slideLocalRect(slide, el);
+    // 拖动全程用包含块坐标（left/top 的参照系）。已是绝对定位的现在就算好；
+    // 流式元素在首次移动转换时补（transformToAbsolute 返回 cb 与 CB 相对坐标）。
+    var cb = el.style.position === 'absolute' ? containingBlockOf(el, slide) : null;
+    var start;
+    if (cb) {
+      var elRect = el.getBoundingClientRect();
+      var cbRect = cb.getBoundingClientRect();
+      var bl = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
+      var bt = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
+      var lr = slideLocalRect(slide, el);
+      start = {
+        x: (elRect.left - cbRect.left - bl) / k,
+        y: (elRect.top - cbRect.top - bt) / k,
+        w: lr.w, h: lr.h,
+      };
+    } else {
+      var r = slideLocalRect(slide, el);
+      start = { x: r.x, y: r.y, w: r.w, h: r.h };
+    }
     drag = {
       kind: 'drag', el: el, slide: slide, k: k,
-      start: { x: r.x, y: r.y, w: r.w, h: r.h },
+      start: start,
       px: e.clientX, py: e.clientY,
       moved: false, refs: snapRects(slide, el),
+      cb: cb,
     };
   }
 
@@ -468,14 +512,25 @@
     // 与拖动同一条纪律：先转绝对定位再改尺寸。流式元素上直接写 width/height
     // 会引发居中布局（.slide 是 justify-content:center）整页回流——元素带着
     // 选中框一起"跳走"；且 left/top 对流式元素不生效，w/n 手柄的数学全落空。
-    transformToAbsolute(el, slide);
+    var conv = transformToAbsolute(el, slide);
+    var cb = (conv && conv.cb) || containingBlockOf(el, slide);
     var k = slideScale(slide);
-    var r = slideLocalRect(slide, el);
+    var elRect = el.getBoundingClientRect();
+    var cbRect = cb.getBoundingClientRect();
+    var bl = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
+    var bt = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
+    var lr = slideLocalRect(slide, el);
     drag = {
       kind: 'resize', dir: dir, el: el, slide: slide, k: k,
-      start: { x: r.x, y: r.y, w: r.w, h: r.h },
+      // 坐标系与 left/top 一致：包含块相对
+      start: {
+        x: (elRect.left - cbRect.left - bl) / k,
+        y: (elRect.top - cbRect.top - bt) / k,
+        w: lr.w, h: lr.h,
+      },
       px: e.clientX, py: e.clientY,
       moved: false, refs: null,
+      cb: cb,
       // 角手柄 = 内容等比缩放（像缩放图片）：以起始字号为基准、按宽度比例实时换算
       fontBases: dir.length === 2 ? fontBasesOf(el) : null,
     };
@@ -490,21 +545,32 @@
         drag.moved = true;
         pushUndo(drag.slide);
         document.body.classList.add('ed-busy');
-        if (drag.kind === 'drag') transformToAbsolute(drag.el, drag.slide);
+        if (drag.kind === 'drag') {
+          var conv = transformToAbsolute(drag.el, drag.slide);
+          if (!drag.cb) {
+            drag.cb = conv.cb;
+            drag.start.x = conv.x; // start 换算到包含块坐标系
+            drag.start.y = conv.y;
+          }
+        }
       }
 
       var s = drag.start;
       if (drag.kind === 'drag') {
         var nx = s.x + dx, ny = s.y + dy;
-        var sw = drag.slide.clientWidth, sh = drag.slide.clientHeight;
-        // 智能参考线：仅拖动时，先吸附后钳位（贴边优先）
-        clearGuides();
-        var sx = snapAxis([nx, nx + s.w / 2, nx + s.w], drag.refs.xs);
-        var sy = snapAxis([ny, ny + s.h / 2, ny + s.h], drag.refs.ys);
-        if (sx) { nx += sx.value - sx.at; drawGuide(drag.slide, 'v', sx.value); }
-        if (sy) { ny += sy.value - sy.at; drawGuide(drag.slide, 'h', sy.value); }
-        nx = Math.min(Math.max(nx, 0), Math.max(0, sw - s.w));
-        ny = Math.min(Math.max(ny, 0), Math.max(0, sh - s.h));
+        // 钳位与参考线都按包含块坐标系（嵌套容器里 slide 坐标系无意义）
+        var cbw = drag.cb ? drag.cb.clientWidth : drag.slide.clientWidth;
+        var cbh = drag.cb ? drag.cb.clientHeight : drag.slide.clientHeight;
+        if (drag.cb === drag.slide || !drag.cb) {
+          // 智能参考线：仅顶层拖动时，先吸附后钳位（贴边优先）
+          clearGuides();
+          var sx = snapAxis([nx, nx + s.w / 2, nx + s.w], drag.refs.xs);
+          var sy = snapAxis([ny, ny + s.h / 2, ny + s.h], drag.refs.ys);
+          if (sx) { nx += sx.value - sx.at; drawGuide(drag.slide, 'v', sx.value); }
+          if (sy) { ny += sy.value - sy.at; drawGuide(drag.slide, 'h', sy.value); }
+        }
+        nx = Math.min(Math.max(nx, 0), Math.max(0, cbw - s.w));
+        ny = Math.min(Math.max(ny, 0), Math.max(0, cbh - s.h));
         drag.el.style.left = nx + 'px';
         drag.el.style.top = ny + 'px';
       } else {
