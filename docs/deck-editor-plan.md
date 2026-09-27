@@ -14,7 +14,7 @@
 
 | # | 决策点 | 结论 |
 |---|--------|------|
-| 1 | 首版能力 | **文本自由编辑 + 拖动/缩放卡片** 两项。样式面板、元素增删复制、页级操作全部二期 |
+| 1 | 首版能力 | **文本自由编辑 + 拖动/缩放卡片** 两项。样式面板、元素增删复制、页级操作全部二期。（2026-09-26 晚追加：**字号缩放**提前做了——工具栏 A−/A+ 步进器 + Ctrl+=/Ctrl+-，选中块及其内部文字等比缩放，px 行高随动） |
 | 2 | 编辑器形态 | **预览弹窗内编辑**（不做独立全屏路由） |
 | 3 | 保存机制 | **显式保存**（Ctrl+S / 按钮）+ 文稿写 history 版本可回滚 |
 | 4 | 可编辑对象 | **用户文稿（deck）+ 我的模板（ut-*）**；内置模板画廊 demo 只读 |
@@ -292,7 +292,10 @@ pointerdown 在已选中元素上（非手柄）→ 开始拖动：
 **缩放（八手柄）**：
 
 ```
-pointerdown 在 .ed-handle 上 → 按方向改 width/height（角手柄同时改 left/top），
+pointerdown 在 .ed-handle 上 → beginResize 必须先 transformToAbsolute（与拖动同一条纪律）。
+  ——实测教训：流式元素上直接写 width/height 会引发居中布局（justify-content:center）
+  整页回流，元素带着选中框"跳走"，且 left/top 对流式元素不生效。
+转换后按方向改 width/height（角手柄同时改 left/top），
 最小 48×24（slide-local），实时写 style，pointerup 时 pushUndo + reportDirty。
 文本自然回流（流式内容的固有行为，接受）。
 ```
@@ -369,7 +372,9 @@ function serialize() {
 | ←iframe | `{type:'preview-ready'}` | runtime 既有 |
 | ←iframe | `{type:'editor-ready', pages:N}` | 就绪 + 页数（顺带解决页数来源） |
 | ←iframe | `{type:'editor-dirty', dirty:boolean}` | 脏标记变化（首次变更 true、保存后 false） |
+| ←iframe | `{type:'editor-selection', selected:boolean, fontSize:number\|null}` | 选中态变化；父页据此启用字号步进器并显示当前字号 |
 | ←iframe | `{type:'editor-serialize', html:string}` | 全量 HTML（对 editor-save / Ctrl+S 的响应） |
+| →iframe | `{type:'editor-font', factor:number}` | 字号等比缩放选中块及其内部文字（0.9/1.1） |
 
 安全：`onMessage` 一律先 `e.source === frameEl.contentWindow` 再处理（TemplatePreviewModal 既有做法）；目标侧 `postMessage(...,'*')`（opaque origin 无源可指定，既有约定）。
 

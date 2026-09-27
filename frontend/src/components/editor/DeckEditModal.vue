@@ -44,6 +44,9 @@ const saving = ref(false)
 const page = ref(1)
 const totalPages = ref(0)
 const confirmDiscard = ref(false)
+/** 选中态（editor-selection 上报）：字号步进器只在有选中时出现 */
+const hasSel = ref(false)
+const fontPx = ref<number | null>(null)
 
 const src = computed(() => {
   if (!props.id) return ''
@@ -93,6 +96,10 @@ function doUndo() {
 }
 function doRedo() {
   sendEditor({ type: 'editor-redo' })
+}
+/** 字号步进：等比缩放选中块及其内部文字（editor.js applyFontFactor） */
+function fontStep(factor: number) {
+  sendEditor({ type: 'editor-font', factor })
 }
 
 async function save() {
@@ -149,7 +156,7 @@ function onCloseClick() {
 
 function onMessage(e: MessageEvent) {
   if (e.source !== frameEl.value?.contentWindow) return
-  const d = e.data as { type?: string; pages?: number; dirty?: boolean; html?: string } | null
+  const d = e.data as { type?: string; pages?: number; dirty?: boolean; html?: string; selected?: boolean; fontSize?: number | null } | null
   if (!d || typeof d !== 'object') return
   if (d.type === 'editor-ready') {
     ready.value = true
@@ -159,8 +166,9 @@ function onMessage(e: MessageEvent) {
   } else if (d.type === 'editor-dirty') {
     dirty.value = !!d.dirty
     if (d.dirty) confirmDiscard.value = false
-  } else if (d.type === 'editor-serialize' && saving.value) {
-    // requestSerialize 的监听器已处理；这里只为兜住saving状态外的意外到达
+  } else if (d.type === 'editor-selection') {
+    hasSel.value = !!d.selected
+    fontPx.value = typeof d.fontSize === 'number' ? d.fontSize : null
   }
 }
 
@@ -231,6 +239,29 @@ watch(
             >
               <PhArrowClockwise :size="15" />
             </button>
+            <!-- 字号步进：选中元素后出现，作用于选中块及其内部文字（等比缩放） -->
+            <template v-if="hasSel">
+              <span class="mx-0.5 hidden h-4 w-px bg-white/20 sm:block"></span>
+              <button
+                type="button"
+                class="cursor-pointer rounded-full px-1.5 py-0.5 text-[11px] font-bold transition-colors hover:bg-white/10 hover:text-white"
+                title="减小字号（Ctrl+-）"
+                @click="fontStep(0.9)"
+              >
+                A−
+              </button>
+              <span class="w-8 text-center font-mono text-[11.5px] text-white/70" title="选中文字的当前字号（px）">
+                {{ fontPx != null ? Math.round(fontPx) : '—' }}
+              </span>
+              <button
+                type="button"
+                class="cursor-pointer rounded-full px-1.5 py-0.5 text-[13px] font-bold transition-colors hover:bg-white/10 hover:text-white"
+                title="增大字号（Ctrl+=）"
+                @click="fontStep(1.1)"
+              >
+                A+
+              </button>
+            </template>
             <button
               type="button"
               class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors hover:border-white/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"

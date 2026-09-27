@@ -219,6 +219,7 @@
     sel = { el: el, slide: slide };
     el.classList.add('ed-selected');
     showFrame(el);
+    postSelection();
   }
 
   function deselect() {
@@ -228,6 +229,62 @@
     sel = null;
     hideFrame();
     clearGuides();
+    postSelection();
+  }
+
+  /* ===================== 选中态上报（父页工具栏据此启用字号步进器） ===================== */
+
+  function postSelection() {
+    var size = null;
+    if (sel && sel.el) {
+      size = Math.round(parseFloat(getComputedStyle(sel.el).fontSize)) || null;
+    }
+    post({ type: 'editor-selection', selected: !!sel, fontSize: size });
+  }
+
+  /* ===================== 字号缩放（§4.4：选中块及其内部文字等比缩放） ===================== */
+
+  var FONT_MIN = 10, FONT_MAX = 200;
+  var fontTimer = null; // 撤销突发合并，与方向键微移同套路
+
+  // 选中元素自身 + 所有"直接持有文本"的后代。两层选择模型选不到卡片里的
+  // 单个文字（如 grid 卡里的 h3），所以字号作用于整块——PPT 的文本块语义。
+  function textLeaves(root) {
+    var out = [];
+    var hasDirectText = function (el) {
+      for (var n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3 && n.nodeValue.trim()) return true;
+      }
+      return false;
+    };
+    if (hasDirectText(root)) out.push(root);
+    var all = root.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      if (hasDirectText(all[i])) out.push(all[i]);
+    }
+    return out;
+  }
+
+  function applyFontFactor(factor) {
+    if (!sel) return;
+    var first = fontTimer === null;
+    if (first) pushUndo(sel.slide);
+    clearTimeout(fontTimer);
+    fontTimer = setTimeout(function () { fontTimer = null; }, NUDGE_BURST_MS);
+    var targets = textLeaves(sel.el);
+    for (var i = 0; i < targets.length; i++) {
+      var el = targets[i];
+      var cs = getComputedStyle(el);
+      var size = parseFloat(cs.fontSize) || 16;
+      var next = Math.min(FONT_MAX, Math.max(FONT_MIN, Math.round(size * factor * 10) / 10));
+      el.style.fontSize = next + 'px';
+      // px 行高随动；无量纲/normal 行高天然等比，不动
+      var lh = parseFloat(cs.lineHeight);
+      if (!isNaN(lh)) el.style.lineHeight = Math.round(lh * factor * 10) / 10 + 'px';
+    }
+    updateFrame();
+    setDirty(true);
+    postSelection();
   }
 
   /* ===================== 流式 → 绝对定位 + 占位块（决策 5 的核心） ===================== */
@@ -333,6 +390,10 @@
   }
 
   function beginResize(e, dir, el, slide) {
+    // 与拖动同一条纪律：先转绝对定位再改尺寸。流式元素上直接写 width/height
+    // 会引发居中布局（.slide 是 justify-content:center）整页回流——元素带着
+    // 选中框一起"跳走"；且 left/top 对流式元素不生效，w/n 手柄的数学全落空。
+    transformToAbsolute(el, slide);
     var k = slideScale(slide);
     var r = slideLocalRect(slide, el);
     drag = {
@@ -518,6 +579,18 @@
       post({ type: 'editor-serialize', html: serialize() });
       return;
     }
+    if (meta && (e.key === '=' || e.key === '+')) {
+      if (!sel || editingEl) return;
+      e.preventDefault();
+      applyFontFactor(1.1);
+      return;
+    }
+    if (meta && e.key === '-') {
+      if (!sel || editingEl) return;
+      e.preventDefault();
+      applyFontFactor(0.9);
+      return;
+    }
     if (e.key === 'Escape') {
       if (editingEl) { exitTextEdit(); return; }
       if (sel && sel.el && collectCandidates(sel.slide).has(sel.el)) {
@@ -604,7 +677,7 @@
 
   /* ===================== 消息协议（§4.5） ===================== */
 
-  var MSG_FROM_PARENT = { 'editor-save': 1, 'editor-saved': 1, 'editor-undo': 1, 'editor-redo': 1 };
+  var MSG_FROM_PARENT = { 'editor-save': 1, 'editor-saved': 1, 'editor-undo': 1, 'editor-redo': 1, 'editor-font': 1 };
 
   function onMessage(e) {
     if (e.source !== window.parent) return;
@@ -619,6 +692,9 @@
         break;
       case 'editor-undo': undo(); break;
       case 'editor-redo': redo(); break;
+      case 'editor-font':
+        if (typeof d.factor === 'number' && d.factor > 0) applyFontFactor(d.factor);
+        break;
     }
   }
 
