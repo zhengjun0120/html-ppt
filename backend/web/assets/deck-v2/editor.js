@@ -360,6 +360,12 @@
     ph.style.borderColor = 'transparent';
     ph.style.boxShadow = 'none';
     ph.style.color = 'transparent';
+    // 空的行内级盒子没有文本基线（CSS 退到底边对齐），行盒会和原元素不一样，
+    // 同行兄弟被顶下/挪位（0079 第二页实测）。塞一个零宽空格给它一条与原元素
+    // 相同度量的文本基线（类名相同=字体相同）；对块级/flex 占位块无副作用。
+    if (m.display.indexOf('inline') === 0) {
+      ph.appendChild(document.createTextNode('\u200B'));
+    }
     // grid 手工定位项原样带走（罕见，但带走无害）
     if (el.style.gridColumn) ph.style.gridColumn = el.style.gridColumn;
     if (el.style.gridRow) ph.style.gridRow = el.style.gridRow;
