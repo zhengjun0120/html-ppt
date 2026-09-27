@@ -338,16 +338,28 @@
   function transformToAbsolute(el, slide) {
     if (el.style.position === 'absolute' && el.parentElement === slide) return;
     var r = slideLocalRect(slide, el);
-    var ph = document.createElement('div');
-    ph.setAttribute('data-ed-placeholder', '1');
     var m = getComputedStyle(el);
-    // 行内候选（span.tag 小卡片，可能是 inline/inline-block/inline-flex）的
-    // 占位块用 inline-block，否则会打断行内排版
-    var d = m.display;
-    var phDisplay = d.indexOf('inline') === 0 ? 'inline-block' : 'block';
-    ph.style.cssText = 'box-sizing:border-box;display:' + phDisplay + ';flex:0 0 auto;' +
-      'width:' + r.w + 'px;height:' + r.h + 'px;' +
-      'margin:' + m.marginTop + ' ' + m.marginRight + ' ' + m.marginBottom + ' ' + m.marginLeft + ';';
+
+    // 占位块 = 原元素的浅克隆（类名/结构属性全保留）：布局算法看到的是和原元素
+    // 完全相同的盒子（display/flex 分配/min-width/伪元素钩子类一应俱全），
+    // 兄弟元素在数学上必然冻结。合成 div 只拷宽高 margin，弹性/grid 重排
+    // 会挤动没被选中的兄弟（实测事故）。
+    var ph = el.cloneNode(false);
+    ph.removeAttribute('id');
+    ph.setAttribute('data-ed-placeholder', '1');
+    ph.classList.remove('ed-selected', 'ed-hoverable', 'ed-editing');
+    // 克隆没有内容，盒子尺寸/弹性分配用原元素现值显式钉死
+    ph.style.width = r.w + 'px';
+    ph.style.height = r.h + 'px';
+    ph.style.margin = m.marginTop + ' ' + m.marginRight + ' ' + m.marginBottom + ' ' + m.marginLeft;
+    ph.style.flex = m.flex;
+    ph.style.alignSelf = m.alignSelf;
+    ph.style.boxSizing = m.boxSizing;
+    // 空洞视觉中性化：皮肤透明（不影响布局），伪元素装饰关掉
+    ph.style.backgroundColor = 'transparent';
+    ph.style.borderColor = 'transparent';
+    ph.style.boxShadow = 'none';
+    ph.style.color = 'transparent';
     // grid 手工定位项原样带走（罕见，但带走无害）
     if (el.style.gridColumn) ph.style.gridColumn = el.style.gridColumn;
     if (el.style.gridRow) ph.style.gridRow = el.style.gridRow;
@@ -834,7 +846,8 @@
       '.ed-selected{outline:2px solid #6366f1;outline-offset:2px}' +
       '.ed-hoverable{outline:1px dashed rgba(99,102,241,.5)}' +
       '.ed-editing{outline:2px dashed #6366f1;cursor:text;white-space:normal}' +
-      'body.ed-busy,body.ed-busy *{cursor:move!important;user-select:none!important;-webkit-user-select:none!important}';
+      'body.ed-busy,body.ed-busy *{cursor:move!important;user-select:none!important;-webkit-user-select:none!important}' +
+      '[data-ed-placeholder]::before,[data-ed-placeholder]::after{content:none!important}';
     document.head.appendChild(style);
   }
 

@@ -270,9 +270,11 @@ pointerdown 在已选中元素上（非手柄）→ 开始拖动：
   scale = slide.getBoundingClientRect().width / slide.clientWidth   // .deck 被 --deck-scale 缩放，全部坐标换算除以它
   第一次拖动该元素时（transform 化）：
     rect = el.getBoundingClientRect()
-    // 占位块：插在原 DOM 位次，顶住流式空间——其余元素纹丝不动的关键
-    ph = <div data-ed-placeholder>，style: width=(rect.width/scale)px; height=(rect.height/scale)px;
-         margin = 拷贝 el 的 computed margin; flex:'0 0 auto'; display:'block'
+    // 占位块 = 原元素的浅克隆（类名/结构属性全保留）：布局算法看到的是和原元素
+  // 完全相同的盒子（display/flex 分配/min-width 一应俱全），兄弟元素在数学上
+  // 必然冻结——合成 div 只拷宽高 margin，弹性/grid 重排会挤动没选中的兄弟。
+  // 皮肤透明（背景/边框/阴影/文字色 inline 置空 + 伪元素 content:none），
+  // 空洞看起来是空的但不影响布局。占位块是真实内容，随 serialize 保留。
     el.before(ph)
     // 转绝对定位（包含块 = .slide 的 padding box，rect 差值坐标直接可用）
     el.style.position='absolute'
