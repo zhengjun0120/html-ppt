@@ -297,6 +297,10 @@ pointerdown 在 .ed-handle 上 → beginResize 必须先 transformToAbsolute（�
   整页回流，元素带着选中框"跳走"，且 left/top 对流式元素不生效。
 转换后按方向改 width/height（角手柄同时改 left/top），
 最小 48×24（slide-local），实时写 style，pointerup 时 pushUndo + reportDirty。
+**角手柄（nw/ne/se/sw）= 内容等比缩放**：拖动中以「起始字号 ×（当前宽/起始宽）」
+实时换算选中块内所有文字的 font-size 与 px 行高（基准是拖动开始时的现值，避免连乘漂移），
+与盒子同一条 undo；边手柄（n/s/e/w）不动字号。注意模板 CSS 的 max-width 会钳制
+实际渲染宽度——拖到上限框就停，属模板护栏不是 bug。
 文本自然回流（流式内容的固有行为，接受）。
 ```
 

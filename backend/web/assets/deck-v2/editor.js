@@ -397,6 +397,14 @@
 
   /* ===================== 拖动 / 缩放 ===================== */
 
+  // 角手柄缩放的字号基准：选中元素内所有"直接持有文本"的节点的现值
+  function fontBasesOf(root) {
+    return textLeaves(root).map(function (el) {
+      var cs = getComputedStyle(el);
+      return { el: el, size: parseFloat(cs.fontSize) || 16, lh: parseFloat(cs.lineHeight) };
+    });
+  }
+
   function beginDrag(e, el, slide) {
     var k = slideScale(slide);
     var r = slideLocalRect(slide, el);
@@ -420,6 +428,8 @@
       start: { x: r.x, y: r.y, w: r.w, h: r.h },
       px: e.clientX, py: e.clientY,
       moved: false, refs: null,
+      // 角手柄 = 内容等比缩放（像缩放图片）：以起始字号为基准、按宽度比例实时换算
+      fontBases: dir.length === 2 ? fontBasesOf(el) : null,
     };
   }
 
@@ -465,6 +475,19 @@
         drag.el.style.top = r.y + 'px';
         drag.el.style.width = r.w + 'px';
         drag.el.style.height = r.h + 'px';
+        // 角手柄：文字随盒子等比缩放（基准是拖动开始时的现值，避免连乘漂移）
+        if (drag.fontBases && s.w > 0) {
+          var ff = r.w / s.w;
+          if (isFinite(ff) && ff > 0) {
+            for (var bi = 0; bi < drag.fontBases.length; bi++) {
+              var fb = drag.fontBases[bi];
+              fb.el.style.fontSize =
+                Math.min(FONT_MAX, Math.max(FONT_MIN, Math.round(fb.size * ff * 10) / 10)) + 'px';
+              if (!isNaN(fb.lh)) fb.el.style.lineHeight = Math.round(fb.lh * ff * 10) / 10 + 'px';
+            }
+            postSelection();
+          }
+        }
       }
       updateFrame();
       return;
@@ -487,8 +510,9 @@
     document.body.classList.remove('ed-busy');
     if (drag.moved) {
       clearGuides();
-      // 横向缩放改变了换行：松手后把盒子高度贴回内容（纵向手柄用户自己控高，不治）
-      if (drag.kind === 'resize' && (drag.dir === 'e' || drag.dir === 'w')) {
+      // 宽度变了的缩放（含角手柄）改变了换行：松手后把盒子高度贴回内容。
+      // 纵向手柄（n/s）是用户在控高，不治——拖小弹回会跟人打架。
+      if (drag.kind === 'resize' && (drag.dir.indexOf('e') >= 0 || drag.dir.indexOf('w') >= 0)) {
         healHeight(drag.el);
         updateFrame();
       }
