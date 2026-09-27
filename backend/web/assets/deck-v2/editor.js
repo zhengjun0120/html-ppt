@@ -558,43 +558,56 @@
     editingEl = el;
     el.classList.remove('ed-hoverable');
     el.classList.add('ed-editing');
-    try {
-      el.contentEditable = 'plaintext-only';
-    } catch (err) {
-      el.contentEditable = 'true'; // Firefox 不支持 plaintext-only
-    }
+    // contentEditable='true'（而非 plaintext-only）：后者会把 Enter/脚本插的
+    // <br> 都吞成纯文本 \n。富文本风险由 paste 拦截 + Ctrl+B/I/U 拦截兜住。
+    el.contentEditable = 'true';
+    // 行内 normal 压过 UA 给编辑态的 pre-wrap：源码结构性换行在编辑态也不可见，
+    // 编辑态渲染 = 最终渲染（行内样式必赢 UA 表，class 选择器压不住它）
+    el.style.whiteSpace = 'normal';
     el.setAttribute('spellcheck', 'false');
     el.focus();
   }
 
-  // plaintext-only 编辑模式里 Enter 产出的换行是**纯文本 \n**（不是 <br>）：
-  // 编辑态浏览器按 pre-wrap 渲染所以看得见，退出后回到流式渲染就被折叠成空格。
-  // 退出编辑时把 \n 归一化成真 <br>——只动用户敲出来的换行，模板源码的缩进
-  // 空白不带 \n 的不受影响（带 \n 的缩进会被误转，但生成产物是压缩排版，无此形态）。
-  function newlineToBr(root) {
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-    var nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function (n) {
-      if (n.nodeValue.indexOf('\n') < 0) return;
-      var frag = document.createDocumentFragment();
-      var parts = n.nodeValue.replace(/\r/g, '').split('\n');
-      for (var i = 0; i < parts.length; i++) {
-        if (i > 0) frag.appendChild(document.createElement('br'));
-        if (parts[i]) frag.appendChild(document.createTextNode(parts[i]));
-      }
-      n.parentNode.replaceChild(frag, n);
-    });
+  // plaintext-only 编辑态默认 pre-wrap：源码里标签之间的结构性换行会显示成
+  // 空行，退出时再被归一化成 <br> 就成了凭空多出的空行（实测事故）。
+  // 正解是让编辑态渲染 = 最终渲染：white-space:normal 让结构性 \n 从头到尾
+  // 不可见；用户的 Enter 由 Enter 处理器手动插真 <br>，粘贴多行拆行插 <br>。
+  function insertBrAtCaret() {
+    var s = window.getSelection();
+    if (!s || !s.rangeCount) return;
+    var r = s.getRangeAt(0);
+    r.deleteContents();
+    var br = document.createElement('br');
+    r.insertNode(br);
+    r.setStartAfter(br);
+    r.collapse(true);
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+
+  // 粘贴多行纯文本：拆行插真 <br>（编辑态 normal 折叠 \n，必须转成 br 才可见）
+  function onPaste(e) {
+    if (!editingEl) return;
+    var clip = e.clipboardData || window.clipboardData;
+    if (!clip) return;
+    var txt = clip.getData('text/plain');
+    if (txt == null) return;
+    e.preventDefault();
+    var lines = txt.replace(/\r/g, '').split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) insertBrAtCaret();
+      if (lines[i]) document.execCommand('insertText', false, lines[i]);
+    }
   }
 
   function exitTextEdit(silent) {
     if (!editingEl) return;
     var el = editingEl;
     editingEl = null;
-    newlineToBr(el);
     el.removeAttribute('contenteditable');
     el.removeAttribute('spellcheck');
     el.classList.remove('ed-editing');
+    el.style.removeProperty('white-space'); // 还原模板自己的 white-space 规则
     try { el.blur(); } catch (e) { /* 已失焦 */ }
     healHeight(el); // 打字换行后盒子高度贴回内容（所见即所得）
     updateFrame();
@@ -678,9 +691,12 @@
     }
     if (editingEl) {
       if (e.key === 'Enter') {
-        // 防止 h1/p 里长出嵌套 <div>：统一换行符
+        // 'true' 模式下 execCommand 产真 <br>；'plaintext-only' 会吞成 \n（已弃用）
         e.preventDefault();
         document.execCommand('insertLineBreak');
+      } else if (meta && (e.key === 'b' || e.key === 'i' || e.key === 'u' || e.key === 'B' || e.key === 'I' || e.key === 'U')) {
+        // 防富文本混入：加粗/斜体/下划线一律不放行
+        e.preventDefault();
       }
       return;
     }
@@ -785,7 +801,7 @@
     style.textContent =
       '.ed-selected{outline:2px solid #6366f1;outline-offset:2px}' +
       '.ed-hoverable{outline:1px dashed rgba(99,102,241,.5)}' +
-      '.ed-editing{outline:2px dashed #6366f1;cursor:text}' +
+      '.ed-editing{outline:2px dashed #6366f1;cursor:text;white-space:normal}' +
       'body.ed-busy,body.ed-busy *{cursor:move!important;user-select:none!important;-webkit-user-select:none!important}';
     document.head.appendChild(style);
   }
@@ -803,6 +819,7 @@
     document.addEventListener('pointerup', onPointerUp);
     document.addEventListener('dblclick', onDblClick);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('paste', onPaste, true);
     window.addEventListener('message', onMessage);
     window.addEventListener('beforeunload', function () {
       exitTextEdit(true);
