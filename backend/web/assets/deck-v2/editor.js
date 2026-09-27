@@ -520,6 +520,20 @@
     var bl = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
     var bt = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
     var lr = slideLocalRect(slide, el);
+    // 解除 max 钳制：模板常给文本/媒体设上限（.lede{max-width:62ch}、
+    // img,svg,video{max-width:100%}）。行内 width 写得再大，计算宽度仍被样式表
+    // max-* 钳住——手柄拉了、盒子纹丝不动（0079 s4 lede 实测：行内 width 已写
+    // 到 1162px，渲染仍停在 796px）。按方向先钉现尺寸（width/height:auto 的
+    // 盒子在解锁瞬间会被内容撑开，先钉住防跳），再解同轴 max；解锁随
+    // serialize 落盘——"能扩到多宽"是用户 resize 的意图，持久生效。
+    if (dir.indexOf('e') >= 0 || dir.indexOf('w') >= 0) {
+      if (!el.style.width) el.style.width = lr.w + 'px';
+      el.style.maxWidth = 'none';
+    }
+    if (dir.indexOf('n') >= 0 || dir.indexOf('s') >= 0) {
+      if (!el.style.height) el.style.height = lr.h + 'px';
+      el.style.maxHeight = 'none';
+    }
     drag = {
       kind: 'resize', dir: dir, el: el, slide: slide, k: k,
       // 坐标系与 left/top 一致：包含块相对

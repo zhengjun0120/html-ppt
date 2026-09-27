@@ -301,9 +301,15 @@ pointerdown 在 .ed-handle 上 → beginResize 必须先 transformToAbsolute（�
 最小 48×24（slide-local），实时写 style，pointerup 时 pushUndo + reportDirty。
 **角手柄（nw/ne/se/sw）= 内容等比缩放**：拖动中以「起始字号 ×（当前宽/起始宽）」
 实时换算选中块内所有文字的 font-size 与 px 行高（基准是拖动开始时的现值，避免连乘漂移），
-与盒子同一条 undo；边手柄（n/s/e/w）不动字号。注意模板 CSS 的 max-width 会钳制
-实际渲染宽度——拖到上限框就停，属模板护栏不是 bug。
-文本自然回流（流式内容的固有行为，接受）。
+与盒子同一条 undo；边手柄（n/s/e/w）不动字号。文本自然回流（流式内容的固有行为，接受）。
+**resize 解除 max 钳制**（2026-09-27，0079 s4 实测教训：原设计把 max-width 当
+"模板护栏"，但 `.lede{max-width:62ch}` 让 east 手柄完全拉不动——行内 width 写到
+1162px、渲染仍停在 796px，用户视角是功能坏了）：beginResize 按方向先把现尺寸
+钉成 px（width/height:auto 的盒子在解锁瞬间会被内容撑开，先钉住防跳），再写
+`max-width/max-height:none`（行内必赢样式表非 !important 规则）。解锁随 serialize
+落盘——"能扩到多宽"是用户 resize 的意图，持久生效；undo 恢复视觉状态，解锁作为
+arming 状态保留（与绝对定位+占位块同一条纪律：begin* 阶段的变更不单独成 undo 项）。
+拖动（不改尺寸）不解 max。
 ```
 
 **智能参考线（吸附）**：
