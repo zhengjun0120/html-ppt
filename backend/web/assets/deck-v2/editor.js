@@ -567,10 +567,31 @@
     el.focus();
   }
 
+  // plaintext-only 编辑模式里 Enter 产出的换行是**纯文本 \n**（不是 <br>）：
+  // 编辑态浏览器按 pre-wrap 渲染所以看得见，退出后回到流式渲染就被折叠成空格。
+  // 退出编辑时把 \n 归一化成真 <br>——只动用户敲出来的换行，模板源码的缩进
+  // 空白不带 \n 的不受影响（带 \n 的缩进会被误转，但生成产物是压缩排版，无此形态）。
+  function newlineToBr(root) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (n) {
+      if (n.nodeValue.indexOf('\n') < 0) return;
+      var frag = document.createDocumentFragment();
+      var parts = n.nodeValue.replace(/\r/g, '').split('\n');
+      for (var i = 0; i < parts.length; i++) {
+        if (i > 0) frag.appendChild(document.createElement('br'));
+        if (parts[i]) frag.appendChild(document.createTextNode(parts[i]));
+      }
+      n.parentNode.replaceChild(frag, n);
+    });
+  }
+
   function exitTextEdit(silent) {
     if (!editingEl) return;
     var el = editingEl;
     editingEl = null;
+    newlineToBr(el);
     el.removeAttribute('contenteditable');
     el.removeAttribute('spellcheck');
     el.classList.remove('ed-editing');
@@ -676,6 +697,9 @@
   /* ===================== serialize（在克隆上清理，活动 DOM 不动） ===================== */
 
   function serialize() {
+    // 先退出编辑态：plaintext-only 的 \n 换行必须归一化成 <br> 才能进文件，
+    // 否则"敲着换行直接点保存"会把换行丢掉。healHeight 同理顺带生效。
+    exitTextEdit(true);
     var root = document.documentElement.cloneNode(true);
 
     // 1. 编辑器自身痕迹

@@ -322,6 +322,8 @@ dblclick 选中元素 → el.contentEditable='plaintext-only'（Chrome 支持；
   paste 拦截：preventDefault + execCommand('insertText', false, 纯文本)
   Enter 拦截：preventDefault + execCommand('insertLineBreak')   // 防止 h1 里长出嵌套 <div>
   blur / Esc → 提交：移除 contenteditable、class；pushUndo + reportDirty
+  换行持久化：plaintext-only 的 Enter 产出纯文本 \n（编辑态按 pre-wrap 渲染，
+  退出后会被流式渲染折叠成空格）——退出编辑/serialize 前把 \n 归一化成 <br>
 span 保留：contenteditable 天然保留既有内联 span（xw-grad/xw-focus/mono…）——只要不全选删光
 全选删光会丢 span：v1 接受，写进已知妥协
 ```
