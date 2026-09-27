@@ -53,3 +53,8 @@
 
 （patch 落在模板而非 runtime——runtime.js/base.css 保持上游原样。tech-sharing/style.css
 追加的 `.slide>.deck-footer` 定位修复记入该模板的 ADAPTATION.md。）
+
+## 2026-09-26 编辑器说明
+
+`editor.js` 是本项目的第一方新文件（不是 vendor 改动），不适用本登记纪律；
+`?edit=1` 的注入点在后端 handler（`handler/inject.go`），见 docs/deck-editor-plan.md。

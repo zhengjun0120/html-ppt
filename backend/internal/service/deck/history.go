@@ -17,6 +17,7 @@ const (
 const (
 	OpRun     = "run"
 	OpRestore = "restore"
+	OpEdit    = "edit" // 编辑器手动保存（docs/deck-editor-plan.md）
 )
 
 var versionPattern = regexp.MustCompile(`^v\d{6}$`)

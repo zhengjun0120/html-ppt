@@ -63,6 +63,8 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/decks/:id/export", h.ExportDeck)
 			guarded.GET("/decks/:id/exports/:file", h.DownloadExport)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
+			// 编辑器手动保存：全量覆盖 index.html 并记一条 edit 版本（deck-editor-plan §4.1）
+			guarded.PUT("/decks/:id/file", h.SaveDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer", h.AskUser)
 			// 暂停中的提问（页面刷新后重建提问卡片用；没有则 questions 为空串）
@@ -92,7 +94,11 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.DELETE("/user-templates/:id", h.DeleteUserTemplate)
 			guarded.POST("/user-templates/:id/publish", h.PublishUserTemplate)
 			guarded.POST("/user-templates/:id/unpublish", h.UnpublishUserTemplate)
-				guarded.POST("/user-templates/:id/chat", h.CustomizeUserTemplate)
+			guarded.POST("/user-templates/:id/chat", h.CustomizeUserTemplate)
+			// 编辑器：demo 读取（注入 editor.js）+ index.html 全量保存（滚动备份 5 版）。
+			// 静态路由没有服务端钩子，注入只能走受保护端点（deck-editor-plan §4.2）
+			guarded.GET("/user-templates/:id/editor", h.GetUserTemplateEditor)
+			guarded.PUT("/user-templates/:id/file", h.SaveUserTemplateFile)
 			guarded.DELETE("/decks/:id/history/:version", h.DeleteDeckVersion)
 			guarded.DELETE("/decks/:id/history", h.ClearDeckHistory)
 
