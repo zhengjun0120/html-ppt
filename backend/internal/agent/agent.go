@@ -408,7 +408,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		turnCtx := trace.WithTurn(ctx, i)
 		//预算将尽：提前吹哨，让模型把剩余轮次留给硬伤，而不是被硬掐后仓促收尾
 		if warn := scope.maxTurns - 4; warn > 0 && i == warn {
-			messages = append(messages, openai.UserMessage("工具调用预算还剩 4 轮：只修硬伤（溢出/截断/拒收的页），停止打磨性改动，然后准备收尾汇报"))
+			messages = append(messages, openai.UserMessage(budgetWarnMsg))
 			opt.Messages = messages
 			if err := as.persistSession(sess, messages); err != nil {
 				return false, rr, err
@@ -416,7 +416,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		}
 		//预算花完了
 		if i > scope.maxTurns {
-			messages = append(messages, openai.UserMessage("工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"))
+			messages = append(messages, openai.UserMessage(budgetFinalMsg))
 			opt.Messages = messages
 			opt.Tools = nil
 			err := as.persistSession(sess, messages)
@@ -879,11 +879,9 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 
 	var userMsg string
 	if resume {
-		userMsg = "继续生成：先 list_slides 对齐已写入的页，然后从缺失的页继续 write_pages；" +
-			"若全部页已写入，则按最近一次量测结果修复问题页，修完汇报。"
+		userMsg = resumeGenerateMsg // 常量在 transcript.go：回放投影按它滤展示
 	} else {
-		userMsg = "开始生成：按工作流走——先 plan_pages 全局规划（被打回就调整重提），" +
-			"然后分批 write_pages 写完全部页，处理量测与 lint 反馈，需要时 review_slides 看图，最后如实汇报。"
+		userMsg = kickoffGenerateMsg
 	}
 	messages := []openai.ChatCompletionMessageParamUnion{
 		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df), outline))),

@@ -185,6 +185,30 @@ func (as *AgentService) SessionTranscript(ctx context.Context, userID, sessionID
 	return t, nil
 }
 
+// 合成 user 消息清单：这几条是后端写给模型的工作流指令（生成开工/续跑、
+// 工具预算吹哨），协议上是 user 角色，但不是"用户说过的话"——回放投影时
+// 滤掉，前端不把它们当用户气泡展示（2026-09-27 用户反馈）。发给模型的不受
+// 影响（消息照常进上下文与落库）。文案改动必须改这里的常量：构造处
+// （agent.go）与过滤处共用同一出处，改一处两边同步。
+const (
+	kickoffGenerateMsg = "开始生成：按工作流走——先 plan_pages 全局规划（被打回就调整重提），" +
+		"然后分批 write_pages 写完全部页，处理量测与 lint 反馈，需要时 review_slides 看图，最后如实汇报。"
+	resumeGenerateMsg = "继续生成：先 list_slides 对齐已写入的页，然后从缺失的页继续 write_pages；" +
+		"若全部页已写入，则按最近一次量测结果修复问题页，修完汇报。"
+	budgetWarnMsg = "工具调用预算还剩 4 轮：只修硬伤（溢出/截断/拒收的页），停止打磨性改动，然后准备收尾汇报"
+	budgetFinalMsg = "工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"
+)
+
+// isSyntheticUserMsg 判断一条 user 消息是否后端合成的工作流指令（不该展示）。
+// 精确匹配：这些文案只由本包常量构造，库里不会出现"长得像"的用户话。
+func isSyntheticUserMsg(content string) bool {
+	switch content {
+	case kickoffGenerateMsg, resumeGenerateMsg, budgetWarnMsg, budgetFinalMsg:
+		return true
+	}
+	return false
+}
+
 // projectTranscript 把协议消息数组投影成回放列表（纯函数，DB 之外可测）。
 //
 // system 不进对话流——它是提示词不是对话内容。
@@ -207,7 +231,11 @@ func projectTranscript(messages []openai.ChatCompletionMessageParamUnion, pendin
 		seq := int64(i)
 		switch {
 		case m.OfUser != nil:
-			out = append(out, TranscriptMessage{Seq: seq, Role: "user", Content: contentString(m.OfUser.Content.OfString)})
+			// 合成的工作流指令（开工/续跑/预算）不进对话流——用户没说过这话，
+			// 展示出来就是"系统预设提示词漏到前端"。seq 照样占位（口径同 system）。
+			if content := contentString(m.OfUser.Content.OfString); !isSyntheticUserMsg(content) {
+				out = append(out, TranscriptMessage{Seq: seq, Role: "user", Content: content})
+			}
 		case m.OfAssistant != nil:
 			tm := TranscriptMessage{Seq: seq, Role: "assistant", Content: contentString(m.OfAssistant.Content.OfString)}
 			for _, tc := range m.OfAssistant.ToolCalls {
