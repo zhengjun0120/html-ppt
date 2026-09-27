@@ -282,9 +282,28 @@
       var lh = parseFloat(cs.lineHeight);
       if (!isNaN(lh)) el.style.lineHeight = Math.round(lh * factor * 10) / 10 + 'px';
     }
+    // 盒子高度随动：转换时锁定的高度不跟着字号长，文字就会溢出框外
+    if (sel.el.style.height) {
+      var h = parseFloat(sel.el.style.height);
+      if (!isNaN(h)) sel.el.style.height = Math.max(MIN_H, Math.round(h * factor * 10) / 10) + 'px';
+    }
+    healHeight(sel.el);
     updateFrame();
     setDirty(true);
     postSelection();
+  }
+
+  // 溢出自愈：锁高盒子的内容长高了（字号/改字/宽度变窄换行）就把高度贴到内容。
+  // 只对纯流式内容生效——子元素里有绝对定位的（设计型盒子）内容量不可信，不动。
+  function healHeight(el) {
+    if (!el.style.height) return;
+    var kids = el.children;
+    for (var i = 0; i < kids.length; i++) {
+      if (getComputedStyle(kids[i]).position === 'absolute') return;
+    }
+    if (el.scrollHeight > el.clientHeight + 1) {
+      el.style.height = el.scrollHeight + 'px';
+    }
   }
 
   /* ===================== 流式 → 绝对定位 + 占位块（决策 5 的核心） ===================== */
@@ -468,6 +487,11 @@
     document.body.classList.remove('ed-busy');
     if (drag.moved) {
       clearGuides();
+      // 横向缩放改变了换行：松手后把盒子高度贴回内容（纵向手柄用户自己控高，不治）
+      if (drag.kind === 'resize' && (drag.dir === 'e' || drag.dir === 'w')) {
+        healHeight(drag.el);
+        updateFrame();
+      }
       setDirty(true);
     }
     drag = null;
@@ -527,6 +551,8 @@
     el.removeAttribute('spellcheck');
     el.classList.remove('ed-editing');
     try { el.blur(); } catch (e) { /* 已失焦 */ }
+    healHeight(el); // 打字换行后盒子高度贴回内容（所见即所得）
+    updateFrame();
     if (silent !== true) {
       setDirty(true);
     }
