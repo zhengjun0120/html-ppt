@@ -107,6 +107,7 @@
     redoStack.push({ slide: entry.slide, html: entry.slide.innerHTML });
     entry.slide.innerHTML = entry.html;
     cleanSlideArtifacts(entry.slide);
+    invalidateCandidates();
     setDirty(true);
   }
 
@@ -118,6 +119,7 @@
     undoStack.push({ slide: entry.slide, html: entry.slide.innerHTML });
     entry.slide.innerHTML = entry.html;
     cleanSlideArtifacts(entry.slide);
+    invalidateCandidates();
     setDirty(true);
   }
 
@@ -132,19 +134,41 @@
       (!el.textContent.trim() && !el.querySelector('img,svg,video,canvas'));
   }
 
+  // 候选判定（§1 决策 6 · 方案 A）：块级元素一律可选；行内元素须有盒子样式
+  // （背景/边框/内边距，如 span.tag 小卡片）才可选——纯文字行内（渐变字、mono
+  // 高亮）不选，想改它的字双击进编辑即可。深度不限，点击选中最深候选。
+  function isCandidate(el) {
+    // 讲稿区、编辑器自身的框/手柄/参考线/占位块及其子孙，永不参与候选
+    if (el.closest('[data-ed-frame],[data-ed-guide],[data-ed-placeholder],.notes,.speaker-notes')) return false;
+    if (isExcluded(el)) return false;
+    var s = getComputedStyle(el);
+    var d = s.display;
+    if (d === 'none' || d === 'contents') return false;
+    if (d === 'inline') {
+      var bg = s.backgroundColor;
+      return s.borderWidth !== '0px' ||
+        (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') ||
+        parseFloat(s.paddingLeft) > 0 || parseFloat(s.paddingTop) > 0;
+    }
+    return true;
+  }
+
+  // 候选集按页缓存：hover 每次 pointermove 都要查，150+ 元素逐个 getComputedStyle
+  // 不可接受。缓存随一切结构变更失效（pointerup / 退出编辑 / 撤销重做 / 转绝对定位）。
+  var candCache = null; // { slide, set }
+
+  function invalidateCandidates() {
+    candCache = null;
+  }
+
   function collectCandidates(slide) {
+    if (candCache && candCache.slide === slide) return candCache.set;
     var set = new Set();
-    var add = function (el) { if (!set.has(el)) set.add(el); };
-    slide.childNodes.forEach(function (el) {
-      if (el.nodeType !== 1 || isExcluded(el)) return;
-      add(el);
-      var d = getComputedStyle(el).display;
-      if (d.indexOf('grid') >= 0 || d.indexOf('flex') >= 0) {
-        el.childNodes.forEach(function (c) {
-          if (c.nodeType === 1 && !isExcluded(c)) add(c);
-        });
-      }
-    });
+    var all = slide.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      if (isCandidate(all[i])) set.add(all[i]);
+    }
+    candCache = { slide: slide, set: set };
     return set;
   }
 
@@ -317,7 +341,11 @@
     var ph = document.createElement('div');
     ph.setAttribute('data-ed-placeholder', '1');
     var m = getComputedStyle(el);
-    ph.style.cssText = 'box-sizing:border-box;display:block;flex:0 0 auto;' +
+    // 行内候选（span.tag 小卡片，可能是 inline/inline-block/inline-flex）的
+    // 占位块用 inline-block，否则会打断行内排版
+    var d = m.display;
+    var phDisplay = d.indexOf('inline') === 0 ? 'inline-block' : 'block';
+    ph.style.cssText = 'box-sizing:border-box;display:' + phDisplay + ';flex:0 0 auto;' +
       'width:' + r.w + 'px;height:' + r.h + 'px;' +
       'margin:' + m.marginTop + ' ' + m.marginRight + ' ' + m.marginBottom + ' ' + m.marginLeft + ';';
     // grid 手工定位项原样带走（罕见，但带走无害）
@@ -332,6 +360,7 @@
     el.style.height = r.h + 'px';
     el.style.margin = '0';
     slide.appendChild(el);
+    invalidateCandidates(); // DOM 结构变了（占位块+搬家），候选集重建
   }
 
   /* ===================== 智能参考线 ===================== */
@@ -372,8 +401,9 @@
     var sw = slide.clientWidth, sh = slide.clientHeight;
     var addX = function (v) { refs.xs.push(v); };
     var addY = function (v) { refs.ys.push(v); };
-    slide.childNodes.forEach(function (el) {
-      if (el.nodeType !== 1 || el === exclude || isExcluded(el)) return;
+    var set = collectCandidates(slide);
+    set.forEach(function (el) {
+      if (el === exclude) return;
       var r = slideLocalRect(slide, el);
       addX(r.x); addX(r.x + r.w / 2); addX(r.x + r.w);
       addY(r.y); addY(r.y + r.h / 2); addY(r.y + r.h);
@@ -516,6 +546,7 @@
         healHeight(drag.el);
         updateFrame();
       }
+      invalidateCandidates();
       setDirty(true);
     }
     drag = null;
@@ -611,6 +642,7 @@
     try { el.blur(); } catch (e) { /* 已失焦 */ }
     healHeight(el); // 打字换行后盒子高度贴回内容（所见即所得）
     updateFrame();
+    invalidateCandidates(); // 编辑可能插了 <br>、heal 改了尺寸
     if (silent !== true) {
       setDirty(true);
     }
