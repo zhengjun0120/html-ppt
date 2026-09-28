@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>空白模板</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-blank">
+<div class="deck">
+<!-- SLIDES:START -->
+<section class="slide full" data-layout="blank-cover">
+  <p class="kicker">{{kicker · 这份演示是什么}}</p>
+  <h1 class="h1 mt-m">{{主标题}}</h1>
+  <p class="lede mt-m">{{一句话定位}}</p>
+</section>
+<section class="slide" data-layout="blank-content">
+  <h2 class="h2">{{小节标题}}</h2>
+  <div class="grid g2 mt-l">
+    <div class="card"><h4 class="h4">{{卡标题}}</h4><p class="dim mt-s">{{卡正文}}</p></div>
+    <div class="card"><h4 class="h4">{{卡标题}}</h4><p class="dim mt-s">{{卡正文}}</p></div>
+  </div>
+</section>
+<!-- SLIDES:END -->
+</div>
+<div class="notes">空白模板的 demo 页：结构契约见 layouts.md，样式全部在 style.css 的 .tpl-blank 作用域内。</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body>
+</html>

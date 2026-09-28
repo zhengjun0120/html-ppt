@@ -37,6 +37,7 @@ const metaOf = computed(() => new Map(templates.value.map((t) => [t.id, t])))
 const builtins = computed(() => templates.value.filter((t) => !t.id.startsWith('ut-')))
 /** base_id → 中文名（内置模板都有中文名；查不到兜底原 id） */
 function baseName(id: string): string {
+  if (id === '_blank') return '空白起点'
   return metaOf.value.get(id)?.name ?? id
 }
 
@@ -89,6 +90,23 @@ async function fork(baseId: string) {
     await router.push(`/my-templates/${row.id}/edit`)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '派生失败')
+  } finally {
+    busyId.value = ''
+  }
+}
+
+// 从空白新建：中性灰阶脚手架（两个最小说明版式），结构与视觉在工作台里从零长出来
+async function createBlank() {
+  const raw = window.prompt('模板名称（可留空用「空白模板」）', '')
+  if (raw === null) return // 用户取消
+  const name = raw.trim()
+  busyId.value = 'blank'
+  try {
+    const row = await userTemplateApi.blank(name)
+    toast.info('空白模板已创建，去工作台把它长成你的样子')
+    await router.push(`/my-templates/${row.id}/edit`)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '创建失败')
   } finally {
     busyId.value = ''
   }
@@ -345,8 +363,15 @@ const editing = ref<UserTemplateRow | null>(null)
 
     <!-- 从内置模板派生 -->
     <div ref="builtinSection" class="mt-8 scroll-mt-4">
-      <h2 class="text-[14px] font-bold">从内置模板派生</h2>
-      <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-[14px] font-bold">从内置模板派生</h2>
+          <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
+        </div>
+        <Button :loading="busyId === 'blank'" @click="createBlank">
+          从空白新建
+        </Button>
+      </div>
       <div class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div v-for="b in pagedBuiltins" :key="b.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
           <div

@@ -54,6 +54,11 @@ export const userTemplateApi = {
       method: 'POST',
       body: { name },
     }),
+  /** 从空白脚手架新建（后端约定 baseId="_blank" 走 CreateBlank，不派生任何内置模板） */
+  blank: (name = '') => request<UserTemplateRow>(`/api/templates/_blank/fork`, {
+    method: 'POST',
+    body: { name },
+  }),
   list: () => request<UserTemplateRow[]>('/api/user-templates'),
   get: (id: string) => request<UserTemplateRow>(`/api/user-templates/${id}`),
   updateMeta: (id: string, name: string, description = '') =>

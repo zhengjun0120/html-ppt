@@ -79,7 +79,13 @@ func (s *Service) Dir(id string) string { return filepath.Join(s.root, id) }
 var forkCopies = []string{"template.json", "index.html", "style.css", "layouts.md", "rules.md"}
 
 // Fork 从内置模板克隆一份私有副本。
+// baseID == "_blank" 是约定的"空白来源"：走 CreateBlank 脚手架而不是克隆目录。
+// 用 :id 的取值而不是静态路由段（/api/templates/blank/fork 之类），避开 gin 的
+// 静态段与参数段同位 panic（router.go 的 recent-sessions 注释记过同一个坑）。
 func (s *Service) Fork(userID uint, baseID, name string) (*store.UserTemplate, error) {
+	if baseID == "_blank" {
+		return s.CreateBlank(userID, name)
+	}
 	src, err := s.reg.BuiltinDir(baseID)
 	if err != nil {
 		return nil, err

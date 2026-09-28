@@ -35,6 +35,8 @@ func (h *Handler) templateVisuals(id string) (*template.Canvas, []template.Varia
 }
 
 // ForkTemplate POST /api/templates/:id/fork —— 从内置模板克隆私有副本。
+// :id 取 "_blank" 时走空白脚手架（usertpl.Fork 内分派到 CreateBlank）——
+// 不为它单开静态路由段，避开 gin 静态/参数同位 panic（见 RecentSessions 注释）。
 func (h *Handler) ForkTemplate(c *gin.Context) {
 	if h.usertpl == nil {
 		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
