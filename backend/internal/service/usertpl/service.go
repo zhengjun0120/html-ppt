@@ -35,6 +35,10 @@ type Service struct {
 	// 定制对话的会话表（内存态；重启即清空——对话历史不是重要数据）
 	custMu   sync.Mutex
 	sessions map[string]*customizeSession
+
+	// per-template 写锁（history.go lockUT）：对话与手动保存可能并发写同一模板
+	locksMu sync.Mutex
+	locks   map[string]*sync.Mutex
 }
 
 func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string) *Service {
@@ -123,8 +127,11 @@ func (s *Service) Fork(userID uint, baseID, name string) (*store.UserTemplate, e
 	// 的 ut- 归属校验，非 owner 拿不到私有模板）。
 	if err := s.reg.MountUser(dir); err != nil {
 		_ = s.st.DB.Delete(row)
+		_ = os.RemoveAll(dir) // 连目录一起清：只删行会留孤儿目录（实测遗留问题）
 		return nil, fmt.Errorf("克隆出的模板没过校验（源模板损坏？）: %w", err)
 	}
+	// 起点基线：fork 本身记一版，"回得去起点"从这里开始
+	_ = s.recordVersionUT(id, OpFork, "克隆自 builtin:"+baseID)
 	return row, nil
 }
 
@@ -185,6 +192,26 @@ func (s *Service) UpdateMeta(userID uint, id, name, description string) error {
 	if err != nil {
 		return err
 	}
+	if name == "" && description == "" {
+		return nil
+	}
+	// published：只改 DB（改名/描述是列表管理，不动文件——D2 的文件锁不含它，
+	// 但也不记版本：没改设计内容）。社区列表的名称来自 DB，展示即时生效。
+	if row.Status == "published" {
+		updates := map[string]any{}
+		if name != "" {
+			updates["name"] = name
+		}
+		if description != "" {
+			updates["description"] = description
+		}
+		return s.st.DB.Model(row).Updates(updates).Error
+	}
+	// draft：DB 与 template.json 一起改（单一真相），并记一条 meta 版本。
+	// 现状问题修正：此前 UpdateMeta 只改 DB，template.json 会与 DB 漂移。
+	if err := s.applyMetaFile(id, name, description); err != nil {
+		return err
+	}
 	updates := map[string]any{}
 	if name != "" {
 		updates["name"] = name
@@ -192,10 +219,10 @@ func (s *Service) UpdateMeta(userID uint, id, name, description string) error {
 	if description != "" {
 		updates["description"] = description
 	}
-	if len(updates) == 0 {
-		return nil
+	if err := s.st.DB.Model(row).Updates(updates).Error; err != nil {
+		return err
 	}
-	return s.st.DB.Model(row).Updates(updates).Error
+	return s.recordVersionUT(id, OpMeta, "改名/描述")
 }
 
 func (s *Service) Delete(userID uint, id string) error {

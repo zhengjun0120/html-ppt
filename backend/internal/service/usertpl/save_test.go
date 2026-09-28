@@ -1,7 +1,8 @@
 package usertpl
 
-// SaveIndexHTML（编辑器手动保存）的回归：docs/deck-editor-plan.md §4.2。
-// 覆盖：覆盖前滚动备份、备份上限 5 版按时间戳淘汰、published 拒绝、越权拒绝。
+// SaveIndexHTML（编辑器手动保存）的回归：docs/user-template-history-plan.md §3.2。
+// 历史系统上线后旧滚动备份退役：每次保存记一条 edit 版本。
+// 覆盖：保存生效+记版、幂等（相同内容不记）、published 拒绝、越权拒绝。
 //
 // 注意：store.OpenMemory 是进程级共享内存库，UserTemplate 的 id 用固定值会与
 // 其他测试文件撞唯一约束——这里每次运行用唯一 id（纳秒后缀）。
@@ -23,9 +24,9 @@ func TestSaveIndexHTML(t *testing.T) {
 		t.Fatalf("内存库: %v", err)
 	}
 	root := t.TempDir()
-	s := New(nil, st, root, "", "") // SaveIndexHTML 路径不依赖注册表
+	s := New(nil, st, root, "", "") // 该路径不依赖注册表（reg 为 nil，record 不触它）
 
-	id := fmt.Sprintf("ut-edit-%d", len(root)) // 唯一且合法（ut- 前缀）
+	id := fmt.Sprintf("ut-edit-%d", len(root))
 	const uid = 7
 	if err := st.DB.Create(&store.UserTemplate{ID: id, UserID: uid, BaseID: "tech-sharing", Status: "draft"}).Error; err != nil {
 		t.Fatalf("建行: %v", err)
@@ -33,44 +34,51 @@ func TestSaveIndexHTML(t *testing.T) {
 	if err := os.MkdirAll(s.Dir(id), 0o755); err != nil {
 		t.Fatalf("建目录: %v", err)
 	}
-	writeIndex := func(content string) {
-		t.Helper()
-		if err := os.WriteFile(filepath.Join(s.Dir(id), "index.html"), []byte(content), 0o644); err != nil {
-			t.Fatalf("写 index.html: %v", err)
-		}
+	if err := os.WriteFile(filepath.Join(s.Dir(id), "index.html"), []byte("v1"), 0o644); err != nil {
+		t.Fatalf("写初版: %v", err)
 	}
-	writeIndex("v1")
 
-	t.Run("覆盖并备份上一版", func(t *testing.T) {
-		kept, err := s.SaveIndexHTML(uid, id, "v2")
-		if err != nil || kept != 1 {
-			t.Fatalf("首次保存: kept=%d err=%v", kept, err)
+	t.Run("保存生效并记 edit 版本", func(t *testing.T) {
+		if err := s.SaveIndexHTML(uid, id, "v2"); err != nil {
+			t.Fatalf("保存: %v", err)
 		}
 		data, _ := os.ReadFile(filepath.Join(s.Dir(id), "index.html"))
 		if string(data) != "v2" {
 			t.Errorf("index.html = %q", data)
 		}
-		bak, _ := os.ReadFile(filepath.Join(s.backupDir(id), firstBackupName(t, s.backupDir(id))))
-		if string(bak) != "v1" {
-			t.Errorf("备份内容 = %q, 期望上一版 v1", bak)
+		versions, err := s.ListUTVersions(uid, id)
+		if err != nil || len(versions) != 1 {
+			t.Fatalf("应有 1 版，得到 %d 版 err=%v", len(versions), err)
+		}
+		if versions[0].Operation != OpEdit || versions[0].Detail != "手动编辑 index.html" {
+			t.Errorf("版本元信息不对: %+v", versions[0])
+		}
+		if versions[0].Version != "v000001" {
+			t.Errorf("首版序号 = %s", versions[0].Version)
 		}
 	})
 
-	t.Run("滚动保留最近5版", func(t *testing.T) {
-		for i := 3; i <= 8; i++ { // 再保存 6 次，共 7 个历史版本
-			if _, err := s.SaveIndexHTML(uid, id, fmt.Sprintf("v%d", i)); err != nil {
-				t.Fatalf("第 %d 次保存: %v", i, err)
-			}
+	t.Run("相同内容不产生噪音版本", func(t *testing.T) {
+		if err := s.SaveIndexHTML(uid, id, "v2"); err != nil {
+			t.Fatalf("重复保存: %v", err)
 		}
-		names := backupNames(t, s.backupDir(id))
-		if len(names) != keepTemplateBackups {
-			t.Fatalf("备份数 = %d, 期望 %d", len(names), keepTemplateBackups)
+		versions, _ := s.ListUTVersions(uid, id)
+		if len(versions) != 1 {
+			t.Errorf("幂等保存后仍应 1 版，得到 %d", len(versions))
 		}
-		// 8 次保存（写 v2..v8）产生 7 个备份（v1..v7），裁到 5 个后
-		// 保留 v3..v7：最旧的是 v3 的内容，v1/v2 已被淘汰
-		first := readFile(t, filepath.Join(s.backupDir(id), names[0]))
-		if first != "v3" {
-			t.Errorf("最旧备份 = %q, 期望 v3", first)
+	})
+
+	t.Run("内容变化追加新版本", func(t *testing.T) {
+		if err := s.SaveIndexHTML(uid, id, "v3"); err != nil {
+			t.Fatalf("保存: %v", err)
+		}
+		versions, _ := s.ListUTVersions(uid, id)
+		if len(versions) != 2 || versions[0].Version != "v000002" {
+			t.Fatalf("应 2 版且新版 v000002，得到 %+v", versions)
+		}
+		// changed 只含 index.html（其余文件与上一版一致或双方皆空）
+		if len(versions[0].Changed) != 1 || versions[0].Changed[0] != "index.html" {
+			t.Errorf("changed 应为 [index.html]，得到 %v", versions[0].Changed)
 		}
 	})
 
@@ -78,52 +86,22 @@ func TestSaveIndexHTML(t *testing.T) {
 		if err := st.DB.Model(&store.UserTemplate{}).Where("id = ?", id).Update("status", "published").Error; err != nil {
 			t.Fatalf("置 published: %v", err)
 		}
-		_, err := s.SaveIndexHTML(uid, id, "hack")
-		if !errors.Is(err, ErrPublished) {
+		if err := s.SaveIndexHTML(uid, id, "hack"); !errors.Is(err, ErrPublished) {
 			t.Errorf("应报 ErrPublished，得到: %v", err)
 		}
 		data, _ := os.ReadFile(filepath.Join(s.Dir(id), "index.html"))
-		if string(data) != "v8" {
+		if string(data) != "v3" {
 			t.Errorf("published 状态下内容被改写: %q", data)
+		}
+		versions, _ := s.ListUTVersions(uid, id)
+		if len(versions) != 2 {
+			t.Errorf("published 拒绝不应记版，现在 %d 版", len(versions))
 		}
 	})
 
 	t.Run("越权拒绝", func(t *testing.T) {
-		if _, err := s.SaveIndexHTML(uid+1, id, "x"); err == nil || !strings.Contains(err.Error(), "不存在") {
+		if err := s.SaveIndexHTML(uid+1, id, "x"); err == nil || !strings.Contains(err.Error(), "不存在") {
 			t.Errorf("越权应报不存在，得到: %v", err)
 		}
 	})
-}
-
-func backupNames(t *testing.T, dir string) []string {
-	t.Helper()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("读备份目录: %v", err)
-	}
-	var names []string
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".html") {
-			names = append(names, e.Name())
-		}
-	}
-	if len(names) == 0 {
-		t.Fatal("备份目录为空")
-	}
-	return names
-}
-
-func firstBackupName(t *testing.T, dir string) string {
-	t.Helper()
-	names := backupNames(t, dir)
-	return names[0]
-}
-
-func readFile(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("读 %s: %v", path, err)
-	}
-	return string(data)
 }

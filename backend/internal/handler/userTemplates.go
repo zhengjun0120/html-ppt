@@ -189,16 +189,94 @@ func (h *Handler) SaveUserTemplateFile(c *gin.Context) {
 		response.Err(c, http.StatusBadRequest, "内容不含 <section>，疑似非模板 HTML")
 		return
 	}
-	backups, err := h.usertpl.SaveIndexHTML(uid, c.Param("id"), string(body))
-	if errors.Is(err, usertpl.ErrPublished) {
-		response.Err(c, http.StatusConflict, err.Error())
+	if err := h.usertpl.SaveIndexHTML(uid, c.Param("id"), string(body)); err != nil {
+		if errors.Is(err, usertpl.ErrPublished) {
+			response.Err(c, http.StatusConflict, err.Error())
+			return
+		}
+		response.Err(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+// ListUserTemplateHistory GET /api/user-templates/:id/history —— 版本历史（新→旧）。
+func (h *Handler) ListUserTemplateHistory(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	versions, err := h.usertpl.ListUTVersions(uid, c.Param("id"))
+	if err != nil {
+		response.Err(c, http.StatusNotFound, err.Error())
+		return
+	}
+	response.OK(c, versions)
+}
+
+// RestoreUserTemplateVersion POST /api/user-templates/:id/history/:version/restore —— 回滚。
+// published 拒绝（409）；回滚本身记一条 restore 版本。
+func (h *Handler) RestoreUserTemplateVersion(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	if err := h.usertpl.RestoreUTVersion(uid, c.Param("id"), c.Param("version")); err != nil {
+		if errors.Is(err, usertpl.ErrPublished) {
+			response.Err(c, http.StatusConflict, err.Error())
+			return
+		}
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+// DeleteUserTemplateVersion DELETE /api/user-templates/:id/history/:version —— 删单版。
+func (h *Handler) DeleteUserTemplateVersion(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	if err := h.usertpl.DeleteUTVersion(uid, c.Param("id"), c.Param("version")); err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+// ClearUserTemplateHistory DELETE /api/user-templates/:id/history —— 清空历史。
+func (h *Handler) ClearUserTemplateHistory(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	n, err := h.usertpl.ClearUTHistory(uid, c.Param("id"))
 	if err != nil {
 		response.Err(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	response.OK(c, gin.H{"ok": true, "backups": backups})
+	response.OK(c, gin.H{"deleted": n})
 }
 
 // UpdateUserTemplate PUT /api/user-templates/:id —— 改名/描述。

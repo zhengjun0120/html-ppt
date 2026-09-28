@@ -99,6 +99,11 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			// 静态路由没有服务端钩子，注入只能走受保护端点（deck-editor-plan §4.2）
 			guarded.GET("/user-templates/:id/editor", h.GetUserTemplateEditor)
 			guarded.PUT("/user-templates/:id/file", h.SaveUserTemplateFile)
+			// 历史版本（docs/user-template-history-plan.md §4）：回滚本身记 restore 版本
+			guarded.GET("/user-templates/:id/history", h.ListUserTemplateHistory)
+			guarded.POST("/user-templates/:id/history/:version/restore", h.RestoreUserTemplateVersion)
+			guarded.DELETE("/user-templates/:id/history/:version", h.DeleteUserTemplateVersion)
+			guarded.DELETE("/user-templates/:id/history", h.ClearUserTemplateHistory)
 			guarded.DELETE("/decks/:id/history/:version", h.DeleteDeckVersion)
 			guarded.DELETE("/decks/:id/history", h.ClearDeckHistory)
 

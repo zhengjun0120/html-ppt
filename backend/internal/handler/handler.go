@@ -58,7 +58,12 @@ type UserTemplateService interface {
 	// 编辑器（deck-editor-plan §4.2）：编辑态读取要 Dir 定位 demo 文件
 	Dir(id string) string
 	GetOwned(userID uint, id string) (*store.UserTemplate, error)
-	SaveIndexHTML(userID uint, id, html string) (int, error)
+	SaveIndexHTML(userID uint, id, html string) error
+	// 历史版本（user-template-history-plan.md §4）：列表/回滚/删单版/清空
+	ListUTVersions(userID uint, id string) ([]usertpl.UTVersionMeta, error)
+	RestoreUTVersion(userID uint, id, version string) error
+	DeleteUTVersion(userID uint, id, version string) error
+	ClearUTHistory(userID uint, id string) (int, error)
 }
 
 func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService) *Handler {

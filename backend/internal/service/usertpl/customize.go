@@ -84,6 +84,8 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 }
 
 // Customize 一轮对话：把用户消息追加进会话，跑到 finish 或轮次上限。
+// 本轮有实际文件写入时记一条 chat 版本（docs/user-template-history-plan.md §3.2），
+// 备注用 finish 的汇报——历史列表因此可读。
 func (s *Service) Customize(ctx context.Context, userID uint, id, message string, llm LLM) (string, error) {
 	row, err := s.GetOwned(userID, id)
 	if err != nil {
@@ -103,7 +105,22 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 	}
 	sess.messages = append(sess.messages, openai.UserMessage(message))
 
+	reply, dirty, note, err := s.customizeLoop(ctx, sess, row, llm)
+	if err != nil {
+		return "", err
+	}
+	if dirty {
+		_ = s.recordVersionUT(row.ID, OpChat, note)
+	}
+	return reply, nil
+}
+
+// customizeLoop 工具循环（会话锁内调用）。返回最终答复、是否有文件写入、
+// 版本备注（finish 汇报优先，兜底用答复摘要）。
+func (s *Service) customizeLoop(ctx context.Context, sess *customizeSession, row *store.UserTemplate, llm LLM) (string, bool, string, error) {
 	const maxTurns = 6
+	dirty := false
+	note := ""
 	for turn := 0; turn < maxTurns; turn++ {
 		completion, err := llm.Client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 			Model:    openai.ChatModel(llm.Model),
@@ -116,21 +133,28 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 			Temperature: openai.Float(0.4),
 		})
 		if err != nil {
-			return "", fmt.Errorf("模型调用失败: %w", err)
+			return "", false, "", fmt.Errorf("模型调用失败: %w", err)
 		}
 		if len(completion.Choices) == 0 {
-			return "", fmt.Errorf("模型返回空响应")
+			return "", false, "", fmt.Errorf("模型返回空响应")
 		}
 		msg := completion.Choices[0].Message
 		sess.messages = append(sess.messages, msg.ToParam())
 
 		if len(msg.ToolCalls) == 0 {
 			// 没调工具直接回话：视为最终答复
-			return strings.TrimSpace(msg.Content), nil
+			reply := strings.TrimSpace(msg.Content)
+			if note == "" {
+				note = truncateNote(reply)
+			}
+			return reply, dirty, note, nil
 		}
 		replied := ""
 		for _, tc := range msg.ToolCalls {
-			result := s.execCustomTool(row, tc.Function.Name, tc.Function.Arguments)
+			result, d := s.execCustomTool(row, tc.Function.Name, tc.Function.Arguments)
+			if d {
+				dirty = true
+			}
 			replied = result
 			sess.messages = append(sess.messages, openai.ToolMessage(result, tc.ID))
 		}
@@ -141,40 +165,57 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 					Reply string `json:"reply"`
 				}
 				_ = json.Unmarshal([]byte(tc.Function.Arguments), &out)
-				if out.Reply != "" {
-					return out.Reply, nil
+				reply := out.Reply
+				if reply == "" {
+					reply = replied
 				}
-				return replied, nil
+				if note == "" {
+					note = truncateNote(reply)
+				}
+				return reply, dirty, note, nil
 			}
 		}
 	}
-	return "本轮改动已应用（达到对话轮次上限）。可以继续描述，或去预览确认效果。", nil
+	return "本轮改动已应用（达到对话轮次上限）。可以继续描述，或去预览确认效果。", dirty, note, nil
 }
 
-// execCustomTool 执行一个定制工具，返回给模型的结果文本。
-func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) string {
+// truncateNote 版本备注上限（index.json 里的人读字段，太长列表没法看）。
+func truncateNote(s string) string {
+	r := []rune(strings.TrimSpace(s))
+	if len(r) > 120 {
+		return string(r[:120]) + "…"
+	}
+	if len(r) == 0 {
+		return "对话定制"
+	}
+	return string(r)
+}
+
+// execCustomTool 执行一个定制工具，返回给模型的结果文本与"是否写了文件"
+//（dirty = 本轮对话需要记一条历史版本）。
+func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (string, bool) {
 	switch name {
 	case "write_tokens":
 		var in struct {
 			Tokens map[string]string `json:"tokens"`
 		}
 		if err := json.Unmarshal([]byte(args), &in); err != nil {
-			return "参数不是合法 JSON: " + err.Error()
+			return "参数不是合法 JSON: " + err.Error(), false
 		}
 		if err := s.writeTokenBlock(row.ID, row.BaseID, in.Tokens); err != nil {
-			return "写入失败: " + err.Error()
+			return "写入失败: " + err.Error(), false
 		}
-		return "已写入 " + fmt.Sprint(len(in.Tokens)) + " 个 token，预览刷新即可看到。"
+		return "已写入 " + fmt.Sprint(len(in.Tokens)) + " 个 token，预览刷新即可看到。", len(in.Tokens) > 0
 	case "set_meta":
 		var in struct {
 			Name        string `json:"name"`
 			Description string `json:"description"`
 		}
 		if err := json.Unmarshal([]byte(args), &in); err != nil {
-			return "参数不是合法 JSON: " + err.Error()
+			return "参数不是合法 JSON: " + err.Error(), false
 		}
 		if err := s.applyMetaFile(row.ID, in.Name, in.Description); err != nil {
-			return "写入失败: " + err.Error()
+			return "写入失败: " + err.Error(), false
 		}
 		updates := map[string]any{}
 		if in.Name != "" {
@@ -185,18 +226,18 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) str
 		}
 		if len(updates) > 0 {
 			if err := s.st.DB.Model(row).Updates(updates).Error; err != nil {
-				return "入库失败: " + err.Error()
+				return "入库失败: " + err.Error(), false
 			}
 		}
-		return "名称/描述已更新。"
+		return "名称/描述已更新。", len(updates) > 0
 	case "finish":
 		var out struct {
 			Reply string `json:"reply"`
 		}
 		_ = json.Unmarshal([]byte(args), &out)
-		return out.Reply
+		return out.Reply, false
 	default:
-		return "未知工具 " + name
+		return "未知工具 " + name, false
 	}
 }
 
@@ -241,7 +282,10 @@ func (s *Service) writeTokenBlock(id, baseID string, tokens map[string]string) e
 		return err
 	}
 	// 已挂载的模板（fork 即挂载）重挂一次，让注册表里的 style.css 快照同步
-	return s.reg.MountUser(dir)
+	if s.reg != nil {
+		return s.reg.MountUser(dir)
+	}
+	return nil
 }
 
 // applyMetaFile 把对话里的改名/描述同步进 template.json（注册表重挂后生效）。
@@ -268,7 +312,10 @@ func (s *Service) applyMetaFile(id, name, description string) error {
 	if err := os.WriteFile(p, out, 0o644); err != nil {
 		return err
 	}
-	return s.reg.MountUser(s.Dir(id))
+	if s.reg != nil {
+		return s.reg.MountUser(s.Dir(id))
+	}
+	return nil
 }
 
 // scopeOf 模板的 CSS 作用域类（body class）。fork 沿用 base 的作用域
