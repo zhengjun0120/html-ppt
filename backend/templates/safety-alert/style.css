@@ -68,3 +68,6 @@
 .tpl-testing-safety-alert.v-blue{
   --ts-red:#1d4ed8;--ts-red-soft:#e9efff;
 }
+
+/* ---- 页面切换（翻页动画）：警报节奏，快 ---- */
+.tpl-testing-safety-alert{--page-shift:12px;--page-dur:.18s}

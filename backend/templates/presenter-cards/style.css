@@ -251,3 +251,6 @@
   --accent-2: #79c0ff;
   --grad: linear-gradient(135deg, #8957e5, #bc8cff);
 }
+
+/* ---- 页面切换（翻页动画）：reveal 式大幅横移，讲者翻页有存在感 ---- */
+.tpl-presenter-mode-reveal{--page-shift:64px;--page-dur:.45s}

@@ -71,3 +71,6 @@
 .tpl-dir-key-nav-minimal.v-amber .dk-accent{color:#fbbf24}
 .tpl-dir-key-nav-minimal.v-amber .t-cream .dk-accent,
 .tpl-dir-key-nav-minimal.v-amber .t-white .dk-accent{color:#b45309}
+
+/* ---- 页面切换（翻页动画）：纯淡入。极简导航不引入多余运动 ---- */
+.tpl-dir-key-nav-minimal{--page-shift:0px;--page-dur:.4s}

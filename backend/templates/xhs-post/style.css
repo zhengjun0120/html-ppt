@@ -69,3 +69,6 @@
   --accent:#8a5cc9;--accent-2:#c26bd6;--accent-3:#e2d4ff;
   --grad:linear-gradient(135deg,#e6d8ff,#ffd3e9 50%,#d6e6ff);
 }
+
+/* ---- 页面切换（翻页动画）：轻盈横移 ---- */
+.tpl-xhs-post{--page-shift:14px;--page-dur:.5s}

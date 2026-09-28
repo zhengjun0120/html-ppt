@@ -49,3 +49,6 @@
 .tpl-knowledge-arch-blueprint .kb-big-num{font-family:'Playfair Display',Georgia,serif;font-size:200px;font-weight:900;line-height:.9;color:var(--kb-rust);letter-spacing:-.04em}
 
 .tpl-knowledge-arch-blueprint.kb-amber{--accent:#d97706}
+
+/* ---- 页面切换（翻页动画）：蓝图绘制节奏，稳重横移 ---- */
+.tpl-knowledge-arch-blueprint{--page-shift:24px;--page-dur:.5s}

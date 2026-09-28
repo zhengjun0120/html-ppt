@@ -142,3 +142,6 @@
 /* ---- 变体：整只替换唯一强调色，纪律不动（对比度均过 AA 大字 3:1） ---- */
 .tpl-brutalist-bold.v-blue{--accent:#1D4ED8}
 .tpl-brutalist-bold.v-green{--accent:#166534}
+
+/* ---- 页面切换（翻页动画）：硬切。粗野主义不要修饰，翻页即换页 ---- */
+.tpl-brutalist-bold{--page-dur:0s}
