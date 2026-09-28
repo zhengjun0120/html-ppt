@@ -65,7 +65,10 @@ const renderItems = computed<RenderItem[]>(() => {
       last.push(e)
       continue
     }
-    if (!Array.isArray(last) && last.kind === 'tool' && last.name === e.name) {
+    // last 可能是 undefined：首事件就可以是 tool（模型开场即调工具、无前导
+    // 文字——回放里后端已过滤合成的开工消息），out 为空时直接读 last.kind
+    // 会把整个视图渲染打崩（黑屏，2026-09-27 实测 24/55 文稿命中）。
+    if (last && !Array.isArray(last) && last.kind === 'tool' && last.name === e.name) {
       out[out.length - 1] = [last, e]
       continue
     }

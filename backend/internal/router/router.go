@@ -116,7 +116,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 
 	// reveal.js 等静态资源：deck.html 里的 <link>/<script> 引用 /assets/...
 	// （静态资源不挂 Auth：浏览器加载 <script src> 时不会带 Authorization 头）
-	assets := r.Group("", revalidateStatic())
+	// assetsCORS：预览 iframe 是 scripts-only 沙箱（origin 为 opaque "null"），
+	// 字体请求永远是 CORS 模式——没有 ACAO 头全部被拦，文稿只能退到系统字体
+	// （2026-09-27 用户报控制台报错刷屏）。静态资产公开且无凭据，通配即可。
+	assets := r.Group("", revalidateStatic(), assetsCORS())
 	assets.Static("/assets", cfg.Assets.Dir)
 
 	// deck-v2 模板库静态服务：画廊的 live 预览 iframe 直接加载
@@ -161,6 +164,19 @@ func revalidateStatic() gin.HandlerFunc {
 		} else {
 			c.Header("Cache-Control", "no-cache")
 		}
+		c.Next()
+	}
+}
+
+// assetsCORS 给静态资产发 Access-Control-Allow-Origin: *。
+//
+// 消费方是 scripts-only 沙箱的预览 iframe：其文档 origin 是 opaque "null"，
+// 对任何来源都是跨域，而字体（@font-face 的 url()）永远走 CORS 模式——
+// 后端不发 ACAO 头字体就全被拦，deck 只能退到系统字体（实测事故）。
+// 资产本身公开且无凭据，通配即可；脚本/样式表标签是非 CORS 模式，加头无副作用。
+func assetsCORS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
 		c.Next()
 	}
 }
