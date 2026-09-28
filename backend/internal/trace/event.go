@@ -95,6 +95,10 @@ type Event struct {
 	UserContent string   `json:"user_content,omitempty"`
 	Model       string   `json:"model,omitempty"`
 	Tools       []string `json:"tools,omitempty"` // 本次挂载了哪些工具（features 开关的效果一眼可见）
+	// RunKind 区分 run 的来源管线：deck（文稿对话，缺省——旧数据没这个字段，
+	// 读侧按 deck 展示）/ customize（模板定制对话）。定制没有会话表，走的是
+	// usertpl 侧的伪会话号，没有这个字段观测页就无法把两类 run 区分开。
+	RunKind string `json:"run_kind,omitempty"`
 
 	// —— agent 循环归属（由 ctx 自动补齐，见 recorder.go）——
 	// Turn 是指针是因为"第 0 轮"（第一次请求）与"不适用"（run_start / run_end）
@@ -178,6 +182,7 @@ type RunMeta struct {
 	SessionID   uint      `json:"session_id"`
 	UserID      uint      `json:"-"` // 只用于按属主过滤，不下发（列表里全是自己的）
 	DeckID      string    `json:"deck_id,omitempty"`
+	RunKind     string    `json:"run_kind,omitempty"` // 缺省 = 旧数据 = 文稿 run
 	UserContent string    `json:"user_content,omitempty"`
 	Model       string    `json:"model,omitempty"`
 	StartedAt   time.Time `json:"started_at"`

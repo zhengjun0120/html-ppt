@@ -14,6 +14,7 @@ import (
 
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 )
 
 func TestCreateBlank(t *testing.T) {
@@ -27,7 +28,7 @@ func TestCreateBlank(t *testing.T) {
 		t.Fatalf("加载内置模板: %v", err)
 	}
 	root := t.TempDir()
-	s := New(reg, st, root, "", "", nil)
+	s := New(reg, st, root, "", "", nil, trace.Config{})
 
 	row, err := s.CreateBlank(9, "我的空白")
 	if err != nil {

@@ -22,6 +22,7 @@ import (
 
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
 )
 
@@ -31,7 +32,8 @@ type Service struct {
 	root       string // data/user-templates
 	chromePath string
 	baseURL    string         // 回环地址（demo 渲染走 nonce 端点）
-	grants     *vision.Grants // 发布门禁渲染的一次性授权（Peek 语义，见 vision/grant.go）
+	grants     *vision.Grants // 体检渲染的一次性授权（Peek 语义，见 vision/grant.go）
+	traceCfg   trace.Config   // 定制对话的观测落盘（2026-09-28 定制接入观测台）
 
 	// 定制对话的会话表（内存态；重启即清空——对话历史不是重要数据）
 	custMu   sync.Mutex
@@ -42,8 +44,8 @@ type Service struct {
 	locks   map[string]*sync.Mutex
 }
 
-func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string, grants *vision.Grants) *Service {
-	return &Service{reg: reg, st: st, root: root, chromePath: chromePath, baseURL: baseURL, grants: grants,
+func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string, grants *vision.Grants, traceCfg trace.Config) *Service {
+	return &Service{reg: reg, st: st, root: root, chromePath: chromePath, baseURL: baseURL, grants: grants, traceCfg: traceCfg,
 		sessions: make(map[string]*customizeSession)}
 }
 
@@ -289,9 +291,10 @@ func (s *Service) Unpublish(userID uint, id string) error {
 	}).Error
 }
 
-// ---------- 发布门禁（自动，两关） ----------
+// ---------- 发布与质量体检 ----------
 
-// PublishReport 两关门禁的结果（进 PublishReport 字段，前端展示）。
+// PublishReport 发布/体检的结果（进 publish_report 字段，前端展示）。
+// Render 只在体检（Checkup）里出现；发布自 2026-09-28 起不再跑渲染量测。
 type PublishReport struct {
 	Structure string            `json:"structure"`
 	Render    *RenderGateResult `json:"render,omitempty"`
@@ -305,20 +308,23 @@ type RenderGateResult struct {
 	Flaws   []string `json:"flaws,omitempty"`
 }
 
-// Publish 跑发布门禁：
-//  1. 结构校验（与内置模板同一套 loadTemplate 规则 + CSS 黑名单扫描）；
-//  2. demo 渲染量测（headless 实拍：无溢出、填充率 ≥45%、无 <13px 内容字号）。
+// Publish 发布（2026-09-28 门禁降级，用户拍板）：
+//  1. 安全扫描（写入时各路径已各自强制，这里兜底防绕过产品的直改）；
+//  2. 挂载校验——MountUser 内部就是全量 loadTemplate 结构校验，挂不上 =
+//     模板坏了，failed + 可读原因。
 //
-// 全过 → public + published + Registry 挂载；任一失败 → failed + 可读原因。
-// 注：规划阶段的"LLM 真生成冒烟"在 v1 以渲染量测替代（确定性、零额度消耗）；
-// LLM 冒烟留给从零构建一起做。
+// 渲染量测（Chrome 实拍：溢出/填充率/最小字号）从发布门禁里拿掉了：它是唯一
+// "看法类"的阈值（45%/13px 是审美不是功能），又是唯一贵的（10-30s），还把
+// 空白骨架这类稀疏 demo 卡死在线外。完整保留为 Checkup 质量体检（不拦发布）。
+// 结构安全不因降级而松动：结构坏 = 挂不上 = 生成侧解析不到，社区拿到手的
+// 永远是挂载成功的模板。
 func (s *Service) Publish(ctx context.Context, userID uint, id string) (*PublishReport, error) {
 	row, err := s.GetOwned(userID, id)
 	if err != nil {
 		return nil, err
 	}
 	if row.Status == "publishing" {
-		return nil, fmt.Errorf("发布门禁正在运行，请稍候")
+		return nil, fmt.Errorf("发布正在运行，请稍候")
 	}
 	if err := s.setPublishing(row); err != nil {
 		return nil, err
@@ -329,35 +335,66 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 	}
 
 	dir := s.Dir(id)
-
-	// 门禁 1：结构校验（registry 同一套规则）+ 用户模板专属黑名单
-	if err := s.reg.ValidateUserDir(dir); err != nil {
-		return fail(fmt.Errorf("结构校验未过：%v", err))
-	}
 	if err := s.securityScan(dir); err != nil {
 		return fail(fmt.Errorf("安全扫描未过：%v", err))
 	}
+	if err := s.reg.MountUser(dir); err != nil {
+		return fail(fmt.Errorf("结构校验未过：%v", err))
+	}
+	report := &PublishReport{Structure: "ok",
+		Note: "发布即挂载校验，秒级完成；溢出/填充率等视觉质量可用「质量体检」随时检查"}
+	rep, _ := json.Marshal(report)
+	if err := s.markPublished(row, string(rep)); err != nil {
+		return nil, err
+	}
+	return report, nil
+}
 
-	// 门禁 2：demo 渲染量测。走一次性 nonce 端点（§3.5 草稿收口）：
-	// 草稿不再公开可访问，headless 导航又带不了鉴权头，nonce 是唯一的桥。
+// Checkup 质量体检（2026-09-28，从发布门禁降级而来）：headless 实拍 demo，
+// 量测溢出/填充率/最小字号，报告返回给前端并落到 publish_report 字段。
+// **不改状态、不拦任何东西**——draft 与 published 都能跑（纯只读诊断）。
+// 发布者自己拿它当修复线索；社区质量靠发布者的自觉 + 体检报告可查。
+func (s *Service) Checkup(ctx context.Context, userID uint, id string) (*PublishReport, error) {
+	row, err := s.GetOwned(userID, id)
+	if err != nil {
+		return nil, err
+	}
+	dir := s.Dir(id)
+	if err := s.securityScan(dir); err != nil {
+		return &PublishReport{Structure: err.Error(), Note: "安全扫描未过：写入时本应拦截，请检查文件是否被绕过产品直接修改"}, nil
+	}
+
+	// 渲染走一次性 nonce 端点（草稿收口后 headless 导航带不了鉴权头，
+	// nonce 是唯一的桥，docs/user-template-history-plan.md §3.5）
 	if s.grants == nil {
-		return fail(fmt.Errorf("渲染授权不可用"))
+		return nil, fmt.Errorf("渲染授权不可用")
 	}
 	nonce, err := s.grants.Issue(userID, "ut:"+id)
 	if err != nil {
-		return fail(fmt.Errorf("渲染授权签发失败: %w", err))
+		return nil, fmt.Errorf("渲染授权签发失败: %w", err)
 	}
 	url := strings.TrimRight(s.baseURL, "/") + "/api/user-template-render/" + nonce + "/index.html"
 	d, err := vision.CaptureV2(ctx, vision.OptionsV2{URL: url, ChromePath: s.chromePath, Timeout: 2 * time.Minute})
 	if err != nil {
-		return fail(fmt.Errorf("demo 渲染失败：%v（检查 demo 是否可独立打开）", err))
+		return nil, fmt.Errorf("demo 渲染失败：%v（检查 demo 是否可独立打开）", err)
 	}
 	// 填充率下限按版式指纹豁免：hero（封面/章节/收尾）与 quote 是刻意的稀疏页，
-	// 它们的质量靠"有没有视觉锚点"而不是"塞没塞满"——把 anchor 判断留给量测
-	// 的溢出/字号项与人工预览。内容型版式一律 ≥45%。
-	patterns := layoutPatterns(filepath.Join(dir, "layouts.md"))
-	render := &RenderGateResult{Pages: len(d.Slides), MinFill: 100}
-	for _, sl := range d.Slides {
+	// 它们的质量靠"有没有视觉锚点"而不是"塞没塞满"。内容型版式一律 ≥45%。
+	report := &PublishReport{Structure: "ok",
+		Render: evaluateRender(d.Slides, layoutPatterns(filepath.Join(dir, "layouts.md"))),
+		Note:   "体检报告（不影响发布）：flaws 为空即未发现溢出/稀疏/小字号问题"}
+	rep, _ := json.Marshal(report)
+	// 落到 publish_report 字段，刷新页面后报告还在。发布报告（publish 时写的）
+	// 会被最近一次体检覆盖——两份都是"诊断快照"，留最新即可
+	_ = s.st.DB.Model(row).Updates(map[string]any{"publish_report": string(rep)}).Error
+	return report, nil
+}
+
+// evaluateRender 量测评估（纯函数，无 IO）：逐页算 flaw，返回量测结果。
+// 从发布门禁时代原样搬来——阈值只在这一处，体检与未来任何调用方共用一套口径。
+func evaluateRender(slides []vision.Slide2, patterns map[string]string) *RenderGateResult {
+	render := &RenderGateResult{Pages: len(slides), MinFill: 100}
+	for _, sl := range slides {
 		if sl.OverflowY || sl.OverflowX {
 			render.Flaws = append(render.Flaws, fmt.Sprintf("第 %d 页溢出画布", sl.Index+1))
 		}
@@ -376,21 +413,7 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 			render.MaxFont = sl.MinFontPx
 		}
 	}
-	if len(render.Flaws) > 0 {
-		return fail(fmt.Errorf("渲染量测未过：%s", strings.Join(render.Flaws, "；")))
-	}
-
-	// 全过：挂进注册表 + 落状态
-	if err := s.reg.MountUser(dir); err != nil {
-		return fail(fmt.Errorf("注册失败：%v", err))
-	}
-	report := &PublishReport{Structure: "ok", Render: render,
-		Note: "v1 冒烟为 demo 渲染量测（确定性）；LLM 真生成冒烟计划于从零构建版本加入"}
-	rep, _ := json.Marshal(report)
-	if err := s.markPublished(row, string(rep)); err != nil {
-		return nil, err
-	}
-	return report, nil
+	return render
 }
 
 // securityScan 用户模板的安全黑名单（写入预检与发布门禁共用的组合入口）：

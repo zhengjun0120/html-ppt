@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 )
 
 // newHistService 每个用例独立的 Service + 模板行 + 五件套目录。
@@ -26,7 +27,7 @@ func newHistService(t *testing.T, suffix string) (*Service, *store.Store, string
 		t.Fatalf("内存库: %v", err)
 	}
 	root := t.TempDir()
-	s := New(nil, st, root, "", "", nil)
+	s := New(nil, st, root, "", "", nil, trace.Config{})
 	id := fmt.Sprintf("ut-hist-%s-%d", suffix, len(root))
 	const uid = 9
 	if err := st.DB.Create(&store.UserTemplate{

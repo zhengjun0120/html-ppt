@@ -54,7 +54,10 @@ type UserTemplateService interface {
 	Delete(userID uint, id string) error
 	Publish(ctx context.Context, userID uint, id string) (*usertpl.PublishReport, error)
 	Unpublish(userID uint, id string) error
-	Customize(ctx context.Context, userID uint, id, message string, llm usertpl.LLM) (string, error)
+	// Checkup 质量体检（2026-09-28 从发布门禁降级而来）：渲染量测，只报告不拦发布
+	Checkup(ctx context.Context, userID uint, id string) (*usertpl.PublishReport, error)
+	// Customize emit 为 SSE 事件出口；同步调用传 nil
+	Customize(ctx context.Context, userID uint, id, message string, llm usertpl.LLM, emit func(usertpl.CustEvent) error) (string, error)
 	// 编辑器（deck-editor-plan §4.2）：编辑态读取要 Dir 定位 demo 文件
 	Dir(id string) string
 	GetOwned(userID uint, id string) (*store.UserTemplate, error)

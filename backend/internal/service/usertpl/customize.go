@@ -17,10 +17,12 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/openai/openai-go/v3"
 
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 )
 
 // LLM 定制对话的模型接入（由装配层从 agent 服务构造，避免包依赖环）。
@@ -109,7 +111,10 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 // Customize 一轮对话：把用户消息追加进会话，跑到 finish 或轮次上限。
 // 本轮有实际文件写入时记一条 chat 版本（docs/user-template-history-plan.md §3.2），
 // 备注用 finish 的汇报——历史列表因此可读。
-func (s *Service) Customize(ctx context.Context, userID uint, id, message string, llm LLM) (string, error) {
+//
+// emit 为 SSE 客户端的事件出口（nil = 同步调用，只落观测不推流）。
+// 整轮同时落 trace 事件（customize_trace.go），观测台可见。
+func (s *Service) Customize(ctx context.Context, userID uint, id, message string, llm LLM, emit func(CustEvent) error) (string, error) {
 	row, err := s.GetOwned(userID, id)
 	if err != nil {
 		return "", err
@@ -128,45 +133,62 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 	}
 	sess.messages = append(sess.messages, openai.UserMessage(message))
 
-	reply, dirty, note, err := s.customizeLoop(ctx, sess, row, llm)
-	if err != nil {
-		return "", err
+	rec := s.openCustRecorder(userID, row, message, llm.Model)
+	defer rec.Close()
+	ctx = trace.With(ctx, rec)
+
+	reply, dirty, note, loopErr := s.customizeLoop(ctx, sess, row, llm, emit)
+	if loopErr != nil {
+		// 中途出错的 run 也要收尾：不落 run_end，观测页会永远停在"运行中"并一直轮询
+		trace.Emit(ctx, trace.Event{Kind: trace.KindError, Error: loopErr.Error()})
+		sum := rec.Summary()
+		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Status: trace.StatusError, Summary: &sum})
+		return "", loopErr
 	}
+	sum := rec.Summary()
+	trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Status: trace.StatusOK, Summary: &sum})
 	if dirty {
 		_ = s.recordVersionUT(row.ID, OpChat, note)
+	}
+	if emit != nil {
+		// 收尾帧：答复全文 + dirty（前端据此把流式草稿落成正式消息、刷新预览与历史）
+		if emitErr := emit(CustEvent{Type: CustEvDone, Dirty: dirty, Reply: reply}); emitErr != nil {
+			return "", emitErr
+		}
 	}
 	return reply, nil
 }
 
 // customizeLoop 工具循环（会话锁内调用）。返回最终答复、是否有文件写入、
 // 版本备注（finish 汇报优先，兜底用答复摘要）。
-func (s *Service) customizeLoop(ctx context.Context, sess *customizeSession, row *store.UserTemplate, llm LLM) (string, bool, string, error) {
+// 每轮的请求/回复/工具调用/用量都在 turnCtx 归属下落 trace；emit 非 nil 时
+// 工具气泡（tool_start/tool_done）与生成进度（tool_progress）实时推给客户端。
+func (s *Service) customizeLoop(ctx context.Context, sess *customizeSession, row *store.UserTemplate, llm LLM, emit func(CustEvent) error) (string, bool, string, error) {
 	const maxTurns = 6
 	dirty := false
 	note := ""
+	retriedEmpty := false
 	for turn := 0; turn < maxTurns; turn++ {
-		completion, err := llm.Client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-			Model:    openai.ChatModel(llm.Model),
-			Messages: sess.messages,
-			Tools:    customizeTools,
-			ToolChoice: openai.ChatCompletionToolChoiceOptionUnionParam{
-				OfAuto: openai.String("auto"),
-			},
-			MaxTokens:   openai.Int(4000),
-			Temperature: openai.Float(0.4),
-		})
+		turnCtx := trace.WithTurn(ctx, turn)
+		msg, finish, _, err := s.custStream(turnCtx, sess, llm, emit)
 		if err != nil {
 			return "", false, "", fmt.Errorf("模型调用失败: %w", err)
 		}
-		if len(completion.Choices) == 0 {
-			return "", false, "", fmt.Errorf("模型返回空响应")
+		// 推理模型把输出预算全花在 reasoning 上（finish=length、零正文零工具）
+		// 时，回退这轮重试一次；不重试用户看到的就是"（本轮无回复）"。
+		if len(msg.ToolCalls) == 0 && strings.TrimSpace(msg.Content) == "" && finish == "length" && !retriedEmpty {
+			retriedEmpty = true
+			turn--
+			continue
 		}
-		msg := completion.Choices[0].Message
 		sess.messages = append(sess.messages, msg.ToParam())
 
 		if len(msg.ToolCalls) == 0 {
 			// 没调工具直接回话：视为最终答复
 			reply := strings.TrimSpace(msg.Content)
+			if reply == "" {
+				return "", false, "", fmt.Errorf("模型返回空响应，请重试")
+			}
 			if note == "" {
 				note = truncateNote(reply)
 			}
@@ -174,9 +196,22 @@ func (s *Service) customizeLoop(ctx context.Context, sess *customizeSession, row
 		}
 		replied := ""
 		for _, tc := range msg.ToolCalls {
+			// 归属挂进 ctx：工具调用/返回两条事件自动带上轮次与 tool_call_id
+			toolCtx := trace.WithTool(turnCtx, tc.Function.Name, tc.ID)
+			trace.Emit(toolCtx, trace.Event{Kind: trace.KindToolCall, Args: tc.Function.Arguments})
+			started := time.Now()
 			result, d := s.execCustomTool(row, tc.Function.Name, tc.Function.Arguments)
+			trace.Emit(toolCtx, trace.Event{
+				Kind: trace.KindToolResult, Result: result,
+				DurationMS: time.Since(started).Milliseconds(),
+			})
 			if d {
 				dirty = true
+			}
+			if emit != nil {
+				if emitErr := emit(CustEvent{Type: CustEvToolDone, ToolCallID: tc.ID, ToolName: tc.Function.Name, Content: toolBrief(result)}); emitErr != nil {
+					return "", false, "", fmt.Errorf("事件推送失败: %w", emitErr)
+				}
 			}
 			replied = result
 			sess.messages = append(sess.messages, openai.ToolMessage(result, tc.ID))
@@ -257,7 +292,7 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 			return "写入失败: " + err.Error(), false
 		}
 		if err := s.remountUT(row.ID); err != nil {
-			return fmt.Sprintf("style.css 已写入并记入历史，但注册表校验未过：%v。预览可见，发布门禁会拦——请检查是否破坏了版式契约或文件结构。", err), true
+			return fmt.Sprintf("style.css 已写入并记入历史，但注册表校验未过：%v。预览可见，但生成侧可能仍挂旧版——请检查是否破坏了版式契约或文件结构（可用质量体检核对）。", err), true
 		}
 		return "style.css 已整体更新，预览刷新即可看到。", true
 	case "write_demo":
@@ -277,7 +312,7 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 			return "写入失败: " + err.Error(), false
 		}
 		if err := s.remountUT(row.ID); err != nil {
-			return fmt.Sprintf("index.html 已写入并记入历史，但注册表校验未过：%v。预览可见，发布门禁会拦——最常见原因是发明了 layouts.md 里没有的 data-layout，请改回已登记的版式。", err), true
+			return fmt.Sprintf("index.html 已写入并记入历史，但注册表校验未过：%v。预览可见，但生成侧可能仍挂旧版——最常见原因是发明了 layouts.md 里没有的 data-layout，请改回已登记的版式。", err), true
 		}
 		return "demo index.html 已整体更新，预览刷新即可看到。", true
 	case "set_meta":

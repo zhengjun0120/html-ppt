@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 )
 
 func TestSaveIndexHTML(t *testing.T) {
@@ -24,7 +25,7 @@ func TestSaveIndexHTML(t *testing.T) {
 		t.Fatalf("内存库: %v", err)
 	}
 	root := t.TempDir()
-	s := New(nil, st, root, "", "", nil) // 该路径不依赖注册表（reg 为 nil，record 不触它）
+	s := New(nil, st, root, "", "", nil, trace.Config{}) // 该路径不依赖注册表（reg 为 nil，record 不触它）
 
 	id := fmt.Sprintf("ut-edit-%d", len(root))
 	const uid = 7

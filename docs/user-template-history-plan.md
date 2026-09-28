@@ -15,6 +15,24 @@
 >    runtime.js + 要求 section/runtime 结构前提。
 > 4. scanCSS/scanHTML 增加非法 UTF-8 拒绝（bundle 经 json.Marshal 会把坏字节换成
 >    U+FFFD，磁盘与历史从此对不上——curl GBK 注入实测发现的防御）。
+>
+> 二次修订（2026-09-28 晚，用户拍板"发布门禁降级 + 定制可观测"）：
+> 5. **发布门禁降级**：Publish 只剩安全扫描（写入时已各自强制，此处兜底）+ MountUser
+>    挂载校验（内部即全量 loadTemplate），秒级完成；渲染量测（Chrome 实拍：溢出/
+>    填充率 ≥45%/字号 ≥13px）从门禁里拿出来变成 `Checkup` 质量体检（POST /checkup，
+>    只报告不改状态，draft/published 都能跑，报告落 publish_report 字段）。动机：
+>    45%/13px 是审美阈值不是功能阈值，空白骨架这类稀疏 demo 被自己的起点卡死
+>    （用户的「咔嗒卡通」即实测案例）；功能破版由挂载校验把守，社区拿到手的
+>    永远是挂载成功的模板。§5/§6 里"门禁终审"的表述自此以本条为准。
+> 6. **定制接入观测台**：trace.Event/RunMeta 新增 run_kind（customize）；定制 run
+>    落在伪会话目录（customSessionID = 1e9 + fnv32(templateID)，避开真实会话号段），
+>    customizeLoop 每轮落 llm_request（含全量上下文）/llm_response/tool_call/
+>    tool_result/usage/run_end，归属校验/导出/徽章全部复用观测台现有读侧。
+> 7. **定制对话 SSE 流式**：POST /user-templates/:id/chat/stream，事件窄集合
+>    CustEvent（tool_start/tool_progress/tool_done/delta/done/error）；LLM 调用改
+>    流式（MaxTokens 4000→8192——推理模型把 4000 全花在 reasoning 上会产出
+>    finish=length 的空回复，实测踩过，循环对空回复自动重试一轮）；
+>    tool_progress 每 4KB 一次字节数心跳，write_style 的大输出不再是黑盒。
 
 ---
 

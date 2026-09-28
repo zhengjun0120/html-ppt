@@ -1,4 +1,5 @@
-import { authedUrl, request } from './client'
+import { authedUrl, currentToken, request } from './client'
+import { iterateSse } from '@/lib/sse'
 import type { TemplateVariant } from './templates'
 
 /**
@@ -91,6 +92,8 @@ export const userTemplateApi = {
     request<{ deleted: number }>(`/api/user-templates/${id}/history`, { method: 'DELETE' }),
   publish: (id: string) => request<PublishReport>(`/api/user-templates/${id}/publish`, { method: 'POST' }),
   unpublish: (id: string) => request<{ ok: boolean }>(`/api/user-templates/${id}/unpublish`, { method: 'POST' }),
+  /** 质量体检（渲染量测：溢出/填充率/最小字号）。只报告不拦发布，draft/published 都能跑 */
+  checkup: (id: string) => request<PublishReport>(`/api/user-templates/${id}/checkup`, { method: 'POST' }),
   community: () => request<CommunityTemplate[]>('/api/community-templates'),
 }
 
@@ -101,7 +104,57 @@ export async function fetchTemplateStyle(id: string): Promise<string> {
   return resp.text()
 }
 
-// —— 定制对话（plan-v3 B2）——//
+// —— 定制对话（plan-v3 B2；2026-09-28 起走 SSE 流式）——//
+
+/** 定制对话的 SSE 事件（后端 usertpl.CustEvent，窄集合） */
+export interface CustomizeEvent {
+  type: 'tool_start' | 'tool_progress' | 'tool_done' | 'delta' | 'done' | 'error'
+  content?: string // delta 文本 / tool_done 结果摘要 / error 消息
+  tool_name?: string
+  tool_call_id?: string
+  tool_index?: number
+  bytes?: number // tool_progress：该工具已生成的参数字节数
+  dirty?: boolean // done：本轮是否有文件写入
+  reply?: string // done：最终答复全文
+}
+
+const CUSTOMIZE_BASE: string = import.meta.env.VITE_API_BASE ?? ''
+
+/** 流式定制对话。onEvent 逐帧回调；调用方负责错误展示与 finally 复位。 */
+export async function customizeChatStream(
+  id: string,
+  message: string,
+  onEvent: (ev: CustomizeEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const token = currentToken()
+  const res = await fetch(`${CUSTOMIZE_BASE}/api/user-templates/${id}/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ message }),
+    signal,
+  })
+  if (!res.ok) {
+    let msg = `请求失败（${res.status}）`
+    try {
+      const data = (await res.json()) as { error?: string }
+      if (data?.error) msg = data.error
+    } catch { /* 非 JSON body */ }
+    throw new Error(msg)
+  }
+  for await (const frame of iterateSse(res)) {
+    try {
+      onEvent(JSON.parse(frame.data) as CustomizeEvent)
+    } catch {
+      // 单帧坏了跳过，不让一行脏数据打断整轮展示
+    }
+  }
+}
+
+/** 同步版定制对话（保留给降级路径；前端正常走 customizeChatStream） */
 export function customizeChat(id: string, message: string) {
   return request<{ reply: string }>(`/api/user-templates/${id}/chat`, {
     method: 'POST',

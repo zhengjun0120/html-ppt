@@ -24,6 +24,7 @@ export interface RunMeta {
   parent_run_id?: string
   session_id: number
   deck_id?: string
+  run_kind?: 'deck' | 'customize' // 缺省 = 旧数据 = 文稿 run（定制 run 落在模板伪会话段）
   user_content?: string
   model?: string
   started_at: string

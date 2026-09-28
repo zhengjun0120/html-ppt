@@ -2,8 +2,11 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -361,8 +364,8 @@ func (h *Handler) DeleteUserTemplate(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
-// PublishUserTemplate POST /api/user-templates/:id/publish —— 跑门禁并公开。
-// 同步执行（渲染关约 10-20s）；失败返回可读原因，状态落 failed。
+// PublishUserTemplate POST /api/user-templates/:id/publish —— 发布（挂载校验+落状态）。
+// 2026-09-28 门禁降级后秒级完成；渲染量测独立为 Checkup（POST /checkup）。
 func (h *Handler) PublishUserTemplate(c *gin.Context) {
 	if h.usertpl == nil {
 		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
@@ -374,6 +377,27 @@ func (h *Handler) PublishUserTemplate(c *gin.Context) {
 		return
 	}
 	report, err := h.usertpl.Publish(c.Request.Context(), uid, c.Param("id"))
+	if err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, report)
+}
+
+// CheckupUserTemplate POST /api/user-templates/:id/checkup —— 质量体检。
+// headless 实拍 demo 量测溢出/填充率/最小字号，报告返回并落 publish_report；
+// 不改状态（draft/published 都能跑），失败只影响本次体检不失败发布。
+func (h *Handler) CheckupUserTemplate(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	report, err := h.usertpl.Checkup(c.Request.Context(), uid, c.Param("id"))
 	if err != nil {
 		response.Err(c, http.StatusBadRequest, err.Error())
 		return
@@ -399,8 +423,9 @@ func (h *Handler) UnpublishUserTemplate(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
-// CustomizeUserTemplate POST /api/user-templates/:id/chat —— 对话定制。
-// 用 agent 服务的 LLM 接入（BYOK 优先）跑受限工具循环（token/元数据级）。
+// CustomizeUserTemplate POST /api/user-templates/:id/chat —— 对话定制（同步版）。
+// 用 agent 服务的 LLM 接入（BYOK 优先）跑受限工具循环。前端已改走 /chat/stream
+// （SSE，工具气泡实时可见）；这个端点保留给 curl/脚本/降级路径，emit 传 nil。
 func (h *Handler) CustomizeUserTemplate(c *gin.Context) {
 	if h.usertpl == nil {
 		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
@@ -419,10 +444,70 @@ func (h *Handler) CustomizeUserTemplate(c *gin.Context) {
 		return
 	}
 	cl := h.agent.CustomizeLLMFor(c.Request.Context())
-	reply, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), body.Message, usertpl.LLM{Client: cl.Client, Model: cl.Model})
+	reply, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), body.Message, usertpl.LLM{Client: cl.Client, Model: cl.Model}, nil)
 	if err != nil {
 		response.Err(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	response.OK(c, gin.H{"reply": reply})
+}
+
+// CustomizeUserTemplateStream POST /api/user-templates/:id/chat/stream —— 定制对话 SSE。
+// 帧格式与 deck 对话一致（event: <type>\ndata: <json>\n\n）；事件类型是
+// usertpl.CustEvent 的窄集合（tool_start/tool_progress/tool_done/delta/done/error）。
+// 客户端断开时 request context 取消，LLM 流与工具循环随之停止，不再白烧 token。
+func (h *Handler) CustomizeUserTemplateStream(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	var body struct {
+		Message string `json:"message"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.Message == "" {
+		response.Err(c, http.StatusBadRequest, "message 不能为空")
+		return
+	}
+
+	cl := h.agent.CustomizeLLMFor(c.Request.Context())
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+
+	ch := make(chan usertpl.CustEvent, 16)
+	go func() {
+		defer close(ch)
+		_, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), body.Message,
+			usertpl.LLM{Client: cl.Client, Model: cl.Model},
+			func(ev usertpl.CustEvent) error {
+				select {
+				case ch <- ev:
+					return nil
+				case <-c.Request.Context().Done():
+					return c.Request.Context().Err()
+				}
+			})
+		if err != nil {
+			log.Printf("定制对话流失败 err:%v", err)
+			select {
+			case ch <- usertpl.CustEvent{Type: usertpl.CustEvError, Content: err.Error()}:
+			case <-c.Request.Context().Done():
+			}
+		}
+	}()
+
+	c.Stream(func(w io.Writer) bool {
+		ev, ok := <-ch
+		if !ok {
+			return false
+		}
+		data, _ := json.Marshal(ev)
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", ev.Type, data)
+		return true
+	})
 }

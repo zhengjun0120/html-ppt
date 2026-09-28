@@ -384,6 +384,7 @@ func runMetaFrom(head Event, end *Event, fileBytes int64, fallbackID string, now
 		SessionID:   head.SessionID,
 		UserID:      head.UserID,
 		DeckID:      head.DeckID,
+		RunKind:     head.RunKind,
 		UserContent: head.UserContent,
 		Model:       head.Model,
 		StartedAt:   head.TS,
