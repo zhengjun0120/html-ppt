@@ -200,6 +200,41 @@ func (h *Handler) SaveUserTemplateFile(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
+// maxTemplateStyleBytes style.css 手动保存的 body 上限（对话 write_style 同限额）。
+const maxTemplateStyleBytes = 512 << 10
+
+// SaveUserTemplateStyle PUT /api/user-templates/:id/style —— 手动保存 style.css
+// （工作台"样式"面板）。安全预检 + 记 edit 版本；published 拒绝（409）。
+func (h *Handler) SaveUserTemplateStyle(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, maxTemplateStyleBytes))
+	if err != nil {
+		response.Err(c, http.StatusRequestEntityTooLarge, "内容超限或读取失败")
+		return
+	}
+	if strings.TrimSpace(string(body)) == "" {
+		response.Err(c, http.StatusBadRequest, "空内容")
+		return
+	}
+	if err := h.usertpl.SaveStyleCSS(uid, c.Param("id"), string(body)); err != nil {
+		if errors.Is(err, usertpl.ErrPublished) {
+			response.Err(c, http.StatusConflict, err.Error())
+			return
+		}
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
 // ListUserTemplateHistory GET /api/user-templates/:id/history —— 版本历史（新→旧）。
 func (h *Handler) ListUserTemplateHistory(c *gin.Context) {
 	if h.usertpl == nil {

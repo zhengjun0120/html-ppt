@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -116,9 +116,9 @@ func (s *Service) Fork(userID uint, baseID, name string) (*store.UserTemplate, e
 
 	row := &store.UserTemplate{
 		ID: id, UserID: userID, BaseID: baseID,
-		Name: fmt.Sprint(meta["name"]),
+		Name:        fmt.Sprint(meta["name"]),
 		Description: fmt.Sprint(meta["description"]),
-		Visibility: "private", Status: "draft",
+		Visibility:  "private", Status: "draft",
 	}
 	if err := s.st.DB.Create(row).Error; err != nil {
 		return nil, err
@@ -276,9 +276,9 @@ func (s *Service) Unpublish(userID uint, id string) error {
 
 // PublishReport 两关门禁的结果（进 PublishReport 字段，前端展示）。
 type PublishReport struct {
-	Structure string           `json:"structure"`
+	Structure string            `json:"structure"`
 	Render    *RenderGateResult `json:"render,omitempty"`
-	Note      string           `json:"note,omitempty"`
+	Note      string            `json:"note,omitempty"`
 }
 
 type RenderGateResult struct {
@@ -368,38 +368,21 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 	return report, nil
 }
 
-// securityScan 用户模板的安全黑名单：style.css 禁外链与表达式；index.html 禁
-// 额外脚本与内联事件（demo 会被其他用户渲染）。
+// securityScan 用户模板的安全黑名单（写入预检与发布门禁共用的组合入口）：
+// style.css 与 index.html 的规则见 scan.go（scanCSS/scanHTML 纯函数）。
 func (s *Service) securityScan(dir string) error {
 	css, err := os.ReadFile(filepath.Join(dir, "style.css"))
 	if err != nil {
 		return fmt.Errorf("style.css 缺失")
 	}
-	cssLow := strings.ToLower(string(css))
-	for _, bad := range []string{"url(", "@import", "expression(", "behavior:", "-moz-binding"} {
-		if strings.Contains(cssLow, bad) {
-			return fmt.Errorf("style.css 含被禁用的 %q（外链/表达式是数据渗出通道）", bad)
-		}
+	if err := scanCSS(string(css)); err != nil {
+		return err
 	}
 	html, err := os.ReadFile(filepath.Join(dir, "index.html"))
 	if err != nil {
 		return fmt.Errorf("index.html 缺失")
 	}
-	htmlLow := strings.ToLower(string(html))
-	for _, tag := range []string{"<script", "<iframe", "<object", "<embed"} {
-		if idx := strings.Index(htmlLow, tag); idx >= 0 {
-			// runtime.js 是唯一的合法脚本（本仓库资产，且 head 引用固定）
-			if tag != "<script" || !strings.Contains(htmlLow[idx:], "/assets/deck-v2/runtime.js") {
-				return fmt.Errorf("index.html 含被禁用的元素 %q", tag)
-			}
-		}
-	}
-	for _, ev := range []string{" onload=", " onerror=", " onclick="} {
-		if strings.Contains(htmlLow, ev) {
-			return fmt.Errorf("index.html 含内联事件 %q", strings.TrimSpace(ev))
-		}
-	}
-	return nil
+	return scanHTML(string(html))
 }
 
 // layoutPatterns 从 layouts.md 提取 版式 id → 指纹（发布门禁的稀疏豁免判据）。

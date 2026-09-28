@@ -71,6 +71,28 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 		},
 	}),
 	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "write_style",
+		Description: openai.String("整体重写模板的 style.css（全文替换）。必须基于系统提示里的当前全文改造，不要凭空杜撰既有规则；保留 .tpl- 作用域前缀与 token 声明区。安全预检会拒绝 url( 网络外链（仅允许 data: 内联）、@import、expression 等内容，被拒时根据报错修正后重试。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"css": map[string]any{"type": "string", "description": "style.css 完整新全文"},
+			},
+			"required": []string{"css"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "write_demo",
+		Description: openai.String("整体重写模板 demo 的 index.html（全文替换）。必须保留 body 上的 tpl- 作用域 class 与 /assets/deck-v2/runtime.js 脚本引用；页面是 .deck 下的 <section class=\"slide\"> 序列，版式与类名沿用模板既有体系（不要发明 layouts.md 里没有的版式）。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"html": map[string]any{"type": "string", "description": "index.html 完整新全文"},
+			},
+			"required": []string{"html"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 		Name:        "finish",
 		Description: openai.String("本轮定制结束。把做了什么、让用户去看哪里复述给用户。"),
 		Parameters: openai.FunctionParameters{
@@ -194,6 +216,11 @@ func truncateNote(s string) string {
 // execCustomTool 执行一个定制工具，返回给模型的结果文本与"是否写了文件"
 //（dirty = 本轮对话需要记一条历史版本）。
 func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (string, bool) {
+	// D2 已发布锁定（修现状问题 C：此前 write_tokens 可绕过门禁改已发布模板）。
+	// 门禁运行态（publishing）同理——量测期间内容不能变。finish 不受影响。
+	if name != "finish" && (row.Status == "published" || row.Status == "publishing") {
+		return "该模板已发布（或正在跑发布门禁），请先下架再修改。", false
+	}
 	switch name {
 	case "write_tokens":
 		var in struct {
@@ -206,6 +233,40 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 			return "写入失败: " + err.Error(), false
 		}
 		return "已写入 " + fmt.Sprint(len(in.Tokens)) + " 个 token，预览刷新即可看到。", len(in.Tokens) > 0
+	case "write_style":
+		var in struct {
+			CSS string `json:"css"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		if len(in.CSS) > maxToolFileBytes {
+			return fmt.Sprintf("style.css 内容 %d 字节，超过 %d 上限，请精简。", len(in.CSS), maxToolFileBytes), false
+		}
+		if err := scanCSS(in.CSS); err != nil {
+			return "安全预检未过：" + err.Error() + "。请修正后重试。", false
+		}
+		if err := s.writeTemplateFile(row.ID, "style.css", in.CSS); err != nil {
+			return "写入失败: " + err.Error(), false
+		}
+		return "style.css 已整体更新，预览刷新即可看到。", true
+	case "write_demo":
+		var in struct {
+			HTML string `json:"html"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		if len(in.HTML) > maxToolFileBytes {
+			return fmt.Sprintf("index.html 内容 %d 字节，超过 %d 上限，请精简。", len(in.HTML), maxToolFileBytes), false
+		}
+		if err := scanHTML(in.HTML); err != nil {
+			return "安全预检未过：" + err.Error() + "。请修正后重试。", false
+		}
+		if err := s.writeTemplateFile(row.ID, "index.html", in.HTML); err != nil {
+			return "写入失败: " + err.Error(), false
+		}
+		return "demo index.html 已整体更新，预览刷新即可看到。", true
 	case "set_meta":
 		var in struct {
 			Name        string `json:"name"`
@@ -334,24 +395,35 @@ func (s *Service) scopeOf(id, baseID string) string {
 	return "tpl-" + baseID
 }
 
-// customizeSystemPrompt 定制对话的系统提示词（含当前 token 值，模型有上下文）。
+// maxToolFileBytes 对话整文件重写工具（write_style/write_demo）的内容上限。
+// style.css 实测量级 20-60KB、demo 30KB；512KB 给足余量同时防 token 失控。
+const maxToolFileBytes = 512 << 10
+
+// customizeSystemPrompt 定制对话的系统提示词（注入当前 style.css 全文，模型有上下文）。
 func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
-	tokens := ""
+	styleAll := ""
 	if raw, err := os.ReadFile(filepath.Join(s.Dir(row.ID), "style.css")); err == nil {
-		if m := tokenBlockRe.FindStringSubmatch(string(raw)); m != nil {
-			tokens = m[1]
-		}
+		styleAll = string(raw)
 	}
-	return "你是 PPT 模板定制助手。用户会用自然语言描述想改的视觉风格（配色、圆角、观感），" +
-		"你通过 write_tokens 工具落地，改完用 finish 汇报。\n\n" +
+	if r := []rune(styleAll); len(r) > 8000 {
+		styleAll = string(r[:8000]) + "\n/* …（已截断，重写时以磁盘现状为准并保留未展示部分的结构） */"
+	}
+	return "你是 PPT 模板定制助手。用户会用自然语言描述想改的视觉风格与页面结构，" +
+		"你通过工具落地，改完用 finish 汇报。\n\n" +
+		"工具选择：\n" +
+		"- 改配色/圆角等设计 token：优先 write_tokens（精准、影响面小）。\n" +
+		"- token 表达不了的样式改动（布局、间距、装饰、字体规则）：用 write_style 整体重写 " +
+		"style.css——必须基于下方当前全文改造，输出完整新全文。\n" +
+		"- 改 demo 页面结构（加删页面/卡片、改布局骨架）：用 write_demo 整体重写 index.html——" +
+		"必须保留 body 的 tpl- 作用域类与 /assets/deck-v2/runtime.js 引用。\n" +
+		"- 改模板名/描述：set_meta。\n\n" +
 		"纪律：\n" +
-		"- 只改列出的 token；一次改动要成套（比如改主色时同步考虑 --accent-2/--accent-3 的协调，以及文字在新底色上的可读性）。\n" +
-		"- 用户说「更圆/直角」时调 --radius/--radius-lg；说「暗色/亮色」时成套改 --bg/--surface/--text-*。\n" +
-		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些 token、建议用户看哪一页验证。\n" +
+		"- 一次改动要成套（改主色时同步考虑 --accent-2/--accent-3 的协调，以及文字在新底色上的可读性）。\n" +
+		"- 结构契约：不要发明 layouts.md 里没有的版式；类名沿用模板既有体系。\n" +
+		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
+		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +
 		"- 模板名：" + row.Name + "（base：" + row.BaseID + "）。\n\n" +
-		"当前 token 值（style.css 的 token 声明区）：\n" + tokens
+		"当前 style.css 全文：\n" + styleAll
 }
 
 var bodyClassRe = regexp.MustCompile(`<body class="([^"]*)">`)
-
-var tokenBlockRe = regexp.MustCompile(`(?s)\.tpl-[a-z0-9-]+\{([^}]*)\}`)

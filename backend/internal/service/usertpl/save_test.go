@@ -34,16 +34,16 @@ func TestSaveIndexHTML(t *testing.T) {
 	if err := os.MkdirAll(s.Dir(id), 0o755); err != nil {
 		t.Fatalf("建目录: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(s.Dir(id), "index.html"), []byte("v1"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir(id), "index.html"), []byte(demoHTML("v1")), 0o644); err != nil {
 		t.Fatalf("写初版: %v", err)
 	}
 
 	t.Run("保存生效并记 edit 版本", func(t *testing.T) {
-		if err := s.SaveIndexHTML(uid, id, "v2"); err != nil {
+		if err := s.SaveIndexHTML(uid, id, demoHTML("v2")); err != nil {
 			t.Fatalf("保存: %v", err)
 		}
 		data, _ := os.ReadFile(filepath.Join(s.Dir(id), "index.html"))
-		if string(data) != "v2" {
+		if string(data) != demoHTML("v2") {
 			t.Errorf("index.html = %q", data)
 		}
 		versions, err := s.ListUTVersions(uid, id)
@@ -59,7 +59,7 @@ func TestSaveIndexHTML(t *testing.T) {
 	})
 
 	t.Run("相同内容不产生噪音版本", func(t *testing.T) {
-		if err := s.SaveIndexHTML(uid, id, "v2"); err != nil {
+		if err := s.SaveIndexHTML(uid, id, demoHTML("v2")); err != nil {
 			t.Fatalf("重复保存: %v", err)
 		}
 		versions, _ := s.ListUTVersions(uid, id)
@@ -69,7 +69,7 @@ func TestSaveIndexHTML(t *testing.T) {
 	})
 
 	t.Run("内容变化追加新版本", func(t *testing.T) {
-		if err := s.SaveIndexHTML(uid, id, "v3"); err != nil {
+		if err := s.SaveIndexHTML(uid, id, demoHTML("v3")); err != nil {
 			t.Fatalf("保存: %v", err)
 		}
 		versions, _ := s.ListUTVersions(uid, id)
@@ -86,11 +86,11 @@ func TestSaveIndexHTML(t *testing.T) {
 		if err := st.DB.Model(&store.UserTemplate{}).Where("id = ?", id).Update("status", "published").Error; err != nil {
 			t.Fatalf("置 published: %v", err)
 		}
-		if err := s.SaveIndexHTML(uid, id, "hack"); !errors.Is(err, ErrPublished) {
+		if err := s.SaveIndexHTML(uid, id, demoHTML("hack")); !errors.Is(err, ErrPublished) {
 			t.Errorf("应报 ErrPublished，得到: %v", err)
 		}
 		data, _ := os.ReadFile(filepath.Join(s.Dir(id), "index.html"))
-		if string(data) != "v3" {
+		if string(data) != demoHTML("v3") {
 			t.Errorf("published 状态下内容被改写: %q", data)
 		}
 		versions, _ := s.ListUTVersions(uid, id)
@@ -100,8 +100,14 @@ func TestSaveIndexHTML(t *testing.T) {
 	})
 
 	t.Run("越权拒绝", func(t *testing.T) {
-		if err := s.SaveIndexHTML(uid+1, id, "x"); err == nil || !strings.Contains(err.Error(), "不存在") {
+		if err := s.SaveIndexHTML(uid+1, id, demoHTML("x")); err == nil || !strings.Contains(err.Error(), "不存在") {
 			t.Errorf("越权应报不存在，得到: %v", err)
 		}
 	})
+}
+
+// demoHTML 构造能过 scanHTML 的最小 demo（<section> + 唯一的 runtime.js 脚本）。
+func demoHTML(tag string) string {
+	return `<body class="tpl-x"><div class="deck"><section class="slide">` + tag + `</section></div>` +
+		`<script src="/assets/deck-v2/runtime.js"></script></body>`
 }

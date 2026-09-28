@@ -59,6 +59,7 @@ type UserTemplateService interface {
 	Dir(id string) string
 	GetOwned(userID uint, id string) (*store.UserTemplate, error)
 	SaveIndexHTML(userID uint, id, html string) error
+	SaveStyleCSS(userID uint, id, css string) error
 	// 历史版本（user-template-history-plan.md §4）：列表/回滚/删单版/清空
 	ListUTVersions(userID uint, id string) ([]usertpl.UTVersionMeta, error)
 	RestoreUTVersion(userID uint, id, version string) error
