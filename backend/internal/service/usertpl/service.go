@@ -341,7 +341,7 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 	if err != nil {
 		return fail(fmt.Errorf("渲染授权签发失败: %w", err))
 	}
-	url := strings.TrimRight(s.baseURL, "/") + "/api/user-template-render/" + nonce
+	url := strings.TrimRight(s.baseURL, "/") + "/api/user-template-render/" + nonce + "/index.html"
 	d, err := vision.CaptureV2(ctx, vision.OptionsV2{URL: url, ChromePath: s.chromePath, Timeout: 2 * time.Minute})
 	if err != nil {
 		return fail(fmt.Errorf("demo 渲染失败：%v（检查 demo 是否可独立打开）", err))

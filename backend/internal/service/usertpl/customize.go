@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -198,7 +199,13 @@ func (s *Service) customizeLoop(ctx context.Context, sess *customizeSession, row
 			}
 		}
 	}
-	return "本轮改动已应用（达到对话轮次上限）。可以继续描述，或去预览确认效果。", dirty, note, nil
+	// 轮次上限：模型连续多轮调工具没调 finish（write_demo 这类大输出常见）。
+	// 备注兜底不能空着——历史列表里空 detail 不可读。
+	reply := "本轮改动已应用（达到对话轮次上限）。可以继续描述，或去预览确认效果。"
+	if note == "" {
+		note = truncateNote(reply)
+	}
+	return reply, dirty, note, nil
 }
 
 // truncateNote 版本备注上限（index.json 里的人读字段，太长列表没法看）。
@@ -249,6 +256,9 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 		if err := s.writeTemplateFile(row.ID, "style.css", in.CSS); err != nil {
 			return "写入失败: " + err.Error(), false
 		}
+		if err := s.remountUT(row.ID); err != nil {
+			return fmt.Sprintf("style.css 已写入并记入历史，但注册表校验未过：%v。预览可见，发布门禁会拦——请检查是否破坏了版式契约或文件结构。", err), true
+		}
 		return "style.css 已整体更新，预览刷新即可看到。", true
 	case "write_demo":
 		var in struct {
@@ -265,6 +275,9 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 		}
 		if err := s.writeTemplateFile(row.ID, "index.html", in.HTML); err != nil {
 			return "写入失败: " + err.Error(), false
+		}
+		if err := s.remountUT(row.ID); err != nil {
+			return fmt.Sprintf("index.html 已写入并记入历史，但注册表校验未过：%v。预览可见，发布门禁会拦——最常见原因是发明了 layouts.md 里没有的 data-layout，请改回已登记的版式。", err), true
 		}
 		return "demo index.html 已整体更新，预览刷新即可看到。", true
 	case "set_meta":
@@ -342,9 +355,10 @@ func (s *Service) writeTokenBlock(id, baseID string, tokens map[string]string) e
 	if err := os.WriteFile(p, []byte(out), 0o644); err != nil {
 		return err
 	}
-	// 已挂载的模板（fork 即挂载）重挂一次，让注册表里的 style.css 快照同步
-	if s.reg != nil {
-		return s.reg.MountUser(dir)
+	// 已挂载的模板重挂一次，让注册表里的 style.css 快照同步；失败不阻断
+	// （token 写入本身已成功，校验问题由发布门禁终审）
+	if err := s.remountUT(id); err != nil {
+		log.Printf("[warn] 模板 %s token 写入后重挂失败: %v", id, err)
 	}
 	return nil
 }
@@ -373,8 +387,8 @@ func (s *Service) applyMetaFile(id, name, description string) error {
 	if err := os.WriteFile(p, out, 0o644); err != nil {
 		return err
 	}
-	if s.reg != nil {
-		return s.reg.MountUser(s.Dir(id))
+	if err := s.remountUT(id); err != nil {
+		log.Printf("[warn] 模板 %s 元数据写入后重挂失败: %v", id, err)
 	}
 	return nil
 }

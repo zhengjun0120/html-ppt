@@ -14,11 +14,16 @@ package usertpl
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 // scanCSS style.css 安全预检。禁 @import / expression / behavior / -moz-binding；
-// url( 仅放行 data: 内联，网络引用一律拒。
+// url( 仅放行 data: 内联，网络引用一律拒。非法 UTF-8 一并拒——bundle 快照经
+// json.Marshal 会把坏字节替换成 U+FFFD，磁盘与历史从此对不上（实测教训）。
 func scanCSS(css string) error {
+	if !utf8.ValidString(css) {
+		return fmt.Errorf("style.css 含非法 UTF-8 字节")
+	}
 	low := strings.ToLower(css)
 	for i := 0; ; {
 		j := strings.Index(low[i:], "url(")
@@ -46,6 +51,9 @@ func scanCSS(css string) error {
 // 禁内联事件；并要求 demo 的两个结构前提：有 <section>（页面集）、引用
 // /assets/deck-v2/runtime.js（没有它 demo 无法翻页/单页化）。
 func scanHTML(html string) error {
+	if !utf8.ValidString(html) {
+		return fmt.Errorf("index.html 含非法 UTF-8 字节")
+	}
 	low := strings.ToLower(html)
 	// 每个 <script> 开标签都必须指向 runtime.js（旧实现只查第一个 script，
 	// 夹在 runtime.js 之前的额外脚本能溜过去——write_demo 全文重写后必须收紧）

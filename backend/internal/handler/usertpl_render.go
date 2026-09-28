@@ -152,6 +152,9 @@ func (h *Handler) RenderUserTemplateDemo(c *gin.Context) {
 		return
 	}
 	name := strings.TrimPrefix(c.Param("filepath"), "/")
+	if name == "" {
+		name = "index.html" // 无尾路径（gin 通配重定向后的 "/" 形态）兜底
+	}
 	styleHref := "/api/user-template-render/" + c.Param("nonce") + "/style.css"
 	h.serveUTFile(c, id, name, styleHref)
 }
