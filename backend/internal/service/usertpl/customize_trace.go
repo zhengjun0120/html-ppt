@@ -91,9 +91,10 @@ func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message
 // 返回累积完整的消息、finish_reason 与用量；emit 可为 nil（同步端点），
 // nil 时不推任何 CustEvent。
 //
-// MaxTokens 给 8192：定制模型（如 deepseek-flash）会先输出 reasoning_content，
-// 推理先吃预算、吃完就没有正文（finish=length 空回复，实测踩过）；旧代码的
-// 4000 对"推理 + write_style 大输出"双场景都太紧。
+// **不设 MaxTokens**（2026-09-28 用户拍板）：上限交给模型/服务商的默认值，与
+// agent 主循环（setChatOpts）同款。起因是实测坑：推理模型（deepseek-flash）会
+// 先输出 reasoning_content，显式小上限被推理吃满后 finish=length、零正文零工具
+// （4000 时必现）。空回复兜底重试保留——服务商自己的默认上限仍可能截断推理。
 //
 // tool_progress 的心跳节奏：参数增量每累计 4KB 推一次累计字节数——write_style
 // 实测量级 20-60KB，一轮生成 30-60s，没有心跳的话聊天页在最重要的那段时间里
@@ -120,7 +121,6 @@ func (s *Service) custStream(ctx context.Context, sess *customizeSession, llm LL
 		ToolChoice: openai.ChatCompletionToolChoiceOptionUnionParam{
 			OfAuto: openai.String("auto"),
 		},
-		MaxTokens:     openai.Int(8192),
 		Temperature:   openai.Float(0.4),
 		StreamOptions: openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)},
 	})

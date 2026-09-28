@@ -30,8 +30,9 @@
 >    tool_result/usage/run_end，归属校验/导出/徽章全部复用观测台现有读侧。
 > 7. **定制对话 SSE 流式**：POST /user-templates/:id/chat/stream，事件窄集合
 >    CustEvent（tool_start/tool_progress/tool_done/delta/done/error）；LLM 调用改
->    流式（MaxTokens 4000→8192——推理模型把 4000 全花在 reasoning 上会产出
->    finish=length 的空回复，实测踩过，循环对空回复自动重试一轮）；
+>    流式，**不设 MaxTokens**（用户拍板：上限交服务商默认，与 agent 主循环同款——
+>    推理模型把显式小上限全花在 reasoning 上会产出 finish=length 的空回复，
+>    4000 时实测必现；循环对空回复自动重试一轮兜底服务商默认上限的截断）；
 >    tool_progress 每 4KB 一次字节数心跳，write_style 的大输出不再是黑盒。
 
 ---
