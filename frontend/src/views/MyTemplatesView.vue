@@ -8,15 +8,17 @@ import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type U
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal.vue'
 import DeckEditModal from '@/components/editor/DeckEditModal.vue'
 import Button from '@/components/ui/Button.vue'
+import Dialog from '@/components/ui/Dialog.vue'
 import Empty from '@/components/ui/Empty.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import { useToast } from '@/stores/toast'
+import { watch } from 'vue'
 
 /**
  * 我的模板（plan-v3 B3）：克隆/定制/发布/下架/删除的管理页。
- * 发布跑自动门禁（结构校验 + demo 渲染量测），结果与失败原因就地展示。
+ * 发布 = 挂载校验秒级完成（2026-09-28 门禁降级），视觉质量用工作台的「质量体检」随时量测。
  * 「从内置模板派生」直接展示内置模板卡片（真实缩略 + 中文名 + 适用场景标签）——
- * 派生是挑"视觉起点"，看不见起点就没法挑。
+ * 派生是挑"视觉起点"，看不见起点就没法挑。从空白新建走独立命名弹窗。
  */
 
 const router = useRouter()
@@ -95,22 +97,38 @@ async function fork(baseId: string) {
   }
 }
 
-// 从空白新建：中性灰阶脚手架（两个最小说明版式），结构与视觉在工作台里从零长出来
+// 从空白新建：中性灰阶脚手架（两个最小说明版式），结构与视觉在工作台里从零长出来。
+// 命名走独立弹窗（原生 prompt 在部分环境抓不到焦点且样式割裂）；留空用默认名。
+const blankOpen = ref(false)
+const blankName = ref('')
+const blankCreating = ref(false)
+const blankInput = ref<HTMLInputElement | null>(null)
+
+function openBlankDialog() {
+  blankName.value = ''
+  blankOpen.value = true
+  // Dialog 自己会把焦点钉在确认按钮上（另一个 watcher），宏任务里抢回来给输入框
+  setTimeout(() => blankInput.value?.focus(), 0)
+}
+
 async function createBlank() {
-  const raw = window.prompt('模板名称（可留空用「空白模板」）', '')
-  if (raw === null) return // 用户取消
-  const name = raw.trim()
-  busyId.value = 'blank'
+  if (blankCreating.value) return
+  blankCreating.value = true
   try {
-    const row = await userTemplateApi.blank(name)
+    const row = await userTemplateApi.blank(blankName.value.trim())
+    blankOpen.value = false
     toast.info('空白模板已创建，去工作台把它长成你的样子')
     await router.push(`/my-templates/${row.id}/edit`)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '创建失败')
   } finally {
-    busyId.value = ''
+    blankCreating.value = false
   }
 }
+
+watch(blankOpen, (o) => {
+  if (!o) blankName.value = ''
+})
 
 async function togglePublish(row: UserTemplateRow) {
   busyId.value = row.id + ':pub'
@@ -368,7 +386,7 @@ const editing = ref<UserTemplateRow | null>(null)
           <h2 class="text-[14px] font-bold">从内置模板派生</h2>
           <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
         </div>
-        <Button :loading="busyId === 'blank'" @click="createBlank">
+        <Button @click="openBlankDialog">
           从空白新建
         </Button>
       </div>
@@ -450,5 +468,25 @@ const editing = ref<UserTemplateRow | null>(null)
       @close="editing = null"
       @saved="load()"
     />
+
+    <!-- 从空白新建：命名弹窗（回车=创建，留空用默认名「空白模板」） -->
+    <Dialog
+      :open="blankOpen"
+      title="从空白新建"
+      desc="中性灰阶的空白起点：先给两个最小说明版式搭好结构契约，配色、字体、版式都在工作台里从零定制。"
+      confirm-text="创建"
+      @confirm="createBlank"
+      @close="blankOpen = false"
+    >
+      <input
+        ref="blankInput"
+        v-model="blankName"
+        class="mt-4 w-full rounded-control border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-3 focus-visible:border-accent"
+        placeholder="模板名称（留空则叫「空白模板」）"
+        maxlength="40"
+        :disabled="blankCreating"
+        @keydown.enter.prevent="createBlank"
+      />
+    </Dialog>
   </div>
 </template>

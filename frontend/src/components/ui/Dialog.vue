@@ -50,6 +50,8 @@ watch(
         >
           <h3 class="text-[14.5px] font-bold">{{ title }}</h3>
           <p v-if="desc" class="mt-1.5 text-[12.5px] text-ink-2">{{ desc }}</p>
+          <!-- 内容插槽：确认框之外的表单类弹窗（如命名输入）从这里长出来 -->
+          <slot />
           <div class="mt-5 flex justify-end gap-2">
             <Button @click="emit('close')">取消</Button>
             <Button ref="confirmBtn" :variant="danger ? 'danger' : 'primary'" @click="emit('confirm')">
