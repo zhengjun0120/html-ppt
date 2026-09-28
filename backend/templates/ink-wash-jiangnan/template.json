@@ -1,0 +1,81 @@
+{
+  "id": "ink-wash-jiangnan",
+  "name": "水墨江南",
+  "description": "宣纸米白上的水墨留白：远山黛色、垂柳朱砂印，标题楷书大字、正文宋体宽行距，文化叙事与东方美学的诗意底色",
+  "tags": ["国风", "水墨", "留白", "文化"],
+  "scenario": ["文化品牌发布", "茶道香道分享", "古典文学讲座", "节庆主题活动", "东方美学课程"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "烟墨", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "卷轴封面",
+      "use": "开场：题签 + 楷书大字标题 + 墨线 + 一句定位，远山与柳枝衬底，可配竖排题款",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；印章 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "目录卷",
+      "use": "议程：宣纸卡内 4 行篇目（墨圈编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：宣纸卡 + 朱砂题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边宣纸卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "朱砂数字",
+      "use": "三个关键数据：朱砂大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "题跋引文",
+      "use": "整页一句引文：楷书大字 + 出处 + 两个支撑描边药丸，配竖排诗句点缀",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 楷书大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：墨圈圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾落款",
+      "use": "收尾：楷书大字 + 一句行动提醒 + 墨框按钮 + 描边药丸，如卷轴落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Georgia", "KaiTi", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/ink-wash-jiangnan",
+    "license": "Apache-2.0"
+  }
+}

@@ -1,0 +1,98 @@
+/* chinese-cream-blossom — 中国传统色·米白樱粉。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/chinese-cream-blossom（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 宣纸米 #F5F2E9 底晕开樱粉 #F091A0/#F5BFC8，胭脂红 #B23A48 只做印章与关键数据：
+ * 右上圆瓣花影与飘落花瓣是每页自动衬底的 ambient 层（z-index:-1，柔和不抢眼），
+ * 卡是左竖线暖卡、圆角小，标题宋体加粗、小标题楷体，温柔圆润。 */
+.tpl-chinese-cream-blossom{
+  --bg:#F5F2E9;              /* 宣纸米 */
+  --ivory:#FAF7F0;           /* 象牙白（卡底） */
+  --pink:#F091A0;            /* 樱粉 */
+  --pink-soft:#F5BFC8;       /* 淡樱 */
+  --rouge:#B23A48;           /* 胭脂红（印章、关键数据） */
+  --gold:#D4A574;            /* 淡金（花蕊级点缀） */
+  --wheat:#E8DCC8;           /* 暖米描边 */
+  --ink:#3D3D3D;             /* 墨黛 */
+  --ink-2:#7A6B5D;           /* 暖灰正文 */
+  --ink-3:#97897B;           /* 暖灰小字 */
+  --border:rgba(122,107,93,.28);
+  --border-soft:rgba(122,107,93,.18);
+  --accent:#F091A0;          /* 身份色：樱粉（柔性的那层） */
+  --accent-ink:#3D3D3D;
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：宋体大字宽字距，小标题楷体，行高放宽是温柔的一半 ---- */
+.tpl-chinese-cream-blossom .h1{font-family:'Songti SC','STSong','SimSun',serif;font-size:90px;line-height:1.14;font-weight:700;letter-spacing:.12em;color:var(--ink);margin-bottom:12px}
+.tpl-chinese-cream-blossom .h2{font-family:'Songti SC','STSong','SimSun',serif;font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.1em;color:var(--ink);margin-bottom:8px}
+.tpl-chinese-cream-blossom h4{font-family:'STKaiti','KaiTi','Songti SC',serif;color:var(--ink);font-weight:700;font-size:27px;letter-spacing:.06em}
+.tpl-chinese-cream-blossom .lede{font-size:24px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-chinese-cream-blossom .deck-footer{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：右上圆瓣花影 + 左下飘落花瓣，z-index:-1 画在内容之下 ---- */
+.tpl-chinese-cream-blossom .slide::before{
+  content:"";position:absolute;right:0;top:0;width:420px;height:380px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 380'%3E%3Cg transform='translate(300,120)'%3E%3Cellipse cx='0' cy='-40' rx='30' ry='46' fill='%23F5BFC8' opacity='0.5'/%3E%3Cellipse cx='36' cy='-12' rx='30' ry='46' fill='%23F091A0' opacity='0.34' transform='rotate(72)'/%3E%3Cellipse cx='22' cy='32' rx='30' ry='46' fill='%23F5BFC8' opacity='0.5' transform='rotate(144)'/%3E%3Cellipse cx='-22' cy='32' rx='30' ry='46' fill='%23F091A0' opacity='0.34' transform='rotate(216)'/%3E%3Cellipse cx='-36' cy='-12' rx='30' ry='46' fill='%23F5BFC8' opacity='0.5' transform='rotate(288)'/%3E%3Ccircle cx='0' cy='0' r='9' fill='%23D4A574' opacity='0.4'/%3E%3C/g%3E%3Cg transform='translate(150,250)'%3E%3Cellipse cx='0' cy='-24' rx='20' ry='30' fill='%23F5BFC8' opacity='0.4'/%3E%3Cellipse cx='23' cy='-7' rx='20' ry='30' fill='%23F091A0' opacity='0.28' transform='rotate(72)'/%3E%3Cellipse cx='14' cy='20' rx='20' ry='30' fill='%23F5BFC8' opacity='0.4' transform='rotate(144)'/%3E%3Cellipse cx='-14' cy='20' rx='20' ry='30' fill='%23F091A0' opacity='0.28' transform='rotate(216)'/%3E%3Cellipse cx='-23' cy='-7' rx='20' ry='30' fill='%23F5BFC8' opacity='0.4' transform='rotate(288)'/%3E%3Ccircle cx='0' cy='0' r='6' fill='%23D4A574' opacity='0.35'/%3E%3C/g%3E%3Cpath d='M420,0 Q340,90 260,190 Q190,280 110,380' stroke='%237A6B5D' stroke-width='2' fill='none' opacity='0.22'/%3E%3C/svg%3E") no-repeat top right;
+}
+.tpl-chinese-cream-blossom .slide::after{
+  content:"";position:absolute;left:0;bottom:0;width:300px;height:220px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 220'%3E%3Cellipse cx='60' cy='60' rx='13' ry='21' fill='%23F5BFC8' opacity='0.5' transform='rotate(22 60 60)'/%3E%3Cellipse cx='180' cy='130' rx='11' ry='18' fill='%23F091A0' opacity='0.36' transform='rotate(-28 180 130)'/%3E%3Cellipse cx='250' cy='40' rx='9' ry='15' fill='%23F5BFC8' opacity='0.42' transform='rotate(40 250 40)'/%3E%3C/svg%3E") no-repeat bottom left;
+}
+
+/* ---- 题签：樱粉圆点引导的小字标签（页首） ---- */
+.tpl-chinese-cream-blossom .cb-kicker{display:flex;align-items:center;gap:14px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.34em;color:var(--ink-2)}
+.tpl-chinese-cream-blossom .cb-kicker::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;background:var(--pink)}
+
+/* ---- 樱线：标题下的一道淡樱，从粉晕到透明 ---- */
+.tpl-chinese-cream-blossom .cb-line{width:210px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--pink-soft) 0%,var(--pink) 55%,transparent 100%)}
+
+/* ---- 胭脂小印：方寸小印，全模板唯一的胭脂底文字元素 ---- */
+.tpl-chinese-cream-blossom .cb-seal{flex:none;width:72px;height:72px;background:var(--rouge);color:var(--ivory);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 描边胶囊：暖灰细描边，柔和圆润；强调态描边转胭脂 ---- */
+.tpl-chinese-cream-blossom .cb-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-chinese-cream-blossom .cb-pill-red{border-color:var(--rouge);color:var(--rouge)}
+
+/* ---- 左线暖卡：象牙半透明底 + 樱粉左竖线，圆角小、无阴影 ---- */
+.tpl-chinese-cream-blossom .cb-card{background:rgba(250,247,240,.78);border:1px solid rgba(232,220,200,.9);border-left:4px solid var(--pink);border-radius:10px;padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 花目行：花圈编号 + 条目名 + 说明 ---- */
+.tpl-chinese-cream-blossom .cb-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-cream-blossom .cb-item:last-child{border-bottom:none}
+.tpl-chinese-cream-blossom .cb-n{flex:none;width:50px;height:50px;background:var(--pink-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--rouge);align-self:center}
+.tpl-chinese-cream-blossom .cb-t{flex:none;width:240px;font-family:'STKaiti','KaiTi',serif;font-size:29px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-cream-blossom .cb-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 流程步骤（split 右列） ---- */
+.tpl-chinese-cream-blossom .cb-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-cream-blossom .cb-step:last-child{border-bottom:none}
+.tpl-chinese-cream-blossom .cb-step-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 胭脂数字：数据页主视觉 ---- */
+.tpl-chinese-cream-blossom .cb-stat{border-top:2px solid var(--pink);padding-top:28px}
+.tpl-chinese-cream-blossom .cb-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--rouge)}
+.tpl-chinese-cream-blossom .cb-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-chinese-cream-blossom .cb-stat-l{margin-top:18px;font-family:'STKaiti','KaiTi',serif;font-size:26px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-cream-blossom .cb-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 花笺引文：宋体大字 ---- */
+.tpl-chinese-cream-blossom .cb-quote{font-family:'Songti SC','STSong','SimSun',serif;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:26em;margin:0}
+.tpl-chinese-cream-blossom .cb-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排题款：短句点缀，只放留白处 ---- */
+.tpl-chinese-cream-blossom .cb-vert{writing-mode:vertical-rl;font-family:'STKaiti','KaiTi',serif;font-size:25px;letter-spacing:.5em;line-height:2.1;color:var(--ink-2)}
+.tpl-chinese-cream-blossom .cb-vert-accent{color:var(--rouge)}
+
+/* ---- 筹备时间线：花圈节点 + 樱粉细连接线 ---- */
+.tpl-chinese-cream-blossom .cb-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-chinese-cream-blossom .cb-tl-item{flex:1;position:relative}
+.tpl-chinese-cream-blossom .cb-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:50px;right:-44px;height:1px;background:rgba(240,145,160,.55)}
+.tpl-chinese-cream-blossom .cb-tl-dot{position:relative;z-index:1;width:50px;height:50px;background:var(--pink-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--rouge)}
+.tpl-chinese-cream-blossom .cb-tl-t{margin-top:18px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;letter-spacing:.04em;color:var(--rouge)}
+.tpl-chinese-cream-blossom .cb-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：樱粉实底圆润按钮，墨黛字，收尾页 ---- */
+.tpl-chinese-cream-blossom .cb-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;background:var(--pink);color:var(--accent-ink);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:22px;font-weight:500;letter-spacing:.18em}
+
+/* ---- 页面切换（翻页动画）：如花瓣轻轻落下 ---- */
+.tpl-chinese-cream-blossom{--page-shift:10px;--page-dur:.62s;--page-ease:cubic-bezier(.33,.66,.4,1)}

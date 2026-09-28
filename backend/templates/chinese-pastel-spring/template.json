@@ -1,0 +1,81 @@
+{
+  "id": "chinese-pastel-spring",
+  "name": "中国传统色·春日嫩柳",
+  "description": "嫩柳绿配桃花粉的初春国风：宣纸米底、桃枝衬角、楷宋标题、实色小色卡，温柔明媚的美妆与生活方式底色",
+  "tags": ["国风", "春日", "粉彩", "自然"],
+  "scenario": ["新品发布", "国风美妆", "春季节庆", "生活方式品牌", "文化体验"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "春笺封面",
+      "use": "开场：题签 + 宋体大字标题 + 四色短线 + 一句定位，右上桃枝衬底，可配朱砂印",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；印章 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "春日目录",
+      "use": "议程：宣纸卡内 4 行篇目（圆点编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三色卡要点",
+      "use": "三个并列要点：嫩柳、柳芽、桃花三张实色小色卡，各配编号 + 楷体小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；编号由骨架给出（01/02/03）；卡名 ≤6 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边暖卡（左竖线）装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "朱砂数字",
+      "use": "三个关键数据：朱砂细体大数字 + 三色顶线（柳绿/桃粉/淡金）+ 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "题跋引文",
+      "use": "整页一句引文：楷体大字 + 出处 + 两个支撑药丸",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "新品节奏",
+      "use": "恰好 4 个节点的横向时间线：圆点 + 时间点 + 一句事件，适合发售节奏",
+      "roles": ["content", "data"],
+      "constraints": "恰好 4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾落款",
+      "use": "收尾：大字 + 一句行动提醒 + 墨黛描边按钮 + 描边药丸 + 朱砂印",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Songti SC", "KaiTi", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/chinese-pastel-spring",
+    "license": "Apache-2.0"
+  }
+}

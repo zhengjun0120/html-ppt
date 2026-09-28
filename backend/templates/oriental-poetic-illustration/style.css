@@ -1,0 +1,103 @@
+/* oriental-poetic-illustration — 东方意境插画。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/oriental-poetic-illustration（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 宣纸白 + 月光蓝/竹青晕染 + 墨竹线描：月轮（右上，radial-gradient 圆 + 光晕）
+ * 与右侧竹影线描是每页自动衬底的 ambient 层（.slide::before/::after，
+ * z-index:-1，画在全部内容之下，骨架零成本）。朱红只作印章与墨点，
+ * 墨竹绿是数据与要点的身份色；留白即构图，卡用细线框，不用硬阴影。 */
+.tpl-oriental-poetic-illustration{
+  --bg:#F5F5F5;              /* 宣纸白 */
+  --bg-soft:#FBFBF9;         /* 月白（卡底） */
+  --ink:#1B1B1B;             /* 墨黑 */
+  --ink-2:#5D6D7E;           /* 远黛灰正文 */
+  --ink-3:#8A99A8;           /* 淡黛小字 */
+  --border:rgba(27,27,27,.16);
+  --border-soft:rgba(27,27,27,.10);
+  --accent:#2E7D32;          /* 墨竹绿（身份色：数据/要点/行动） */
+  --bamboo:#2E7D32;          /* 墨竹绿 */
+  --verdant:#4A7C59;         /* 苍翠（竹干线描） */
+  --bamboo-tint:#E8F5E9;     /* 竹青淡绿 */
+  --moonlit:#E3F2FD;         /* 月光蓝 */
+  --mist:#B2DFDB;            /* 薄雾青 */
+  --vermilion:#D32F2F;       /* 朱红（印章/墨点） */
+  --gold-soft:#D4A574;       /* 淡金点缀 */
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：楷书大字 + 宋体宽行距，留白是呼吸感的一半 ---- */
+.tpl-oriental-poetic-illustration .h1{font-family:'STKaiti','KaiTi','Songti SC','SimSun',serif;font-size:94px;line-height:1.14;font-weight:700;letter-spacing:.12em;color:var(--ink);margin-bottom:10px}
+.tpl-oriental-poetic-illustration .h2{font-family:'STKaiti','KaiTi','Songti SC','SimSun',serif;font-size:54px;line-height:1.18;font-weight:700;letter-spacing:.1em;color:var(--ink);margin-bottom:8px}
+.tpl-oriental-poetic-illustration h4{font-family:'STKaiti','KaiTi',serif;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.06em}
+.tpl-oriental-poetic-illustration .lede{font-size:24px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-oriental-poetic-illustration .deck-footer{font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：月轮（右上，圆 + 光晕）+ 竹影线描（右侧整条），z-index:-1 ---- */
+.tpl-oriental-poetic-illustration .slide::before{
+  content:"";position:absolute;right:140px;top:84px;width:190px;height:190px;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle at 35% 35%,#FFFFFF 0%,#E3F2FD 60%,#B2DFDB 100%);
+  box-shadow:0 0 60px rgba(178,223,219,.55),0 0 120px rgba(227,242,253,.45);
+  opacity:.62;
+}
+.tpl-oriental-poetic-illustration .slide::after{
+  content:"";position:absolute;right:0;top:0;bottom:0;width:230px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 230 1080' preserveAspectRatio='none'%3E%3Cline x1='52' y1='0' x2='66' y2='1080' stroke='%234A7C59' stroke-width='5' opacity='0.36'/%3E%3Cline x1='128' y1='0' x2='118' y2='1080' stroke='%232E7D32' stroke-width='4' opacity='0.4'/%3E%3Cline x1='196' y1='0' x2='208' y2='1080' stroke='%234A7C59' stroke-width='6' opacity='0.32'/%3E%3Cellipse cx='60' cy='230' rx='5' ry='2.6' fill='%232E7D32' opacity='0.5'/%3E%3Cellipse cx='63' cy='520' rx='5' ry='2.6' fill='%232E7D32' opacity='0.5'/%3E%3Cellipse cx='66' cy='810' rx='5' ry='2.6' fill='%232E7D32' opacity='0.5'/%3E%3Cellipse cx='122' cy='340' rx='4.6' ry='2.4' fill='%232E7D32' opacity='0.5'/%3E%3Cellipse cx='119' cy='660' rx='4.6' ry='2.4' fill='%232E7D32' opacity='0.5'/%3E%3Cellipse cx='44' cy='300' rx='20' ry='5' fill='%234A7C59' opacity='0.34' transform='rotate(28 44 300)'/%3E%3Cellipse cx='84' cy='430' rx='18' ry='4.6' fill='%232E7D32' opacity='0.38' transform='rotate(-24 84 430)'/%3E%3Cellipse cx='142' cy='270' rx='21' ry='5' fill='%234A7C59' opacity='0.32' transform='rotate(36 142 270)'/%3E%3Cellipse cx='104' cy='570' rx='19' ry='4.8' fill='%232E7D32' opacity='0.32' transform='rotate(-32 104 570)'/%3E%3Cellipse cx='152' cy='720' rx='20' ry='5' fill='%234A7C59' opacity='0.3' transform='rotate(22 152 720)'/%3E%3Cellipse cx='14' cy='180' rx='6' ry='2.4' fill='%234A7C59' opacity='0.4' transform='rotate(30 14 180)'/%3E%3Cellipse cx='38' cy='720' rx='5.6' ry='2.2' fill='%232E7D32' opacity='0.38' transform='rotate(-18 38 720)'/%3E%3C/svg%3E") no-repeat right top;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：朱红墨点引导的小字标签（页首） ---- */
+.tpl-oriental-poetic-illustration .oi-kicker{display:flex;align-items:center;gap:14px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.4em;color:var(--ink-2)}
+.tpl-oriental-poetic-illustration .oi-kicker::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--vermilion)}
+
+/* ---- 朱红印：正方块小印，全模板唯一的红底元素 ---- */
+.tpl-oriental-poetic-illustration .oi-seal{flex:none;width:72px;height:72px;background:var(--vermilion);color:#FBFBF9;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 细线：透明→远黛→透明的墨色分隔（对应上游 baseline） ---- */
+.tpl-oriental-poetic-illustration .oi-line{width:300px;height:1px;background:linear-gradient(90deg,transparent,var(--ink-2) 30%,var(--ink-2) 70%,transparent);opacity:.45}
+
+/* ---- 细线框卡：月白半透明底 + 淡竹青描边，无阴影 ---- */
+.tpl-oriental-poetic-illustration .oi-card{background:rgba(251,251,249,.78);border:1px solid rgba(74,124,89,.26);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：细描边胶囊 ---- */
+.tpl-oriental-poetic-illustration .oi-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-oriental-poetic-illustration .oi-pill-accent{border-color:var(--bamboo);color:var(--bamboo)}
+
+/* ---- 目录行：绿圈编号 + 篇名 + 说明 ---- */
+.tpl-oriental-poetic-illustration .oi-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-oriental-poetic-illustration .oi-item:last-child{border-bottom:none}
+.tpl-oriental-poetic-illustration .oi-n{flex:none;width:52px;height:52px;border:1.5px solid var(--bamboo);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:19px;font-weight:700;color:var(--bamboo);align-self:center}
+.tpl-oriental-poetic-illustration .oi-t{flex:none;width:260px;font-family:'STKaiti','KaiTi',serif;font-size:30px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-oriental-poetic-illustration .oi-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 竹绿数字：数据页主视觉（无衬线细体大数字） ---- */
+.tpl-oriental-poetic-illustration .oi-stat{border-top:2px solid var(--bamboo);padding-top:30px}
+.tpl-oriental-poetic-illustration .oi-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:104px;line-height:1;font-weight:300;letter-spacing:-.01em;color:var(--bamboo)}
+.tpl-oriental-poetic-illustration .oi-stat-u{font-size:28px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-oriental-poetic-illustration .oi-stat-l{margin-top:20px;font-family:'STKaiti','KaiTi',serif;font-size:27px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-oriental-poetic-illustration .oi-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 诗引：楷书大字 ---- */
+.tpl-oriental-poetic-illustration .oi-quote{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:64px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:26em;margin:0}
+.tpl-oriental-poetic-illustration .oi-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排诗句：只放留白处 ---- */
+.tpl-oriental-poetic-illustration .oi-vert{writing-mode:vertical-rl;font-family:'STKaiti','KaiTi',serif;font-size:26px;letter-spacing:.5em;line-height:2.1;color:var(--ink-2)}
+.tpl-oriental-poetic-illustration .oi-vert-accent{color:var(--gold-soft)}
+
+/* ---- 时间线：绿圈圆点 + 细墨连接线 ---- */
+.tpl-oriental-poetic-illustration .oi-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-oriental-poetic-illustration .oi-tl-item{flex:1;position:relative}
+.tpl-oriental-poetic-illustration .oi-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1px;background:var(--border)}
+.tpl-oriental-poetic-illustration .oi-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--bamboo);border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--bamboo)}
+.tpl-oriental-poetic-illustration .oi-tl-t{margin-top:20px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--bamboo);letter-spacing:.04em}
+.tpl-oriental-poetic-illustration .oi-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-oriental-poetic-illustration .oi-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-oriental-poetic-illustration .oi-step:last-child{border-bottom:none}
+.tpl-oriental-poetic-illustration .oi-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：竹绿描边，收尾页 ---- */
+.tpl-oriental-poetic-illustration .oi-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:2px solid var(--bamboo);font-family:'STKaiti','KaiTi',serif;font-size:23px;font-weight:700;letter-spacing:.18em;color:var(--bamboo)}
+
+/* ---- 页面切换（翻页动画）：如雾缓缓漫过 ---- */
+.tpl-oriental-poetic-illustration{--page-shift:12px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

@@ -1,0 +1,81 @@
+{
+  "id": "chinese-cream-blossom",
+  "name": "中国传统色·米白樱粉",
+  "description": "宣纸米白晕开一抹樱粉的温柔国风：圆瓣花影衬底、左线暖卡、胭脂小印，宋楷标题温柔圆润，安静而有温度",
+  "tags": ["国风", "樱粉", "温柔", "婚庆"],
+  "scenario": ["婚庆方案提案", "女性品牌发布", "春季节庆活动", "美妆护肤分享", "生活方式沙龙"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "花笺封面",
+      "use": "开场：题签 + 宋楷大字标题 + 樱线 + 一句定位，花影衬底，可配胭脂小印",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；小印 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "花目",
+      "use": "议程：左线暖卡内 4 行条目（花圈编号 + 条目名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；条目名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：左线暖卡 + 胶囊题签 + 楷体小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边胶囊），右暖卡装三行流程",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个胶囊；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "胭脂数字",
+      "use": "三个关键数据：胭脂大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "花笺引文",
+      "use": "整页一句引文：宋楷大字 + 出处 + 两个支撑胶囊，留白处可立竖排短句",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；胶囊各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡问题 + 两个看点胶囊",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；胶囊各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "筹备时间线",
+      "use": "3-4 个节点的横向时间线：花圈节点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾相邀",
+      "use": "收尾：宋楷大字 + 一句行动提醒 + 樱粉实底按钮 + 描边胶囊与小印",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；胶囊 ≤10 字"
+    }
+  ],
+  "fonts": ["Songti SC", "KaiTi", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/chinese-cream-blossom",
+    "license": "Apache-2.0"
+  }
+}

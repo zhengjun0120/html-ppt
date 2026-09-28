@@ -1,0 +1,99 @@
+/* palace-ink-red — 故宫墨红。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/palace-ink-red（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 宫墙墨红 #8C3232 大色块 + 玄石灰 #363636 深卡 + 宣纸米灰 #CAD2C5 底：
+ * 分区靠色块分层，黑体大字像碑刻匾额；哑光无渐变，大圆角 24-32px 厚重卡。
+ * 左侧墨红竖脊（正文页）与顶部宽条（封面/章节/收尾页）是每页自动衬底的
+ * ambient 层（z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-palace-ink-red{
+  --bg:#CAD2C5;              /* 宣纸米灰 */
+  --paper:#E6E1D3;           /* 浅宣纸（浅卡底） */
+  --ink:#2F2F2F;             /* 深炭灰（浅底标题与正文） */
+  --ink-2:#555B54;           /* 石灰正文次级 */
+  --ink-3:#525850;           /* 石灰小字 */
+  --cream:#DAD8CC;           /* 米白（深底上的字） */
+  --border:rgba(47,47,47,.20);
+  --border-soft:rgba(47,47,47,.12);
+  --stone:#363636;           /* 玄石灰 */
+  --accent:#8C3232;          /* 宫墙墨红（身份色） */
+  --accent-deep:#6F2626;     /* 墨红加深一档 */
+  --accent-ink:#DAD8CC;      /* 墨红底上的字 */
+  --tag:#CFC8BA;             /* 描边胶囊浅米灰 */
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei','Inter',sans-serif;
+}
+
+/* ---- 字阶：黑体大字 + 大字距，像碑刻匾额；正文利落不圆滑 ---- */
+.tpl-palace-ink-red .h1{font-family:inherit;font-size:94px;line-height:1.10;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:14px}
+.tpl-palace-ink-red .h2{font-family:inherit;font-size:52px;line-height:1.16;font-weight:700;letter-spacing:.06em;color:var(--ink);margin-bottom:10px}
+.tpl-palace-ink-red h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:27px;letter-spacing:.04em}
+.tpl-palace-ink-red .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-palace-ink-red .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：正文页左墨红竖脊 + hero 页顶部宽条；右上角窗棂格衬底 ---- */
+.tpl-palace-ink-red .slide::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:16px;z-index:-1;background:var(--accent);
+}
+.tpl-palace-ink-red .slide.full::before{
+  content:"";position:absolute;left:0;right:0;top:0;bottom:auto;width:auto;height:14px;background:var(--accent);
+}
+.tpl-palace-ink-red .slide::after{
+  content:"";position:absolute;right:0;top:0;width:360px;height:360px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 360'%3E%3Cg stroke='%23363636' stroke-width='1.5' opacity='0.07'%3E%3Cpath d='M70,0 V360'/%3E%3Cpath d='M160,0 V360'/%3E%3Cpath d='M250,0 V360'/%3E%3Cpath d='M340,0 V360'/%3E%3Cpath d='M0,70 H360'/%3E%3Cpath d='M0,160 H360'/%3E%3Cpath d='M0,250 H360'/%3E%3Cpath d='M0,340 H360'/%3E%3C/g%3E%3Crect x='70' y='70' width='90' height='90' fill='none' stroke='%238C3232' stroke-width='2' opacity='0.14'/%3E%3C/svg%3E") no-repeat top right;
+}
+
+/* ---- 题签：墨红小方旗引导的大字距标签（页首） ---- */
+.tpl-palace-ink-red .pi-kicker{display:flex;align-items:center;gap:14px;font-size:16px;font-weight:700;letter-spacing:.34em;color:var(--ink-2)}
+.tpl-palace-ink-red .pi-kicker::before{content:"";flex:none;width:14px;height:14px;background:var(--accent)}
+
+/* ---- 短尺：标题下的墨红厚条，展板的题额压边 ---- */
+.tpl-palace-ink-red .pi-rule{width:120px;height:10px;background:var(--accent)}
+
+/* ---- 方印：墨红实底小方印，全模板唯一的红底文字元素 ---- */
+.tpl-palace-ink-red .pi-seal{flex:none;width:76px;height:76px;background:var(--accent);color:var(--accent-ink);border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:700;line-height:1.3;letter-spacing:.12em}
+
+/* ---- 描边胶囊：浅米灰细描边，低调印章感；强调态描边转墨红 ---- */
+.tpl-palace-ink-red .pi-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:10px 26px;border:1px solid var(--tag);border-radius:999px;font-size:17px;letter-spacing:.14em;color:var(--ink-2);white-space:nowrap}
+.tpl-palace-ink-red .pi-pill-red{border-color:var(--accent);color:var(--accent);font-weight:700}
+
+/* ---- 浅宣卡：米灰纸底 + 大圆角，厚纸板装裱的哑光层次 ---- */
+.tpl-palace-ink-red .pi-card{background:var(--paper);border-radius:28px;padding:40px 46px;display:flex;flex-direction:column;min-height:280px;box-shadow:0 18px 40px rgba(47,47,47,.10)}
+
+/* ---- 玄石灰深卡：一页至多一块的深色信息区 ---- */
+.tpl-palace-ink-red .pi-card-dark{background:var(--stone);border-radius:28px;padding:40px 46px;display:flex;flex-direction:column;min-height:280px;color:var(--cream);box-shadow:0 18px 40px rgba(47,47,47,.16)}
+
+/* ---- 目录行：墨红编号块 + 条目名 + 说明 ---- */
+.tpl-palace-ink-red .pi-item{display:flex;align-items:center;gap:28px;padding:26px 8px;border-bottom:2px solid var(--border-soft)}
+.tpl-palace-ink-red .pi-item:last-child{border-bottom:none}
+.tpl-palace-ink-red .pi-num{flex:none;width:54px;height:54px;background:var(--accent);color:var(--accent-ink);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+.tpl-palace-ink-red .pi-item-t{flex:none;width:250px;font-size:29px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-palace-ink-red .pi-item-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 工序行（split 右列，装在深卡里） ---- */
+.tpl-palace-ink-red .pi-step{display:flex;align-items:center;gap:22px;padding:24px 2px;border-bottom:1px solid rgba(218,216,204,.18)}
+.tpl-palace-ink-red .pi-step:last-child{border-bottom:none}
+.tpl-palace-ink-red .pi-step-t{margin:0;font-size:20px;line-height:1.65;color:var(--cream);letter-spacing:.01em}
+
+/* ---- 朱红数字：数据页主视觉，浅宣数据板承载 ---- */
+.tpl-palace-ink-red .pi-stat{background:var(--paper);border-radius:28px;padding:36px 34px}
+.tpl-palace-ink-red .pi-stat-v{font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--accent)}
+.tpl-palace-ink-red .pi-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-palace-ink-red .pi-stat-l{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-palace-ink-red .pi-stat-note{margin:12px 0 0;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 题铭引文：黑体大字 ---- */
+.tpl-palace-ink-red .pi-quote{font-size:62px;line-height:1.5;font-weight:700;letter-spacing:.05em;color:var(--ink);max-width:24em;margin:0}
+.tpl-palace-ink-red .pi-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 时间线：墨红编号块 + 石灰连接线 ---- */
+.tpl-palace-ink-red .pi-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-palace-ink-red .pi-tl-item{flex:1;position:relative}
+.tpl-palace-ink-red .pi-tl-item:not(:last-child)::before{content:"";position:absolute;top:27px;left:56px;right:-44px;height:2px;background:rgba(47,47,47,.18)}
+.tpl-palace-ink-red .pi-tl-dot{position:relative;z-index:1;width:54px;height:54px;background:var(--accent);color:var(--accent-ink);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700}
+.tpl-palace-ink-red .pi-tl-t{margin-top:20px;font-size:22px;font-weight:700;letter-spacing:.04em;color:var(--accent)}
+.tpl-palace-ink-red .pi-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：墨红实底厚按钮，收尾页 ---- */
+.tpl-palace-ink-red .pi-btn{display:inline-flex;align-items:center;gap:14px;padding:16px 44px;background:var(--accent);color:var(--accent-ink);border-radius:14px;font-size:22px;font-weight:700;letter-spacing:.2em}
+
+/* ---- 页面切换（翻页动画）：像展板缓缓落位 ---- */
+.tpl-palace-ink-red{--page-shift:16px;--page-dur:.6s;--page-ease:cubic-bezier(.22,.61,.36,1)}
