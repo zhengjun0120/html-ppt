@@ -77,3 +77,40 @@ func parseUintClaim(v any) (uint, bool) {
 		return 0, false
 	}
 }
+
+// AuthOptional 与 Auth 同一条 token 解析（header 优先、?token= 兜底），但
+// 缺失/无效不拦截——供"公开资源 + 属主附加能力"的受控端点用：published 模板
+// 免登录伺服（社区画廊 iframe 带不了鉴权头），草稿类状态要求属主（handler 里
+// 读 authctx.UserID 判断，取不到就按 404 处理，不泄露存在性）。
+func AuthOptional(jwtSecret string) gin.HandlerFunc {
+	key := []byte(jwtSecret)
+	return func(c *gin.Context) {
+		token := ""
+		if v, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer "); ok {
+			token = strings.TrimSpace(v)
+		} else {
+			token = c.Query("token")
+		}
+		if token == "" {
+			c.Next()
+			return
+		}
+		parsed, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
+			return key, nil
+		}, jwt.WithValidMethods([]string{"HS256"}))
+		if err != nil || !parsed.Valid {
+			c.Next()
+			return
+		}
+		claims, ok := parsed.Claims.(jwt.MapClaims)
+		if !ok {
+			c.Next()
+			return
+		}
+		if id, ok := parseUintClaim(claims["sub"]); ok {
+			c.Set("user_id", id)
+			c.Request = c.Request.WithContext(authctx.WithUser(c.Request.Context(), id))
+		}
+		c.Next()
+	}
+}

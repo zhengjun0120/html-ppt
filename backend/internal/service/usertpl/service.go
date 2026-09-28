@@ -30,7 +30,8 @@ type Service struct {
 	st         *store.Store
 	root       string // data/user-templates
 	chromePath string
-	baseURL    string // 回环地址（demo 渲染走公开静态 /user-templates/）
+	baseURL    string         // 回环地址（demo 渲染走 nonce 端点）
+	grants     *vision.Grants // 发布门禁渲染的一次性授权（Peek 语义，见 vision/grant.go）
 
 	// 定制对话的会话表（内存态；重启即清空——对话历史不是重要数据）
 	custMu   sync.Mutex
@@ -41,9 +42,19 @@ type Service struct {
 	locks   map[string]*sync.Mutex
 }
 
-func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string) *Service {
-	return &Service{reg: reg, st: st, root: root, chromePath: chromePath, baseURL: baseURL,
+func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string, grants *vision.Grants) *Service {
+	return &Service{reg: reg, st: st, root: root, chromePath: chromePath, baseURL: baseURL, grants: grants,
 		sessions: make(map[string]*customizeSession)}
+}
+
+// Peek 读模板行，不做归属判断（受控公开端点专用：先看状态再决定要不要鉴权，
+// 见 handler 的 UserTemplatePublicFile）。
+func (s *Service) Peek(id string) (*store.UserTemplate, error) {
+	var row store.UserTemplate
+	if err := s.st.DB.First(&row, "id = ?", id).Error; err != nil {
+		return nil, fmt.Errorf("模板不存在")
+	}
+	return &row, nil
 }
 
 func (s *Service) sessionFor(key string) *customizeSession {
@@ -321,8 +332,16 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 		return fail(fmt.Errorf("安全扫描未过：%v", err))
 	}
 
-	// 门禁 2：demo 渲染量测（公开静态 /user-templates/<id>/index.html）
-	url := strings.TrimRight(s.baseURL, "/") + "/user-templates/" + id + "/index.html"
+	// 门禁 2：demo 渲染量测。走一次性 nonce 端点（§3.5 草稿收口）：
+	// 草稿不再公开可访问，headless 导航又带不了鉴权头，nonce 是唯一的桥。
+	if s.grants == nil {
+		return fail(fmt.Errorf("渲染授权不可用"))
+	}
+	nonce, err := s.grants.Issue(userID, "ut:"+id)
+	if err != nil {
+		return fail(fmt.Errorf("渲染授权签发失败: %w", err))
+	}
+	url := strings.TrimRight(s.baseURL, "/") + "/api/user-template-render/" + nonce
 	d, err := vision.CaptureV2(ctx, vision.OptionsV2{URL: url, ChromePath: s.chromePath, Timeout: 2 * time.Minute})
 	if err != nil {
 		return fail(fmt.Errorf("demo 渲染失败：%v（检查 demo 是否可独立打开）", err))

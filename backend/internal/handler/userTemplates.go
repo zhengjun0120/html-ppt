@@ -155,9 +155,13 @@ func (h *Handler) GetUserTemplateEditor(c *gin.Context) {
 		response.Err(c, http.StatusNotFound, "模板 demo 缺失")
 		return
 	}
-	// 相对引用 → 静态路由的绝对引用（与 PreviewTemplate 同一套）
-	base := "/user-templates/" + row.ID + "/"
-	html := strings.ReplaceAll(string(raw), `href="style.css"`, `href="`+base+`style.css"`)
+	// 相对引用 → 受控资产端点（草稿收口后 style.css 不在公开路由上；
+	// 子请求带不了鉴权头，token 从本请求的 query 原样带出）
+	styleHref := "/api/user-templates/" + row.ID + "/assets/style.css"
+	if token := c.Query("token"); token != "" {
+		styleHref += "?token=" + token
+	}
+	html := strings.ReplaceAll(string(raw), `href="style.css"`, `href="`+styleHref+`"`)
 	html = injectEditorScript(html)
 	deckPageHeaders(c) // 含 Cache-Control: no-store
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))

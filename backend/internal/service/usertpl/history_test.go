@@ -26,7 +26,7 @@ func newHistService(t *testing.T, suffix string) (*Service, *store.Store, string
 		t.Fatalf("内存库: %v", err)
 	}
 	root := t.TempDir()
-	s := New(nil, st, root, "", "")
+	s := New(nil, st, root, "", "", nil)
 	id := fmt.Sprintf("ut-hist-%s-%d", suffix, len(root))
 	const uid = 9
 	if err := st.DB.Create(&store.UserTemplate{

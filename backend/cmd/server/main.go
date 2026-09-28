@@ -179,7 +179,7 @@ func run() error {
 	_ = os.MkdirAll(userTplRoot, 0o755)
 	var utplSvc usertpl.Service
 	if st != nil && templateReg != nil {
-		utplSvc = *usertpl.New(templateReg, st, userTplRoot, cfg.Vision.ChromePath, loopback)
+		utplSvc = *usertpl.New(templateReg, st, userTplRoot, cfg.Vision.ChromePath, loopback, visionGrants)
 		// base 侧修了结构契约（骨架/数量行）后，旧 fork 的 layouts.md 也要跟上。
 		// 必须在下面的重挂循环之前落盘，挂载时读到的才是新文件。骨架的公共类
 		// （grid/notes 等）由外壳 base.css 提供，覆盖判定要把它算进来。

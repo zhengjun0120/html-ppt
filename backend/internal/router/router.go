@@ -36,6 +36,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 		// （同一个 deckPageHeaders），否则"审查看到的页面"和"用户看到的页面"不是一个东西。
 		// 路径前缀改了的话，agent/vision_review.go 里拼 URL 那行必须一起改。
 		api.GET("/render/:nonce", h.RenderDeck)
+		// 用户模板发布门禁的渲染端点：nonce 即鉴权（Publish 签发、Peek 语义、
+		// TTL 2 分钟），headless 导航带不了鉴权头，草稿收口后这是唯一的桥
+		// （docs/user-template-history-plan.md §3.5）
+		api.GET("/user-template-render/:nonce/*filepath", h.RenderUserTemplateDemo)
 
 		// 公开：验证码 / 注册 / 登录
 		authg := api.Group("/auth")
@@ -100,6 +104,9 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/user-templates/:id/editor", h.GetUserTemplateEditor)
 			guarded.PUT("/user-templates/:id/file", h.SaveUserTemplateFile)
 			guarded.PUT("/user-templates/:id/style", h.SaveUserTemplateStyle)
+			// 鉴权预览与资产（工作台/编辑弹窗；草稿收口后不再依赖公开静态）
+			guarded.GET("/user-templates/:id/demo", h.GetUserTemplateDemo)
+			guarded.GET("/user-templates/:id/assets/:name", h.GetUserTemplateAsset)
 			// 历史版本（docs/user-template-history-plan.md §4）：回滚本身记 restore 版本
 			guarded.GET("/user-templates/:id/history", h.ListUserTemplateHistory)
 			guarded.POST("/user-templates/:id/history/:version/restore", h.RestoreUserTemplateVersion)
@@ -135,11 +142,14 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	if h.TemplatesAvailable() {
 		templates := r.Group("", revalidateStatic())
 		templates.Static("/templates", cfg.Templates.Dir)
-		// 用户自定义模板 demo：公开 + no-cache（定制对话会改 style.css，
-		// 缓存会让预览与发布量测拿到旧样式）。模板设计不含用户数据；发布门禁的无头渲染
-		// 走这里，导航带不了鉴权头）。目录在 main 里保证存在。
-		utStatic := r.Group("", noCacheHeader())
-		utStatic.Static("/user-templates", filepath.Join(cfg.Data.Dir, "user-templates"))
+	}
+	// 用户自定义模板：受控伺服替代原 StaticFS 公开路由（草稿收口，
+	// docs/user-template-history-plan.md §3.5）。published 免登录（社区画廊
+	// iframe 带不了鉴权头）；draft/failed/publishing 仅属主（token）；
+	// 白名单只有 index.html/style.css——template.json/layouts.md/rules.md
+	// 这些"模板源码"和 history/ 永不伺服。
+	if h.UsertplAvailable() {
+		r.GET("/user-templates/:id/*filepath", middleware.AuthOptional(cfg.Auth.JWTSecret), h.UserTemplatePublicFile)
 	}
 
 	// SSE 测试台（同源访问，无 CORS 问题）：http://localhost:8080/chat-test

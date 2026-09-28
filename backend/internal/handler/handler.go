@@ -60,6 +60,8 @@ type UserTemplateService interface {
 	GetOwned(userID uint, id string) (*store.UserTemplate, error)
 	SaveIndexHTML(userID uint, id, html string) error
 	SaveStyleCSS(userID uint, id, css string) error
+	// Peek 无归属读行（受控公开端点先看状态再决定鉴权，user-template-history-plan.md §3.5）
+	Peek(id string) (*store.UserTemplate, error)
 	// 历史版本（user-template-history-plan.md §4）：列表/回滚/删单版/清空
 	ListUTVersions(userID uint, id string) ([]usertpl.UTVersionMeta, error)
 	RestoreUTVersion(userID uint, id, version string) error
@@ -73,3 +75,6 @@ func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, aut
 
 // TemplatesAvailable 模板库是否可用（router 据此决定挂不挂预览静态路由）。
 func (h *Handler) TemplatesAvailable() bool { return h.templates != nil }
+
+// UsertplAvailable 用户模板子系统是否可用（router 据此挂受控伺服路由）。
+func (h *Handler) UsertplAvailable() bool { return h.usertpl != nil }
