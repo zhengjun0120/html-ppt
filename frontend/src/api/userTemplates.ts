@@ -1,4 +1,4 @@
-import { request } from './client'
+import { authedUrl, request } from './client'
 import type { TemplateVariant } from './templates'
 
 /**
@@ -39,6 +39,15 @@ export interface PublishReport {
   note?: string
 }
 
+/** 一条模板历史版本（后端 usertpl.UTVersionMeta；changed=与上一版相比变动的文件） */
+export interface UTVersionMeta {
+  version: string
+  time: number
+  operation: 'fork' | 'chat' | 'edit' | 'meta' | 'restore'
+  detail: string
+  changed?: string[]
+}
+
 export const userTemplateApi = {
   fork: (baseId: string, name = '') =>
     request<UserTemplateRow>(`/api/templates/${baseId}/fork`, {
@@ -53,16 +62,38 @@ export const userTemplateApi = {
       body: { name, description },
     }),
   remove: (id: string) => request<{ ok: boolean }>(`/api/user-templates/${id}`, { method: 'DELETE' }),
-  /** 编辑器全量保存 index.html（raw HTML；服务端滚动备份最近 5 版） */
+  /** 编辑器全量保存 index.html（raw HTML；服务端记 edit 版本，滚动备份已退役） */
   saveFile: (id: string, html: string) =>
-    request<{ ok: boolean; backups: number }>(`/api/user-templates/${id}/file`, {
+    request<{ ok: boolean }>(`/api/user-templates/${id}/file`, {
       method: 'PUT',
       body: html,
       raw: true,
     }),
+  /** 手动保存 style.css（raw CSS；安全预检 + 记 edit 版本；published 409） */
+  saveStyle: (id: string, css: string) =>
+    request<{ ok: boolean }>(`/api/user-templates/${id}/style`, {
+      method: 'PUT',
+      body: css,
+      raw: true,
+    }),
+  // —— 历史版本（docs/user-template-history-plan.md §4）——//
+  history: (id: string) => request<UTVersionMeta[]>(`/api/user-templates/${id}/history`),
+  restoreVersion: (id: string, version: string) =>
+    request<{ ok: boolean }>(`/api/user-templates/${id}/history/${version}/restore`, { method: 'POST' }),
+  deleteVersion: (id: string, version: string) =>
+    request<{ ok: boolean }>(`/api/user-templates/${id}/history/${version}`, { method: 'DELETE' }),
+  clearHistory: (id: string) =>
+    request<{ deleted: number }>(`/api/user-templates/${id}/history`, { method: 'DELETE' }),
   publish: (id: string) => request<PublishReport>(`/api/user-templates/${id}/publish`, { method: 'POST' }),
   unpublish: (id: string) => request<{ ok: boolean }>(`/api/user-templates/${id}/unpublish`, { method: 'POST' }),
   community: () => request<CommunityTemplate[]>('/api/community-templates'),
+}
+
+/** 读当前 style.css 全文（样式面板；raw 文本，走 request 之外的白名单资产端点） */
+export async function fetchTemplateStyle(id: string): Promise<string> {
+  const resp = await fetch(authedUrl(`/api/user-templates/${id}/assets/style.css`))
+  if (!resp.ok) throw new Error('样式读取失败')
+  return resp.text()
 }
 
 // —— 定制对话（plan-v3 B2）——//
@@ -73,7 +104,7 @@ export function customizeChat(id: string, message: string) {
   })
 }
 
-/** demo 预览地址（公开静态；定制/预览共用） */
+/** demo 预览地址：鉴权 demo 端点（草稿收口后不再走公开静态；token 由 authedUrl 带） */
 export function userTemplatePreviewUrl(id: string, page = 0) {
-  return `/user-templates/${id}/index.html${page > 0 ? `#/${page}` : ''}`
+  return authedUrl(`/api/user-templates/${id}/demo`) + (page > 0 ? `#/${page}` : '')
 }

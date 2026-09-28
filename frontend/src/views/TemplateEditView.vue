@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { PhArrowClockwise, PhGlobe, PhPaperPlaneTilt } from '@phosphor-icons/vue'
+import { PhArrowClockwise, PhClockCounterClockwise, PhGlobe, PhPaperPlaneTilt } from '@phosphor-icons/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { customizeChat, userTemplateApi, userTemplatePreviewUrl, type UserTemplateRow } from '@/api/userTemplates'
+import TemplateHistoryDrawer from '@/components/usertpl/TemplateHistoryDrawer.vue'
+import { customizeChat, fetchTemplateStyle, userTemplateApi, userTemplatePreviewUrl, type UserTemplateRow } from '@/api/userTemplates'
 import Button from '@/components/ui/Button.vue'
 import { useToast } from '@/stores/toast'
 
 /**
- * 定制工作台（plan-v3 B3）：/templates/:id/edit
- * 左 = demo 实时预览（每次对话改完 token 自动刷新）；
- * 右 = 与 agent 的定制对话（改色板/圆角/观感，token 级）；
- * 顶栏 = 名称编辑 + 发布门禁（两关自动跑，结果就地展示）。
+ * 定制工作台（plan-v3 B3 + user-template-history-plan §3.6）：
+ * 左 = demo 实时预览 + style.css 手动编辑面板；
+ * 右 = 与 agent 的定制对话（token 级 + write_style/write_demo 整文件重写）；
+ * 顶栏 = 名称编辑 + 历史 + 发布门禁（两关自动跑，结果就地展示）。
  */
 
 const route = useRoute()
@@ -28,8 +29,53 @@ const publishing = ref(false)
 const previewKey = ref(0)
 const demoPage = ref(1)
 
-const previewSrc = computed(() => (row.value ? userTemplatePreviewUrl(utId, demoPage.value) + (previewKey.value ? `?v=${previewKey.value}` : '') : ''))
+const previewSrc = computed(() => (row.value ? userTemplatePreviewUrl(utId, demoPage.value) + (previewKey.value ? `&v=${previewKey.value}` : '') : ''))
 const previewKeyedSrc = computed(() => previewKey.value + ':' + previewSrc.value)
+
+// —— 历史版本（每次用户动作一版，可回滚）——//
+const showHistory = ref(false)
+
+// —— 样式面板：style.css 手动编辑（与对话 write_style 同级，写入都过历史）——//
+const styleOpen = ref(false)
+const styleText = ref('')
+const styleLoadedText = ref('')
+const styleSaving = ref(false)
+const styleDirty = computed(() => styleText.value !== styleLoadedText.value)
+
+async function loadStyle() {
+  try {
+    styleLoadedText.value = await fetchTemplateStyle(utId)
+    styleText.value = styleLoadedText.value
+  } catch {
+    // 读不到（如 published 前的瞬态）保持现状，不打断主流程
+  }
+}
+
+async function saveStyle() {
+  if (!styleDirty.value || styleSaving.value) return
+  styleSaving.value = true
+  try {
+    await userTemplateApi.saveStyle(utId, styleText.value)
+    styleLoadedText.value = styleText.value
+    previewKey.value += 1
+    toast.success('样式已保存，并记入历史')
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '样式保存失败')
+  } finally {
+    styleSaving.value = false
+  }
+}
+
+function toggleStyle() {
+  styleOpen.value = !styleOpen.value
+  if (styleOpen.value) void loadStyle()
+}
+
+function onRestored() {
+  previewKey.value += 1
+  if (styleOpen.value) void loadStyle()
+  void load()
+}
 
 async function load() {
   try {
@@ -55,7 +101,8 @@ async function send() {
   try {
     const { reply } = await customizeChat(utId, text)
     messages.value.push({ role: 'agent', text: reply })
-    previewKey.value += 1 // token 已写入，刷新预览
+    previewKey.value += 1 // token/write_style 已写入，刷新预览
+    if (styleOpen.value) void loadStyle() // 对话可能整体重写过 style.css，面板跟着刷新
   } catch (e) {
     messages.value.push({ role: 'agent', text: e instanceof Error ? e.message : '定制失败' })
   } finally {
@@ -108,6 +155,10 @@ async function unpublish() {
         @change="rename"
       />
       <Button @click="router.push('/my-templates')">返回</Button>
+      <Button @click="showHistory = true">
+        <PhClockCounterClockwise :size="12" />
+        历史
+      </Button>
       <Button v-if="row?.visibility === 'public'" @click="unpublish">
         <PhGlobe :size="12" />
         下架
@@ -144,6 +195,14 @@ async function unpublish() {
               <button class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong" title="刷新预览" @click="previewKey += 1">
                 <PhArrowClockwise :size="11" />
               </button>
+              <button
+                class="cursor-pointer rounded border px-2 py-0.5 transition-colors"
+                :class="styleOpen ? 'border-accent text-accent' : 'border-line hover:border-line-strong'"
+                title="编辑 style.css"
+                @click="toggleStyle"
+              >
+                样式
+              </button>
             </span>
           </div>
           <div class="h-[460px] overflow-hidden bg-surface-2">
@@ -156,6 +215,27 @@ async function unpublish() {
               title="模板定制预览"
             />
           </div>
+        </div>
+        <!-- 样式面板：style.css 手动编辑（安全预检与历史同对话路径） -->
+        <div v-if="styleOpen" class="mt-3 overflow-hidden rounded-card border border-line bg-surface">
+          <div class="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] text-ink-2">
+            <span>style.css 手动编辑<span v-if="styleDirty" class="ml-2 text-[#9F2F2D]">有未保存改动</span></span>
+            <Button
+              size="sm"
+              variant="primary"
+              :loading="styleSaving"
+              :disabled="!styleDirty || row?.status === 'published'"
+              :title="row?.status === 'published' ? '已发布模板先下架再改' : undefined"
+              @click="saveStyle"
+            >
+              保存样式
+            </Button>
+          </div>
+          <textarea
+            v-model="styleText"
+            class="h-[280px] w-full resize-y border-0 bg-surface p-3 font-mono text-[12px] leading-relaxed text-ink outline-none"
+            spellcheck="false"
+          />
         </div>
         <p class="mt-2 text-[11.5px] text-ink-3">
           对话里的每次改动都会重写 token 并刷新这里的预览；发布前门禁会再整本量测一遍。
@@ -193,5 +273,13 @@ async function unpublish() {
         </div>
       </div>
     </div>
+
+    <TemplateHistoryDrawer
+      :open="showHistory"
+      :template-id="utId"
+      :published="row?.status === 'published'"
+      @close="showHistory = false"
+      @restored="onRestored"
+    />
   </div>
 </template>
