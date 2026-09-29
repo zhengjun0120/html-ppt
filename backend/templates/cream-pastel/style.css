@@ -1,0 +1,98 @@
+/* cream-pastel — 奶油温柔 · 高级感。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/cream-pastel（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 奶油白 #FBF7F2 大面积打底，豆沙粉作柔光、抹茶绿添呼吸，深棕灰正文、
+ * 暖驼只做焦糖细边与点睛：圆角大卡 + 半透明奶油底 + 细虚线分隔，
+ * 右上尤加利枝线稿与柔光色团是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在内容之下，骨架零成本）。 */
+.tpl-cream-pastel{
+  --bg:#F8F3EC;              /* letterbox 底：奶油白→米色渐变中段，翻页不跳 */
+  --bg-soft:#FBF7F2;         /* 奶油白（卡外底） */
+  --ink:#5C5248;             /* 深棕灰标题 */
+  --ink-2:#7A6F65;           /* 暖灰正文 */
+  --ink-3:#A89E94;           /* 弱化暖灰小字 */
+  --border:rgba(92,82,72,.18);
+  --border-soft:rgba(92,82,72,.10);
+  --caramel:#C9A876;         /* 暖驼：焦糖细边与点睛，不进正文 */
+  --caramel-ink:#8A6A3B;
+  --rose:#F4E9E8;            /* 豆沙粉 */
+  --rose-ink:#8A6058;
+  --matcha:#A3B18A;          /* 抹茶绿 */
+  --matcha-ink:#6B7F4A;
+  --sage:#9A9488;            /* 暖灰绿 */
+  --cream-card:rgba(255,255,255,.62);
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;
+  /* 页面切换：温柔 ease-out，像奶油缓缓铺开 */
+  --page-shift:12px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94);
+}
+
+/* ---- 字阶：无衬线中黑标题 + 细体宽行距正文，衬线只做点缀 ---- */
+.tpl-cream-pastel .h1{font-size:84px;line-height:1.14;font-weight:700;letter-spacing:.04em;color:var(--ink);margin-bottom:12px}
+.tpl-cream-pastel .h2{font-size:50px;line-height:1.2;font-weight:700;letter-spacing:.03em;color:var(--ink);margin-bottom:10px}
+.tpl-cream-pastel h4{color:var(--ink);font-weight:600;font-size:25px;letter-spacing:.03em}
+.tpl-cream-pastel .lede{font-size:23px;line-height:1.95;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-cream-pastel .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.2em}
+
+/* ---- ambient：右上尤加利枝 + 豆沙柔光（上）+ 页底抹茶雾（下） ---- */
+.tpl-cream-pastel .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 380'%3E%3Cpath d='M96,0 C112,96 76,200 108,380' stroke='%23A3B18A' stroke-width='2.5' fill='none' opacity='.5'/%3E%3Cpath d='M96,64 C70,88 58,122 62,158' stroke='%23A3B18A' stroke-width='2' fill='none' opacity='.42'/%3E%3Cpath d='M104,152 C132,174 142,208 138,242' stroke='%23A3B18A' stroke-width='2' fill='none' opacity='.42'/%3E%3Cellipse cx='60' cy='96' rx='8' ry='22' fill='%23A3B18A' opacity='.36' transform='rotate(-30 60 96)'/%3E%3Cellipse cx='88' cy='164' rx='8' ry='22' fill='%23A3B18A' opacity='.32' transform='rotate(-64 88 164)'/%3E%3Cellipse cx='140' cy='206' rx='8' ry='22' fill='%239A9488' opacity='.34' transform='rotate(28 140 206)'/%3E%3Cellipse cx='150' cy='282' rx='8' ry='22' fill='%23A3B18A' opacity='.38' transform='rotate(64 150 282)'/%3E%3Cellipse cx='80' cy='252' rx='7' ry='19' fill='%239A9488' opacity='.28' transform='rotate(-42 80 252)'/%3E%3C/svg%3E"),radial-gradient(ellipse 560px 420px at 8% 6%,rgba(244,233,232,.55),transparent 70%);
+  background-position:right 108px top 56px,0 0;
+  background-repeat:no-repeat;background-size:200px 316px,auto;
+}
+.tpl-cream-pastel .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:430px;z-index:-1;
+  background-image:radial-gradient(ellipse 780px 400px at 2% 106%,rgba(163,177,138,.20),transparent 70%),radial-gradient(ellipse 620px 330px at 96% 100%,rgba(244,233,232,.5),transparent 72%);
+}
+
+/* ---- 豆沙粉胶囊题签：页首唯一的实底色签 ---- */
+.tpl-cream-pastel .cp-kicker{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border-radius:999px;background:var(--rose);color:var(--rose-ink);font-size:16px;font-weight:700;letter-spacing:.18em;white-space:nowrap}
+
+/* ---- 衬线点缀：标题里的温润一笔 ---- */
+.tpl-cream-pastel .cp-serif{font-family:'Songti SC','STSong','SimSun',serif;font-weight:600;color:var(--rose-ink)}
+
+/* ---- 奶油卡：大圆角 + 半透明奶油底 + 焦糖细边（身份边） ---- */
+.tpl-cream-pastel .cp-card{background:var(--cream-card);border:1px solid rgba(201,168,118,.38);border-radius:24px;padding:36px 38px;display:flex;flex-direction:column;min-height:280px;box-shadow:0 16px 36px rgba(92,82,72,.08)}
+.tpl-cream-pastel .cp-card-warm{background:rgba(244,233,232,.55);border-left:4px solid var(--caramel)}
+
+/* ---- 药丸：奶油白描边胶囊，强调款焦糖 ---- */
+.tpl-cream-pastel .cp-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 20px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid var(--border);font-size:16px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-cream-pastel .cp-pill-accent{background:rgba(201,168,118,.14);border-color:rgba(201,168,118,.45);color:var(--caramel-ink)}
+
+/* ---- 目录行：抹茶圆号 + 篇名 + 说明，细虚线分隔 ---- */
+.tpl-cream-pastel .cp-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border)}
+.tpl-cream-pastel .cp-item:last-child{border-bottom:none}
+.tpl-cream-pastel .cp-n{flex:none;width:50px;height:50px;border-radius:50%;background:rgba(163,177,138,.22);color:var(--matcha-ink);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;align-self:center}
+.tpl-cream-pastel .cp-t{flex:none;width:250px;font-size:28px;font-weight:600;letter-spacing:.05em;color:var(--ink)}
+.tpl-cream-pastel .cp-d{flex:1;font-size:19px;line-height:1.8;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-cream-pastel .cp-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-cream-pastel .cp-step:last-child{border-bottom:none}
+.tpl-cream-pastel .cp-mini-t{margin:0;font-size:20px;line-height:1.7;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 色样：圆角小方块 + 色号，奶油色卡语言 ---- */
+.tpl-cream-pastel .cp-sw{flex:none;width:26px;height:26px;border-radius:8px;border:1px solid rgba(92,82,72,.08);box-shadow:0 3px 8px rgba(92,82,72,.08)}
+.tpl-cream-pastel .cp-hex{font-size:15px;letter-spacing:.12em;color:var(--ink-3);white-space:nowrap}
+
+/* ---- 奶油数字：焦糖顶边浅卡 + 豆沙色大数字 ---- */
+.tpl-cream-pastel .cp-stat{background:rgba(255,255,255,.6);border:1px solid var(--border-soft);border-top:3px solid rgba(201,168,118,.55);border-radius:20px;padding:30px 32px}
+.tpl-cream-pastel .cp-stat-v{font-size:96px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--rose-ink)}
+.tpl-cream-pastel .cp-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-cream-pastel .cp-stat-l{margin-top:16px;font-size:25px;font-weight:600;letter-spacing:.04em;color:var(--ink)}
+.tpl-cream-pastel .cp-stat-note{margin:10px 0 0;font-size:18px;line-height:1.8;color:var(--ink-2)}
+
+/* ---- 宋体引文：温润大字 ---- */
+.tpl-cream-pastel .cp-quote{font-family:'Songti SC','STSong','SimSun',serif;font-size:60px;line-height:1.7;font-weight:600;letter-spacing:.05em;color:var(--ink);max-width:24em;margin:0}
+.tpl-cream-pastel .cp-src{margin:0;font-size:19px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：抹茶圆角节点 + 虚线连接 ---- */
+.tpl-cream-pastel .cp-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-cream-pastel .cp-tl-item{flex:1;position:relative}
+.tpl-cream-pastel .cp-tl-item:not(:last-child)::before{content:"";position:absolute;top:24px;left:50px;right:-40px;height:0;border-top:2px dashed rgba(163,177,138,.45)}
+.tpl-cream-pastel .cp-tl-dot{position:relative;z-index:1;width:50px;height:50px;border-radius:14px;background:rgba(163,177,138,.24);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--matcha-ink)}
+.tpl-cream-pastel .cp-tl-t{margin-top:18px;font-size:21px;font-weight:700;color:var(--matcha-ink);letter-spacing:.03em}
+.tpl-cream-pastel .cp-tl-d{margin-top:8px;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 行动钮：深棕胶囊，全模板唯一的深色实底 ---- */
+.tpl-cream-pastel .cp-btn{display:inline-flex;align-items:center;gap:12px;padding:16px 42px;border-radius:999px;background:var(--ink);color:var(--bg-soft);font-size:21px;font-weight:600;letter-spacing:.16em;box-shadow:0 12px 28px rgba(92,82,72,.22);white-space:nowrap}

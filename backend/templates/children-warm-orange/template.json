@@ -1,0 +1,81 @@
+{
+  "id": "children-warm-orange",
+  "name": "童趣橙暖",
+  "description": "暖橙奶油底上的绘本童趣：简笔太阳云朵与草绿缓坡每页自动衬底，圆滚滚大圆角卡配暖沙柔影，圆润粗体标题带一点涂鸦气——亲子与儿童场景里依然排得清爽干净",
+  "tags": ["童趣", "橙暖", "亲子", "圆润"],
+  "scenario": ["少儿课程招生", "亲子活动邀请", "儿童节活动策划", "绘本玩具品牌宣传", "家庭亲子营销"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "暖阳", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "暖阳封面",
+      "use": "开场：题签 + 圆润大标题 + 橙色波浪线 + 一句定位，太阳云朵草地自动衬底，可配暖黄贴纸",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 26-52 字；题签 ≤14 字；贴纸 ≤12 字"
+    },
+    {
+      "id": "contents",
+      "name": "糖果目录",
+      "use": "议程：大圆角卡内 4 行篇目（糖果圆号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：大圆角卡 + 橙描边题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤10 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边大圆角卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "橙子数字",
+      "use": "三个关键数据：橙色大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "便签引言",
+      "use": "整页一句引文：圆润大字 + 出处 + 两个支撑描边药丸，像贴在墙上的一张便签",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤10 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：糖果圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾行动",
+      "use": "收尾：圆润大字 + 一句行动提醒 + 橙色圆钮 + 贴纸药丸，像海报的报名角",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤12 字"
+    }
+  ],
+  "fonts": ["Yuanti SC", "YouYuan", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/children-warm-orange",
+    "license": "Apache-2.0"
+  }
+}

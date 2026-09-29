@@ -1,0 +1,98 @@
+/* rainbow-gradient — 彩虹渐变。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/rainbow-gradient（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 白底之上七彩流动：整幅柔彩渐变 wash + 顶部丝带与页底彩虹浪是每页自动
+ * 衬底的 ambient 层（z-index:-1，骨架零成本）。对比度纪律：正文一律海军蓝/
+ * 钢灰墨色（对柔彩底 ≥4.5:1），文字区优先落在白色卡上；大数字用玫红→紫
+ * 双色渐变字（两端对白底都 ≥4.5:1），七彩只做条、环、点等装饰，不上正文。 */
+.tpl-rainbow-gradient{
+  --bg:#F5F2E7;               /* letterbox 中段暖白（翻页不跳） */
+  --milk:rgba(255,255,255,.92);
+  --ink:#1E3A5F;              /* 海军蓝标题 */
+  --ink-2:#374151;            /* 钢灰正文 */
+  --ink-3:#5F6B7A;            /* 灰蓝小字 */
+  --border:rgba(30,58,95,.15);
+  --border-soft:rgba(30,58,95,.09);
+  --rose:#E11D48;             /* 彩虹起点 · 玫红 */
+  --violet:#7C3AED;           /* 彩虹终点 · 紫 */
+  --rainbow:linear-gradient(90deg,#F43F5E 0%,#F97316 14%,#EAB308 28%,#22C55E 42%,#06B6D4 57%,#3B82F6 71%,#8B5CF6 85%,#D946EF 100%);
+  --accent:#E11D48;
+  --accent-ink:#FFFFFF;
+  font-family:'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：友好无衬线，标题温暖但不厚重 ---- */
+.tpl-rainbow-gradient .h1{font-size:84px;line-height:1.12;font-weight:900;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-rainbow-gradient .h2{font-size:52px;line-height:1.18;font-weight:800;letter-spacing:.02em;color:var(--ink);margin-bottom:8px}
+.tpl-rainbow-gradient h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.03em}
+.tpl-rainbow-gradient .lede{font-size:24px;line-height:1.8;color:var(--ink-2);font-weight:400;letter-spacing:.01em}
+.tpl-rainbow-gradient .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：整幅柔彩 wash + 顶部七彩丝带（整幅）+ 页底彩虹浪，z-index:-1 ---- */
+.tpl-rainbow-gradient .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='w' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='1920' y2='420'%3E%3Cstop offset='0' stop-color='%23FECACA'/%3E%3Cstop offset='0.17' stop-color='%23FEF3C7'/%3E%3Cstop offset='0.33' stop-color='%23FEF9C3'/%3E%3Cstop offset='0.5' stop-color='%23DCFCE7'/%3E%3Cstop offset='0.67' stop-color='%23DBEAFE'/%3E%3Cstop offset='0.83' stop-color='%23E0E7FF'/%3E%3Cstop offset='1' stop-color='%23FAE8FF'/%3E%3C/linearGradient%3E%3ClinearGradient id='v' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='1920' y2='0'%3E%3Cstop offset='0' stop-color='%23F43F5E'/%3E%3Cstop offset='0.14' stop-color='%23F97316'/%3E%3Cstop offset='0.28' stop-color='%23EAB308'/%3E%3Cstop offset='0.42' stop-color='%2322C55E'/%3E%3Cstop offset='0.57' stop-color='%2306B6D4'/%3E%3Cstop offset='0.71' stop-color='%233B82F6'/%3E%3Cstop offset='0.85' stop-color='%238B5CF6'/%3E%3Cstop offset='1' stop-color='%23D946EF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='%23FFFFFF'/%3E%3Crect width='1920' height='1080' fill='url(%23w)' opacity='0.5'/%3E%3Cpath d='M-20,120 C320,60 640,170 960,115 C1280,60 1600,165 1940,100' stroke='url(%23v)' stroke-width='12' fill='none' opacity='0.9'/%3E%3Cpath d='M-20,192 C360,150 700,226 1040,180 C1380,140 1660,205 1940,160' stroke='url(%23v)' stroke-width='5' fill='none' opacity='0.45'/%3E%3C/svg%3E") no-repeat center center;
+  background-size:100% 100%;
+}
+.tpl-rainbow-gradient .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:170px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 170' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='v2' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='1920' y2='0'%3E%3Cstop offset='0' stop-color='%23F43F5E'/%3E%3Cstop offset='0.14' stop-color='%23F97316'/%3E%3Cstop offset='0.28' stop-color='%23EAB308'/%3E%3Cstop offset='0.42' stop-color='%2322C55E'/%3E%3Cstop offset='0.57' stop-color='%2306B6D4'/%3E%3Cstop offset='0.71' stop-color='%233B82F6'/%3E%3Cstop offset='0.85' stop-color='%238B5CF6'/%3E%3Cstop offset='1' stop-color='%23D946EF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,170 L0,80 C320,30 640,130 960,85 C1280,40 1600,120 1920,70 L1920,170 Z' fill='url(%23v2)' opacity='0.85'/%3E%3Cpath d='M0,170 L0,122 C320,82 700,152 1040,112 C1380,77 1650,137 1920,102 L1920,170 Z' fill='%23FFFFFF' opacity='0.85'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签胶囊：白药丸 + 一小段彩虹丝带（页首） ---- */
+.tpl-rainbow-gradient .rg-kicker{display:inline-flex;align-items:center;gap:14px;align-self:flex-start;background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.8);border-radius:999px;padding:10px 26px;box-shadow:0 8px 24px rgba(30,58,95,.12);font-size:16px;font-weight:700;letter-spacing:.24em;color:var(--ink-2)}
+.tpl-rainbow-gradient .rg-kicker::before{content:"";width:36px;height:10px;border-radius:999px;background:var(--rainbow)}
+
+/* ---- 彩虹条：标题下的七彩一笔，也可做留白处装饰 ---- */
+.tpl-rainbow-gradient .rg-stripe{display:block;width:250px;height:8px;border-radius:999px;background:var(--rainbow)}
+
+/* ---- 彩色圆点芯片：三颗一排，呼应光谱 ---- */
+.tpl-rainbow-gradient .rg-chip{flex:none;width:26px;height:26px;border-radius:50%;background:var(--c,var(--rose));border:2px solid rgba(30,58,95,.15);box-shadow:0 4px 12px rgba(30,58,95,.15)}
+
+/* ---- 白卡：浮在柔彩之上的主体，圆角柔和 ---- */
+.tpl-rainbow-gradient .rg-card{background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.75);border-radius:22px;padding:36px 40px;box-shadow:0 14px 36px rgba(30,58,95,.12);display:flex;flex-direction:column;min-height:280px}
+.tpl-rainbow-gradient .rg-band{background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.75);border-radius:24px;padding:30px 52px;box-shadow:0 14px 36px rgba(30,58,95,.12)}
+
+/* ---- 胶囊：白底细描边，玫红只做强调 ---- */
+.tpl-rainbow-gradient .rg-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.9);font-size:17px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-rainbow-gradient .rg-pill-accent{border-color:rgba(225,29,72,.4);background:rgba(225,29,72,.07);color:var(--rose)}
+
+/* ---- 目录行：彩虹环编号 + 篇名 + 说明 ---- */
+.tpl-rainbow-gradient .rg-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-rainbow-gradient .rg-item:last-child{border-bottom:none}
+.tpl-rainbow-gradient .rg-n{flex:none;width:52px;height:52px;border-radius:50%;border:2.5px solid transparent;background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,var(--rainbow) border-box;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-rainbow-gradient .rg-t{flex:none;width:250px;font-size:28px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-rainbow-gradient .rg-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 庆祝数字：玫红→紫渐变大字（两端对白底 ≥4.5:1） ---- */
+.tpl-rainbow-gradient .rg-stat{position:relative;border-top:2px solid var(--border-soft);padding-top:30px}
+.tpl-rainbow-gradient .rg-stat::before{content:"";position:absolute;top:-4px;left:0;width:120px;height:6px;border-radius:999px;background:var(--rainbow)}
+.tpl-rainbow-gradient .rg-stat-v{font-size:100px;line-height:1;font-weight:900;letter-spacing:-.01em;background:linear-gradient(120deg,#E11D48 15%,#7C3AED 90%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.tpl-rainbow-gradient .rg-stat-u{font-size:26px;font-weight:600;color:var(--ink-3);margin-left:8px}
+.tpl-rainbow-gradient .rg-stat-l{margin-top:18px;font-size:26px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-rainbow-gradient .rg-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 欢呼引言 ---- */
+.tpl-rainbow-gradient .rg-quote{font-size:56px;line-height:1.6;font-weight:800;letter-spacing:.03em;color:var(--ink);max-width:24em;margin:0}
+.tpl-rainbow-gradient .rg-src{margin:0;font-size:20px;letter-spacing:.1em;color:var(--ink-3)}
+
+/* ---- 赛程时间线：彩虹环圆点 + 渐变连接线 ---- */
+.tpl-rainbow-gradient .rg-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-rainbow-gradient .rg-tl-item{flex:1;position:relative}
+.tpl-rainbow-gradient .rg-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:52px;right:-44px;height:3px;border-radius:999px;background:linear-gradient(90deg,#F43F5E,#F97316,#EAB308,#22C55E,#06B6D4,#3B82F6,#8B5CF6);opacity:.75}
+.tpl-rainbow-gradient .rg-tl-dot{position:relative;z-index:1;width:52px;height:52px;border-radius:50%;border:2.5px solid transparent;background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,var(--rainbow) border-box;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-rainbow-gradient .rg-tl-t{margin-top:18px;font-size:21px;font-weight:800;color:var(--rose);letter-spacing:.04em}
+.tpl-rainbow-gradient .rg-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-rainbow-gradient .rg-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-rainbow-gradient .rg-step:last-child{border-bottom:none}
+.tpl-rainbow-gradient .rg-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.01em}
+
+/* ---- 行动钮：海军蓝底白字 + 顶部彩虹条，收尾页 ---- */
+.tpl-rainbow-gradient .rg-btn{position:relative;display:inline-flex;align-items:center;gap:12px;padding:15px 44px;border-radius:999px;background:var(--ink);color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:.14em;box-shadow:0 12px 30px rgba(30,58,95,.3)}
+.tpl-rainbow-gradient .rg-btn::before{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:64px;height:5px;border-radius:999px;background:var(--rainbow)}
+
+/* ---- 页面切换（翻页动画）：像彩带甩一下 ---- */
+.tpl-rainbow-gradient{--page-shift:22px;--page-dur:.5s;--page-ease:cubic-bezier(.34,1.35,.44,1)}

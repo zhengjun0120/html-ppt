@@ -1,0 +1,97 @@
+/* dreamy-pink-gradient — 渐变美学·樱粉雾蓝。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/dreamy-pink-gradient（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 淡樱粉 × 雾紫蓝 × 深靛蓝：柔光大渐变是唯一的背景主角；卡用磨砂半透明白 +
+ * 白描边 + 淡紫软阴影（不用 backdrop-filter，截图管线友好）；渐变填充只给
+ * 大标题、大数字、编号球与按钮（正文一律深靛实色，保住对比度）。
+ * 星子与柔光是每页自动衬底的 ambient 层（z-index:-1），骨架零成本。 */
+.tpl-dreamy-pink-gradient{
+  --bg:#F8F3FA;              /* 樱粉→淡紫过渡中值（letterbox 翻页不跳） */
+  --bg-soft:#FFF5F9;         /* 粉白 */
+  --ink:#2E4B8F;             /* 深靛正文 */
+  --ink-deep:#1E2D5C;        /* 夜蓝标题 */
+  --ink-2:#5A669C;           /* 雾靛次级文字 */
+  --ink-3:#7A82B0;           /* 淡靛小字 */
+  --border:rgba(46,75,143,.18);
+  --border-soft:rgba(46,75,143,.10);
+  --pink:#FFCDE1;            /* 淡樱粉 */
+  --pink-2:#FFB3D1;          /* 粉霞 */
+  --lav:#A8B8FF;             /* 薰衣草 */
+  --peri:#7C96FF;            /* 雾紫蓝 */
+  --rose:#FF6B9D;            /* 玫粉（大面积/装饰用） */
+  --rose-ink:#C22460;        /* 玫粉收暗：小字可读 */
+  --grad:linear-gradient(120deg,#FF6B9D 0%,#A8B8FF 52%,#2E4B8F 100%);
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：渐变大标题是身份，正文深靛宽行距 ---- */
+.tpl-dreamy-pink-gradient .h1{font-size:88px;line-height:1.14;font-weight:800;letter-spacing:.06em;color:transparent;margin-bottom:12px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.tpl-dreamy-pink-gradient .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.05em;color:var(--ink-deep);margin-bottom:10px}
+.tpl-dreamy-pink-gradient h4{font-family:inherit;color:var(--ink-deep);font-weight:700;font-size:25px;letter-spacing:.03em}
+.tpl-dreamy-pink-gradient .lede{font-size:23px;line-height:1.9;color:var(--ink);font-weight:400;letter-spacing:.02em}
+.tpl-dreamy-pink-gradient .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：晨昏柔光（整页）+ 星子带（页底），z-index:-1 画在内容之下 ---- */
+.tpl-dreamy-pink-gradient .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(ellipse at 14% 10%, rgba(255,205,225,.55) 0%, transparent 55%),
+    radial-gradient(ellipse at 88% 86%, rgba(124,150,255,.32) 0%, transparent 55%),
+    radial-gradient(circle at 92% 12%, rgba(255,179,209,.35) 0%, transparent 30%);
+}
+.tpl-dreamy-pink-gradient .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:280px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 280'%3E%3Cpath d='M240,66 L244,76 L254,80 L244,84 L240,94 L236,84 L226,80 L236,76 Z' fill='%23FF6B9D' opacity='0.75'/%3E%3Cpath d='M560,180 L563,187 L570,190 L563,193 L560,200 L557,193 L550,190 L557,187 Z' fill='%23A8B8FF' opacity='0.7'/%3E%3Cpath d='M900,48 L904,56 L912,60 L904,64 L900,72 L896,64 L888,60 L896,56 Z' fill='%237C96FF' opacity='0.65'/%3E%3Cpath d='M1240,134 L1245,145 L1256,150 L1245,155 L1240,166 L1235,155 L1224,150 L1235,145 Z' fill='%23FF6B9D' opacity='0.6'/%3E%3Cpath d='M1560,70 L1563,77 L1570,80 L1563,83 L1560,90 L1557,83 L1550,80 L1557,77 Z' fill='%23A8B8FF' opacity='0.7'/%3E%3Cpath d='M1760,197 L1764,206 L1773,210 L1764,214 L1760,223 L1756,214 L1747,210 L1756,206 Z' fill='%23FFB3D1' opacity='0.8'/%3E%3Ccircle cx='420' cy='215' r='5' fill='%23FFCDE1'/%3E%3Ccircle cx='760' cy='140' r='4' fill='%23A8B8FF' opacity='0.7'/%3E%3Ccircle cx='1080' cy='230' r='6' fill='%23FF6B9D' opacity='0.45'/%3E%3Ccircle cx='1420' cy='90' r='4' fill='%237C96FF' opacity='0.6'/%3E%3Ccircle cx='1680' cy='160' r='5' fill='%23FFB3D1'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 渐变题签：短线引导的小字标签（页首） ---- */
+.tpl-dreamy-pink-gradient .dp-kicker{display:inline-flex;align-items:center;gap:14px;font-size:16px;font-weight:600;letter-spacing:.32em;color:var(--ink-deep);white-space:nowrap}
+.tpl-dreamy-pink-gradient .dp-kicker::before{content:"";width:36px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--rose),var(--peri))}
+
+/* ---- 月亮印：柔光圆月，全模板唯一的“发光体”身份元素 ---- */
+.tpl-dreamy-pink-gradient .dp-moon{flex:none;width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFFFFF 0%,var(--pink) 58%,var(--pink-2) 100%);box-shadow:0 0 44px rgba(255,179,209,.65)}
+
+/* ---- 磨砂云卡：半透明白 + 白描边 + 淡紫软阴影，无 backdrop-filter ---- */
+.tpl-dreamy-pink-gradient .dp-card{position:relative;background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.9);border-radius:28px;padding:38px 42px;box-shadow:0 18px 44px rgba(124,150,255,.16);display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：磨砂胶囊，玫粉描边为强调 ---- */
+.tpl-dreamy-pink-gradient .dp-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.55);font-size:17px;letter-spacing:.1em;color:var(--ink);white-space:nowrap}
+.tpl-dreamy-pink-gradient .dp-pill-accent{border:1.5px solid var(--rose);background:rgba(255,107,157,.10);color:var(--rose-ink)}
+
+/* ---- 目录行：渐变编号球 + 篇名 + 说明 ---- */
+.tpl-dreamy-pink-gradient .dp-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-dreamy-pink-gradient .dp-item:last-child{border-bottom:none}
+.tpl-dreamy-pink-gradient .dp-n{flex:none;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--lav));box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--ink-deep);align-self:center}
+.tpl-dreamy-pink-gradient .dp-t{flex:none;width:250px;font-size:28px;font-weight:700;letter-spacing:.06em;color:var(--ink-deep)}
+.tpl-dreamy-pink-gradient .dp-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 渐变数字：数据页主视觉（单位在渐变字内，须单独还原实色） ---- */
+.tpl-dreamy-pink-gradient .dp-stat{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);border-radius:28px;padding:34px 34px 30px;box-shadow:0 18px 44px rgba(124,150,255,.14)}
+.tpl-dreamy-pink-gradient .dp-stat-v{font-size:100px;line-height:1;font-weight:800;letter-spacing:-.01em;color:transparent;background:linear-gradient(120deg,#F0568F,#7C96FF);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.tpl-dreamy-pink-gradient .dp-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px;-webkit-text-fill-color:var(--ink-3);background:none;-webkit-background-clip:border-box;background-clip:border-box}
+.tpl-dreamy-pink-gradient .dp-stat-l{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.04em;color:var(--ink-deep)}
+.tpl-dreamy-pink-gradient .dp-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 时间线：渐变圆点 + 粉蓝渐隐连接线 ---- */
+.tpl-dreamy-pink-gradient .dp-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-dreamy-pink-gradient .dp-tl-item{flex:1;position:relative}
+.tpl-dreamy-pink-gradient .dp-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:2px;background:linear-gradient(90deg,var(--lav),var(--pink))}
+.tpl-dreamy-pink-gradient .dp-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--lav));box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink-deep)}
+.tpl-dreamy-pink-gradient .dp-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--rose-ink);letter-spacing:.04em}
+.tpl-dreamy-pink-gradient .dp-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-dreamy-pink-gradient .dp-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-dreamy-pink-gradient .dp-step:last-child{border-bottom:none}
+.tpl-dreamy-pink-gradient .dp-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：玫粉→雾蓝渐变胶囊（收尾页） ---- */
+.tpl-dreamy-pink-gradient .dp-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;border-radius:999px;background:linear-gradient(120deg,#F0568F,#6B82F2);font-size:22px;font-weight:700;letter-spacing:.14em;color:#FFFFFF;box-shadow:0 14px 30px rgba(240,86,143,.32)}
+
+/* ---- 星语引文：衬线大字 ---- */
+.tpl-dreamy-pink-gradient .dp-quote{font-family:Georgia,'Songti SC','STSong','Noto Serif SC',serif;font-size:60px;line-height:1.6;font-weight:700;letter-spacing:.04em;color:var(--ink-deep);max-width:26em;margin:0}
+.tpl-dreamy-pink-gradient .dp-src{margin:0;font-size:19px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 页面切换（翻页动画）：如云层缓缓推移 ---- */
+.tpl-dreamy-pink-gradient{--page-shift:16px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

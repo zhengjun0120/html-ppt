@@ -1,0 +1,101 @@
+/* dreamy-romance — 梦幻浪漫·治愈系。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/dreamy-romance（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 雾紫 × 樱花粉 × 星空蓝 × 奶油白：低饱和高明度，磨砂柔雾 + 微光质感；
+ * 卡用大圆角半透明白 + 柔光阴影（不用 backdrop-filter，截图管线友好）；
+ * 香槟金只做星光点缀，樱粉只做关键数据与题签。花瓣星光与月亮是每页
+ * 自动衬底的 ambient 层（z-index:-1），骨架零成本。 */
+.tpl-dreamy-romance{
+  --bg:#F1E9F4;              /* 雾紫底（letterbox 翻页不跳） */
+  --bg-soft:#FBF5F0;         /* 奶油白（卡底） */
+  --ink:#6B5A8A;             /* 深紫灰正文 */
+  --ink-deep:#584778;        /* 标题紫 */
+  --ink-2:#746599;           /* 雾紫灰次级文字 */
+  --ink-3:#9387B5;           /* 淡紫小字 */
+  --border:rgba(107,90,138,.20);
+  --border-soft:rgba(107,90,138,.12);
+  --lav:#D8C5E8;             /* 雾紫 */
+  --sakura:#F4C8D8;          /* 樱花粉 */
+  --sky:#B8C8E8;             /* 星空蓝 */
+  --cream:#FBF5F0;           /* 奶油白 */
+  --gold:#E8C896;            /* 香槟金（星光/描环用） */
+  --rose:#C0709A;            /* 樱粉深一档：大号数字可读 */
+  --rose-ink:#A85578;        /* 樱粉再收一档：小字可读 */
+  font-family:'Songti SC','STSong','Noto Serif SC',Georgia,serif;
+}
+
+/* ---- 字阶：宋体抒情大字 + 细无衬线正文，宽行距是呼吸感的另一半 ---- */
+.tpl-dreamy-romance .h1{font-size:84px;line-height:1.16;font-weight:700;letter-spacing:.08em;color:var(--ink-deep);margin-bottom:12px;text-shadow:0 4px 24px rgba(216,197,232,.6)}
+.tpl-dreamy-romance .h2{font-size:52px;line-height:1.22;font-weight:700;letter-spacing:.07em;color:var(--ink-deep);margin-bottom:10px}
+.tpl-dreamy-romance h4{font-family:inherit;color:var(--ink-deep);font-weight:700;font-size:26px;letter-spacing:.05em}
+.tpl-dreamy-romance .lede{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:23px;line-height:1.9;color:var(--ink);font-weight:300;letter-spacing:.03em}
+.tpl-dreamy-romance .deck-footer{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：三团柔光（整页）+ 月亮，花瓣星尘（页底），z-index:-1 ---- */
+.tpl-dreamy-romance .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(ellipse at 16% 12%, rgba(216,197,232,.60) 0%, transparent 55%),
+    radial-gradient(ellipse at 84% 16%, rgba(184,200,232,.45) 0%, transparent 52%),
+    radial-gradient(ellipse at 55% 100%, rgba(244,200,216,.50) 0%, transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cpath d='M50,4 A36,36 0 1,0 50,76 A28,28 0 1,1 50,4 Z' fill='%23F0DCC0' opacity='0.75'/%3E%3C/svg%3E") no-repeat right 150px top 90px / 110px 110px;
+}
+.tpl-dreamy-romance .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:280px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 280'%3E%3Cpath d='M300,96 C282,114 258,132 240,132 C222,132 198,114 180,96 C198,78 222,60 240,60 C258,60 282,78 300,96 Z' fill='%23E7A5BF' opacity='0.55'/%3E%3Cpath d='M760,204 C748,216 732,228 720,228 C708,228 692,216 680,204 C692,192 708,180 720,180 C732,180 748,192 760,204 Z' fill='%23F4C8D8' opacity='0.8'/%3E%3Cpath d='M1340,90 C1327,103 1309,116 1298,116 C1287,116 1269,103 1256,90 C1269,77 1287,64 1298,64 C1309,64 1327,77 1340,90 Z' fill='%23E7A5BF' opacity='0.45'/%3E%3Cpath d='M1700,196 C1691,205 1679,214 1671,214 C1663,214 1651,205 1642,196 C1651,187 1663,178 1671,178 C1679,178 1691,187 1700,196 Z' fill='%23D898B0' opacity='0.5'/%3E%3Cpath d='M520,50 L523,57 L530,60 L523,63 L520,70 L517,63 L510,60 L517,57 Z' fill='%23E8C896' opacity='0.85'/%3E%3Cpath d='M1100,140 L1105,151 L1116,154 L1105,157 L1100,168 L1095,157 L1084,154 L1095,151 Z' fill='%23E8C896' opacity='0.7'/%3E%3Cpath d='M1620,60 L1623,67 L1630,70 L1623,73 L1620,80 L1617,73 L1610,70 L1617,67 Z' fill='%23E8C896' opacity='0.8'/%3E%3Ccircle cx='930' cy='230' r='5' fill='%23FFFFFF' opacity='0.7'/%3E%3Ccircle cx='1500' cy='240' r='4' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='420' cy='180' r='4' fill='%23B8C8E8' opacity='0.8'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 柔雾题签：奶油胶囊 + 金色星点（页首） ---- */
+.tpl-dreamy-romance .dm-kicker{display:inline-flex;align-items:center;align-self:flex-start;gap:12px;padding:9px 24px;border-radius:999px;background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 24px rgba(216,197,232,.4);font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;font-weight:600;letter-spacing:.28em;color:var(--ink-deep);white-space:nowrap}
+.tpl-dreamy-romance .dm-kicker::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--gold)}
+
+/* ---- 爱心印记：纯 CSS 心形，治愈系身份元素 ---- */
+.tpl-dreamy-romance .dm-heart{position:relative;flex:none;width:30px;height:27px;align-self:center}
+.tpl-dreamy-romance .dm-heart::before,.tpl-dreamy-romance .dm-heart::after{content:"";position:absolute;top:0;width:15px;height:24px;border-radius:15px 15px 0 0;background:#E7A5BF}
+.tpl-dreamy-romance .dm-heart::before{left:15px;transform:rotate(-45deg);transform-origin:0 100%}
+.tpl-dreamy-romance .dm-heart::after{left:0;transform:rotate(45deg);transform-origin:100% 100%}
+
+/* ---- 云朵卡：大圆角半透明白 + 柔光阴影，无 backdrop-filter ---- */
+.tpl-dreamy-romance .dm-card{position:relative;background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.85);border-radius:32px;padding:38px 42px;box-shadow:0 18px 44px rgba(216,197,232,.35);display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：奶油胶囊，樱粉底为强调 ---- */
+.tpl-dreamy-romance .dm-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border-radius:999px;background:rgba(255,255,255,.6);border:1px solid var(--border-soft);font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.1em;color:var(--ink);white-space:nowrap}
+.tpl-dreamy-romance .dm-pill-accent{background:var(--sakura);border:1px solid rgba(168,85,120,.25);color:var(--ink-deep)}
+
+/* ---- 目录行：金环编号 + 篇名 + 说明 ---- */
+.tpl-dreamy-romance .dm-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-dreamy-romance .dm-item:last-child{border-bottom:none}
+.tpl-dreamy-romance .dm-n{flex:none;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.8);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:19px;font-weight:700;color:var(--ink-deep);align-self:center}
+.tpl-dreamy-romance .dm-t{flex:none;width:250px;font-size:28px;font-weight:700;letter-spacing:.06em;color:var(--ink-deep)}
+.tpl-dreamy-romance .dm-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 柔光数字：数据页主视觉 ---- */
+.tpl-dreamy-romance .dm-stat{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);border-radius:32px;padding:34px;box-shadow:0 18px 44px rgba(216,197,232,.32)}
+.tpl-dreamy-romance .dm-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:96px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--rose)}
+.tpl-dreamy-romance .dm-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-dreamy-romance .dm-stat-l{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.04em;color:var(--ink-deep)}
+.tpl-dreamy-romance .dm-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 时间线：金环圆点 + 紫粉渐隐连接线 ---- */
+.tpl-dreamy-romance .dm-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-dreamy-romance .dm-tl-item{flex:1;position:relative}
+.tpl-dreamy-romance .dm-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:2px;background:linear-gradient(90deg,var(--lav),var(--sakura))}
+.tpl-dreamy-romance .dm-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:rgba(255,255,255,.85);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--ink-deep)}
+.tpl-dreamy-romance .dm-tl-t{margin-top:20px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--rose-ink);letter-spacing:.04em}
+.tpl-dreamy-romance .dm-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-dreamy-romance .dm-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-dreamy-romance .dm-step:last-child{border-bottom:none}
+.tpl-dreamy-romance .dm-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：香槟金→樱粉渐变胶囊，紫字（收尾页） ---- */
+.tpl-dreamy-romance .dm-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;border-radius:999px;background:linear-gradient(120deg,#E8C896,#E3AFC2);font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:22px;font-weight:700;letter-spacing:.14em;color:#4A3E68;box-shadow:0 14px 30px rgba(232,200,150,.4)}
+
+/* ---- 抒情引文：宋体大字 ---- */
+.tpl-dreamy-romance .dm-quote{font-size:58px;line-height:1.7;font-weight:700;letter-spacing:.06em;color:var(--ink-deep);max-width:24em;margin:0}
+.tpl-dreamy-romance .dm-src{margin:0;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:19px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 页面切换（翻页动画）：像雾慢慢散开 ---- */
+.tpl-dreamy-romance{--page-shift:18px;--page-dur:.62s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

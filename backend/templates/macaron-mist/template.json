@@ -1,0 +1,81 @@
+{
+  "id": "macaron-mist",
+  "name": "柔雾甜梦",
+  "description": "奶油白上铺开的三团柔雾：薄荷、珊瑚、薰衣草的光晕像撒了糖粉，半透奶白大圆角卡配紫灰柔影，圆润按钮与马卡龙线稿点缀——梦幻又精致的甜品气质，甜而不腻",
+  "tags": ["甜点", "柔雾", "粉彩", "梦幻"],
+  "scenario": ["甜品品牌发布", "烘焙教学分享", "下午茶营销", "婚庆甜点企划", "节日礼盒推广"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "柔雾", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "柔雾封面",
+      "use": "开场：题签 + 圆润大标题 + 三色雾线 + 一句定位，柔雾光晕自动衬底，可配胶囊副题",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 26-52 字；题签 ≤14 字；胶囊 ≤14 字"
+    },
+    {
+      "id": "contents",
+      "name": "甜序目录",
+      "use": "议程：大圆角卡内 4 行篇目（薰衣草圆号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三味卡",
+      "use": "三个并列要点：半透卡 + 彩色题签 + 小标题 + 两句说明，三卡各配一色",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边半透卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "薄荷数字",
+      "use": "三个关键数据：薄荷深色大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "手记引文",
+      "use": "整页一句引文：深紫大字 + 出处 + 两个支撑药丸，像甜品手记里的一页",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤10 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 深紫大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "发售时间线",
+      "use": "3-4 个节点的横向时间线：薰衣草圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾邀约",
+      "use": "收尾：深紫大字 + 一句行动提醒 + 薄荷胶囊钮 + 描边药丸，像柜台边的一张预约卡",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤14 字"
+    }
+  ],
+  "fonts": ["Yuanti SC", "Hiragino Maru Gothic", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/macaron-mist",
+    "license": "Apache-2.0"
+  }
+}

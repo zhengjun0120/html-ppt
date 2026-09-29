@@ -1,0 +1,105 @@
+/* splash-abstract — 泼彩抽象·多巴胺。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/splash-abstract（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 橙红 × 品红 × 紫罗兰 × 青绿 × 亮蓝五色泼洒在暖白画布上，明黄星芒做爆点：
+ * 泼彩色块全部收进 ambient 层（z-index:-1，边缘留白、不抢正文），
+ * 正文与卡片文字一律深墨实色守对比度；白字只出现在五色大圆点与深墨按钮上
+ * （特大号）。粗黑描边 + 硬阴影是卡与钮的统一画法，一页只留一个爆点。 */
+.tpl-splash-abstract{
+  --bg:#FDF4EA;              /* 暖白画布（letterbox 翻页不跳） */
+  --bg-soft:#FFF8F0;
+  --ink:#1A1A2E;             /* 深墨正文 */
+  --ink-deep:#2D1B69;        /* 暗紫标题 */
+  --ink-2:#4A4A66;           /* 墨灰次级文字 */
+  --ink-3:#77748F;           /* 淡墨小字 */
+  --border:rgba(26,26,46,.9);
+  --border-soft:rgba(26,26,46,.18);
+  --orange:#FF4500;          /* 橙红 */
+  --magenta:#FF1493;         /* 热品红 */
+  --violet:#9370DB;          /* 紫罗兰 */
+  --teal:#20B2AA;            /* 青绿 */
+  --blue:#1E90FF;            /* 亮蓝 */
+  --yellow:#FFD700;          /* 明黄（爆点/题签/硬阴影） */
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;
+}
+
+/* ---- 字阶：特粗标题 + 无衬线正文，泼彩只许在字色点睛处出现 ---- */
+.tpl-splash-abstract .h1{font-size:88px;line-height:1.08;font-weight:900;letter-spacing:.01em;color:var(--ink);margin-bottom:14px}
+.tpl-splash-abstract .h2{font-size:52px;line-height:1.16;font-weight:900;letter-spacing:.01em;color:var(--ink-deep);margin-bottom:10px}
+.tpl-splash-abstract h4{font-family:inherit;color:var(--ink);font-weight:800;font-size:24px;letter-spacing:.02em}
+.tpl-splash-abstract .lede{font-size:23px;line-height:1.75;color:var(--ink-2);font-weight:400;letter-spacing:.01em}
+.tpl-splash-abstract .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：左上橙红泼点 + 右上品红泼点（整页），页底紫绿泼块与星芒 ---- */
+.tpl-splash-abstract .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(circle at 3% 2%, rgba(255,69,0,.55) 0%, rgba(255,69,0,.55) 120px, rgba(255,69,0,.26) 170px, transparent 235px),
+    radial-gradient(circle at 99% 5%, rgba(255,20,147,.42) 0%, rgba(255,20,147,.42) 100px, rgba(255,20,147,.20) 150px, transparent 210px);
+}
+.tpl-splash-abstract .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:300px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 300'%3E%3Cpath d='M150,300 C70,280 20,210 50,150 C80,95 170,80 230,115 C290,150 300,240 250,280 C220,300 190,308 150,300 Z' fill='%239370DB' opacity='0.38'/%3E%3Ccircle cx='300' cy='250' r='10' fill='%239370DB' opacity='0.3'/%3E%3Ccircle cx='330' cy='180' r='6' fill='%239370DB' opacity='0.3'/%3E%3Ccircle cx='1700' cy='260' r='85' fill='%2320B2AA' opacity='0.35'/%3E%3Ccircle cx='1580' cy='180' r='8' fill='%2320B2AA' opacity='0.4'/%3E%3Cpath d='M1350,20 L1362,62 L1404,50 L1372,80 L1404,110 L1362,98 L1350,140 L1338,98 L1296,110 L1328,80 L1296,50 L1338,62 Z' fill='%23FFD700' opacity='0.9'/%3E%3Cpath d='M1130,170 L1133,177 L1140,180 L1133,183 L1130,190 L1127,183 L1120,180 L1127,177 Z' fill='%23FFFFFF' opacity='0.85'/%3E%3Cpath d='M1560,108 L1564,118 L1574,121 L1564,124 L1560,134 L1556,124 L1546,121 L1556,118 Z' fill='%23FF1493' opacity='0.7'/%3E%3Ccircle cx='60' cy='40' r='8' fill='%23FF4500' opacity='0.4'/%3E%3Ccircle cx='120' cy='95' r='5' fill='%23FF4500' opacity='0.35'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 明黄题签：爆点标签，黑字压明黄（页首） ---- */
+.tpl-splash-abstract .sp-kicker{display:inline-flex;align-items:center;align-self:flex-start;gap:10px;padding:9px 22px;border-radius:12px;background:var(--yellow);color:var(--ink);font-size:16px;font-weight:800;letter-spacing:.2em;white-space:nowrap;box-shadow:4px 4px 0 var(--ink)}
+
+/* ---- 星芒：明黄八角爆炸星，一页一枚的爆点身份元素 ---- */
+.tpl-splash-abstract .sp-burst{flex:none;filter:drop-shadow(4px 4px 0 rgba(26,26,46,.18))}
+
+/* ---- 粗描边卡：白底 + 3px 深墨描边（展览标牌画法） ---- */
+.tpl-splash-abstract .sp-card{position:relative;background:rgba(255,255,255,.94);border:3px solid var(--ink);border-radius:22px;padding:34px 38px;box-shadow:10px 10px 0 rgba(26,26,46,.14);display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：白底胶囊，品红填充为强调 ---- */
+.tpl-splash-abstract .sp-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:2.5px solid var(--ink);border-radius:999px;background:#FFFFFF;font-size:17px;font-weight:700;letter-spacing:.08em;color:var(--ink);white-space:nowrap}
+.tpl-splash-abstract .sp-pill-accent{background:var(--magenta)}
+
+/* ---- 展签行：五色编号块 + 展区名 + 说明（橙→品红→紫→青轮换） ---- */
+.tpl-splash-abstract .sp-item{display:flex;align-items:center;gap:24px;padding:22px 6px;border-bottom:2px dashed var(--border-soft)}
+.tpl-splash-abstract .sp-item:last-child{border-bottom:none}
+.tpl-splash-abstract .sp-n{flex:none;width:52px;height:52px;border:3px solid var(--ink);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:19px;font-weight:700;color:#FFFFFF}
+.tpl-splash-abstract .sp-item:nth-child(1) .sp-n{background:var(--orange)}
+.tpl-splash-abstract .sp-item:nth-child(2) .sp-n{background:var(--magenta)}
+.tpl-splash-abstract .sp-item:nth-child(3) .sp-n{background:var(--violet)}
+.tpl-splash-abstract .sp-item:nth-child(4) .sp-n{background:var(--teal)}
+.tpl-splash-abstract .sp-t{flex:none;width:250px;font-size:28px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-splash-abstract .sp-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 展观数字：五色轮换大数字（数据页主视觉） ---- */
+.tpl-splash-abstract .sp-stat{background:#FFFFFF;border:3px solid var(--ink);border-radius:22px;padding:30px 30px;box-shadow:10px 10px 0 rgba(26,26,46,.14)}
+.tpl-splash-abstract .sp-stat-v{font-family:'Helvetica Neue','Noto Sans SC',sans-serif;font-size:92px;line-height:1;font-weight:900;letter-spacing:-.02em;color:var(--ink)}
+.tpl-splash-abstract .sp-stat:nth-child(1) .sp-stat-v{color:var(--orange)}
+.tpl-splash-abstract .sp-stat:nth-child(2) .sp-stat-v{color:var(--magenta)}
+.tpl-splash-abstract .sp-stat:nth-child(3) .sp-stat-v{color:var(--violet)}
+.tpl-splash-abstract .sp-stat-u{font-size:24px;font-weight:600;color:var(--ink-2);margin-left:6px}
+.tpl-splash-abstract .sp-stat-l{margin-top:16px;font-size:24px;font-weight:800;color:var(--ink)}
+.tpl-splash-abstract .sp-stat-note{margin:10px 0 0;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 时间线：五色圆点 + 墨色虚线连接 ---- */
+.tpl-splash-abstract .sp-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-splash-abstract .sp-tl-item{flex:1;position:relative}
+.tpl-splash-abstract .sp-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:58px;right:-44px;height:3px;background:repeating-linear-gradient(90deg,rgba(26,26,46,.5) 0 10px,transparent 10px 18px)}
+.tpl-splash-abstract .sp-tl-dot{position:relative;z-index:1;width:54px;height:54px;border:3px solid var(--ink);border-radius:50%;box-shadow:4px 4px 0 rgba(26,26,46,.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#FFFFFF}
+.tpl-splash-abstract .sp-tl-item:nth-child(1) .sp-tl-dot{background:var(--orange)}
+.tpl-splash-abstract .sp-tl-item:nth-child(2) .sp-tl-dot{background:var(--magenta)}
+.tpl-splash-abstract .sp-tl-item:nth-child(3) .sp-tl-dot{background:var(--violet)}
+.tpl-splash-abstract .sp-tl-item:nth-child(4) .sp-tl-dot{background:var(--teal)}
+.tpl-splash-abstract .sp-tl-t{margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.tpl-splash-abstract .sp-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-splash-abstract .sp-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:2px dashed var(--border-soft)}
+.tpl-splash-abstract .sp-step:last-child{border-bottom:none}
+.tpl-splash-abstract .sp-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：深墨底白字 + 明黄硬阴影（收尾页） ---- */
+.tpl-splash-abstract .sp-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 42px;border:3px solid var(--ink);border-radius:14px;background:var(--ink);color:#FFFFFF;font-size:22px;font-weight:800;letter-spacing:.14em;box-shadow:8px 8px 0 var(--yellow)}
+
+/* ---- 艺术家引文：特粗大字 ---- */
+.tpl-splash-abstract .sp-quote{font-size:56px;line-height:1.55;font-weight:900;letter-spacing:.03em;color:var(--ink);max-width:24em;margin:0}
+.tpl-splash-abstract .sp-src{margin:0;font-size:19px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 页面切换（翻页动画）：干脆有力，带轻微弹入 ---- */
+.tpl-splash-abstract{--page-shift:24px;--page-dur:.5s;--page-ease:cubic-bezier(.34,1.3,.64,1)}

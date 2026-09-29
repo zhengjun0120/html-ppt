@@ -1,0 +1,81 @@
+{
+  "id": "cream-pastel",
+  "name": "奶油温柔 · 高级感",
+  "description": "奶油白打底、豆沙粉作柔光、抹茶绿添呼吸：焦糖描边的圆角大卡、植物线稿与细虚线分隔，像一杯温热的奶茶铺开在幻灯片上，温柔克制的奶油质感高级风",
+  "tags": ["浅色", "柔和", "奶油", "高级感"],
+  "scenario": ["家居软装提案", "咖啡烘焙品牌", "护肤美妆分享", "母婴亲子内容", "慢生活主题分享"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "奶油封面",
+      "use": "开场：豆沙粉胶囊题签 + 温柔大字标题（可衬线点缀）+ 一句定位，右上尤加利枝衬底",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 26-52 字；题签 ≤14 字；衬线点缀 ≤4 字"
+    },
+    {
+      "id": "contents",
+      "name": "方案目录",
+      "use": "议程：奶油大卡内 4 行篇目（抹茶圆号 + 篇名 + 一句说明），细虚线分隔",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：圆角奶油卡（焦糖细边）+ 豆沙粉题签 + 小标题 + 说明 + 色样行",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右卡",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边奶油卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "奶油数字",
+      "use": "三个关键数据：豆沙色大数字 + 指标名 + 口径，焦糖顶边浅卡承托，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "宋体引文",
+      "use": "整页一句引文：宋体大字 + 出处 + 两个支撑药丸，留白即奶油质感",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节柔幕",
+      "use": "章节过渡：进度题签 + 温柔大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "工期时间线",
+      "use": "3-4 个节点的横向时间线：抹茶圆角节点 + 阶段时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "温柔收尾",
+      "use": "收尾：温柔大字 + 一句行动提醒 + 深棕胶囊按钮 + 药丸，如一封奶油信笺",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Noto Sans SC", "Songti SC", "PingFang SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/cream-pastel",
+    "license": "Apache-2.0"
+  }
+}

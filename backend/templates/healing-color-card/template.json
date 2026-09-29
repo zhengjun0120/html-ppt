@@ -1,0 +1,81 @@
+{
+  "id": "healing-color-card",
+  "name": "情绪疗愈色卡",
+  "description": "薰衣草紫、暖桃米、薄荷绿三色协奏的情绪色卡：大圆角卡、柔和渐变与呼吸感留白，像清晨第一缕柔光，温柔包裹每一种情绪",
+  "tags": ["浅色", "柔和", "疗愈", "情绪"],
+  "scenario": ["情绪疗愈工作坊", "冥想与正念课程", "女性品牌分享", "亲子成长记录", "生活方式笔记"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "柔光封面",
+      "use": "开场：情绪题签 + 圆润大字标题 + 三色色板行 + 一句定位，右上月牙柔光衬底",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 26-52 字；题签 ≤14 字；色板行固定三枚圆点（薰衣草/暖桃/薄荷）"
+    },
+    {
+      "id": "contents",
+      "name": "课表目录",
+      "use": "议程：大圆角奶油卡内 4 行篇目（圆点编号 + 篇名 + 一句说明），虚线分隔",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三色情绪卡",
+      "use": "三个并列要点：三张渐变色卡（薰衣草/暖桃/薄荷各一）+ 题签 + 小标题 + 说明 + 色板行",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字；三卡渐变各用一色"
+    },
+    {
+      "id": "split",
+      "name": "左文右卡",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边奶油卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "柔光数字",
+      "use": "三个关键数据：藕荷紫大数字 + 指标名 + 口径，圆角浅卡承托，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "手记引文",
+      "use": "整页一句引文：楷体大字 + 出处 + 两个支撑药丸 + 三色色板行收底",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节柔幕",
+      "use": "章节过渡：进度题签 + 圆润大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：白底圆点编号 + 时间点 + 一句事件，柔光连接线",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "温柔收尾",
+      "use": "收尾：圆润大字 + 一句行动提醒 + 藕荷紫胶囊按钮 + 药丸 + 三色色板行",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Yuanti SC", "YouYuan", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/healing-color-card",
+    "license": "Apache-2.0"
+  }
+}
