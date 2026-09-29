@@ -1,14 +1,15 @@
 # oh-my-ppt 84 风格导入为内置模板 —— 施工方案
 
-> 状态：**试点批已实施并验收（2026-09-29）**——12 个中文风模板全部落地
-> （ink-wash-jiangnan / palace-ink-red / chinese-porcelain-rose / chinese-cream-blossom /
-> song-rain-poetic / chinese-ink-landscape / celadon-bamboo / chinese-fresh-trio /
-> chinese-pastel-spring / indigo-lotus / oriental-poetic-illustration / gold-ivory），
-> 注册表校验全绿，Chrome 真实渲染量测 108 页全过（填充率 ≥57%、最小字号 ≥15px、零溢出），
-> 封面与内页观感抽查通过。剩余 6 批（72 个）待用户过目试点批后继续。
+> 状态：**全部 83 个模板已落地（2026-09-30）**。试点批 12（ef44d45）+ 波 1 24（ebe4cf4）+
+> 波 2 26（0dd38f2）+ 波 3 21（f3a341c）。84 风格 - soft-pastel（与既有内置模板同名，拍板跳过）= 83。
+> 全部通过：tmp-check 自检 + 注册表 go test（含 TestOMPTemplateCatalog 目录回归）+ Chrome
+> 真渲染量测（demo 页填充率/字号/溢出）+ 封面拼图目检。
+> 生成质量测试（每模板真实 LLM 生成 12 页统一大纲《二十四节气》）单独报告：
+> docs/ohmyppt-import-report.md。
 >
-> 决策记录（2026-09-29 拍板，全部采纳推荐项）：D1=先试点 12 个；D2=跳过上游 soft-pastel
-> （与现有内置模板同名同定位）；D3=每模板单 default 变体；D4=全中文 demo。
+> 决策记录（2026-09-29 拍板，全部采纳推荐项）：D1=先试点 12 个；D2=跳过上游 soft-pastel；
+> D3=每模板单 default 变体；D4=全中文 demo。2026-09-30 追加：修复预算=修 1 轮重测 1 次；
+> 生成主题=统一大纲保证横向可比。
 >
 > 来源仓库 `D:\go_files\oh-my-ppt\oh-my-ppt`（GitHub arcsin1/oh-my-ppt，
 > Apache-2.0，NOTICE 要求保留归属）。
