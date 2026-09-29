@@ -1,0 +1,99 @@
+/* red-research-framework — 丹朱教研。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/red-research-framework（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 白底 + 丹朱红骨架：红底白字标题带、红描边模块卡、红圆编号，金黄虚线只做
+ * 推进与连接；箭头、虚线只表达顺序，不画具象插画。右上六边形与左下金黄
+ * 连接线是 ambient 层（.slide::before/::after，z-index:-1），骨架零成本。 */
+.tpl-red-research-framework{
+  --bg:#F4E6E1;              /* 淡丹朱暖白（letterbox 衬托白页不跳） */
+  --bg-soft:#FCF1F0;         /* 淡红卡底 */
+  --ink:#333333;             /* 近黑标题辅字 */
+  --ink-2:#595959;           /* 正文 */
+  --ink-3:#808080;           /* 弱化灰 */
+  --red:#D02300;             /* 丹朱主红（身份色） */
+  --red-deep:#9C1A00;        /* 深红（标题带渐变尾） */
+  --red-soft:#BF3C2E;        /* 朱红（描边辅助） */
+  --gold:#FFC000;            /* 金黄（推进箭头/虚线） */
+  --gold-soft:#FFDC6D;
+  --tint:#F9ECEA;            /* 浅红底 */
+  --tint-2:#FCF1F0;
+  --border:rgba(156,26,0,.24);
+  --border-soft:rgba(156,26,0,.12);
+  --accent:var(--red);
+  font-family:'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：红字标题 + 灰字正文，层级靠色块与编号 ---- */
+.tpl-red-research-framework .h1{font-size:74px;line-height:1.18;font-weight:800;letter-spacing:.02em;color:var(--red);margin-bottom:12px}
+.tpl-red-research-framework .h2{font-size:50px;line-height:1.2;font-weight:700;letter-spacing:.02em;color:var(--red);margin-bottom:10px}
+.tpl-red-research-framework h4{color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.02em}
+.tpl-red-research-framework .lede{font-size:23px;line-height:1.8;color:var(--ink-2);font-weight:400;max-width:56ch}
+.tpl-red-research-framework .deck-footer{font-family:Menlo,'SF Mono',Consolas,'Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：右上朱红六边形轮廓 + 左下金黄推进虚线（框架图的语言） ---- */
+.tpl-red-research-framework .slide::before{
+  content:"";position:absolute;right:-56px;top:-48px;width:330px;height:270px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 330 270'%3E%3Cpolygon points='210,28 264,59 264,121 210,152 156,121 156,59' fill='none' stroke='%23BF3C2E' stroke-width='2' opacity='.16'/%3E%3Cpolygon points='270,152 312,176 312,224 270,248 228,224 228,176' fill='none' stroke='%23BF3C2E' stroke-width='1.6' opacity='.11'/%3E%3C/svg%3E") no-repeat center;
+}
+.tpl-red-research-framework .slide::after{
+  content:"";position:absolute;left:-30px;bottom:-40px;width:380px;height:220px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 380 220'%3E%3Cline x1='16' y1='190' x2='300' y2='190' stroke='%23FFC000' stroke-width='2' stroke-dasharray='10 8' opacity='.5'/%3E%3Crect x='316' y='176' width='28' height='28' fill='none' stroke='%23BF3C2E' stroke-width='2' opacity='.28'/%3E%3Ccircle cx='60' cy='120' r='5' fill='%23FFC000' opacity='.65'/%3E%3C/svg%3E") no-repeat center;
+}
+
+/* ---- 品牌行：等宽小字，红字白底（上游 .brand 的转写） ---- */
+.tpl-red-research-framework .rr-brand{font-family:Menlo,'SF Mono',Consolas,monospace;font-size:15px;letter-spacing:.26em;color:var(--red);text-transform:uppercase}
+
+/* ---- 徽标：红底白字（上游 .badge 的转写） ---- */
+.tpl-red-research-framework .rr-badge{display:inline-flex;align-items:center;padding:8px 18px;background:var(--red);color:#FFFFFF;font-size:15px;font-weight:700;letter-spacing:.20em}
+
+/* ---- 标题带：红底白字（上游 .band 的转写），带内标题强制白色 ---- */
+.tpl-red-research-framework .rr-band{background:linear-gradient(90deg,var(--red) 0%,var(--red-deep) 100%);color:#FFFFFF;padding:38px 46px}
+.tpl-red-research-framework .rr-band .h1,.tpl-red-research-framework .rr-band .h2{color:#FFFFFF;margin-bottom:8px}
+.tpl-red-research-framework .rr-band-sub{margin:0;font-size:24px;letter-spacing:.04em;color:rgba(255,255,255,.88)}
+
+/* ---- 模块卡：红描边白卡（上游 .node 的转写），框架图的模块 ---- */
+.tpl-red-research-framework .rr-card{background:#FFFFFF;border:2px solid var(--red);padding:30px 32px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 红色编号：模块与目录的引导数字 ---- */
+.tpl-red-research-framework .rr-num{font-size:52px;line-height:1;font-weight:800;color:var(--red);letter-spacing:.01em}
+
+/* ---- 药丸：细描边标签，红只留给强调位 ---- */
+.tpl-red-research-framework .rr-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);font-size:16px;letter-spacing:.10em;color:var(--ink-2);white-space:nowrap}
+.tpl-red-research-framework .rr-pill-accent{border-color:var(--red);color:var(--red)}
+
+/* ---- 目录行：红圆编号 + 板块名 + 一句说明 ---- */
+.tpl-red-research-framework .rr-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-red-research-framework .rr-item:last-child{border-bottom:none}
+.tpl-red-research-framework .rr-n{flex:none;width:52px;height:52px;border-radius:50%;background:var(--red);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:Menlo,'SF Mono',Consolas,monospace;font-size:18px;font-weight:700;align-self:center}
+.tpl-red-research-framework .rr-t{flex:none;width:250px;font-size:27px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-red-research-framework .rr-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 成效数据：淡红底 + 红左线的数据块，红字白底身份 ---- */
+.tpl-red-research-framework .rr-stat{background:var(--tint-2);border-left:4px solid var(--red);padding:28px 30px}
+.tpl-red-research-framework .rr-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--red)}
+.tpl-red-research-framework .rr-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-red-research-framework .rr-stat-l{margin-top:16px;font-size:24px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-red-research-framework .rr-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 教育题记：近黑大字 ---- */
+.tpl-red-research-framework .rr-quote{font-size:56px;line-height:1.7;font-weight:700;letter-spacing:.03em;color:var(--ink);max-width:24em;margin:0}
+.tpl-red-research-framework .rr-src{margin:0;font-size:19px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：红圆点 + 金黄虚线连接（只表达推进顺序） ---- */
+.tpl-red-research-framework .rr-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-red-research-framework .rr-tl-item{flex:1;position:relative}
+.tpl-red-research-framework .rr-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:56px;right:-44px;height:2px;background:repeating-linear-gradient(90deg,rgba(255,192,0,.65) 0 8px,transparent 8px 14px)}
+.tpl-red-research-framework .rr-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:var(--red);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:Menlo,'SF Mono',Consolas,monospace;font-size:18px;font-weight:700}
+.tpl-red-research-framework .rr-tl-t{margin-top:20px;font-family:Menlo,'SF Mono',Consolas,monospace;font-size:19px;font-weight:700;color:var(--red);letter-spacing:.04em}
+.tpl-red-research-framework .rr-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-red-research-framework .rr-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-red-research-framework .rr-step:last-child{border-bottom:none}
+.tpl-red-research-framework .rr-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：丹朱实底白字，收尾页最大的一块红 ---- */
+.tpl-red-research-framework .rr-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;background:var(--red);color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:.16em}
+
+/* ---- 页面切换（翻页动画）：由左到右的推进感 ---- */
+.tpl-red-research-framework{--page-shift:24px;--page-dur:.5s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

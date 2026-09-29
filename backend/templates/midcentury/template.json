@@ -1,0 +1,81 @@
+{
+  "id": "midcentury",
+  "name": "世纪中叶",
+  "description": "芥末黄遇上焦橙与青，奶油色画布上的有机几何——Eames 与 Nelson 的黄金年代客厅，温暖、经典、永不过时的杂志编辑气质",
+  "tags": ["杂志", "编辑", "复古", "家居"],
+  "scenario": ["杂志编辑", "艺术视觉", "生活方式", "家居美学", "复古品牌故事"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "展厅入口",
+      "use": "开场：标本签 + 几何大标题 + 三色横条 + 一句定位，右上有机形状衬底，可立一枚年份圆章",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 30-60 字；题签 ≤14 字；圆章 4-8 字符"
+    },
+    {
+      "id": "contents",
+      "name": "观展目录",
+      "use": "议程：一张奶白大卡里放 4 行篇目（圆号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三件经典",
+      "use": "三个并列要点：奶白卡 + 青绿题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤10 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "细读一件",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边奶白卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "展观数字",
+      "use": "三个关键数据：焦橙大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "设计师语录",
+      "use": "整页一句引文：衬线大字 + 出处 + 两个支撑药丸，右上留白处有几何形状衬底",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡句 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "年代大事记",
+      "use": "3-4 个节点的横向时间线：圆点编号 + 年份 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "观展预约",
+      "use": "收尾：大字标题 + 一句行动提醒 + 青绿按钮 + 描边药丸 + 年份圆章",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤12 字"
+    }
+  ],
+  "fonts": ["Century Gothic", "Georgia", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/midcentury",
+    "license": "Apache-2.0"
+  }
+}

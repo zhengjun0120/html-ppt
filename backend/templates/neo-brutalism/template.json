@@ -1,0 +1,81 @@
+{
+  "id": "neo-brutalism",
+  "name": "新野兽派",
+  "description": "设计界的朋克摇滚：厚黑描边、零模糊硬阴影、暖画布上的高饱和撞色，卡片像拳头一样打在观众眼前，用不妥协的姿态说出你的观点",
+  "tags": ["野兽派", "撞色", "硬阴影", "态度"],
+  "scenario": ["创业路演", "品牌提案", "创意比稿", "音乐节与青年文化", "反叛精神演讲"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "拳头封面",
+      "use": "开场：粗标签 + 黑底徽章 + 描边大字标题盒，页底黑通栏条压阵，角落斜置色块衬底",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤8 字；lede 30-60 字；标签各 ≤6 字；通栏条两段各 ≤16 字符"
+    },
+    {
+      "id": "contents",
+      "name": "提案四步",
+      "use": "议程：白卡（粗黑描边+硬阴影）里 4 行条目：黄色编号块 + 篇名 + 一句说明",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "复盘重拳",
+      "use": "三个关键数据：描边数据卡，其中一个橙底重色卡做焦点，口径写页尾",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度粗标签 + 描边标题盒大字章节名 + 过渡问题 + 两个歪斜标签",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤8 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三张重拳",
+      "use": "三个并列要点：描边白卡，阴影按黑/橙/红轮换，标签歪斜制造手感",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "落地拆解",
+      "use": "左边把方案讲透（lede + 补充 + 标签），右边白卡装三行落地步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个标签；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "moments",
+      "name": "筹备节奏",
+      "use": "3-4 个节点的横向时间线：描边方块节点（奶油/橙/黄/红轮换）+ 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "quote",
+      "name": "立场宣言",
+      "use": "整页一句立场宣言：900 大字两行（下行荧光黄荧光笔划）+ 等宽出处 + 两个标签",
+      "roles": ["quote"],
+      "constraints": "引文共 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "closing",
+      "name": "拍板页",
+      "use": "收尾：描边标题盒 + 一句承诺 + 橙底行动钮 + 标签 + 黑通栏条收尾",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤8 字；lede 20-48 字；按钮 ≤6 字；标签各 ≤10 字；通栏条两段各 ≤16 字符"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/neo-brutalism",
+    "license": "Apache-2.0"
+  }
+}

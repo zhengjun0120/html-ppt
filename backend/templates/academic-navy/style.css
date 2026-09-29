@@ -1,0 +1,99 @@
+/* academic-navy — 藏青学衡。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/academic-navy（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 浅灰蓝底 + 藏青主色 + 低调金棕：金棕只出现在关键数字、环形编号与少量标签，
+ * 白色证据卡用藏青顶线分组；装饰只用规整的金环与六边形轮廓，不引入具象场景，
+ * 全部画在 .slide::before/::after 的 ambient 层（z-index:-1），骨架零成本。 */
+.tpl-academic-navy{
+  --bg:#E9EDF3;              /* 对角浅灰蓝渐变的中段值（letterbox 翻页不跳） */
+  --bg-soft:#F3F5F8;         /* 上游浅背景 */
+  --ink:#112D5C;             /* 藏青（标题与主字） */
+  --ink-2:#404040;           /* 正文深灰 */
+  --ink-3:#808080;           /* 弱化灰小字 */
+  --navy-2:#173C7A;
+  --navy-3:#1F4F97;
+  --border:rgba(17,45,92,.20);
+  --border-soft:rgba(17,45,92,.11);
+  --gold:#7C4E2C;            /* 金棕深（小标签、题签） */
+  --gold-2:#A78D5B;          /* 金棕主（关键数字） */
+  --gold-3:#D4BA54;          /* 金棕亮（细线、圆环） */
+  --accent:var(--navy-3);
+  font-family:'SF Pro Text','PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：藏青标题 + 深灰正文，层级靠字号与留白，不靠花色 ---- */
+.tpl-academic-navy .h1{font-size:84px;line-height:1.12;font-weight:800;letter-spacing:.02em;color:var(--ink);margin-bottom:14px}
+.tpl-academic-navy .h2{font-size:52px;line-height:1.18;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-academic-navy h4{color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.02em}
+.tpl-academic-navy .lede{font-size:23px;line-height:1.85;color:var(--ink-2);font-weight:400;max-width:56ch}
+.tpl-academic-navy .deck-footer{font-family:Menlo,'SF Mono',Consolas,'Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：右上金环（答辩印章的抽象）+ 左下六边形轮廓（规整几何） ---- */
+.tpl-academic-navy .slide::before{
+  content:"";position:absolute;right:-110px;top:-120px;width:360px;height:360px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 360'%3E%3Ccircle cx='180' cy='180' r='168' fill='none' stroke='%23D4BA54' stroke-width='2.5' opacity='.55'/%3E%3Ccircle cx='180' cy='180' r='138' fill='none' stroke='%23A78D5B' stroke-width='1.2' opacity='.38'/%3E%3C/svg%3E") no-repeat center;
+}
+.tpl-academic-navy .slide::after{
+  content:"";position:absolute;left:-46px;bottom:-64px;width:430px;height:270px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 430 270'%3E%3Cpolygon points='80,120 128,148 128,204 80,232 32,204 32,148' fill='none' stroke='%23173C7A' stroke-width='1.6' opacity='.16'/%3E%3Cpolygon points='168,66 216,94 216,150 168,178 120,150 120,94' fill='none' stroke='%23173C7A' stroke-width='1.4' opacity='.11'/%3E%3Cpolygon points='256,120 304,148 304,204 256,232 208,204 208,148' fill='none' stroke='%23173C7A' stroke-width='1.6' opacity='.14'/%3E%3C/svg%3E") no-repeat center;
+}
+
+/* ---- 题签：等宽小字 + 藏青短线，全模板的「页眉引语」 ---- */
+.tpl-academic-navy .an-kicker{font-family:Menlo,'SF Mono',Consolas,monospace;font-size:15px;letter-spacing:.30em;color:var(--gold);text-transform:uppercase}
+.tpl-academic-navy .an-kicker::after{content:"";display:block;width:64px;height:3px;background:var(--navy-3);margin-top:12px}
+
+/* ---- 标题短线：藏青一笔，压住大标题 ---- */
+.tpl-academic-navy .an-rule{width:230px;height:5px;background:linear-gradient(90deg,var(--ink) 0%,rgba(17,45,92,0) 100%)}
+
+/* ---- 证据卡：白底 + 藏青顶线（分组语言来自上游），无重阴影 ---- */
+.tpl-academic-navy .an-card{background:#FFFFFF;border:1px solid var(--border-soft);border-top:4px solid var(--navy-2);padding:34px 36px;display:flex;flex-direction:column;min-height:280px}
+.tpl-academic-navy .an-card-gold{border-top-color:var(--gold-2)}
+
+/* ---- 金棕编号：卡与目录的引导数字 ---- */
+.tpl-academic-navy .an-num{font-family:Georgia,'Times New Roman',serif;font-size:54px;line-height:1;font-weight:700;color:var(--gold-2)}
+
+/* ---- 药丸：细描边标签，金棕只留给强调位 ---- */
+.tpl-academic-navy .an-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);font-size:16px;letter-spacing:.10em;color:var(--ink-2);white-space:nowrap}
+.tpl-academic-navy .an-pill-accent{border-color:var(--gold-2);color:var(--gold)}
+
+/* ---- 目录行：环形编号 + 板块名 + 一句说明 ---- */
+.tpl-academic-navy .an-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-academic-navy .an-item:last-child{border-bottom:none}
+.tpl-academic-navy .an-n{flex:none;width:52px;height:52px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Menlo,'SF Mono',Consolas,monospace;font-size:18px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-academic-navy .an-t{flex:none;width:250px;font-size:27px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-academic-navy .an-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 关键数字：金棕大数字是数据页唯一主视觉 ---- */
+.tpl-academic-navy .an-stat{border-top:2px solid var(--navy-2);padding-top:28px}
+.tpl-academic-navy .an-stat-v{font-size:100px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--gold-2)}
+.tpl-academic-navy .an-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-academic-navy .an-stat-l{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-academic-navy .an-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 治学题记：衬线大字引文 ---- */
+.tpl-academic-navy .an-quote{font-family:Georgia,'Songti SC','STSong',serif;font-size:58px;line-height:1.65;font-weight:700;letter-spacing:.04em;color:var(--ink);max-width:24em;margin:0}
+.tpl-academic-navy .an-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 封面索引：右侧金棕研究索引数（上游 .side 的转写） ---- */
+.tpl-academic-navy .an-side{position:absolute;right:110px;bottom:150px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;text-align:right}
+.tpl-academic-navy .an-side-v{font-family:Georgia,'Times New Roman',serif;font-size:88px;line-height:1;font-weight:700;color:var(--gold-2)}
+.tpl-academic-navy .an-side-l{font-family:Menlo,'SF Mono',Consolas,monospace;font-size:14px;letter-spacing:.26em;color:var(--ink-3);text-transform:uppercase}
+
+/* ---- 时间线：藏青实心圆点 + 细连接线 ---- */
+.tpl-academic-navy .an-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-academic-navy .an-tl-item{flex:1;position:relative}
+.tpl-academic-navy .an-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:56px;right:-44px;height:1px;background:var(--border)}
+.tpl-academic-navy .an-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:var(--ink);color:#F3F5F8;display:flex;align-items:center;justify-content:center;font-family:Menlo,'SF Mono',Consolas,monospace;font-size:18px;font-weight:700}
+.tpl-academic-navy .an-tl-t{margin-top:20px;font-family:Menlo,'SF Mono',Consolas,monospace;font-size:20px;font-weight:700;color:var(--gold);letter-spacing:.04em}
+.tpl-academic-navy .an-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-academic-navy .an-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-academic-navy .an-step:last-child{border-bottom:none}
+.tpl-academic-navy .an-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：藏青实底，收尾页唯一深色块 ---- */
+.tpl-academic-navy .an-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;background:var(--ink);color:#F3F5F8;font-size:22px;font-weight:700;letter-spacing:.16em}
+
+/* ---- 页面切换（翻页动画）：沉稳的上移入场 ---- */
+.tpl-academic-navy{--page-shift:18px;--page-dur:.5s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

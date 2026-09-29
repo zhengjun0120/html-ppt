@@ -1,0 +1,81 @@
+{
+  "id": "news-broadcast",
+  "name": "新闻播报",
+  "description": "红色竖条亮起，所有目光聚焦——白色画面上的正红竖条与硬阴影卡片，大写无衬线头条横幅，这是突发新闻的权威感",
+  "tags": ["杂志", "编辑", "新闻", "播报"],
+  "scenario": ["商业汇报", "品牌营销", "杂志编辑", "数据发布", "突发公告"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "开播封面",
+      "use": "开场：台标框 + 时间戳 + 头条横幅 + 大标题 + 一句定位，页底滚动条压轴",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；头条导语 ≤20 字；lede 30-60 字；台标 ≤6 字；时间戳 ≤16 字符"
+    },
+    {
+      "id": "contents",
+      "name": "今晚版面",
+      "use": "议程：一块白卡里放 4 行板块（红色块号 + 板块名 + 一句说明），页底滚动条",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；板块名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三条要闻",
+      "use": "三个并列要点：硬阴影白卡 + 红色题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "深度连线",
+      "use": "左边把一件事讲透（lede + 补充 + 提示块），右边白卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个提示块；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "数据播报",
+      "use": "三个关键数据：正红大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "导播金句",
+      "use": "整页一句引文：粗黑大字 + 出处 + 两个支撑提示块",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；提示块各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "板块转场",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡句 + 两个看点提示块，页底滚动条",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡句 22-44 字；提示块各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "直播时间轴",
+      "use": "3-4 个节点的横向时间线：红色方块 + 时刻 + 一句动态",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "结束播报",
+      "use": "收尾：大字标题 + 一句行动提醒 + 红底按钮 + 提示块 + 台标框，页底滚动条",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-48 字；按钮 ≤8 字；提示块 ≤14 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/news-broadcast",
+    "license": "Apache-2.0"
+  }
+}

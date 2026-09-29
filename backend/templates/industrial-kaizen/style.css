@@ -1,0 +1,94 @@
+/* industrial-kaizen — 表格 · 现代周报。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/industrial-kaizen（Apache-2.0，
+ * 借鉴配色与表格母题，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 表格即视觉：暖白画布 #FBFAF6，账本封边深墨强线 #1F1E1A，行间发丝线 #EDE9DC，
+ * 文字三级灰阶，等宽数字右对齐——零彩色、零阴影、零渐变、圆角不超过 2px。
+ * 页顶封边与右侧栏线是每页自动衬底的 ambient 层（z-index:-1，骨架零成本）。 */
+.tpl-industrial-kaizen{
+  --bg:#EDE9DC;              /* letterbox 底：暖灰（表行分隔色），翻页不跳 */
+  --paper:#FBFAF6;           /* 暖白画布 */
+  --paper-2:#F2EFE5;         /* 合计行底 */
+  --ink:#1F1E1A;             /* 深墨：标题/重点数字/强分隔线 */
+  --ink-2:#2A2924;           /* 正文 */
+  --ink-3:#8B8478;           /* 辅助/标签 */
+  --rule-soft:#EDE9DC;       /* 行间发丝线 */
+  --rule-mid:#D8D4C8;        /* 中分隔线 */
+  --border:rgba(31,30,26,.20);
+  --border-soft:rgba(31,30,26,.10);
+  font-family:Inter,'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---- 画布底：暖白纸，无渐变 ---- */
+.tpl-industrial-kaizen .slide{background:var(--paper)}
+
+/* ---- 字阶：粗壮黑体、字距收紧，紧凑但行距呼吸 ---- */
+.tpl-industrial-kaizen .h1{font-size:64px;line-height:1.15;font-weight:800;letter-spacing:-.015em;color:var(--ink);margin-bottom:12px}
+.tpl-industrial-kaizen .h2{font-size:44px;line-height:1.2;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-industrial-kaizen h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:22px;letter-spacing:-.005em}
+.tpl-industrial-kaizen .lede{font-size:22px;line-height:1.85;color:var(--ink-2);font-weight:400;letter-spacing:0}
+.tpl-industrial-kaizen .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.08em;font-weight:400}
+
+/* ---- ambient：页顶账本封边（深墨强线）+ 右侧栏线（发丝），z-index:-1 画在内容之下 ---- */
+.tpl-industrial-kaizen .slide::before{
+  content:"";position:absolute;top:64px;bottom:96px;right:44px;width:1px;z-index:-1;
+  background:var(--rule-soft);
+}
+.tpl-industrial-kaizen .slide::after{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;z-index:-1;
+  background:var(--ink);
+}
+
+/* ---- 眉题：全大写、宽字距、标签灰——报表的栏目行 ---- */
+.tpl-industrial-kaizen .ik-kicker{font-size:15px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ---- 封边强线：深墨短横线，只出现在标题下沿 ---- */
+.tpl-industrial-kaizen .ik-rule{width:140px;height:2px;background:var(--ink)}
+
+/* ---- 细边卡：暖白底 + 1px 中灰细边 + 2px 圆角，无阴影 ---- */
+.tpl-industrial-kaizen .ik-card{background:var(--paper);border:1px solid var(--rule-mid);border-radius:2px;padding:32px 36px;display:flex;flex-direction:column;min-height:288px}
+
+/* ---- 状态徽章：实底反白 / 浅底深字 / 描边空心，2px 圆角 ---- */
+.tpl-industrial-kaizen .ik-badge{display:inline-flex;align-items:center;align-self:flex-start;padding:5px 14px;border-radius:2px;font-size:15px;font-weight:600;letter-spacing:.06em;line-height:1.4;white-space:nowrap}
+.tpl-industrial-kaizen .ik-badge-solid{background:var(--ink);color:var(--paper)}
+.tpl-industrial-kaizen .ik-badge-soft{background:var(--rule-soft);color:#5C5852}
+.tpl-industrial-kaizen .ik-badge-line{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+
+/* ---- 条目行：两位数编号 + 条目名 + 说明，发丝线分行如报表行 ---- */
+.tpl-industrial-kaizen .ik-item{display:flex;align-items:baseline;gap:26px;padding:26px 4px;border-bottom:1px solid var(--rule-soft)}
+.tpl-industrial-kaizen .ik-item:last-child{border-bottom:none}
+.tpl-industrial-kaizen .ik-n{flex:none;width:56px;font-size:17px;font-weight:500;color:var(--ink-3);letter-spacing:.06em}
+.tpl-industrial-kaizen .ik-t{flex:none;width:236px;font-size:24px;font-weight:700;letter-spacing:-.005em;color:var(--ink)}
+.tpl-industrial-kaizen .ik-d{flex:1;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- KPI 块：横栏内竖细线分列，数字粗壮右倾紧凑，▲▼ 是唯一「图形」 ---- */
+.tpl-industrial-kaizen .ik-stat{flex:1;padding:6px 32px;border-right:1px solid var(--rule-soft)}
+.tpl-industrial-kaizen .grid .ik-stat:first-child{padding-left:0}
+.tpl-industrial-kaizen .ik-stat:last-child{border-right:none}
+.tpl-industrial-kaizen .ik-stat-v{font-size:84px;line-height:1;font-weight:700;letter-spacing:-.015em;color:var(--ink);font-variant-numeric:tabular-nums}
+.tpl-industrial-kaizen .ik-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:6px;letter-spacing:0}
+.tpl-industrial-kaizen .ik-stat-l{margin-top:16px;font-size:16px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.tpl-industrial-kaizen .ik-stat-note{margin:8px 0 0;font-size:17px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 摘录引文：报表卷首扉页语，粗壮标语体 ---- */
+.tpl-industrial-kaizen .ik-quote{font-size:48px;line-height:1.6;font-weight:700;letter-spacing:-.005em;color:var(--ink);max-width:26em;margin:0}
+.tpl-industrial-kaizen .ik-src{margin:0;font-size:17px;font-weight:400;letter-spacing:.08em;color:var(--ink-3)}
+
+/* ---- 时间线：方点 + 细线串联，如排程表 ---- */
+.tpl-industrial-kaizen .ik-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-industrial-kaizen .ik-tl-item{flex:1;position:relative}
+.tpl-industrial-kaizen .ik-tl-item:not(:last-child)::before{content:"";position:absolute;top:9px;left:34px;right:-44px;height:1px;background:var(--rule-mid)}
+.tpl-industrial-kaizen .ik-tl-dot{position:relative;z-index:1;width:19px;height:19px;border:1px solid var(--ink);border-radius:2px;background:var(--paper)}
+.tpl-industrial-kaizen .ik-tl-t{margin-top:16px;font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.tpl-industrial-kaizen .ik-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 日程行（split 右列） ---- */
+.tpl-industrial-kaizen .ik-step{display:flex;align-items:baseline;gap:18px;padding:24px 4px;border-bottom:1px solid var(--rule-soft)}
+.tpl-industrial-kaizen .ik-step:last-child{border-bottom:none}
+.tpl-industrial-kaizen .ik-mini-t{margin:0;flex:1;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：深墨实底反白，全模板唯一的大色块 ---- */
+.tpl-industrial-kaizen .ik-btn{display:inline-flex;align-items:center;padding:15px 40px;background:var(--ink);color:var(--paper);border-radius:2px;font-size:19px;font-weight:700;letter-spacing:.16em;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：干脆利落，逐条审视的节奏 ---- */
+.tpl-industrial-kaizen{--page-shift:8px;--page-dur:.4s;--page-ease:cubic-bezier(.4,0,.2,1)}

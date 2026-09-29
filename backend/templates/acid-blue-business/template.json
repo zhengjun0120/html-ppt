@@ -1,0 +1,81 @@
+{
+  "id": "acid-blue-business",
+  "name": "酸蓝张力",
+  "description": "电光酸蓝打在黑白灰画布上：不对称构图、左侧垂直色轨与超大编号，方向感和速度感拉满，正文却保持报告级的对比度",
+  "tags": ["科技", "商务", "张力", "现代"],
+  "scenario": ["技术方案评审", "产品发布", "项目汇报", "商业计划", "创新业务提案"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "张力封面",
+      "use": "开场：等宽题签 + 超重字重大标题 + 酸蓝横线 + 一句论点，左轨与几何衬底",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-52 字；题签 ≤14 字；标识 2-4 字"
+    },
+    {
+      "id": "contents",
+      "name": "议程页",
+      "use": "议程：白卡黑描边内 4 行议程（等宽编号方块 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡策略",
+      "use": "三条硬规矩：白卡黑描边 + 酸蓝题签 + 重字重小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边白卡装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "关键数字",
+      "use": "三个关键数字：酸蓝大数字 + 黑顶线荧光刻度 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "原则引言",
+      "use": "整页一句原则：超重字重引言 + 等宽出处 + 两个支撑药丸，右侧酸蓝圆环衬底",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤24 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节页",
+      "use": "章节过渡：进度题签 + 超大章节名 + 一句过渡 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "路线时间线",
+      "use": "4 个节点的横向时间线：酸蓝编号方块 + 等宽时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "恰好 4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "行动请求",
+      "use": "收尾：超大结论 + 一句行动提醒 + 酸蓝按钮 + 描边药丸",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-48 字；按钮 ≤6 字；药丸 ≤14 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/acid-blue-business",
+    "license": "Apache-2.0"
+  }
+}

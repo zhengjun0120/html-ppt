@@ -1,0 +1,93 @@
+/* academic-paper — 学术论文。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/academic-paper（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 论文白渐变底 + 墨黑标题 + 学术蓝链接：衬线正文、等宽元数据、纸面卡片框，
+ * 蓝色只给「可溯源」的东西——编号、数字、链接感的小字；页顶一道蓝条是
+ * 全模板唯一的装饰（.slide::after），纸面渐变铺在 ::before（z-index:-1）。 */
+.tpl-academic-paper{
+  --bg:#EFEFEF;              /* 论文白渐变的中段值（letterbox 翻页不跳） */
+  --bg-soft:#FAFAFA;
+  --ink:#171717;             /* 墨黑标题 */
+  --ink-2:#404040;           /* 正文深灰 */
+  --ink-3:#737373;           /* 元数据灰 */
+  --link:#2563EB;            /* 学术蓝（编号/数字/链接） */
+  --link-2:#3B82F6;
+  --link-3:#93C5FD;
+  --border:rgba(0,0,0,.14);
+  --border-soft:rgba(0,0,0,.08);
+  --accent:var(--link);
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Serif SC',serif;
+}
+
+/* ---- 字阶：衬线标题与正文，元数据用等宽，如期刊版式 ---- */
+.tpl-academic-paper .h1{font-size:66px;line-height:1.22;font-weight:700;letter-spacing:.01em;color:var(--ink);margin-bottom:12px}
+.tpl-academic-paper .h2{font-size:48px;line-height:1.2;font-weight:700;letter-spacing:.01em;color:var(--ink);margin-bottom:10px}
+.tpl-academic-paper h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:24px;letter-spacing:.01em}
+.tpl-academic-paper .lede{font-size:22px;line-height:1.9;color:var(--ink-2);font-weight:400;max-width:58ch}
+.tpl-academic-paper .deck-footer{font-family:Consolas,'SF Mono',Menlo,'Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.08em}
+
+/* ---- ambient：纸面渐变（::before）+ 页顶学术蓝条（::after） ---- */
+.tpl-academic-paper .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(145deg,#FAFAFA 0%,#F5F5F5 55%,#E8E8E8 100%);
+}
+.tpl-academic-paper .slide::after{
+  content:"";position:absolute;top:0;left:0;right:0;height:6px;z-index:-1;
+  background:linear-gradient(90deg,#1E40AF,#2563EB);
+}
+
+/* ---- 期刊头：衬线斜体刊名 + 等宽卷期，页首的身份行 ---- */
+.tpl-academic-paper .ap-journal{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.tpl-academic-paper .ap-jname{font-style:italic;font-weight:600;font-size:21px;color:var(--ink)}
+.tpl-academic-paper .ap-jmeta{font-family:Consolas,'SF Mono',Menlo,monospace;font-size:15px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 摘要卡：白纸面 + 极淡描边 + 方角，论文的框 ---- */
+.tpl-academic-paper .ap-card{background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.10);border-radius:2px;padding:30px 36px}
+.tpl-academic-paper .ap-abs-label{font-family:Consolas,'SF Mono',Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.20em;color:var(--link)}
+.tpl-academic-paper .ap-abs-text{margin:0;font-size:21px;line-height:1.9;color:var(--ink-2);text-align:justify}
+
+/* ---- 节号与作者行：蓝色等宽，可溯源的小字 ---- */
+.tpl-academic-paper .ap-kicker{font-family:Consolas,'SF Mono',Menlo,monospace;font-size:15px;letter-spacing:.26em;color:var(--link);text-transform:uppercase}
+.tpl-academic-paper .ap-authors{margin:0;font-size:20px;letter-spacing:.04em;color:var(--ink-2)}
+.tpl-academic-paper .ap-no{flex:none;width:64px;font-family:Consolas,'SF Mono',Menlo,monospace;font-size:20px;font-weight:700;color:var(--link);align-self:center}
+
+/* ---- 目录行：节号 + 章节名 + 一句说明 ---- */
+.tpl-academic-paper .ap-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-academic-paper .ap-item:last-child{border-bottom:none}
+.tpl-academic-paper .ap-t{flex:none;width:270px;font-size:27px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
+.tpl-academic-paper .ap-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 药丸：等宽小字描边，如关键词标签 ---- */
+.tpl-academic-paper .ap-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:2px;font-family:Consolas,'SF Mono',Menlo,monospace;font-size:16px;letter-spacing:.08em;color:var(--ink-2);white-space:nowrap}
+.tpl-academic-paper .ap-pill-accent{border-color:var(--link);color:var(--link)}
+
+/* ---- 数据：蓝色衬线大数字 + 图表注 ---- */
+.tpl-academic-paper .ap-stat{border-top:2px solid var(--ink);padding-top:28px}
+.tpl-academic-paper .ap-stat-v{font-family:Georgia,'Times New Roman',serif;font-size:100px;line-height:1;font-weight:700;color:var(--link)}
+.tpl-academic-paper .ap-stat-u{font-size:24px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-academic-paper .ap-stat-l{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
+.tpl-academic-paper .ap-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+.tpl-academic-paper .ap-figcap{margin:0;font-family:Consolas,'SF Mono',Menlo,monospace;font-size:15px;line-height:1.8;letter-spacing:.04em;color:var(--ink-3)}
+
+/* ---- 题记引文：衬线斜体大字 ---- */
+.tpl-academic-paper .ap-quote{font-style:italic;font-size:56px;line-height:1.7;font-weight:700;letter-spacing:.01em;color:var(--ink);max-width:24em;margin:0}
+.tpl-academic-paper .ap-src{margin:0;font-family:Consolas,'SF Mono',Menlo,monospace;font-size:19px;letter-spacing:.10em;color:var(--ink-3)}
+
+/* ---- 时间线：蓝色方框编号 + 细横线，如文献年表 ---- */
+.tpl-academic-paper .ap-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-academic-paper .ap-tl-item{flex:1;position:relative}
+.tpl-academic-paper .ap-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:54px;right:-44px;height:1px;background:var(--border)}
+.tpl-academic-paper .ap-tl-dot{position:relative;z-index:1;width:52px;height:52px;border:1.5px solid var(--link);border-radius:2px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font-family:Consolas,'SF Mono',Menlo,monospace;font-size:18px;font-weight:700;color:var(--link)}
+.tpl-academic-paper .ap-tl-t{margin-top:20px;font-family:Consolas,'SF Mono',Menlo,monospace;font-size:20px;font-weight:700;color:var(--link);letter-spacing:.04em}
+.tpl-academic-paper .ap-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-academic-paper .ap-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-academic-paper .ap-step:last-child{border-bottom:none}
+.tpl-academic-paper .ap-mini-t{margin:0;font-size:20px;line-height:1.65;color:var(--ink);letter-spacing:.01em}
+
+/* ---- 行动钮：学术蓝实底，收尾页唯一的饱和色块 ---- */
+.tpl-academic-paper .ap-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;background:var(--link);color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:.14em;border-radius:2px}
+
+/* ---- 页面切换（翻页动画）：如翻过一页纸 ---- */
+.tpl-academic-paper{--page-shift:20px;--page-dur:.45s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

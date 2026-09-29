@@ -1,0 +1,95 @@
+/* pitch-deck-vc — 融资路演（浅色 · 专业，YC 风格投资路演）。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/pitch-deck-vc（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 白底上蓝紫渐变如一朵正在绽放的花：靛紫渐变封面板 + 等宽小节标签 +
+ * 左线大数字，大留白给每一个数字呼吸的空间。与内置 pitch-deck（pd-，
+ * 纯蓝渐变字、圆角大卡、无侧板）刻意区分：本模板的身份色是紫罗兰。 */
+.tpl-pitch-deck-vc{
+  --bg:#F5F3FF;              /* 白→淡紫渐变的中段，翻页 letterbox 不跳 */
+  --ink:#1E1B4B;             /* 深靛标题 */
+  --ink-2:#4338CA;           /* 靛蓝正文（上游正文色） */
+  --ink-3:#64748B;           /* 石板灰小字 */
+  --border:rgba(139,92,246,.18);
+  --accent:#7C3AED;          /* 紫罗兰：左线、时间点、行动钮 */
+  --accent-2:#6366F1;        /* 蓝紫：等宽标签 */
+  --accent-ink:#FFFFFF;
+  --panel:linear-gradient(135deg,#1E1B4B 0%,#4338CA 42%,#7C3AED 100%);
+  font-family:'Inter','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：标题直接有力，数字要大要粗，正文精练 ---- */
+.tpl-pitch-deck-vc .h1{font-size:88px;line-height:1.04;font-weight:900;letter-spacing:-.03em;color:var(--ink);margin-bottom:12px}
+.tpl-pitch-deck-vc .h2{font-size:60px;line-height:1.08;font-weight:800;letter-spacing:-.025em;color:var(--ink);margin-bottom:10px}
+.tpl-pitch-deck-vc h4{font-family:inherit;font-size:26px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.tpl-pitch-deck-vc .lede{font-size:24px;line-height:1.7;color:var(--ink-2);font-weight:400;max-width:56ch}
+.tpl-pitch-deck-vc .deck-footer{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase}
+
+/* ---- ambient：白→淡紫的晨曦渐变 + 右上一圈极淡的紫罗兰圆环 ---- */
+.tpl-pitch-deck-vc .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(145deg,#FFFFFF 0%,#F5F3FF 52%,#EDE9FE 100%);
+}
+.tpl-pitch-deck-vc .slide::after{
+  content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;z-index:-1;
+  border:2px solid rgba(124,58,237,.12);border-radius:50%;
+}
+
+/* ---- 小节标签：等宽全大写宽字距，是全模板的「仪表盘口音」 ---- */
+.tpl-pitch-deck-vc .pv-kicker{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-2)}
+
+/* ---- 封面渐变侧板：靛→蓝紫→紫罗兰，右上藏一圈细环 ---- */
+.tpl-pitch-deck-vc .pv-panel{position:relative;overflow:hidden;background:var(--panel);border-radius:18px;padding:56px;display:flex;flex-direction:column;justify-content:center;color:#fff;box-shadow:0 24px 60px rgba(30,27,75,.35)}
+.tpl-pitch-deck-vc .pv-panel::after{content:"";position:absolute;right:-70px;top:-70px;width:240px;height:240px;border:2px solid rgba(255,255,255,.14);border-radius:50%}
+.tpl-pitch-deck-vc .pv-brand{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;letter-spacing:.02em;color:#fff}
+.tpl-pitch-deck-vc .pv-mark{flex:none;display:inline-block;width:34px;height:34px;border-radius:9px;background:#fff;position:relative}
+.tpl-pitch-deck-vc .pv-mark::before{content:"";position:absolute;inset:7px;border-radius:4px;background:linear-gradient(135deg,#7C3AED,#6366F1)}
+.tpl-pitch-deck-vc .pv-round{display:inline-flex;align-self:flex-start;margin:30px 0 0;padding:6px 14px;border:1px solid rgba(255,255,255,.35);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.tpl-pitch-deck-vc .pv-panel-title{font-size:58px;font-weight:800;line-height:1.12;letter-spacing:-.02em;color:#fff;margin:26px 0 0}
+.tpl-pitch-deck-vc .pv-panel-sub{font-size:19px;line-height:1.75;color:rgba(255,255,255,.78);margin:18px 0 0;max-width:24em}
+
+/* ---- 左线大数字：traction 的标准姿势 ---- */
+.tpl-pitch-deck-vc .pv-metric{border-left:3px solid var(--accent);padding-left:20px}
+.tpl-pitch-deck-vc .pv-metric-v{font-size:76px;line-height:1;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.tpl-pitch-deck-vc .pv-metric-l{margin-top:12px;font-size:16px;letter-spacing:.06em;color:var(--ink-3)}
+
+/* ---- 白卡：极淡紫描边 + 微紫投影，路演页的「干净托盘」 ---- */
+.tpl-pitch-deck-vc .pv-card{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:14px;padding:34px 38px;display:flex;flex-direction:column;box-shadow:0 12px 34px rgba(67,56,202,.07)}
+
+/* ---- 标签：细描边胶囊（等宽字）与实心渐变胶囊 ---- */
+.tpl-pitch-deck-vc .pv-tag{display:inline-flex;align-items:center;padding:8px 20px;border:1px solid rgba(124,58,237,.4);border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.1em;color:var(--accent-2);white-space:nowrap}
+.tpl-pitch-deck-vc .pv-tag-solid{display:inline-flex;align-items:center;padding:8px 20px;border-radius:999px;background:var(--panel);font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:.1em;color:#fff;white-space:nowrap}
+
+/* ---- 目录行 / 步骤行：编号渐变块 ---- */
+.tpl-pitch-deck-vc .pv-row{display:flex;align-items:baseline;gap:24px;padding:24px 4px;border-bottom:1px solid var(--border)}
+.tpl-pitch-deck-vc .pv-row:last-child{border-bottom:none}
+.tpl-pitch-deck-vc .pv-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border)}
+.tpl-pitch-deck-vc .pv-step:last-child{border-bottom:none}
+.tpl-pitch-deck-vc .pv-n{flex:none;width:44px;height:44px;border-radius:10px;background:var(--panel);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;align-self:center}
+.tpl-pitch-deck-vc .pv-t{flex:none;width:300px;font-size:24px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.tpl-pitch-deck-vc .pv-d{flex:1;font-size:17px;line-height:1.7;color:var(--ink-3)}
+.tpl-pitch-deck-vc .pv-mini-t{margin:0;font-size:19px;line-height:1.6;color:var(--ink)}
+
+/* ---- 月度柱阵：增长曲线的抽象表达，越靠右越亮 ---- */
+.tpl-pitch-deck-vc .pv-bars{display:flex;align-items:flex-end;gap:12px;height:150px}
+.tpl-pitch-deck-vc .pv-bar{flex:1;min-height:14px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#7C3AED,#6366F1)}
+.tpl-pitch-deck-vc .pv-bar-dim{background:linear-gradient(180deg,#C7D2FE,#A5B4FC)}
+
+/* ---- 来源行：数字的口径永远跟在页尾 ---- */
+.tpl-pitch-deck-vc .pv-src{font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.08em;color:var(--ink-3)}
+
+/* ---- 资本之言：大字引文 ---- */
+.tpl-pitch-deck-vc .pv-quote{font-size:58px;line-height:1.35;font-weight:800;letter-spacing:-.015em;color:var(--ink);max-width:24em;margin:0}
+
+/* ---- 里程碑时间线：编号圆点 + 紫罗兰时间点 ---- */
+.tpl-pitch-deck-vc .pv-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-pitch-deck-vc .pv-tl-item{flex:1;position:relative}
+.tpl-pitch-deck-vc .pv-tl-item:not(:last-child)::before{content:"";position:absolute;top:24px;left:50px;right:-40px;height:2px;background:var(--border)}
+.tpl-pitch-deck-vc .pv-tl-dot{position:relative;z-index:1;width:48px;height:48px;border:2px solid var(--accent);border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--accent-2)}
+.tpl-pitch-deck-vc .pv-tl-t{margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;letter-spacing:.04em;color:var(--accent)}
+.tpl-pitch-deck-vc .pv-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-3)}
+
+/* ---- 行动钮：渐变实底，收尾 The Ask ---- */
+.tpl-pitch-deck-vc .pv-btn{display:inline-flex;align-items:center;gap:12px;padding:17px 46px;background:var(--panel);border-radius:12px;font-size:21px;font-weight:700;letter-spacing:.06em;color:#fff;box-shadow:0 14px 34px rgba(76,29,149,.28)}
+
+/* ---- 页面切换（翻页动画）：路演节奏要快 ---- */
+.tpl-pitch-deck-vc{--page-shift:40px;--page-dur:.42s}

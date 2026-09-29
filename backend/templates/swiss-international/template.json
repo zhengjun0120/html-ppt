@@ -1,0 +1,81 @@
+{
+  "id": "swiss-international",
+  "name": "瑞士国际主义",
+  "description": "冷静精确的信息设计：极细网格上的极致字号对比，12 栏网格、左对齐与大留白，内容的结构本身就是视觉，一个 IKB 蓝说所有强调的话",
+  "tags": ["设计", "理性", "网格", "极简"],
+  "scenario": ["科技产品发布", "数据汇报", "设计工程", "年度总结", "AI 技术分享"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "索引封面",
+      "use": "开场：mono 元信息行 + 细体巨字标题（一词套蓝）+ 通栏细线 + 三格 KPI 条",
+      "roles": ["cover"],
+      "constraints": "主标题上行 ≤6 字、下行强调词 ≤4 字；lede 30-60 字；3 个数值各 ≤6 字符；指标行 ≤10 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录表",
+      "use": "议程：hairline 分隔的 4 行目录（mono 蓝色索引 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "KPI 塔",
+      "use": "三个关键数据：1px 黑缝拼合的三格指标，第一格是蓝色焦点，口径写页尾",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标行 ≤10 字；来源 14-40 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度元信息 + 细体大字章节名 + 细线 + 过渡问题，右下灰色巨号",
+      "roles": ["divider"],
+      "constraints": "章节名上行 ≤6 字、下行 ≤4 字；过渡问题 22-44 字；看点各 ≤8 字；巨号 2 字符"
+    },
+    {
+      "id": "keynotes",
+      "name": "定义三格",
+      "use": "三个并列定义：黑缝拼合三格，只允许中间一格做蓝色焦点，小标题粗、说明细",
+      "roles": ["content"],
+      "constraints": "恰好 3 格；索引 01-03；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "分屏论点",
+      "use": "左边把论点讲透（lede + 补充 + 两个方角标签），右边 hairline 三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "moments",
+      "name": "时间线",
+      "use": "3-4 个节点的横向时间线：黑色通栏线 + 蓝色直角方块节点 + mono 时间点",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "quote",
+      "name": "宣言页",
+      "use": "整页一句宣言：细体大字两行（下行套蓝）+ mono 出处 + 两个方角标签",
+      "roles": ["quote"],
+      "constraints": "引文共 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾",
+      "use": "收尾：细体大字 + 通栏细线 + 一句下一步 + 蓝底方角行动钮",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "收束上行 ≤6 字、下行 ≤4 字；lede 20-48 字；按钮 ≤6 字；标签各 ≤10 字"
+    }
+  ],
+  "fonts": ["Inter", "Helvetica Neue", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/swiss-international",
+    "license": "Apache-2.0"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "id": "pitch-deck-vc",
+  "name": "融资路演",
+  "description": "白底上蓝紫渐变如一朵正在绽放的花：靛紫封面板、等宽小节标签、左线大数字，YC 舞台上的视觉武器，每一个数字都在说服投资人",
+  "tags": ["路演", "商业", "融资", "专业"],
+  "scenario": ["融资路演", "种子轮 Pitch", "VC Meeting", "创业大赛", "产品发布"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "路演封面",
+      "use": "开场：左侧靛紫渐变面板装品牌与融资轮次，右侧 traction 大数字先声夺人",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；面板副文 30-60 字（含本轮融资额）；3 个数值各 ≤6 字符；口径行 20-44 字"
+    },
+    {
+      "id": "contents",
+      "name": "融资议程",
+      "use": "议程：白卡里 4 行投资人问题（编号块 + 问题 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；问题 ≤10 字；说明 14-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "增长数字",
+      "use": "三个核心指标 + 月度增长柱阵，紫罗兰大数字是唯一主视觉，来源写在页尾",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度标签 + 大字章节名 + 一个过渡问题 + 两个看点标签",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤8 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡论点",
+      "use": "三个并列论点：白卡 + 实心标签 + 小标题 + 两句说明，一页只回答一个问题",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "打法拆解",
+      "use": "左边把打法讲透（lede + 补充 + 标签），右边白卡装三行执行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个标签；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "moments",
+      "name": "里程碑",
+      "use": "3-4 个节点的横向时间线：编号圆点 + 时间点 + 一句事件，讲增长故事",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "quote",
+      "name": "资本之言",
+      "use": "整页一句创始人/资本视角的宣言：大字引文 + 出处 + 两个支撑标签",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "closing",
+      "name": "The Ask",
+      "use": "收尾要钱：大字融资额 + 资金用途 + 渐变行动钮 + 联系标签，一页只说这一件事",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-48 字；按钮 ≤6 字；标签各 ≤10 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/pitch-deck-vc",
+    "license": "Apache-2.0"
+  }
+}

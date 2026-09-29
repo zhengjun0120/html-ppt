@@ -1,0 +1,81 @@
+{
+  "id": "premium-color-blocking",
+  "name": "高级撞色",
+  "description": "珊瑚橙对峙深墨蓝的时尚编辑大片：锐利平涂色块、粗黑分隔与狠留白，像杂志封面的强对峙构图，让色彩本身成为情绪的主角",
+  "tags": ["杂志", "撞色", "时尚", "编辑"],
+  "scenario": ["时尚潮流", "品牌营销", "产品发布", "年度总结", "创意提案"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "大片封面",
+      "use": "开场：柠黄标签 + 超粗大标题 + 斜切色带 + 一句定位，右下可立编号角标",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；标签 ≤14 字；角标 4 字符内"
+    },
+    {
+      "id": "contents",
+      "name": "目录切页",
+      "use": "议程：白底粗边卡内 4 行章目（橙色大序号 + 章名 + 一句说明），粗实线分组",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；章名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三块对峙",
+      "use": "三个并列要点：锐利白卡 + 橙色标签 + 小标题 + 两句说明，粗黑上边线分组",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右块",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边墨蓝实色块装三行步骤，构成撞色对峙",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "撞色数字",
+      "use": "三个关键数据：橙色超大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "宣言引文",
+      "use": "整页一句宣言式引文：超粗大字 + 出处 + 两个支撑药丸，右侧斜切色带点缀",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度标签 + 超粗大字章节名 + 一个过渡句 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：墨蓝方块点 + 时间点 + 一句事件，粗色带连线",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾订货",
+      "use": "收尾：超粗大字 + 一句行动提醒 + 墨蓝实底按钮 + 描边药丸",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/premium-color-blocking",
+    "license": "Apache-2.0"
+  }
+}

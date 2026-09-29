@@ -1,0 +1,95 @@
+/* japanese-minimal — 日式极简。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/japanese-minimal（Apache-2.0，
+ * 借鉴配色与「间」的美学，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 和纸米白 #FAF8F5 → 暖灰 #EDE5D8 渐变上，宋体细字安静存在；
+ * 朱红 #DC2626 一页只许一笔（短线/封线/点睛之一），円相与纸角是每页
+ * 自动衬底的 ambient 层（z-index:-1，画在内容之下，骨架零成本）。
+ * 留白不是空洞，是经过极致删减后留下的精华。 */
+.tpl-japanese-minimal{
+  --bg:#F0E9DC;              /* letterbox 底：渐变中段值，翻页不跳 */
+  --washi:#FAF8F5;           /* 和纸米白 */
+  --ink:#1C1C1C;             /* 墨黑 */
+  --ink-2:#525252;           /* 灰正文 */
+  --ink-3:#A3A3A3;           /* 弱灰小字 */
+  --shu:#DC2626;             /* 朱红：一页一笔 */
+  --shu-deep:#B91C1C;
+  --border:rgba(28,28,28,.14);
+  --border-soft:rgba(28,28,28,.08);
+  --border-shu:rgba(185,28,28,.14);
+  font-family:Georgia,'Songti SC','STSong','Noto Serif SC','SimSun',serif;
+}
+
+/* ---- 画布底：和纸米白到暖灰的呼吸渐变 ---- */
+.tpl-japanese-minimal .slide{background:linear-gradient(145deg,#FAF8F5 0%,#F5F0E8 55%,#EDE5D8 100%)}
+
+/* ---- 字阶：宋体大字气场靠字距与行高，不靠字重 ---- */
+.tpl-japanese-minimal .h1{font-size:84px;line-height:1.22;font-weight:400;letter-spacing:.12em;color:var(--ink);margin-bottom:14px}
+.tpl-japanese-minimal .h2{font-size:46px;line-height:1.3;font-weight:400;letter-spacing:.1em;color:var(--ink);margin-bottom:10px}
+.tpl-japanese-minimal h4{font-family:inherit;color:var(--ink);font-weight:600;font-size:23px;letter-spacing:.08em}
+.tpl-japanese-minimal .lede{font-size:22px;line-height:2.05;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-japanese-minimal .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.3em;font-weight:400}
+
+/* ---- ambient：右侧円相（含一段淡朱笔意）+ 右上纸角，z-index:-1 画在内容之下 ---- */
+.tpl-japanese-minimal .slide::before{
+  content:"";position:absolute;right:110px;top:50%;transform:translateY(-50%);width:440px;height:440px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 440 440'%3E%3Ccircle cx='220' cy='220' r='170' fill='none' stroke='%231C1C1C' stroke-width='9' opacity='0.09' stroke-linecap='round' stroke-dasharray='920 150' transform='rotate(-60 220 220)'/%3E%3Cpath d='M172 384 Q220 398 266 380' fill='none' stroke='%23DC2626' stroke-width='9' opacity='0.35' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center;
+}
+.tpl-japanese-minimal .slide::after{
+  content:"";position:absolute;top:40px;right:40px;width:26px;height:26px;z-index:-1;
+  border-top:1px solid rgba(28,28,28,.4);border-right:1px solid rgba(28,28,28,.4);
+}
+
+/* ---- 题签：宽字距灰字，无饰线，安静开场 ---- */
+.tpl-japanese-minimal .jm-kicker{font-size:15px;font-weight:400;letter-spacing:.42em;color:var(--ink-2)}
+
+/* ---- 一笔朱红：标题下的短封线，全页唯一的红 ---- */
+.tpl-japanese-minimal .jm-red-line{width:34px;height:2px;background:var(--shu)}
+
+/* ---- 白纸卡：纯白 90% + 极淡朱红描边，无阴影 ---- */
+.tpl-japanese-minimal .jm-card{background:rgba(255,255,255,.9);border:1px solid var(--border-shu);padding:38px 42px;display:flex;flex-direction:column;min-height:288px}
+
+/* ---- 细描边签：直角细边胶囊；accent 变体是朱红描边（点睛用） ---- */
+.tpl-japanese-minimal .jm-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);font-size:16px;font-weight:400;letter-spacing:.18em;color:var(--ink-2);background:rgba(255,255,255,.7);white-space:nowrap}
+.tpl-japanese-minimal .jm-pill-accent{border-color:rgba(185,28,28,.45);color:var(--shu-deep)}
+
+/* ---- 目次行：汉数字号 + 条目名 + 说明，发丝线分行 ---- */
+.tpl-japanese-minimal .jm-item{display:flex;align-items:baseline;gap:28px;padding:27px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-japanese-minimal .jm-item:last-child{border-bottom:none}
+.tpl-japanese-minimal .jm-n{flex:none;width:44px;font-size:19px;font-weight:400;letter-spacing:.2em;color:var(--ink-3)}
+.tpl-japanese-minimal .jm-t{flex:none;width:240px;font-size:27px;font-weight:600;letter-spacing:.12em;color:var(--ink)}
+.tpl-japanese-minimal .jm-d{flex:1;font-size:18px;line-height:1.8;color:var(--ink-2)}
+
+/* ---- 数字：宋体大数字保持墨色，中栏可用一道朱红封线点睛 ---- */
+.tpl-japanese-minimal .jm-stat{border-top:1px solid var(--border);padding-top:30px}
+.tpl-japanese-minimal .jm-stat-accent{border-top:2px solid var(--shu)}
+.tpl-japanese-minimal .jm-stat-v{font-size:92px;line-height:1;font-weight:400;letter-spacing:.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.tpl-japanese-minimal .jm-stat-u{font-size:22px;font-weight:400;color:var(--ink-3);margin-left:10px}
+.tpl-japanese-minimal .jm-stat-l{margin-top:20px;font-size:24px;font-weight:600;letter-spacing:.1em;color:var(--ink)}
+.tpl-japanese-minimal .jm-stat-note{margin:10px 0 0;font-size:18px;line-height:1.8;color:var(--ink-2)}
+
+/* ---- 一笔引文：宋体大字 + 出处 ---- */
+.tpl-japanese-minimal .jm-quote{font-size:50px;line-height:1.85;font-weight:400;letter-spacing:.1em;color:var(--ink);max-width:24em;margin:0}
+.tpl-japanese-minimal .jm-src{margin:0;font-size:18px;font-weight:400;letter-spacing:.2em;color:var(--ink-3)}
+
+/* ---- 竖排题款：只放留白处，accent 可点一个朱字 ---- */
+.tpl-japanese-minimal .jm-vert{writing-mode:vertical-rl;font-size:22px;font-weight:400;letter-spacing:.55em;line-height:2.2;color:var(--ink-2)}
+.tpl-japanese-minimal .jm-vert-accent{color:var(--shu)}
+
+/* ---- 时间线：空心圆点 + 发丝连接线 ---- */
+.tpl-japanese-minimal .jm-tl{display:flex;gap:46px;margin-top:6px}
+.tpl-japanese-minimal .jm-tl-item{flex:1;position:relative}
+.tpl-japanese-minimal .jm-tl-item:not(:last-child)::before{content:"";position:absolute;top:7px;left:26px;right:-46px;height:1px;background:var(--border-soft)}
+.tpl-japanese-minimal .jm-tl-dot{position:relative;z-index:1;width:15px;height:15px;border:1px solid var(--ink);border-radius:50%;background:var(--washi)}
+.tpl-japanese-minimal .jm-tl-t{margin-top:18px;font-size:20px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.tpl-japanese-minimal .jm-tl-d{margin-top:8px;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-japanese-minimal .jm-step{display:flex;align-items:baseline;gap:20px;padding:26px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-japanese-minimal .jm-step:last-child{border-bottom:none}
+.tpl-japanese-minimal .jm-mini-t{margin:0;font-size:19px;line-height:1.8;color:var(--ink-2)}
+
+/* ---- 行动钮：墨线描边，无填充，收尾款识 ---- */
+.tpl-japanese-minimal .jm-btn{display:inline-flex;align-items:center;padding:14px 44px;border:1px solid var(--ink);font-size:20px;font-weight:500;letter-spacing:.32em;color:var(--ink);background:transparent;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：如纸页轻揭 ---- */
+.tpl-japanese-minimal{--page-shift:6px;--page-dur:.6s;--page-ease:cubic-bezier(.22,.61,.36,1)}

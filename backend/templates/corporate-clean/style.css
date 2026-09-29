@@ -1,0 +1,98 @@
+/* corporate-clean — 企业洁净。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/corporate-clean（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 纯白画布 + 海军蓝落笔：克制的蓝灰双色、细分隔线、大量留白；
+ * 卡片轻描边、小圆角、浅阴影，无任何花哨装饰。页顶海军蓝信头细线与
+ * 右下账目细线是每页自动衬底的 ambient 层（z-index:-1，画在 .deck
+ * 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-corporate-clean{
+  --bg:#FFFFFF;              /* 纯白画布 */
+  --bg-soft:#F8FAFC;         /* 蓝灰底（几乎不可察觉） */
+  --surface:#FFFFFF;
+  --surface-2:#F1F5F9;
+  --ink:#0F172A;             /* 深墨标题 */
+  --ink-2:#334155;           /* 石板灰正文 */
+  --ink-3:#94A3B8;           /* 浅灰蓝小字 */
+  --border:#E2E8F0;
+  --navy:#1E3A8A;            /* 海军蓝（身份色） */
+  --blue:#3B82F6;            /* 蓝色辅助 */
+  --blue-soft:#EFF6FF;
+  --navy-ink:#FFFFFF;
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：重字重标题 + 标准行距正文，层级分明是商务文档的底气 ---- */
+.tpl-corporate-clean .h1{font-size:84px;line-height:1.1;font-weight:800;letter-spacing:-.015em;color:var(--ink);margin-bottom:12px}
+.tpl-corporate-clean .h2{font-size:52px;line-height:1.15;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-corporate-clean h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:24px;letter-spacing:.01em}
+.tpl-corporate-clean .lede{font-size:23px;line-height:1.85;color:var(--ink-2);font-weight:400;letter-spacing:.01em}
+.tpl-corporate-clean .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：页顶海军蓝信头细线（由上游侧栏渐变转写为横向细线）----
+     右下三道账目细线像财务报表的落款栏，克制到几乎只是"纸感"。 */
+.tpl-corporate-clean .slide::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:5px;z-index:-1;
+  background:linear-gradient(90deg,var(--navy) 0%,var(--blue) 34%,rgba(59,130,246,0) 72%);
+}
+.tpl-corporate-clean .slide::after{
+  content:"";position:absolute;right:96px;bottom:62px;width:420px;height:14px;z-index:-1;
+  background:
+    linear-gradient(var(--border),var(--border)) 0 0/420px 2px no-repeat,
+    linear-gradient(var(--ink-3),var(--ink-3)) 0 6px/300px 1px no-repeat,
+    linear-gradient(var(--border),var(--border)) 0 12px/180px 1px no-repeat;
+}
+
+/* ---- 信头题签：蓝色小字 + 海军蓝短线，像公文页眉 ---- */
+.tpl-corporate-clean .cc-kicker{align-self:flex-start;display:inline-flex;flex-direction:column;font-size:16px;font-weight:700;letter-spacing:.24em;color:var(--blue);text-transform:uppercase}
+.tpl-corporate-clean .cc-kicker::after{content:"";width:64px;height:3px;background:var(--navy);margin-top:10px}
+
+/* ---- 标题细线：海军蓝到透明，压住大标题 ---- */
+.tpl-corporate-clean .cc-rule{width:220px;height:3px;background:linear-gradient(90deg,var(--navy) 0%,rgba(30,58,138,0) 100%)}
+
+/* ---- 标识块：海军蓝方标，全模板唯一的实底色块 ---- */
+.tpl-corporate-clean .cc-badge{flex:none;width:72px;height:72px;border-radius:8px;background:var(--navy);color:var(--navy-ink);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;letter-spacing:.08em}
+
+/* ---- 白卡：轻描边 + 小圆角 + 浅阴影，禁重阴影禁大圆角 ---- */
+.tpl-corporate-clean .cc-card{background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:36px 40px;display:flex;flex-direction:column;min-height:260px}
+
+/* ---- 药丸：细描边胶囊，点缀用蓝 ---- */
+.tpl-corporate-clean .cc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:16px;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
+.tpl-corporate-clean .cc-pill-accent{background:var(--blue-soft);border-color:rgba(59,130,246,.35);color:var(--navy);font-weight:600}
+
+/* ---- 议程行：编号方块 + 篇名 + 说明 ---- */
+.tpl-corporate-clean .cc-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid var(--border)}
+.tpl-corporate-clean .cc-item:last-child{border-bottom:none}
+.tpl-corporate-clean .cc-n{flex:none;width:46px;height:46px;border:1.5px solid var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--navy);align-self:center}
+.tpl-corporate-clean .cc-t{flex:none;width:280px;font-size:27px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
+.tpl-corporate-clean .cc-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 核心指标：海军蓝大数字压在细顶线上 ---- */
+.tpl-corporate-clean .cc-stat{border-top:3px solid var(--navy);padding-top:28px}
+.tpl-corporate-clean .cc-stat-v{font-size:100px;line-height:1;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
+.tpl-corporate-clean .cc-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-corporate-clean .cc-stat-l{margin-top:18px;font-size:26px;font-weight:700;color:var(--ink)}
+.tpl-corporate-clean .cc-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 高管引言 + 超大引号衬底 ---- */
+.tpl-corporate-clean .cc-quote{font-size:58px;line-height:1.55;font-weight:700;letter-spacing:.01em;color:var(--ink);max-width:24em;margin:0}
+.tpl-corporate-clean .cc-src{margin:0;font-size:20px;letter-spacing:.1em;color:var(--ink-3)}
+.tpl-corporate-clean .cc-mark{position:absolute;right:130px;top:50%;transform:translateY(-50%);font-family:Georgia,'Times New Roman',serif;font-size:340px;line-height:1;font-weight:800;color:rgba(30,58,138,.07);pointer-events:none}
+
+/* ---- 时间线：编号圆点 + 细连接线 ---- */
+.tpl-corporate-clean .cc-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-corporate-clean .cc-tl-item{flex:1;position:relative}
+.tpl-corporate-clean .cc-tl-item:not(:last-child)::before{content:"";position:absolute;top:27px;left:54px;right:-44px;height:2px;background:var(--border)}
+.tpl-corporate-clean .cc-tl-dot{position:relative;z-index:1;width:54px;height:54px;border:2px solid var(--navy);border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--navy)}
+.tpl-corporate-clean .cc-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--navy);letter-spacing:.04em}
+.tpl-corporate-clean .cc-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-corporate-clean .cc-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border)}
+.tpl-corporate-clean .cc-step:last-child{border-bottom:none}
+.tpl-corporate-clean .cc-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：海军蓝实底，收尾页唯一的按钮 ---- */
+.tpl-corporate-clean .cc-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;border-radius:8px;background:var(--navy);color:var(--navy-ink);font-size:21px;font-weight:700;letter-spacing:.1em;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：干净利落的小幅右滑 ---- */
+.tpl-corporate-clean{--page-shift:16px;--page-dur:.55s;--page-ease:cubic-bezier(.4,0,.2,1)}

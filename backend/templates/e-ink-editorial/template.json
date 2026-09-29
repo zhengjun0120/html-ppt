@@ -1,0 +1,81 @@
+{
+  "id": "e-ink-editorial",
+  "name": "墨页叙事",
+  "description": "纸灰底、纯黑字、极细线、全程无彩色的墨水屏气质长文杂志：衬线正文与等宽元数据建立阅读秩序，留白与安静比卡片更重要",
+  "tags": ["杂志", "墨水屏", "人文", "极简"],
+  "scenario": ["人文分享", "行业观察", "品牌故事", "书评访谈", "长文专题"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "卷首页",
+      "use": "开场：等宽刊号行 + 通栏极细线 + 衬线大标题 + 一句导语，像长文的开卷",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；刊号行 ≤16 字符；药丸 ≤10 字"
+    },
+    {
+      "id": "contents",
+      "name": "目次页",
+      "use": "议程：细线框卡内 4 行目次（等宽编号 + 篇名 + 一句说明），细线分组",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三段论",
+      "use": "三个并列要点：细线描边卡 + 黑底反白题签 + 衬线小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边墨黑实块装三行步骤，纸墨反转",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "墨黑数字",
+      "use": "三个关键数据：纯黑衬线大数字 + 指标名 + 口径，页尾等宽字标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "访谈引文",
+      "use": "整页一句引文：衬线大字 + 等宽出处 + 两个支撑药丸，右侧留白处一行页码注记",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：等宽进度行 + 衬线大字章节名 + 一个过渡句 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：细线方点 + 时间点 + 一句事件，极细连接线",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "卷尾互动",
+      "use": "收尾：衬线大字 + 一句行动提醒 + 细线描边按钮 + 描边药丸",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Georgia", "Songti SC", "JetBrains Mono", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/e-ink-editorial",
+    "license": "Apache-2.0"
+  }
+}

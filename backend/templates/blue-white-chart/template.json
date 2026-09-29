@@ -1,0 +1,81 @@
+{
+  "id": "blue-white-chart",
+  "name": "蓝白商务图表",
+  "description": "白底深蓝骨架的咨询级图表风：一条深蓝主线贯穿标题分隔线与数据模块，浅蓝灰制造层级，信息密度高而不压迫，像一份被打磨过的经营分析报告",
+  "tags": ["浅色", "专业", "图表", "咨询"],
+  "scenario": ["季度业绩汇报", "经营分析汇报", "销售数据看板", "咨询报告", "企业内部汇报"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "图表封面",
+      "use": "开场：浅蓝胶囊题签 + 深蓝大标题 + 横贯分隔线 + 一句结论，右上浅蓝圆衬底",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-52 字；题签 ≤14 字；标识 2-4 字"
+    },
+    {
+      "id": "contents",
+      "name": "汇报目录",
+      "use": "议程：浅蓝信息卡内 4 行议程（深蓝编号块 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡引擎",
+      "use": "三个增长引擎：浅蓝卡 + 深蓝题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一个问题讲透（lede + 补充 + 药丸），右边浅蓝卡装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "核心 KPI",
+      "use": "三个关键 KPI：深蓝顶线白卡 + 深海军蓝大数字 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "季度金句",
+      "use": "整页一句季度金句：深蓝大字引言 + 出处 + 两个支撑药丸，右侧圆环衬底",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤24 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节页",
+      "use": "章节过渡：进度题签 + 深蓝大字章节名 + 一句过渡 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "季度大事记",
+      "use": "4 个节点的横向时间线：深蓝编号方块 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "恰好 4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾行动",
+      "use": "收尾：深蓝大字结论 + 一句行动提醒 + 深蓝按钮 + 描边药丸",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-48 字；按钮 ≤6 字；药丸 ≤14 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "Roboto"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/blue-white-chart",
+    "license": "Apache-2.0"
+  }
+}

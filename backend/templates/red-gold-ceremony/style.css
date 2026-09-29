@@ -1,0 +1,97 @@
+/* red-gold-ceremony — 初心红典。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/red-gold-ceremony（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深正红底 + 香槟金光：仪典感来自对称轴线、细金线与克制的金渐变标题，
+ * 红为主、金为点睛；仪典内框与页底金辉是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-red-gold-ceremony{
+  --bg:#B4160F;              /* 深红中段（letterbox 翻页不跳） */
+  --red-deep:#8F140F;        /* 暗部红 */
+  --red-core:#CD170A;        /* 主正红 */
+  --red-lift:#D43525;        /* 提亮部红 */
+  --ink:#FFF6EA;             /* 正文暖白 */
+  --ink-2:#FFE2AC;           /* 金白辅助信息 */
+  --ink-3:#D9B98C;           /* 更弱的说明字 */
+  --border:rgba(254,235,165,.38);
+  --border-soft:rgba(254,235,165,.20);
+  --gold:#FEEBA5;            /* 香槟金亮 */
+  --gold-deep:#E29B60;       /* 鎏金暗 */
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 画布：深红径向光场，金光自上方来 ---- */
+.tpl-red-gold-ceremony .slide{background:radial-gradient(circle at 50% 18%,var(--red-lift) 0%,var(--red-core) 46%,var(--red-deep) 100%)}
+
+/* ---- 字阶：衬线大字 + 金渐变只给 h1，正文暖白宽行距 ---- */
+.tpl-red-gold-ceremony .h1{font-size:96px;line-height:1.12;font-weight:700;letter-spacing:.10em;margin-bottom:10px;background:linear-gradient(180deg,var(--gold) 20%,var(--gold-deep) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.tpl-red-gold-ceremony .h2{font-size:54px;line-height:1.18;font-weight:700;letter-spacing:.08em;color:var(--gold);margin-bottom:8px}
+.tpl-red-gold-ceremony h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.06em}
+.tpl-red-gold-ceremony .lede{font-size:24px;line-height:1.95;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-red-gold-ceremony .deck-footer{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.20em}
+
+/* ---- ambient：仪典内框（四周细金线）+ 页底金辉，z-index:-1 画在内容之下 ---- */
+.tpl-red-gold-ceremony .slide::before{
+  content:"";position:absolute;inset:28px;z-index:-1;
+  border:1px solid rgba(254,235,165,.26);
+}
+.tpl-red-gold-ceremony .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:340px;z-index:-1;
+  background:radial-gradient(62% 130% at 50% 120%,rgba(254,235,165,.14),transparent 64%);
+}
+
+/* ---- 金签：细金线引导的题行（页首） ---- */
+.tpl-red-gold-ceremony .rc-kicker{display:flex;align-items:center;gap:16px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.42em;color:var(--ink-2)}
+.tpl-red-gold-ceremony .rc-kicker::before{content:"";width:44px;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
+
+/* ---- 金线：标题下的对称细金线 ---- */
+.tpl-red-gold-ceremony .rc-line{width:260px;height:1px;background:linear-gradient(90deg,transparent,var(--gold) 28%,var(--gold) 72%,transparent)}
+
+/* ---- 徽记：金框方印，全模板唯一的「印」元素 ---- */
+.tpl-red-gold-ceremony .rc-emblem{flex:none;width:78px;height:78px;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;text-align:center;font-family:Georgia,'Songti SC',serif;font-size:19px;font-weight:700;line-height:1.3;letter-spacing:.14em;color:var(--gold)}
+
+/* ---- 星点：✦ ✦ ✦ 仪典点缀，只放留白处 ---- */
+.tpl-red-gold-ceremony .rc-stars{flex:none;font-family:'JetBrains Mono',monospace;font-size:17px;letter-spacing:.55em;color:var(--gold);opacity:.85}
+
+/* ---- 仪典卡：深红暗部半透明 + 细金描边，无阴影无圆角 ---- */
+.tpl-red-gold-ceremony .rc-card{background:rgba(85,10,6,.42);border:1px solid var(--border-soft);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：方角细金描边，克制 ---- */
+.tpl-red-gold-ceremony .rc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.16em;color:var(--ink-2);white-space:nowrap}
+.tpl-red-gold-ceremony .rc-pill-accent{border-color:var(--gold);color:var(--gold)}
+
+/* ---- 议程行：金框序号 + 议程名 + 说明 ---- */
+.tpl-red-gold-ceremony .rc-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-red-gold-ceremony .rc-item:last-child{border-bottom:none}
+.tpl-red-gold-ceremony .rc-n{flex:none;width:52px;height:52px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:Georgia,'Songti SC',serif;font-size:19px;font-weight:700;color:var(--gold);align-self:center}
+.tpl-red-gold-ceremony .rc-t{flex:none;width:260px;font-family:Georgia,'Songti SC',serif;font-size:30px;font-weight:700;letter-spacing:.10em;color:var(--ink)}
+.tpl-red-gold-ceremony .rc-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 鎏金数字：数据页主视觉 ---- */
+.tpl-red-gold-ceremony .rc-stat{border-top:1px solid var(--gold);padding-top:30px}
+.tpl-red-gold-ceremony .rc-stat-v{font-family:Georgia,'Songti SC',serif;font-size:104px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--gold)}
+.tpl-red-gold-ceremony .rc-stat-u{font-size:28px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-red-gold-ceremony .rc-stat-l{margin-top:20px;font-family:Georgia,'Songti SC',serif;font-size:27px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-red-gold-ceremony .rc-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 致辞引文：衬线大字 ---- */
+.tpl-red-gold-ceremony .rc-quote{font-family:Georgia,'Songti SC',serif;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:26em;margin:0}
+.tpl-red-gold-ceremony .rc-src{margin:0;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;letter-spacing:.18em;color:var(--ink-3)}
+
+/* ---- 时间线：金框方点 + 细金连接线 ---- */
+.tpl-red-gold-ceremony .rc-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-red-gold-ceremony .rc-tl-item{flex:1;position:relative}
+.tpl-red-gold-ceremony .rc-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:52px;right:-44px;height:1px;background:var(--border-soft)}
+.tpl-red-gold-ceremony .rc-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1px solid var(--gold);background:rgba(85,10,6,.60);display:flex;align-items:center;justify-content:center;font-family:Georgia,'Songti SC',serif;font-size:18px;font-weight:700;color:var(--gold)}
+.tpl-red-gold-ceremony .rc-tl-t{margin-top:20px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:19px;font-weight:700;color:var(--gold);letter-spacing:.10em}
+.tpl-red-gold-ceremony .rc-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-red-gold-ceremony .rc-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-red-gold-ceremony .rc-step:last-child{border-bottom:none}
+.tpl-red-gold-ceremony .rc-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：金框描边，收尾页 ---- */
+.tpl-red-gold-ceremony .rc-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:1.5px solid var(--gold);font-family:Georgia,'Songti SC',serif;font-size:22px;font-weight:700;letter-spacing:.22em;color:var(--gold)}
+
+/* ---- 页面切换：如仪仗缓步，稳而不跳 ---- */
+.tpl-red-gold-ceremony{--page-shift:12px;--page-dur:.60s;--page-ease:cubic-bezier(.22,.61,.36,1)}
