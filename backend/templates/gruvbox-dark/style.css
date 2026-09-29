@@ -1,0 +1,120 @@
+/* gruvbox-dark — Gruvbox 暗。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/gruvbox-dark（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 复古暖褐终端：炭火渐变底 + 琥珀橙 #FE8019 / 沙黄 #D79921 / 苔绿 #B8BB26，
+ * 全局等宽字型，vim 提示符块与终端窗口是身份元素；右上琥珀辉光、左下苔绿
+ * 余温与极淡扫描线是每页自动衬底的 ambient 层（z-index:-1，画在内容之下，
+ * 骨架零成本）。 */
+.tpl-gruvbox-dark{
+  --bg:#1D2021;              /* 渐变中段：letterbox 与翻页同色不跳 */
+  --bg-soft:#282828;         /* 暖褐（卡与状态栏底） */
+  --ink:#EBDBB2;             /* 暖白标题 */
+  --ink-2:#D5C4A1;           /* 暖灰正文 */
+  --ink-3:#A89984;           /* 棕灰小字 */
+  --border:rgba(168,153,132,.28);
+  --border-soft:rgba(168,153,132,.15);
+  --accent:#FE8019;          /* 琥珀橙（身份色） */
+  --accent-2:#D79921;        /* 沙黄 */
+  --accent-3:#B8BB26;        /* 苔绿 */
+  --accent-ink:#1D2021;      /* 橙底上的深字 */
+  font-family:'JetBrains Mono','Noto Sans SC',ui-monospace,Consolas,monospace;
+}
+
+/* ---- 画布：炭火径向渐变，外圈一圈暖橙细光 ---- */
+.tpl-gruvbox-dark .slide{
+  background:radial-gradient(circle at 20% 0%, #282828 0%, #1d2021 52%, #16191a 100%);
+  box-shadow:0 0 0 1px rgba(254,128,25,.12);
+}
+
+/* ---- 字阶：等宽大字是终端的门面，正文保持等宽节奏 ---- */
+.tpl-gruvbox-dark .h1{font-size:88px;line-height:1.14;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:12px;text-shadow:0 0 34px rgba(254,128,25,.14)}
+.tpl-gruvbox-dark .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-gruvbox-dark h4{color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.03em}
+.tpl-gruvbox-dark .lede{font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-gruvbox-dark .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：右上琥珀辉光 + 左下苔绿余温；顶部橙绿细条 + 极淡扫描线 ---- */
+.tpl-gruvbox-dark .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(42% 55% at 82% 6%, rgba(254,128,25,.10), transparent 68%),
+    radial-gradient(38% 46% at 8% 96%, rgba(184,187,38,.07), transparent 70%);
+}
+.tpl-gruvbox-dark .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(90deg,var(--accent),var(--accent-3) 62%,transparent),
+    repeating-linear-gradient(0deg, rgba(235,219,178,.028) 0 1px, transparent 1px 5px);
+  background-size:100% 3px,100% 100%;
+  background-position:0 0,0 0;
+  background-repeat:no-repeat,repeat;
+}
+
+/* ---- 提示符块：像 vim 状态栏的身份段（封面/收尾用） ---- */
+.tpl-gruvbox-dark .gd-prompt{flex:none;display:inline-flex;align-items:center;padding:8px 20px;background:var(--accent);color:var(--accent-ink);font-size:18px;font-weight:700;letter-spacing:.08em;border-radius:4px;white-space:nowrap}
+
+/* ---- 题签：沙黄小字 + 琥珀短线引导（页首） ---- */
+.tpl-gruvbox-dark .gd-kicker{display:flex;align-items:center;gap:16px;font-size:16px;letter-spacing:.32em;color:var(--accent-2)}
+.tpl-gruvbox-dark .gd-kicker::before{content:"";width:34px;height:2px;background:var(--accent)}
+
+/* ---- 渐隐线：标题下的一笔，琥珀渐隐 ---- */
+.tpl-gruvbox-dark .gd-rule{width:220px;height:4px;background:linear-gradient(90deg,var(--accent),transparent)}
+
+/* ---- 终端卡：比底色亮一档的暖褐面，暖棕细描边，小圆角 ---- */
+.tpl-gruvbox-dark .gd-card{background:rgba(40,40,40,.68);border:1px solid var(--border-soft);border-radius:10px;padding:34px 38px;display:flex;flex-direction:column;min-height:270px}
+
+/* ---- 目录行：方括号编号 + 篇名 + 说明 ---- */
+.tpl-gruvbox-dark .gd-item{display:flex;align-items:baseline;gap:24px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-gruvbox-dark .gd-item:last-child{border-bottom:none}
+.tpl-gruvbox-dark .gd-n{flex:none;width:70px;font-size:19px;font-weight:700;color:var(--accent-2);letter-spacing:.04em}
+.tpl-gruvbox-dark .gd-t{flex:none;width:270px;font-size:27px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-gruvbox-dark .gd-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 描边药丸：方角胶囊，低调终端标签 ---- */
+.tpl-gruvbox-dark .gd-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid var(--border);border-radius:6px;font-size:16px;letter-spacing:.14em;color:var(--ink-2);background:rgba(40,40,40,.5);white-space:nowrap}
+.tpl-gruvbox-dark .gd-pill-accent{border-color:rgba(254,128,25,.55);color:var(--accent);background:rgba(254,128,25,.08)}
+
+/* ---- 琥珀数字：数据页主视觉，环境辉光不加彩到字上 ---- */
+.tpl-gruvbox-dark .gd-stat{border-top:2px solid rgba(254,128,25,.5);padding-top:28px}
+.tpl-gruvbox-dark .gd-stat-v{font-size:100px;line-height:1;font-weight:700;letter-spacing:-.02em;color:var(--accent)}
+.tpl-gruvbox-dark .gd-stat-u{font-size:26px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-gruvbox-dark .gd-stat-l{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-gruvbox-dark .gd-stat-note{margin:12px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：等宽大字，像一行被反复引用的注释 ---- */
+.tpl-gruvbox-dark .gd-quote{font-size:58px;line-height:1.55;font-weight:700;letter-spacing:.04em;color:var(--ink);max-width:24em;margin:0}
+.tpl-gruvbox-dark .gd-src{margin:0;font-size:17px;letter-spacing:.08em;color:var(--ink-3)}
+
+/* ---- 时间线：琥珀方框序号 + 细棕连接线 ---- */
+.tpl-gruvbox-dark .gd-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-gruvbox-dark .gd-tl-item{flex:1;position:relative}
+.tpl-gruvbox-dark .gd-tl-item:not(:last-child)::before{content:"";position:absolute;top:27px;left:56px;right:-44px;height:1px;background:var(--border)}
+.tpl-gruvbox-dark .gd-tl-dot{position:relative;z-index:1;width:54px;height:54px;border:1.5px solid rgba(254,128,25,.5);border-radius:8px;background:#1D2021;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--accent)}
+.tpl-gruvbox-dark .gd-tl-t{margin-top:20px;font-size:22px;font-weight:700;letter-spacing:.04em;color:var(--accent-2)}
+.tpl-gruvbox-dark .gd-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-gruvbox-dark .gd-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-gruvbox-dark .gd-step:last-child{border-bottom:none}
+.tpl-gruvbox-dark .gd-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：琥珀描边，收尾页 ---- */
+.tpl-gruvbox-dark .gd-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 38px;border:2px solid var(--accent);border-radius:6px;background:rgba(254,128,25,.1);font-size:22px;font-weight:700;letter-spacing:.16em;color:var(--accent);white-space:nowrap}
+
+/* ---- 正文补充句：卡说明 / 左栏补充 / 代码页尾注共用的正文档 ---- */
+.tpl-gruvbox-dark .gd-note{margin:0;font-size:19px;line-height:1.8;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 终端窗口：code 版式的母题，标题栏三圆点 + 文件名 + 状态栏 ---- */
+.tpl-gruvbox-dark .gd-term{border:1px solid rgba(254,128,25,.22);border-radius:10px;background:rgba(22,25,26,.92);overflow:hidden}
+.tpl-gruvbox-dark .gd-term-bar{display:flex;align-items:center;gap:10px;padding:14px 22px;background:rgba(40,40,40,.85);border-bottom:1px solid var(--border-soft)}
+.tpl-gruvbox-dark .gd-dot{width:13px;height:13px;border-radius:50%;background:rgba(168,153,132,.35)}
+.tpl-gruvbox-dark .gd-dot:nth-child(1){background:#CC241D}
+.tpl-gruvbox-dark .gd-dot:nth-child(2){background:#D79921}
+.tpl-gruvbox-dark .gd-dot:nth-child(3){background:#98971A}
+.tpl-gruvbox-dark .gd-term-name{margin-left:10px;font-size:17px;letter-spacing:.06em;color:var(--ink-2)}
+.tpl-gruvbox-dark .gd-lang{margin-left:auto;padding:3px 14px;border:1px solid rgba(184,187,38,.4);border-radius:999px;font-size:14px;letter-spacing:.1em;color:var(--accent-3)}
+.tpl-gruvbox-dark .gd-codeblock{margin:0;padding:28px 30px;font-family:inherit;font-size:20px;line-height:1.85;color:var(--ink-2)}
+.tpl-gruvbox-dark .gd-status{display:flex;align-items:center;justify-content:space-between;padding:10px 22px;background:var(--accent);color:var(--accent-ink);font-size:15px;font-weight:700;letter-spacing:.08em}
+
+/* ---- 页面切换：像光标换行一样干脆 ---- */
+.tpl-gruvbox-dark{--page-shift:18px;--page-dur:.55s;--page-ease:cubic-bezier(.3,.7,.3,1)}

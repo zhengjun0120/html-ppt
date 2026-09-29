@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>终端效率之夜 · 复古终端的效率哲学</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-gruvbox-dark">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="gd-kicker">~/share · 终端效率之夜</p>
+    <h1 class="h1 mt-m">复古终端的，<br>效率哲学。</h1>
+    <div class="gd-rule mt-s"></div>
+    <p class="lede mt-m" style="max-width:52ch">一台老终端、一份 86 行的 vimrc。今晚把每天重复上千次的动作，交还给肌肉记忆。</p>
+    <div class="row mt-l" style="gap:24px">
+      <span class="gd-prompt">:wq</span>
+      <span class="gd-pill">分享人 · 阿禾</span>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场先把终端放在大屏上，别急着翻页。今晚只讲手上的效率，不比谁的配置花哨。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="gd-kicker">今晚的目录</p>
+    <h2 class="h2 mt-m">四段路程</h2>
+    <div class="gd-card mt-l" style="margin-top:44px">
+      <div class="gd-item"><span class="gd-n">[01]</span><span class="gd-t">认识你的手</span><span class="gd-d">上万次按键先记账，再谈优化</span></div>
+      <div class="gd-item"><span class="gd-n">[02]</span><span class="gd-t">vimrc 减脂</span><span class="gd-d">247 行怎么瘦到 86 行</span></div>
+      <div class="gd-item"><span class="gd-n">[03]</span><span class="gd-t">键位即效率</span><span class="gd-d">三组快捷键练进肌肉记忆</span></div>
+      <div class="gd-item"><span class="gd-n">[04]</span><span class="gd-t">数据与回放</span><span class="gd-d">用启动日志和录屏核对收益</span></div>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">第二、三段是今晚的主菜；第一段是热身，第四段负责验收。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="gd-kicker">减脂之后的账本</p>
+    <h2 class="h2 mt-m">速度，是删出来的</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="gd-stat"><div class="gd-stat-v">86<span class="gd-stat-u">行</span></div><div class="gd-stat-l">配置行数</div><p class="gd-stat-note">vimrc 当前版本，2026-06 定稿，含注释与空行</p></div>
+      <div class="gd-stat"><div class="gd-stat-v">0.4<span class="gd-stat-u">秒</span></div><div class="gd-stat-l">冷启动耗时</div><p class="gd-stat-note">nvim --startuptime 十次中位；旧配置为 1.8 秒</p></div>
+      <div class="gd-stat"><div class="gd-stat-v">37<span class="gd-stat-u">%</span></div><div class="gd-stat-l">重复操作省时</div><p class="gd-stat-note">工作坊学员前后测中位，任务为同一组编辑题</p></div>
+    </div>
+    <p class="gd-src mt-m" style="margin-top:40px">来源：作者终端效率工作坊 2019-2025 年记录（n=60，任务录屏核对）。</p>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">三个数字都有出处，讲的时候点一下口径，别让人以为是跑分榜。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="gd-kicker">卷二 · 键位即效率</p>
+    <h1 class="h1 mt-m">先练手，<br>再谈快。</h1>
+    <p class="lede mt-m" style="max-width:48ch">工具不救慢手。三组键位练进手指之前，任何插件都只是补丁。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="gd-pill gd-pill-accent">肌肉记忆</span>
+      <span class="gd-pill">盲打验证</span>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">过渡页停三秒。这部分是工作坊式的，大家会跟着一起按。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="gd-kicker">效率三原则</p>
+    <h2 class="h2 mt-m">老终端教我的三件事</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="gd-card"><span class="gd-pill gd-pill-accent">先练手</span><h4 class="mt-m">键位肌肉记忆</h4><p class="gd-note mt-s">高频动作必须不假思索，每一次找键位，都是当天要还的复利负债。</p></div>
+      <div class="gd-card"><span class="gd-pill gd-pill-accent">再减重</span><h4 class="mt-m">少即是快</h4><p class="gd-note mt-s">插件越少启动越快，留下的每一行配置都要能说出自己的用途。</p></div>
+      <div class="gd-card"><span class="gd-pill gd-pill-accent">后留证</span><h4 class="mt-m">一切可回放</h4><p class="gd-note mt-s">tmux 会话加录屏脚本，快了多少、改了什么，随时能翻旧账。</p></div>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">三条是顺序而不是并列：手、配置、证据，一层管一层。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="gd-kicker">vimrc 减脂三步</p>
+    <h2 class="h2 mt-m">247 行，怎么瘦到 86 行</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">不许一次删光。先全量注释，回到可跑的最小集过一周；没被想念的行，下一周才准真删。判断只有一条：这行配置，最近三十天真的用到过吗。</p>
+        <p class="gd-note mt-m">每轮删除都打一个 git 标签，随时能整批回滚。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="gd-pill">一周观察期</span>
+          <span class="gd-pill">删前先打 tag</span>
+        </div>
+      </div>
+      <div class="gd-card">
+        <div class="gd-step"><span class="gd-n">[01]</span><p class="gd-mini-t">全量注释旧配置，原样跑满一周</p></div>
+        <div class="gd-step"><span class="gd-n">[02]</span><p class="gd-mini-t">只留三十天内翻过牌的行</p></div>
+        <div class="gd-step"><span class="gd-n">[03]</span><p class="gd-mini-t">定稿 86 行，打 tag 长期归档</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">这三步明天就能做；强调「一周」不能省，否则删掉的会是还没用到的宝藏。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="gd-kicker">现场演示 · 配置即文档</p>
+    <h2 class="h2 mt-m">一份能背下来的 vimrc</h2>
+    <div class="gd-term mt-l" style="margin-top:44px">
+      <div class="gd-term-bar"><span class="gd-dot"></span><span class="gd-dot"></span><span class="gd-dot"></span><span class="gd-term-name">~/.vimrc</span><span class="gd-lang">vimrc</span></div>
+      <pre class="gd-codeblock"><code>" 86 行定稿节选 —— 每行都背得出理由
+filetype plugin indent on
+set number relativenumber
+set ignorecase smartcase
+set updatetime=300
+nnoremap &lt;leader&gt;w :write&lt;CR&gt;
+nnoremap &lt;leader&gt;h :nohlsearch&lt;CR&gt;
+nnoremap &lt;leader&gt;e :edit ~/notes.md
+colorscheme gruvbox</code></pre>
+      <div class="gd-status"><span>NORMAL · 86 行节选 9 行</span><span>utf-8 · :wq 保存</span></div>
+    </div>
+    <p class="gd-note mt-m" style="margin-top:28px">这九行覆盖九成日常操作；留下的行，每月翻牌率都超过一次。</p>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">现场逐行讲「为什么留下它」。leader 键是这页的主角。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="gd-kicker">配置演进</p>
+    <h2 class="h2 mt-m">九年，从 247 行到 86 行</h2>
+    <div class="gd-tl mt-l" style="margin-top:52px">
+      <div class="gd-tl-item"><div class="gd-tl-dot">01</div><div class="gd-tl-t">2016</div><p class="gd-tl-d">第一份 vimrc，247 行大杂烩</p></div>
+      <div class="gd-tl-item"><div class="gd-tl-dot">02</div><div class="gd-tl-t">2019</div><p class="gd-tl-d">第一次减脂，砍到 112 行</p></div>
+      <div class="gd-tl-item"><div class="gd-tl-dot">03</div><div class="gd-tl-t">2022</div><p class="gd-tl-d">插件收敛，常驻不足十个</p></div>
+      <div class="gd-tl-item"><div class="gd-tl-dot">04</div><div class="gd-tl-t">2026</div><p class="gd-tl-d">86 行定稿，每季回看一次</p></div>
+    </div>
+    <p class="gd-src mt-m" style="margin-top:44px">行数按当年 12 月归档版本统计，tag 记录在仓库里可查。</p>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">时间线说明「减脂是反复发生的」，一次到位是幻觉。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="gd-kicker">终端圈的行话</p>
+    <p class="gd-quote mt-l" style="margin-top:40px">「空谈廉价，给我看代码。」</p>
+    <p class="gd-src mt-m">—— Linus Torvalds · LKML</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="gd-pill gd-pill-accent">代码为证</span>
+      <span class="gd-pill">一份 vimrc</span>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">这句在社区挂了二十多年；今晚整场就是它的注脚——86 行，就是我的回复。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="gd-kicker">带走这份配置</p>
+    <h1 class="h1 mt-m">快，<br>长在手上。</h1>
+    <p class="lede mt-m" style="max-width:48ch">86 行定稿与减脂清单挂在仓库，标签 2026-06。拿回去之后，请按你自己的手改。</p>
+    <div class="row mt-l" style="gap:24px">
+      <span class="gd-btn">领取配置</span>
+      <span class="gd-pill">86 行 · MIT</span>
+      <span class="gd-prompt">:wq</span>
+    </div>
+    <div class="deck-footer"><span>~/share · 终端效率之夜</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：今晚就把配置抄回自己的 vimrc，改到能背下来。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

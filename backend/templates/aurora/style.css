@@ -1,0 +1,99 @@
+/* aurora — 极光。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/aurora（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深蓝天幕 + 翠绿/蓝紫极光带：光带住在 ambient 层（.slide::before/::after，
+ * z-index:-1，画在内容之下），骨架零成本。深色模板：正文一律浅色
+ * （#F1F5FF/#C3CDF2/#8E99CE），卡为暗夜玻璃（深色半透明 + 细描边），
+ * --bg 取天幕渐变中段值，letterbox 与翻页过渡不跳色。 */
+.tpl-aurora{
+  --bg:#131735;              /* 天幕渐变中段值 */
+  --ink:#F1F5FF;             /* 星白标题 */
+  --ink-2:#C3CDF2;           /* 浅靛正文 */
+  --ink-3:#8E99CE;           /* 小字与页脚 */
+  --border:rgba(190,205,255,.24);   /* 细浅描边 */
+  --border-soft:rgba(190,205,255,.15);
+  --green:#6EE7B7;           /* 极光绿（文字级） */
+  --cyan:#67E8F9;            /* 极光青 */
+  --violet:#C4B5FD;          /* 极光紫 */
+  font-family:'Inter','Segoe UI','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：星白大字带一点点天光，正文宽行距 ---- */
+.tpl-aurora .h1{font-size:84px;line-height:1.14;font-weight:800;letter-spacing:.01em;color:var(--ink);text-shadow:0 0 44px rgba(110,231,183,.22);margin-bottom:12px}
+.tpl-aurora .h2{font-size:48px;line-height:1.22;font-weight:700;letter-spacing:.01em;color:var(--ink);margin-bottom:10px}
+.tpl-aurora h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.02em}
+.tpl-aurora .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400}
+.tpl-aurora .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：极光带（多条大而软的径向渐变）+ 星野与挪威山脊剪影，
+   全部 z-index:-1 画在内容之下；inset 负值让光带出血到页缘 ---- */
+.tpl-aurora .slide::before{
+  content:"";position:absolute;inset:-6%;z-index:-1;
+  background:
+    radial-gradient(55% 22% at 22% 10%, rgba(52,211,153,.38), transparent 70%),
+    radial-gradient(48% 20% at 70% 4%, rgba(167,139,250,.36), transparent 72%),
+    radial-gradient(60% 22% at 92% 24%, rgba(34,211,238,.28), transparent 70%),
+    radial-gradient(70% 28% at 40% 32%, rgba(79,70,229,.26), transparent 75%),
+    linear-gradient(180deg,#070A1E 0%,#131735 48%,#1A1F42 100%);
+}
+.tpl-aurora .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:620px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 620' preserveAspectRatio='none'%3E%3Cg fill='%23F5F8FF'%3E%3Ccircle cx='90' cy='70' r='1.6' opacity='0.8'/%3E%3Ccircle cx='210' cy='150' r='1.1' opacity='0.55'/%3E%3Ccircle cx='330' cy='60' r='1.4' opacity='0.7'/%3E%3Ccircle cx='470' cy='190' r='1.2' opacity='0.5'/%3E%3Ccircle cx='610' cy='90' r='1.8' opacity='0.85'/%3E%3Ccircle cx='760' cy='40' r='1.1' opacity='0.5'/%3E%3Ccircle cx='900' cy='170' r='1.4' opacity='0.65'/%3E%3Ccircle cx='1050' cy='70' r='1.2' opacity='0.55'/%3E%3Ccircle cx='1190' cy='140' r='1.6' opacity='0.75'/%3E%3Ccircle cx='1330' cy='50' r='1.1' opacity='0.5'/%3E%3Ccircle cx='1470' cy='180' r='1.3' opacity='0.6'/%3E%3Ccircle cx='1610' cy='90' r='1.7' opacity='0.8'/%3E%3Ccircle cx='1750' cy='40' r='1.2' opacity='0.55'/%3E%3Ccircle cx='1850' cy='160' r='1.4' opacity='0.65'/%3E%3Ccircle cx='540' cy='260' r='1.1' opacity='0.45'/%3E%3Ccircle cx='1120' cy='250' r='1.2' opacity='0.5'/%3E%3C/g%3E%3Cg fill='%236EE7B7'%3E%3Ccircle cx='400' cy='120' r='2' opacity='0.8'/%3E%3Ccircle cx='980' cy='110' r='1.8' opacity='0.7'/%3E%3Ccircle cx='1680' cy='130' r='2' opacity='0.75'/%3E%3C/g%3E%3Cg fill='%23C4B5FD'%3E%3Ccircle cx='700' cy='30' r='1.8' opacity='0.7'/%3E%3Ccircle cx='1400' cy='100' r='1.8' opacity='0.65'/%3E%3C/g%3E%3Cpath d='M0,620 L0,470 L140,430 L260,480 L420,400 L560,470 L700,420 L860,500 L1020,440 L1180,500 L1330,450 L1500,520 L1660,470 L1800,520 L1920,480 L1920,620 Z' fill='%2305070F' opacity='0.92'/%3E%3Cpath d='M0,620 L0,540 L200,510 L380,555 L560,515 L760,565 L980,530 L1200,575 L1420,545 L1640,585 L1920,555 L1920,620 Z' fill='%23070A1C' opacity='0.95'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：极光渐变短线 + 宽字距小标（页首） ---- */
+.tpl-aurora .au-kicker{display:flex;align-items:center;gap:16px;font-size:16px;font-weight:600;letter-spacing:.34em;color:#A7F3D0}
+.tpl-aurora .au-kicker::before{content:"";flex:none;width:40px;height:3px;border-radius:999px;background:linear-gradient(90deg,#34D399,#67E8F9)}
+
+/* ---- 极光带细线：标题下的一道绿青紫光 ---- */
+.tpl-aurora .au-band{width:260px;height:4px;border-radius:999px;background:linear-gradient(90deg,#34D399,#67E8F9 50%,#A78BFA 90%,transparent)}
+
+/* ---- 暗夜玻璃卡：深色半透明 + blur + 细浅描边，唯一卡型 ---- */
+.tpl-aurora .au-card{background:rgba(16,20,52,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:20px;padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+/* 绿边亮一档的暗卡：承载步骤等需要被指认的块 */
+.tpl-aurora .au-card-glow{border:1px solid rgba(110,231,183,.4);box-shadow:0 0 32px rgba(52,211,153,.14);padding:38px 42px}
+
+/* ---- 药丸：浅描边胶囊；强调款换极光绿 ---- */
+.tpl-aurora .au-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:16px;font-weight:600;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-aurora .au-pill-accent{border-color:rgba(110,231,183,.55);color:var(--green);background:rgba(110,231,183,.08)}
+
+/* ---- 追光徽章：圆角方暗卡 + 极光绿描边与微光 ---- */
+.tpl-aurora .au-badge{flex:none;width:76px;height:76px;border-radius:18px;background:rgba(16,20,52,.6);border:1px solid rgba(110,231,183,.45);display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:800;line-height:1.25;letter-spacing:.06em;color:var(--green);box-shadow:0 0 24px rgba(110,231,183,.22)}
+
+/* ---- 目录行：极光圆号 + 篇名 + 说明 ---- */
+.tpl-aurora .au-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed rgba(190,205,255,.16)}
+.tpl-aurora .au-item:last-child{border-bottom:none}
+.tpl-aurora .au-n{flex:none;width:52px;height:52px;border-radius:50%;background:rgba(16,20,52,.5);border:1.5px solid rgba(110,231,183,.6);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--green);align-self:center}
+.tpl-aurora .au-t{flex:none;width:250px;font-size:29px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
+.tpl-aurora .au-d{flex:1;font-size:19px;line-height:1.7;color:#AAB6E4;letter-spacing:.01em}
+
+/* ---- 追光数据：暗卡 + 极光渐变大数字（两端均为浅色，暗底可读） ---- */
+.tpl-aurora .au-stat{background:rgba(16,20,52,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:20px;padding:36px 34px;box-shadow:0 0 32px rgba(79,70,229,.16)}
+.tpl-aurora .au-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.01em;background:linear-gradient(100deg,#6EE7B7,#67E8F9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tpl-aurora .au-stat-u{font-size:26px;font-weight:600;color:var(--ink-3)}
+.tpl-aurora .au-stat-l{font-size:26px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
+.tpl-aurora .au-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:#AAB6E4}
+
+/* ---- 引文：极光渐变大字（绿→青→紫，暗底上全程高对比） ---- */
+.tpl-aurora .au-quote{font-size:60px;line-height:1.55;font-weight:800;letter-spacing:.01em;background:linear-gradient(95deg,#A7F3D0,#67E8F9 45%,#C4B5FD);-webkit-background-clip:text;background-clip:text;color:transparent;max-width:24em;margin:0}
+.tpl-aurora .au-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：极光圆点 + 渐变连接线 ---- */
+.tpl-aurora .au-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-aurora .au-tl-item{flex:1;position:relative}
+.tpl-aurora .au-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(52,211,153,.45),rgba(34,211,238,.3))}
+.tpl-aurora .au-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:rgba(16,20,52,.72);border:1.5px solid rgba(110,231,183,.6);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green);box-shadow:0 0 18px rgba(110,231,183,.2)}
+.tpl-aurora .au-tl-t{margin-top:20px;font-size:21px;font-weight:700;letter-spacing:.03em;color:var(--green)}
+.tpl-aurora .au-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:#AAB6E4}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-aurora .au-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed rgba(190,205,255,.16)}
+.tpl-aurora .au-step:last-child{border-bottom:none}
+.tpl-aurora .au-mini-t{margin:0;font-size:20px;line-height:1.6;color:#DCE4FA;letter-spacing:.01em}
+
+/* ---- 行动钮：极光渐变实底 + 墨绿字，全模板唯一的实色块 ---- */
+.tpl-aurora .au-btn{display:inline-flex;align-items:center;gap:14px;padding:16px 42px;border-radius:999px;background:linear-gradient(100deg,#34D399,#22D3EE);color:#04241B;font-size:22px;font-weight:800;letter-spacing:.06em;box-shadow:0 0 36px rgba(52,211,153,.35)}
+
+/* ---- 页面切换（翻页动画）：如天幕缓缓平移，柔出柔入 ---- */
+.tpl-aurora{--page-shift:18px;--page-dur:.6s;--page-ease:cubic-bezier(.33,1,.68,1)}

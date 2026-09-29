@@ -1,0 +1,81 @@
+{
+  "id": "starlight-fireworks",
+  "name": "一半星河一半烟火",
+  "description": "深海军蓝星河与暖焰橙烟火沿对角线相接：衬线大标题、星白细正文、星光金数据，星点与烟火粒子每页自动衬底，庆典与浪漫叙事的梦幻底色",
+  "tags": ["深色", "浪漫", "庆典", "梦幻"],
+  "scenario": ["婚庆浪漫策划", "跨年庆典提案", "年终回顾分享", "艺术视觉发布", "品牌之夜活动"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "星幕开场",
+      "use": "开场：星辉题签 + 衬线大字标题 + 星光渐变线 + 一句定位，星河烟火双意象衬底，可配星月徽章",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-48 字；题签 ≤14 字；徽章 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "双城篇目",
+      "use": "议程：星夜卡内 4 行篇目（星圈编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三幕要点",
+      "use": "三个并列要点：星夜卡 + 金色题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "双栏分幕",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边星夜卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "星光数据",
+      "use": "三个关键数据：星光金大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "星夜题记",
+      "use": "整页一句引文：衬线斜体大字 + 出处 + 两个支撑描边药丸，留白处一枚星月徽章",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 衬线大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：星圈圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾邀约",
+      "use": "收尾：衬线大字 + 一句行动提醒 + 金边按钮 + 描边药丸 + 星月徽章，如焰火落幕",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Georgia", "Noto Serif SC", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/starlight-fireworks",
+    "license": "Apache-2.0"
+  }
+}

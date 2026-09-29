@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>极简工作流：编辑器与终端</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-nord">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="no-kicker">极简工作流 · 分享</p>
+    <h1 class="h1 mt-m">少装插件，<br>多写代码。</h1>
+    <div class="no-line mt-s"></div>
+    <p class="lede mt-m" style="max-width:52ch">一个用了三年的编辑器与终端配置：五个快捷键、三个插件与一次次删减，追求深思熟虑的少。</p>
+    <div class="row mt-l" style="gap:18px">
+      <span class="no-pill no-pill-accent">Neovim</span>
+      <span class="no-pill">Zsh</span>
+      <span class="no-pill">三年</span>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场先声明：这不是教大家换编辑器，是分享怎么跟自己的配置做减法。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="no-kicker">今天的四段</p>
+    <h2 class="h2 mt-m">工作流全景</h2>
+    <div class="no-card mt-l" style="margin-top:44px">
+      <div class="no-item"><span class="no-n">01</span><span class="no-t">一屏的分工</span><span class="no-d">编辑器、终端与浏览器各司其职</span></div>
+      <div class="no-item"><span class="no-n">02</span><span class="no-t">五个快捷键</span><span class="no-d">高频操作全部两键以内完成</span></div>
+      <div class="no-item"><span class="no-n">03</span><span class="no-t">插件取舍</span><span class="no-d">从 27 个删到 3 个的过程</span></div>
+      <div class="no-item"><span class="no-n">04</span><span class="no-t">用数据复盘</span><span class="no-d">一周操作日志改变了什么</span></div>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">重点在第三、四段：删插件的过程和复盘方法，比快捷键清单更可迁移。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="no-kicker">三年后的账本</p>
+    <h2 class="h2 mt-m">减法换来的三个数字</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="no-stat"><div class="no-stat-v">3<span class="no-stat-u">个</span></div><div class="no-stat-l">常驻插件</div><p class="no-stat-note">从 27 个删到 3 个，各有不可替代的职责</p></div>
+      <div class="no-stat"><div class="no-stat-v">1.8<span class="no-stat-u">秒</span></div><div class="no-stat-l">编辑器冷启动</div><p class="no-stat-note">nvim --startuptime 连跑 20 次取中位数</p></div>
+      <div class="no-stat"><div class="no-stat-v">92<span class="no-stat-u">%</span></div><div class="no-stat-l">快捷键覆盖率</div><p class="no-stat-note">一周操作日志里两键以内完成的操作占比</p></div>
+    </div>
+    <p class="mt-m" style="font-size:17px;color:#b3bfcd;letter-spacing:.06em">来源：个人 dotfiles 仓库提交历史与 2026-07 操作日志（N=2,400 次按键记录）。</p>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">三个数字互为因果：插件少了启动快，快捷键集中了覆盖率才上得去。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="no-kicker">二 · 取舍</p>
+    <h1 class="h1 mt-m">先做减法，<br>再谈效率。</h1>
+    <p class="lede mt-m" style="max-width:48ch">效率不是把所有操作塞进肌肉记忆，而是让高频的十件事各有一条最短路径。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="no-pill no-pill-accent">快捷键</span>
+      <span class="no-pill">插件取舍</span>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">过渡页：先讲三条原则，再看配置里怎么落地。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="no-kicker">三条原则</p>
+    <h2 class="h2 mt-m">减法的边界</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="no-card"><span class="no-pill no-pill-accent">一屏一职</span><h4 class="mt-m">窗口不打架</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#d8dee9">编辑器写代码、终端跑命令、浏览器查文档，三层窗口永不重叠，注意力只切换不找回。</p></div>
+      <div class="no-card"><span class="no-pill no-pill-accent">键不离行</span><h4 class="mt-m">两键以内</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#d8dee9">手不离主键区：找文件、跑测试、查版本全部两键以内，鼠标只在查资料时启用。</p></div>
+      <div class="no-card"><span class="no-pill no-pill-accent">配置即文档</span><h4 class="mt-m">每行有注释</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#d8dee9">dotfiles 入库管理，每行配置留一句为什么。半年后回看，注释比记忆可靠。</p></div>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">原则只有三条，是因为插件和快捷键都能归到其中一条之下，多了就记不住。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="no-kicker">地基</p>
+    <h2 class="h2 mt-m">五个快捷键</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">五个快捷键是工作流的地基：找文件、找符号、跑测试、切终端、格式化。其余操作默认行为就够好，不值得绑键。</p>
+        <p class="mt-m" style="font-size:19px;line-height:1.8;color:#d8dee9">快捷键一季度复盘一次：日志里两周没碰到的就解绑，别让肌肉记忆过期。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="no-key">&lt;leader&gt;f</span>
+          <span class="no-key">gt</span>
+        </div>
+      </div>
+      <div class="no-card">
+        <div class="no-step"><span class="no-n">01</span><p class="no-mini-t">找文件交给模糊搜索，路径不值得背</p></div>
+        <div class="no-step"><span class="no-n">02</span><p class="no-mini-t">测试绑一个键，保存即跑当前文件</p></div>
+        <div class="no-step"><span class="no-n">03</span><p class="no-mini-t">终端悬浮在同一侧，视线不离开代码</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">下一页是 init.lua 的真实片段，就是这套映射的骨架。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="no-kicker">~/.config/nvim</p>
+    <h2 class="h2 mt-m">工作流的骨架</h2>
+    <div class="no-term mt-l" style="margin-top:40px">
+      <div class="no-term-bar"><span class="no-dot"></span><span class="no-dot"></span><span class="no-dot"></span><span class="no-term-file">init.lua</span><span class="no-lang">Lua</span></div>
+      <pre class="no-codeblock"><code>-- init.lua · 高频操作两键以内
+vim.g.mapleader = " "
+vim.keymap.set("n", "&lt;leader&gt;f", ":find ")
+vim.keymap.set("n", "&lt;leader&gt;t", ":TestFile")
+vim.keymap.set("n", "&lt;leader&gt;g", ":Git status")
+vim.opt.termguicolors = true
+vim.cmd("colorscheme nord")</code></pre>
+    </div>
+    <p class="no-codenote mt-m">leader 键加三行映射就是全部骨架：找、测、查，其余交给默认行为。</p>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">整份 init.lua 一共 74 行，含注释；这 7 行是每天摸得最多的部分。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="no-kicker">演进</p>
+    <h2 class="h2 mt-m">三年，四次改版</h2>
+    <div class="no-tl mt-l" style="margin-top:52px">
+      <div class="no-tl-item"><div class="no-tl-dot"></div><div class="no-tl-t">2023-09</div><p class="no-tl-d">初装 27 个插件，启动要等 4 秒</p></div>
+      <div class="no-tl-item"><div class="no-tl-dot"></div><div class="no-tl-t">2024-05</div><p class="no-tl-d">第一次大删减，插件砍到 11 个</p></div>
+      <div class="no-tl-item"><div class="no-tl-dot"></div><div class="no-tl-t">2025-10</div><p class="no-tl-d">定稿三插件方案，启动降到 1.8 秒</p></div>
+      <div class="no-tl-item"><div class="no-tl-dot"></div><div class="no-tl-t">2026-07</div><p class="no-tl-d">记录一周操作日志，复盘快捷键</p></div>
+    </div>
+    <p class="mt-m" style="font-size:17px;color:#b3bfcd;letter-spacing:.06em">时间取自 dotfiles 仓库提交历史；启动时长为 --startuptime 20 次中位数。</p>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">曲线是单调递减的：插件数在降，启动在快，唯一在涨的是留在这套配置里的年头。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="no-kicker">README 第一行</p>
+    <p class="no-quote mt-l" style="margin-top:40px">「配置的尽头，是忘了配置的存在。」</p>
+    <p class="no-src mt-m">—— 陈屿 dotfiles 仓库 README</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="no-pill no-pill-accent">三插件</span>
+      <span class="no-pill">两键以内</span>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">这行 README 写于 2025 年定稿那天。做到忘了它，配置才算完成。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="no-kicker">git clone dotfiles</p>
+    <h1 class="h1 mt-m">减法做完，<br>剩下的是专注。</h1>
+    <p class="lede mt-m" style="max-width:48ch">dotfiles 已开源，一条 git clone 就能得到同款配置。建议先删掉自己的三个插件，再决定要不要它。</p>
+    <div class="row mt-l" style="gap:22px">
+      <span class="no-btn">克隆配置</span>
+      <span class="no-pill">MIT · 已开源</span>
+    </div>
+    <div class="deck-footer"><span>陈屿 · 极简工作流 · 2026</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：先删再加。仓库地址在讲义尾页，issue 里有一份迁移指引。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

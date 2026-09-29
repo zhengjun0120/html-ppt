@@ -1,0 +1,99 @@
+/* glassmorphism — 磨砂玻璃。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/glassmorphism（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 彩色渐变光斑打底 + rgba 白玻璃卡：深度靠 backdrop-blur 而不是硬阴影，
+ * 边界靠细白描边与顶部高光。光斑全部住在 ambient 层（.slide::before/::after，
+ * z-index:-1，画在内容之下、.deck 背景之上），骨架零成本。
+ * 玻璃卡内一律深墨文字（#0F172A/#334155/#475569），浅底深字保证投屏对比度；
+ * 上游文字级强调色 #818cf8/#06b6d4 各加深一档（#4338CA/#0E7490）用于正文语境。 */
+.tpl-glassmorphism{
+  --bg:#DCE3F8;              /* 渐变中段值：letterbox 与翻页底色，翻页不跳 */
+  --ink:#0F172A;             /* 深墨标题 */
+  --ink-2:#334155;           /* 石板灰正文 */
+  --ink-3:#64748B;           /* 小字与页脚 */
+  --border:rgba(255,255,255,.58);   /* 细白描边 */
+  --border-soft:rgba(255,255,255,.40);
+  --indigo:#4338CA;          /* 柔紫身份色（文字级） */
+  --cyan:#0E7490;            /* 青蓝身份色（文字级） */
+  font-family:'Inter','SF Pro Display','Segoe UI','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：无衬线、标题紧字距，像发布会大屏 ---- */
+.tpl-glassmorphism .h1{font-size:88px;line-height:1.12;font-weight:800;letter-spacing:-.015em;color:var(--ink);margin-bottom:12px}
+.tpl-glassmorphism .h2{font-size:50px;line-height:1.2;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-glassmorphism h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.01em}
+.tpl-glassmorphism .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400}
+.tpl-glassmorphism .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：多彩光斑（大而软的径向渐变）+ 顶部斜向光带与星光，
+   全部 z-index:-1 画在内容之下；inset 负值让光斑出血到页缘 ---- */
+.tpl-glassmorphism .slide::before{
+  content:"";position:absolute;inset:-8%;z-index:-1;
+  background:
+    radial-gradient(42% 50% at 12% 6%, rgba(129,140,248,.55), transparent 70%),
+    radial-gradient(40% 46% at 90% 80%, rgba(6,182,212,.42), transparent 70%),
+    radial-gradient(30% 36% at 64% 44%, rgba(199,210,254,.60), transparent 72%),
+    radial-gradient(26% 30% at 26% 86%, rgba(240,171,252,.30), transparent 70%),
+    linear-gradient(140deg,#C7D2FE 0%,#E0E7FF 45%,#CFFAFE 100%);
+}
+.tpl-glassmorphism .slide::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:340px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 340' preserveAspectRatio='none'%3E%3Cpath d='M120,-20 L420,360' stroke='%23FFFFFF' stroke-width='64' opacity='0.10'/%3E%3Cpath d='M1560,-40 L1880,320' stroke='%23FFFFFF' stroke-width='96' opacity='0.08'/%3E%3Cg fill='%23FFFFFF'%3E%3Cpath d='M320 88 L327 109 L348 116 L327 123 L320 144 L313 123 L292 116 L313 109 Z' opacity='0.65'/%3E%3Cpath d='M1640 58 L1646 76 L1664 82 L1646 88 L1640 106 L1634 88 L1616 82 L1634 76 Z' opacity='0.5'/%3E%3Cpath d='M980 26 L985 41 L1000 46 L985 51 L980 66 L975 51 L960 46 L975 41 Z' opacity='0.45'/%3E%3C/g%3E%3C/svg%3E") no-repeat top center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：品牌渐变短线 + 宽字距小标（页首） ---- */
+.tpl-glassmorphism .gl-kicker{display:flex;align-items:center;gap:16px;font-size:16px;font-weight:600;letter-spacing:.32em;color:#475569}
+.tpl-glassmorphism .gl-kicker::before{content:"";flex:none;width:38px;height:4px;border-radius:999px;background:linear-gradient(90deg,#4F46E5,#06B6D4)}
+
+/* ---- 品牌渐变线：标题下的一道光 ---- */
+.tpl-glassmorphism .gl-line{width:220px;height:4px;border-radius:999px;background:linear-gradient(90deg,#4F46E5,#06B6D4 55%,transparent)}
+
+/* ---- 玻璃卡：rgba 白 + backdrop blur + 细白描边 + 顶部高光，唯一卡型 ---- */
+.tpl-glassmorphism .gl-glass{background:rgba(255,255,255,.46);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border:1px solid var(--border);border-radius:24px;box-shadow:0 8px 32px rgba(51,65,133,.12),inset 0 1px 0 rgba(255,255,255,.65);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+/* 加实一档的玻璃：承载目录、步骤等长文本，读得更稳 */
+.tpl-glassmorphism .gl-glass-deep{background:rgba(255,255,255,.62);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:1px solid var(--border);border-radius:24px;box-shadow:0 8px 32px rgba(51,65,133,.12),inset 0 1px 0 rgba(255,255,255,.7);padding:38px 42px}
+
+/* ---- 玻璃药丸：白玻璃胶囊；强调款换柔紫描边 ---- */
+.tpl-glassmorphism .gl-chip{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border-radius:999px;background:rgba(255,255,255,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--border);font-size:16px;font-weight:600;letter-spacing:.1em;color:#334155;white-space:nowrap}
+.tpl-glassmorphism .gl-chip-accent{border-color:rgba(67,56,202,.42);background:rgba(199,210,254,.42);color:#4338CA}
+
+/* ---- 玻璃徽章：圆角方玻璃块，封面与收尾的身份件 ---- */
+.tpl-glassmorphism .gl-badge{flex:none;width:76px;height:76px;border-radius:20px;background:rgba(255,255,255,.52);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:800;line-height:1.25;letter-spacing:.06em;color:#4338CA;box-shadow:0 8px 24px rgba(51,65,133,.14)}
+
+/* ---- 目录行：玻璃圆号 + 篇名 + 说明 ---- */
+.tpl-glassmorphism .gl-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid rgba(67,56,202,.12)}
+.tpl-glassmorphism .gl-item:last-child{border-bottom:none}
+.tpl-glassmorphism .gl-n{flex:none;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.6);border:1.5px solid rgba(67,56,202,.35);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:#4338CA;align-self:center}
+.tpl-glassmorphism .gl-t{flex:none;width:250px;font-size:29px;font-weight:700;letter-spacing:.02em;color:#0F172A}
+.tpl-glassmorphism .gl-d{flex:1;font-size:19px;line-height:1.7;color:#475569;letter-spacing:.01em}
+
+/* ---- 光白数字：数据页主视觉，渐变实色字（两端均够深，投屏可读） ---- */
+.tpl-glassmorphism .gl-stat{background:rgba(255,255,255,.44);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:24px;padding:36px 34px;box-shadow:0 8px 32px rgba(51,65,133,.10)}
+.tpl-glassmorphism .gl-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.02em;background:linear-gradient(120deg,#4338CA,#0E7490);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tpl-glassmorphism .gl-stat-u{font-size:26px;font-weight:600;color:#64748B}
+.tpl-glassmorphism .gl-stat-l{font-size:26px;font-weight:700;letter-spacing:.02em;color:#0F172A}
+.tpl-glassmorphism .gl-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:#475569}
+
+/* ---- 引文：渐变大字（含在玻璃雾面上仍清晰的两端深色） ---- */
+.tpl-glassmorphism .gl-quote{font-size:60px;line-height:1.55;font-weight:800;letter-spacing:.01em;background:linear-gradient(120deg,#312E81,#155E75);-webkit-background-clip:text;background-clip:text;color:transparent;max-width:24em;margin:0}
+.tpl-glassmorphism .gl-src{margin:0;font-size:20px;letter-spacing:.12em;color:#64748B}
+
+/* ---- 时间线：玻璃圆点 + 渐变连接线 ---- */
+.tpl-glassmorphism .gl-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-glassmorphism .gl-tl-item{flex:1;position:relative}
+.tpl-glassmorphism .gl-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(79,70,229,.35),rgba(6,182,212,.25))}
+.tpl-glassmorphism .gl-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:rgba(255,255,255,.66);border:1.5px solid rgba(67,56,202,.35);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#4338CA;box-shadow:0 4px 16px rgba(51,65,133,.12)}
+.tpl-glassmorphism .gl-tl-t{margin-top:20px;font-size:21px;font-weight:700;letter-spacing:.03em;color:#4338CA}
+.tpl-glassmorphism .gl-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:#475569}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-glassmorphism .gl-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px solid rgba(67,56,202,.12)}
+.tpl-glassmorphism .gl-step:last-child{border-bottom:none}
+.tpl-glassmorphism .gl-mini-t{margin:0;font-size:20px;line-height:1.6;color:#1E293B;letter-spacing:.01em}
+
+/* ---- 行动钮：品牌渐变实底 + 白字，全模板唯一的实色块 ---- */
+.tpl-glassmorphism .gl-btn{display:inline-flex;align-items:center;gap:14px;padding:16px 42px;border-radius:999px;background:linear-gradient(120deg,#4F46E5,#0E7490);color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:.06em;box-shadow:0 12px 32px rgba(79,70,229,.35)}
+
+/* ---- 页面切换（翻页动画）：像玻璃轻推一格，短促轻盈 ---- */
+.tpl-glassmorphism{--page-shift:16px;--page-dur:.55s;--page-ease:cubic-bezier(.4,0,.2,1)}

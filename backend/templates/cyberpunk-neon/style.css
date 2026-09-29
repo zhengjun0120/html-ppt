@@ -1,0 +1,98 @@
+/* cyberpunk-neon — 赛博霓虹。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/cyberpunk-neon（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 纯黑夜幕 + 双霓虹：粉 #FF2E88 管结构与描边，青 #00F0FF 管数据与高亮；
+ * 正文永远冷白/灰白保证对比度，霓虹只做点缀不上正文。
+ * 故障网格与霓虹扫描线是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-cyberpunk-neon{
+  --bg:#0F0F1A;              /* letterbox 深紫黑（渐变中段，翻页不跳） */
+  --bg-deep:#050509;
+  --ink:#F8FAFC;             /* 冷白标题 */
+  --ink-2:#CBD5E1;           /* 灰白正文 */
+  --ink-3:#7C86A0;           /* 暗蓝灰小字（只用于页脚/来源行） */
+  --border:rgba(255,46,136,.38);
+  --accent:#FF2E88;          /* 霓虹粉：结构与边框 */
+  --accent-2:#00F0FF;        /* 霓虹青：数据与高亮 */
+  --card:rgba(15,15,26,.78);
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 画布：radial 深紫灰到纯黑，如无星的夜空 ---- */
+.tpl-cyberpunk-neon .deck{background:radial-gradient(circle at 30% 10%,#1A1A2E 0%,#0F0F1A 52%,#050509 100%)}
+
+/* ---- 字阶：冷白 900 字重自带霓虹辉光 ---- */
+.tpl-cyberpunk-neon .h1{font-size:92px;line-height:1.08;font-weight:900;letter-spacing:.02em;color:var(--ink);margin-bottom:12px;text-shadow:0 0 14px rgba(255,46,136,.5),0 0 46px rgba(255,46,136,.22),0 0 88px rgba(0,240,255,.16)}
+.tpl-cyberpunk-neon .h2{font-size:58px;line-height:1.12;font-weight:900;letter-spacing:.02em;color:var(--ink);margin-bottom:10px;text-shadow:0 0 12px rgba(255,46,136,.4),0 0 36px rgba(0,240,255,.18)}
+.tpl-cyberpunk-neon h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.04em}
+.tpl-cyberpunk-neon .lede{font-size:24px;line-height:1.75;color:var(--ink-2);font-weight:400;letter-spacing:.02em;max-width:54ch}
+.tpl-cyberpunk-neon .deck-footer{font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：故障网格（青色细格）+ 霓虹横线与扫描带 ---- */
+.tpl-cyberpunk-neon .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;opacity:.5;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 55px,rgba(0,240,255,.07) 55px 57px),
+    repeating-linear-gradient(90deg,transparent 0 55px,rgba(0,240,255,.07) 55px 57px);
+}
+.tpl-cyberpunk-neon .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background-image:
+    linear-gradient(90deg,transparent 0,rgba(255,46,136,.55) 18%,rgba(0,240,255,.55) 82%,transparent 100%),
+    linear-gradient(90deg,transparent,rgba(255,46,136,.16),transparent),
+    linear-gradient(90deg,transparent 0,rgba(0,240,255,.4) 15%,rgba(255,46,136,.4) 85%,transparent 100%),
+    linear-gradient(90deg,transparent,rgba(0,240,255,.12),transparent),
+    linear-gradient(180deg,rgba(0,240,255,0),rgba(0,240,255,.05) 46%,rgba(0,240,255,0) 54%);
+  background-repeat:no-repeat;
+  background-size:100% 2px,100% 9px,100% 2px,100% 9px,100% 260px;
+  background-position:0 90px,0 86px,0 calc(100% - 118px),0 calc(100% - 122px),0 38%;
+}
+
+/* ---- 题签：等宽小字，霓虹青，">" 前缀像终端提示符 ---- */
+.tpl-cyberpunk-neon .cn-kicker{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:16px;font-weight:700;letter-spacing:.26em;color:var(--accent-2)}
+.tpl-cyberpunk-neon .cn-kicker::before{content:">";color:var(--accent);font-weight:700}
+
+/* ---- 暗卡：半透明夜幕 + 粉描边 + 微光 ---- */
+.tpl-cyberpunk-neon .cn-card{background:var(--card);border:1px solid rgba(255,46,136,.35);border-radius:3px;box-shadow:0 0 26px rgba(255,46,136,.10),inset 0 0 24px rgba(0,240,255,.04);padding:36px 38px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边标签：粉为结构、青为参数 ---- */
+.tpl-cyberpunk-neon .cn-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 20px;border:1px solid rgba(255,46,136,.55);border-radius:3px;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.1em;color:var(--accent);white-space:nowrap}
+.tpl-cyberpunk-neon .cn-pill-cyan{border-color:rgba(0,240,255,.6);color:var(--accent-2)}
+
+/* ---- 目录行：描边编号 + 篇名 + 说明，粉细线分隔 ---- */
+.tpl-cyberpunk-neon .cn-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid rgba(255,46,136,.18)}
+.tpl-cyberpunk-neon .cn-item:last-child{border-bottom:none}
+.tpl-cyberpunk-neon .cn-n{flex:none;width:52px;height:52px;border:1px solid rgba(0,240,255,.55);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:var(--accent-2);text-shadow:0 0 8px rgba(0,240,255,.5);align-self:center}
+.tpl-cyberpunk-neon .cn-t{flex:none;width:270px;font-size:28px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-cyberpunk-neon .cn-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 霓虹数字：数据页主视觉，青色发光 + 粉顶线 ---- */
+.tpl-cyberpunk-neon .cn-stat{position:relative;border-top:1px solid rgba(255,46,136,.4);padding-top:28px}
+.tpl-cyberpunk-neon .cn-stat::before{content:"";position:absolute;top:-1px;left:0;width:64px;height:3px;background:linear-gradient(90deg,var(--accent),transparent)}
+.tpl-cyberpunk-neon .cn-stat-v{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--accent-2);text-shadow:0 0 18px rgba(0,240,255,.45),0 0 60px rgba(0,240,255,.2)}
+.tpl-cyberpunk-neon .cn-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-cyberpunk-neon .cn-stat-l{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:.03em;color:var(--ink)}
+.tpl-cyberpunk-neon .cn-stat-note{margin:10px 0 0;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 引文：辉光大字 ---- */
+.tpl-cyberpunk-neon .cn-quote{font-size:62px;line-height:1.5;font-weight:900;letter-spacing:.02em;color:var(--ink);max-width:24em;margin:0;text-shadow:0 0 24px rgba(255,46,136,.35),0 0 64px rgba(0,240,255,.15)}
+.tpl-cyberpunk-neon .cn-src{margin:0;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:18px;letter-spacing:.1em;color:var(--ink-3)}
+
+/* ---- 时间线：发光方块节点 + 粉青渐变连接线 ---- */
+.tpl-cyberpunk-neon .cn-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-cyberpunk-neon .cn-tl-item{flex:1;position:relative}
+.tpl-cyberpunk-neon .cn-tl-item:not(:last-child)::before{content:"";position:absolute;top:13px;left:56px;right:-40px;height:1px;background:linear-gradient(90deg,rgba(255,46,136,.6),rgba(0,240,255,.6))}
+.tpl-cyberpunk-neon .cn-tl-dot{position:relative;z-index:1;width:27px;height:27px;border:2px solid var(--accent-2);border-radius:3px;background:rgba(0,240,255,.12);box-shadow:0 0 12px rgba(0,240,255,.5)}
+.tpl-cyberpunk-neon .cn-tl-t{margin-top:16px;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:20px;font-weight:700;letter-spacing:.06em;color:var(--accent-2)}
+.tpl-cyberpunk-neon .cn-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-cyberpunk-neon .cn-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid rgba(255,46,136,.18)}
+.tpl-cyberpunk-neon .cn-step:last-child{border-bottom:none}
+.tpl-cyberpunk-neon .cn-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 行动钮：粉底黑字 + 外发光，收尾页 ---- */
+.tpl-cyberpunk-neon .cn-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 44px;background:var(--accent);color:#0A0A12;border-radius:3px;font-size:21px;font-weight:900;letter-spacing:.16em;box-shadow:0 0 26px rgba(255,46,136,.45)}
+
+/* ---- 页面切换（翻页动画）：像信号接入一样快 ---- */
+.tpl-cyberpunk-neon{--page-shift:20px;--page-dur:.55s;--page-ease:cubic-bezier(.3,.7,.3,1)}

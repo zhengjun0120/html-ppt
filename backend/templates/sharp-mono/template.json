@@ -1,0 +1,88 @@
+{
+  "id": "sharp-mono",
+  "name": "锐利黑白",
+  "description": "黑白利刃切开视觉噪音：纯白浅灰底上粗黑边框与硬阴影落地，超大加粗标题字重拉满，无彩色的极端对比，每一页都是宣言",
+  "tags": ["大胆", "宣言", "黑白", "高对比"],
+  "scenario": ["融资路演", "品牌态度发布", "创意比稿", "设计讲座", "艺术提案"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "宣言封面",
+      "use": "开场：题签 + 超大加粗标题 + 硬横线 + 一句定位，反白标签点题",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 28-56 字；题签 ≤14 字；标签各 ≤8 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录墙",
+      "use": "议程：硬卡里 4 行篇目（方块编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡主张",
+      "use": "三个并列要点：硬卡 + 反白题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边标签），右边硬卡装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个标签；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "硬数字",
+      "use": "三个关键数据：超大加粗数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "宣言引文",
+      "use": "整页一句引文：加粗大字 + 出处 + 两个支撑标签",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 加粗大字章节名 + 一个过渡问题 + 两个看点标签",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：方块节点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾号召",
+      "use": "收尾：加粗大字 + 一句行动提醒 + 黑底按钮 + 描边标签",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；标签 ≤12 字"
+    },
+    {
+      "id": "code",
+      "name": "代码示例",
+      "use": "一段真实代码：终端窗口（三圆点标题栏 + 文件名 + 等宽代码块）+ 语言标签 + 一句说明",
+      "roles": ["code"],
+      "constraints": "代码 6-10 行、每行 ≤56 字符；文件名 ≤18 字符；说明 18-40 字"
+    }
+  ],
+  "fonts": ["Archivo Black", "Arial Black", "Inter", "JetBrains Mono", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/sharp-mono",
+    "license": "Apache-2.0"
+  }
+}

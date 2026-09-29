@@ -1,0 +1,97 @@
+/* y2k-chrome — Y2K 铬。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/y2k-chrome（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 银铬四段渐变 + 大圆角 + 气泡/彩虹光斑：金属质感全住在背景与描边层
+ * （chrome 高光与气泡是 .slide::before/::after 的 ambient 层，z-index:-1），
+ * 正文保持墨黑/深灰在银底上的量测对比度；卡是半透明白底高光描边，
+ * 像浮在液态金属上的气泡。文本级紫色/青色收深一档保证 4.5:1。 */
+.tpl-y2k-chrome{
+  --bg:#d6d6d8;               /* 银铬渐变中段值（letterbox 翻页不跳色） */
+  --bg-soft:#efeff1;          /* 高光银（卡底提亮参照） */
+  --ink:#171717;              /* 墨黑标题 */
+  --ink-2:#47474d;            /* 深灰正文 */
+  --ink-3:#5d5d64;            /* 银灰小字（页脚/来源） */
+  --border:rgba(23,23,23,.16);
+  --border-soft:rgba(23,23,23,.10);
+  --border-hi:rgba(255,255,255,.65);   /* 铬面高光描边 */
+  --violet:#5b21b6;           /* 紫（文本级，银底上 ≥4.5:1） */
+  --violet-deep:#7c3aed;      /* 紫（大面积/渐变端） */
+  --cyan-deep:#0891b2;        /* 青（渐变端） */
+  --rainbow:linear-gradient(90deg,#ef4444,#f97316,#eab308,#22c55e,#06b6d4,#8b5cf6,#ec4899);
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：干净利落的无衬线大字，数字与标签走等宽 ---- */
+.tpl-y2k-chrome .h1{font-size:92px;line-height:1.08;font-weight:800;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-y2k-chrome .h2{font-size:52px;line-height:1.16;font-weight:800;letter-spacing:.02em;color:var(--ink);margin-bottom:8px}
+.tpl-y2k-chrome h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:24px;letter-spacing:.03em}
+.tpl-y2k-chrome .lede{font-size:23px;line-height:1.8;color:var(--ink-2);font-weight:400;letter-spacing:.01em}
+.tpl-y2k-chrome .deck-footer{font-family:'Inter','Noto Sans SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.22em}
+
+/* ---- ambient：铬面高光斜扫（上）+ 气泡与彩虹光斑（全页），z-index:-1 画在内容之下 ---- */
+.tpl-y2k-chrome .slide{
+  background:linear-gradient(160deg,#b9b9bd 0%,#e9e9eb 16%,#c4c4c8 34%,#f1f1f3 52%,#aeaeb2 68%,#dcdcde 86%,#c8c8cc 100%);
+}
+.tpl-y2k-chrome .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(115deg,transparent 22%,rgba(255,255,255,.50) 33%,transparent 43%,transparent 55%,rgba(255,255,255,.28) 66%,transparent 76%);
+}
+.tpl-y2k-chrome .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Cdefs%3E%3CradialGradient id='b' cx='35%25' cy='35%25' r='72%25'%3E%3Cstop offset='0' stop-color='%23ffffff' stop-opacity='.9'/%3E%3Cstop offset='.5' stop-color='%23ffffff' stop-opacity='.12'/%3E%3Cstop offset='1' stop-color='%23ffffff' stop-opacity='.05'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='1560' cy='185' r='112' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.55'/%3E%3Ccircle cx='1725' cy='430' r='54' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.45'/%3E%3Ccircle cx='1408' cy='352' r='28' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.4'/%3E%3Ccircle cx='252' cy='872' r='92' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.45'/%3E%3Ccircle cx='430' cy='975' r='36' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.4'/%3E%3Ccircle cx='1120' cy='962' r='22' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.35'/%3E%3Ccircle cx='1808' cy='880' r='66' fill='url(%23b)' stroke='%23ffffff' stroke-opacity='.4'/%3E%3Ccircle cx='1150' cy='225' r='64' fill='%23a855f7' opacity='.13'/%3E%3Ccircle cx='640' cy='150' r='42' fill='%2306b6d4' opacity='.12'/%3E%3Ccircle cx='905' cy='1005' r='58' fill='%238b5cf6' opacity='.10'/%3E%3C/svg%3E") no-repeat center center;
+  background-size:100% 100%;
+}
+
+/* ---- 彩虹条：标题下的幻彩高光，全模板最亮的一笔 ---- */
+.tpl-y2k-chrome .yk-rainbow{width:240px;height:5px;border-radius:999px;background:var(--rainbow);box-shadow:0 0 18px rgba(139,92,246,.45)}
+
+/* ---- 题签：等宽全大写 + 宽字距，紫色小标 ---- */
+.tpl-y2k-chrome .yk-kicker{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','Inter',monospace;font-size:16px;font-weight:600;letter-spacing:.30em;color:var(--violet);text-transform:uppercase}
+.tpl-y2k-chrome .yk-kicker::before{content:"";width:36px;height:3px;border-radius:999px;background:var(--rainbow)}
+
+/* ---- 铬面徽标：气泡圆徽，封面/收尾的身份元素 ---- */
+.tpl-y2k-chrome .yk-orb{flex:none;width:78px;height:78px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#ffffff 0%,#ececef 40%,#b9b9bf 78%,#dcdce0 100%);border:1.5px solid var(--border-hi);box-shadow:inset 0 -8px 14px rgba(23,23,23,.16),inset 0 6px 10px rgba(255,255,255,.85),0 10px 24px rgba(23,23,23,.14);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','Inter',monospace;font-size:19px;font-weight:700;color:var(--ink)}
+
+/* ---- 气泡卡：半透明白底 + 高光描边 + 大圆角，无直角 ---- */
+.tpl-y2k-chrome .yk-card{background:rgba(255,255,255,.62);border:1.5px solid var(--border-hi);border-radius:30px;padding:36px 42px;display:flex;flex-direction:column;min-height:280px;box-shadow:0 16px 36px rgba(23,23,23,.10),inset 0 1px 0 rgba(255,255,255,.9)}
+
+/* ---- 药丸：玻璃感描边胶囊 ---- */
+.tpl-y2k-chrome .yk-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:10px 24px;border:1.5px solid var(--border);border-radius:999px;background:rgba(255,255,255,.55);font-size:16px;letter-spacing:.10em;color:var(--ink-2);white-space:nowrap}
+.tpl-y2k-chrome .yk-pill-accent{border-color:rgba(124,58,237,.55);color:var(--violet);background:rgba(168,85,247,.10)}
+
+/* ---- 目录行：铬面编号 + 篇名 + 说明 ---- */
+.tpl-y2k-chrome .yk-item{display:flex;align-items:center;gap:26px;padding:26px 6px;border-bottom:1.5px dashed var(--border-soft)}
+.tpl-y2k-chrome .yk-item:last-child{border-bottom:none}
+.tpl-y2k-chrome .yk-n{flex:none;width:54px;height:54px;border-radius:50%;background:linear-gradient(155deg,#f7f7f9 0%,#d9d9dd 55%,#bfbfc5 100%);border:1.5px solid var(--border-hi);box-shadow:inset 0 3px 6px rgba(255,255,255,.9),inset 0 -4px 8px rgba(23,23,23,.14);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-y2k-chrome .yk-t{flex:none;width:250px;font-size:28px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-y2k-chrome .yk-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 铬面数字：数据页主视觉，彩虹上描边 ---- */
+.tpl-y2k-chrome .yk-stat{border-top:4px solid;border-image:linear-gradient(90deg,#ec4899,#8b5cf6,#06b6d4) 1;padding-top:30px}
+.tpl-y2k-chrome .yk-stat-v{font-family:'JetBrains Mono','Inter',sans-serif;font-size:104px;line-height:1;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.tpl-y2k-chrome .yk-stat-u{font-size:26px;font-weight:600;color:var(--ink-3);margin-left:8px}
+.tpl-y2k-chrome .yk-stat-l{margin-top:20px;font-size:26px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-y2k-chrome .yk-stat-note{margin:12px 0 0;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 引文：大字 + 出处 ---- */
+.tpl-y2k-chrome .yk-quote{font-size:60px;line-height:1.5;font-weight:800;letter-spacing:.02em;color:var(--ink);max-width:24em;margin:0}
+.tpl-y2k-chrome .yk-src{margin:0;font-size:19px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：铬面圆点 + 幻彩连接线 ---- */
+.tpl-y2k-chrome .yk-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-y2k-chrome .yk-tl-item{flex:1;position:relative}
+.tpl-y2k-chrome .yk-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:54px;right:-44px;height:3px;border-radius:999px;background:linear-gradient(90deg,rgba(139,92,246,.45),rgba(6,182,212,.45))}
+.tpl-y2k-chrome .yk-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:linear-gradient(155deg,#f7f7f9,#cfcfd5);border:1.5px solid var(--border-hi);box-shadow:inset 0 3px 6px rgba(255,255,255,.9),inset 0 -4px 8px rgba(23,23,23,.14);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--ink)}
+.tpl-y2k-chrome .yk-tl-t{margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--violet);letter-spacing:.04em}
+.tpl-y2k-chrome .yk-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-y2k-chrome .yk-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1.5px dashed var(--border-soft)}
+.tpl-y2k-chrome .yk-step:last-child{border-bottom:none}
+.tpl-y2k-chrome .yk-mini-t{margin:0;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：紫青渐变胶囊，收尾页唯一的大面积色 ---- */
+.tpl-y2k-chrome .yk-btn{display:inline-flex;align-items:center;gap:12px;padding:16px 44px;border:none;border-radius:999px;background:linear-gradient(90deg,var(--violet-deep) 0%,var(--cyan-deep) 100%);color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.14em;box-shadow:0 12px 30px rgba(124,58,237,.35),inset 0 1px 0 rgba(255,255,255,.45)}
+
+/* ---- 页面切换（翻页动画）：轻快回弹的 Y2K 弹跳（≤650ms 截图上限） ---- */
+.tpl-y2k-chrome{--page-shift:16px;--page-dur:.55s;--page-ease:cubic-bezier(.34,1.3,.5,1)}
