@@ -251,7 +251,7 @@ watch(
                 A−
               </button>
               <span class="w-8 text-center font-mono text-[11.5px] text-white/70" title="选中文字的当前字号（px）">
-                {{ fontPx != null ? Math.round(fontPx) : '—' }}
+                {{ fontPx != null ? Math.round(fontPx) : '-' }}
               </span>
               <button
                 type="button"

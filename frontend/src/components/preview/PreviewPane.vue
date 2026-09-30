@@ -57,7 +57,7 @@ function openInNewTab() {
       </span>
     </div>
     <!-- 画布：deck 用自己的主题（内容，不是应用界面），深色外壳衬亮色片子 -->
-    <div class="min-h-0 flex-1 bg-bg">
+    <div class="min-h-0 flex-1 bg-canvas">
       <iframe
         v-if="props.deckId"
         :key="reloadKey"

@@ -254,7 +254,7 @@ async function unpublish() {
         {{ row?.visibility === 'public' ? '重新发布' : '发布到社区' }}
       </Button>
     </div>
-    <p v-if="row?.publish_error" class="mb-3 rounded-control border border-[#FDEBEC] bg-[#FDEBEC]/40 p-2 text-[12px] text-[#9F2F2D]">
+    <p v-if="row?.publish_error" class="mb-3 rounded-control border border-danger-soft bg-danger-soft p-2 text-[12px] text-danger">
       上次发布失败：{{ row.publish_error }}
     </p>
 
@@ -262,7 +262,7 @@ async function unpublish() {
     <div
       v-if="checkupReport"
       class="mb-3 rounded-card border p-3 text-[12.5px]"
-      :class="checkupReport.render?.flaws?.length ? 'border-[#F5D9A8] bg-[#FDF6E7]' : 'border-[#CDEBD8] bg-[#EAF7EF]'"
+      :class="checkupReport.render?.flaws?.length ? 'border-warning-soft bg-warning-soft' : 'border-success-soft bg-success-soft'"
     >
       <div class="flex items-center justify-between">
         <span class="font-semibold">
@@ -274,7 +274,7 @@ async function unpublish() {
         共 {{ checkupReport.render.pages }} 页 · 最低填充率 {{ checkupReport.render.min_fill }}% · 最小字号
         {{ checkupReport.render.max_flag_font }}px（报告不影响发布，存档在模板上）
       </p>
-      <p v-if="checkupReport.structure && checkupReport.structure !== 'ok'" class="mt-1 text-[#9F2F2D]">
+      <p v-if="checkupReport.structure && checkupReport.structure !== 'ok'" class="mt-1 text-danger">
         结构/安全：{{ checkupReport.structure }}
       </p>
       <ul v-if="checkupReport.render?.flaws?.length" class="mt-1.5 list-disc pl-5 text-ink-2">
@@ -329,7 +329,7 @@ async function unpublish() {
         <!-- 样式面板：style.css 手动编辑（安全预检与历史同对话路径） -->
         <div v-if="styleOpen" class="mt-3 overflow-hidden rounded-card border border-line bg-surface">
           <div class="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] text-ink-2">
-            <span>style.css 手动编辑<span v-if="styleDirty" class="ml-2 text-[#9F2F2D]">有未保存改动</span></span>
+            <span>style.css 手动编辑<span v-if="styleDirty" class="ml-2 text-warning">有未保存改动</span></span>
             <Button
               size="sm"
               variant="primary"
@@ -371,7 +371,7 @@ async function unpublish() {
           <div v-if="activity" class="mr-2 rounded-control bg-surface-2 px-3 py-2 text-[12.5px]">
             <div v-for="(s, i) in activity.steps" :key="i" class="flex items-center gap-2 py-0.5">
               <PhCircleNotch v-if="s.running" :size="12" class="shrink-0 animate-spin text-accent" />
-              <PhCheck v-else :size="12" class="shrink-0 text-[#2E7D4F]" />
+              <PhCheck v-else :size="12" class="shrink-0 text-success" />
               <span class="shrink-0 font-mono text-[11.5px] font-semibold">{{ s.name }}</span>
               <span class="shrink-0 text-[11px] text-ink-3">{{ TOOL_LABEL[s.name] ?? '执行中' }}</span>
               <span v-if="s.running && s.bytes" class="ml-auto shrink-0 font-mono text-[11px] text-ink-3">
@@ -393,7 +393,7 @@ async function unpublish() {
               placeholder="描述想改的视觉（回车发送）"
               @keydown.enter="send"
             />
-            <Button variant="primary" :loading="sending" @click="send">
+            <Button variant="primary" :loading="sending" aria-label="发送" @click="send">
               <PhPaperPlaneTilt :size="12" />
             </Button>
           </div>

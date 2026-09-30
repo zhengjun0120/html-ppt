@@ -167,8 +167,14 @@ async function togglePublish(row: UserTemplateRow) {
   }
 }
 
+// 删除确认走 Dialog（与空白新建同款交互，替代原生 confirm 的样式割裂）
+const removeTarget = ref<UserTemplateRow | null>(null)
+function requestRemove(row: UserTemplateRow) {
+  removeTarget.value = row
+}
+
 async function remove(row: UserTemplateRow) {
-  if (!window.confirm(`删除模板「${row.name}」？已生成的文稿不受影响。`)) return
+  removeTarget.value = null
   busyId.value = row.id + ':del'
   try {
     await userTemplateApi.remove(row.id)
@@ -306,7 +312,7 @@ const editing = ref<UserTemplateRow | null>(null)
           />
           <span
             class="absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
-            :class="row.visibility === 'public' ? 'bg-accent text-on-accent' : 'bg-surface-3 text-ink-2'"
+            :class="row.visibility === 'public' ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink-2'"
           >
             {{ row.visibility === 'public' ? '已公开' : '私有' }}
           </span>
@@ -335,13 +341,13 @@ const editing = ref<UserTemplateRow | null>(null)
             <p class="truncate text-[13.5px] font-semibold" :title="row.name">{{ row.name }}</p>
             <span
               class="shrink-0 rounded px-1.5 py-0.5 text-[10px]"
-              :class="row.status === 'failed' ? 'bg-[#FDEBEC] text-[#9F2F2D]' : 'bg-surface-2 text-ink-3'"
+              :class="row.status === 'failed' ? 'bg-danger-soft text-danger' : 'bg-surface-2 text-ink-3'"
             >
               {{ STATUS_LABELS[row.status] ?? row.status }}
             </span>
           </div>
           <p class="text-[11px] text-ink-3">派生自「{{ baseName(row.base_id) }}」</p>
-          <p v-if="row.publish_error" class="line-clamp-3 rounded bg-[#FDEBEC] p-1.5 text-[11px] text-[#9F2F2D]" :title="row.publish_error">
+          <p v-if="row.publish_error" class="line-clamp-3 rounded bg-danger-soft p-1.5 text-[11px] text-danger" :title="row.publish_error">
             {{ row.publish_error }}
           </p>
           <div class="flex flex-wrap gap-1.5 pt-1">
@@ -357,7 +363,7 @@ const editing = ref<UserTemplateRow | null>(null)
               <PhGlobe :size="12" />
               {{ row.visibility === 'public' ? '下架' : '发布' }}
             </Button>
-            <Button size="sm" variant="ghost" :loading="busyId === row.id + ':del'" @click="remove(row)">
+            <Button size="sm" variant="ghost" :loading="busyId === row.id + ':del'" @click="requestRemove(row)">
               <PhTrash :size="12" />
               删除
             </Button>
@@ -522,5 +528,16 @@ const editing = ref<UserTemplateRow | null>(null)
         @keydown.enter.prevent="createBlank"
       />
     </Dialog>
+
+    <!-- 删除确认：danger 态，替代原生 window.confirm -->
+    <Dialog
+      :open="!!removeTarget"
+      :title="`删除模板「${removeTarget?.name ?? ''}」`"
+      desc="删除后不可恢复；已生成的文稿不受影响。"
+      confirm-text="删除"
+      danger
+      @confirm="removeTarget && remove(removeTarget)"
+      @close="removeTarget = null"
+    />
   </div>
 </template>

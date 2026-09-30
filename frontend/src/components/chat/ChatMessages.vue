@@ -109,7 +109,7 @@ function itemKey(item: RenderItem): string {
           v-else-if="item.kind === 'agent'"
           class="max-w-[95%] self-start rounded-xl rounded-bl-sm bg-surface-2 px-3 py-2 text-[13.5px]"
         >
-          <div class="prose-sm break-words [&_a]:text-accent [&_a]:underline [&_code]:rounded [&_code]:bg-code-bg [&_code]:px-1 [&_code]:font-mono [&_code]:text-[12px] [&_li]:ml-4 [&_li]:list-disc [&_ol]:list-decimal [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-1" v-html="renderMarkdown(item.text)" />
+          <div class="prose-sm break-words [&_a]:text-accent [&_a]:underline [&_code]:rounded [&_code]:bg-code [&_code]:px-1 [&_code]:font-mono [&_code]:text-[12px] [&_li]:ml-4 [&_li]:list-disc [&_ol]:list-decimal [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-1" v-html="renderMarkdown(item.text)" />
           <span v-if="item.streaming" class="mt-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-accent align-middle" />
         </div>
 

@@ -40,7 +40,7 @@ function go(key: WizardStep) {
       >
         <span
           class="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[9.5px] leading-none"
-          :class="current === s.key ? 'border-accent bg-accent text-on-accent' : isDone(s.key) ? 'border-line-strong' : 'border-line'"
+          :class="current === s.key ? 'border-accent bg-accent text-accent-contrast' : isDone(s.key) ? 'border-line-strong' : 'border-line'"
         >
           {{ isDone(s.key) && current !== s.key ? '✓' : i + 1 }}
         </span>

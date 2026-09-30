@@ -224,7 +224,7 @@ function imgUrl(r: RunMeta, name: string): string {
               <PhDownloadSimple :size="12" /> 导出 JSON
             </a>
           </div>
-          <p class="mt-2 text-[13px] text-ink-1">{{ selected.user_content || '（无输入）' }}</p>
+          <p class="mt-2 text-[13px] text-ink">{{ selected.user_content || '（无输入）' }}</p>
           <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-ink-3">
             <span>{{ fmtTime(selected.started_at) }}</span>
             <span>耗时 {{ fmtDuration(selected.duration_ms) }}</span>
@@ -285,14 +285,14 @@ function imgUrl(r: RunMeta, name: string): string {
 
               <!-- 展开体：参数 / 结果 / 完整上下文 -->
               <div v-if="expanded[e.seq]" class="mt-2 flex flex-col gap-2" @click.stop>
-                <pre v-if="e.args" class="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-code-bg p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.args) }}</pre>
-                <pre v-if="e.result" class="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-code-bg p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.result) }}</pre>
+                <pre v-if="e.args" class="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.args) }}</pre>
+                <pre v-if="e.result" class="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.result) }}</pre>
                 <template v-if="e.kind === 'llm_request' && e.messages == null">
                   <p class="text-[11px] text-ink-3">
                     {{ expandedMessages[e.seq] === 'loading' ? '加载完整上下文…' : (expandedMessages[e.seq] ?? '点击已展开；完整上下文在再次点击时加载') }}
                   </p>
                 </template>
-                <pre v-if="e.kind === 'llm_request' && expandedMessages[e.seq] && expandedMessages[e.seq] !== 'loading'" class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-code-bg p-2 font-mono text-[11px] text-ink-2">{{ expandedMessages[e.seq] }}</pre>
+                <pre v-if="e.kind === 'llm_request' && expandedMessages[e.seq] && expandedMessages[e.seq] !== 'loading'" class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ expandedMessages[e.seq] }}</pre>
                 <div v-if="e.usage" class="text-[11px] text-ink-3">
                   tokens：{{ e.usage.total }}（输入 {{ e.usage.prompt }} / 输出 {{ e.usage.completion }}，缓存 {{ e.usage.cached }}<template v-if="e.usage.reasoning">，推理 {{ e.usage.reasoning }}</template>）
                 </div>

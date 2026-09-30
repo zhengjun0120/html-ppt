@@ -51,7 +51,7 @@ function go(p: number) {
         v-else
         type="button"
         class="h-7 min-w-[28px] cursor-pointer rounded border px-1.5 text-[12px] transition-colors"
-        :class="p === modelValue ? 'border-accent bg-accent font-semibold text-on-accent' : 'border-line text-ink-2 hover:border-line-strong'"
+        :class="p === modelValue ? 'border-accent bg-accent font-semibold text-accent-contrast' : 'border-line text-ink-2 hover:border-line-strong'"
         :aria-current="p === modelValue ? 'page' : undefined"
         @click="go(p)"
       >

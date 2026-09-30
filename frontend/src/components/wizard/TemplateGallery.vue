@@ -218,7 +218,7 @@ async function start() {
             />
             <span
               v-if="selected === c.id"
-              class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-on-accent"
+              class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-accent-contrast"
             >
               <PhCheck :size="10" /> 已选
             </span>
@@ -276,6 +276,7 @@ async function start() {
             class="cursor-pointer rounded border border-line px-1.5 py-0.5 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
             :disabled="demoPage <= 1"
             title="上一页"
+            aria-label="上一页"
             @click="demoPage = Math.max(1, demoPage - 1)"
           >
             <PhCaretLeft :size="11" />
@@ -284,6 +285,7 @@ async function start() {
           <button
             class="cursor-pointer rounded border border-line px-1.5 py-0.5 transition-colors hover:border-line-strong"
             title="下一页"
+            aria-label="下一页"
             @click="demoPage = demoPage + 1"
           >
             <PhCaretRight :size="11" />

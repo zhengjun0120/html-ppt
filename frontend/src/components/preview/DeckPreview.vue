@@ -169,7 +169,7 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
 
       <!-- 画布 -->
       <div class="flex min-w-0 flex-1 flex-col">
-        <div class="min-h-0 flex-1 bg-bg">
+        <div class="min-h-0 flex-1 bg-canvas">
           <iframe
             v-if="props.deckId"
             :key="reloadKey + ':' + iframeSrc"
