@@ -3,8 +3,10 @@ import { PhCheck, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
+import TemplateFilterBar from '@/components/templates/TemplateFilterBar.vue'
 import { templateApi, type TemplateVariant } from '@/api/templates'
 import { userTemplateApi, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
+import { useTemplateFilter } from '@/lib/templateFilter'
 import { useChatStore } from '@/stores/chat'
 import { useWizardStore } from '@/stores/wizard'
 import { useToast } from '@/stores/toast'
@@ -39,6 +41,7 @@ interface GalleryCard {
   id: string
   name: string
   description: string
+  tags?: string[]
   scenario?: string[]
   canvas: { w: number; h: number }
   variants: TemplateVariant[]
@@ -54,6 +57,8 @@ const cards = computed<GalleryCard[]>(() => {
       id: t.id,
       name: ut ? ut.name : t.name,
       description: ut ? ut.description : t.description,
+      // 用户模板没有 tags 数据：标签筛选只覆盖内置模板（方案已拍板接受）
+      tags: ut ? undefined : t.tags,
       scenario: ut ? undefined : t.scenario,
       canvas: t.canvas,
       variants: t.variants,
@@ -64,6 +69,10 @@ const cards = computed<GalleryCard[]>(() => {
   // 我的模板置顶，其余按 id 稳定排序
   return [...all.filter((c) => c.mine), ...all.filter((c) => !c.mine)]
 })
+
+// —— 标签筛选 + 名字搜索：词表从数据算出；过滤作用在喂瀑布流的数组上，
+// 被筛掉的卡片 iframe 直接卸载，选中/变体/翻页逻辑零改动。——//
+const { query, activeTag, vocab, filtered, toggleTag, reset } = useTemplateFilter(cards)
 
 const selectedCard = computed(() => cards.value.find((c) => c.id === selected.value))
 const canStart = computed(
@@ -89,7 +98,7 @@ function updateColumns() {
 const columns = computed<GalleryCard[][]>(() => {
   const cols: GalleryCard[][] = Array.from({ length: columnCount.value }, () => [])
   const heights = new Array<number>(columnCount.value).fill(0)
-  for (const c of cards.value) {
+  for (const c of filtered.value) {
     let i = 0
     for (let k = 1; k < heights.length; k++) {
       if (heights[k] < heights[i]) i = k
@@ -165,7 +174,17 @@ async function start() {
       </p>
     </div>
 
-    <div class="mt-3 flex items-start gap-3">
+    <TemplateFilterBar
+      v-model:query="query"
+      :active-tag="activeTag"
+      :vocab="vocab"
+      :total="cards.length"
+      :shown="filtered.length"
+      class="mt-3"
+      @update:active-tag="toggleTag"
+    />
+
+    <div v-if="filtered.length" class="mt-3 flex items-start gap-3">
       <div v-for="(col, ci) in columns" :key="ci" class="flex min-w-0 flex-1 flex-col gap-3">
         <button
           v-for="c in col"
@@ -212,6 +231,11 @@ async function start() {
               <span v-if="!c.mine" class="font-mono text-[10.5px] text-ink-3">{{ c.id }}</span>
             </div>
             <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ c.description }}</p>
+            <div v-if="c.tags?.length" class="flex flex-wrap gap-1">
+              <span v-for="s in c.tags.slice(0, 3)" :key="s" class="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] text-ink-2">
+                {{ s }}
+              </span>
+            </div>
             <div v-if="c.scenario?.length" class="flex flex-wrap gap-1">
               <span v-for="s in c.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
                 {{ s }}
@@ -220,6 +244,16 @@ async function start() {
           </div>
         </button>
       </div>
+    </div>
+
+    <div
+      v-else
+      class="mt-3 flex flex-col items-center gap-2 rounded-card border border-dashed border-line px-6 py-12 text-center"
+    >
+      <p class="text-[13px] text-ink-2">没有匹配的模板</p>
+      <button class="cursor-pointer text-[12.5px] font-semibold text-accent hover:underline" @click="reset">
+        清空筛选条件
+      </button>
     </div>
 
     <div class="sticky bottom-0 mt-auto flex flex-wrap items-center gap-3 rounded-control border border-line bg-surface px-4 py-3">

@@ -5,12 +5,14 @@ import { useRouter } from 'vue-router'
 
 import { templateApi, type TemplateMeta } from '@/api/templates'
 import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
+import TemplateFilterBar from '@/components/templates/TemplateFilterBar.vue'
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal.vue'
 import DeckEditModal from '@/components/editor/DeckEditModal.vue'
 import Button from '@/components/ui/Button.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Empty from '@/components/ui/Empty.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import { useTemplateFilter } from '@/lib/templateFilter'
 import { useToast } from '@/stores/toast'
 import { watch } from 'vue'
 
@@ -37,6 +39,15 @@ const STATUS_LABELS: Record<string, string> = {
 const metaOf = computed(() => new Map(templates.value.map((t) => [t.id, t])))
 /** 可派生的内置模板（注册表合并视图里的用户模板不算"内置"） */
 const builtins = computed(() => templates.value.filter((t) => !t.id.startsWith('ut-')))
+// —— 派生选起点也要筛/搜：百来个内置模板靠翻页找太费劲（docs/template-filter-plan.md）——//
+const {
+  query: builtinQuery,
+  activeTag: builtinTag,
+  vocab: builtinVocab,
+  filtered: filteredBuiltins,
+  toggleTag: toggleBuiltinTag,
+  reset: resetBuiltinFilter,
+} = useTemplateFilter(builtins)
 /** base_id → 中文名（内置模板都有中文名；查不到兜底原 id） */
 function baseName(id: string): string {
   if (id === '_blank') return '空白起点'
@@ -55,7 +66,7 @@ async function load() {
       if (p.value > n) p.value = n
     }
     clamp(minePage, Math.max(1, Math.ceil(m.length / MINE_PER_PAGE)))
-    clamp(builtinPage, Math.max(1, Math.ceil(builtins.value.length / BUILTIN_PER_PAGE)))
+    clamp(builtinPage, Math.max(1, Math.ceil(filteredBuiltins.value.length / BUILTIN_PER_PAGE)))
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '模板加载失败')
   } finally {
@@ -70,9 +81,9 @@ const BUILTIN_PER_PAGE = 9
 const minePage = ref(1)
 const builtinPage = ref(1)
 const minePageCount = computed(() => Math.max(1, Math.ceil(mine.value.length / MINE_PER_PAGE)))
-const builtinPageCount = computed(() => Math.max(1, Math.ceil(builtins.value.length / BUILTIN_PER_PAGE)))
+const builtinPageCount = computed(() => Math.max(1, Math.ceil(filteredBuiltins.value.length / BUILTIN_PER_PAGE)))
 const pagedMine = computed(() => mine.value.slice((minePage.value - 1) * MINE_PER_PAGE, minePage.value * MINE_PER_PAGE))
-const pagedBuiltins = computed(() => builtins.value.slice((builtinPage.value - 1) * BUILTIN_PER_PAGE, builtinPage.value * BUILTIN_PER_PAGE))
+const pagedBuiltins = computed(() => filteredBuiltins.value.slice((builtinPage.value - 1) * BUILTIN_PER_PAGE, builtinPage.value * BUILTIN_PER_PAGE))
 const mineSection = ref<HTMLElement>()
 const builtinSection = ref<HTMLElement>()
 function setMinePage(p: number) {
@@ -83,6 +94,11 @@ function setBuiltinPage(p: number) {
   builtinPage.value = p
   nextTick(() => builtinSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
 }
+
+// 筛选/搜索条件变化后过滤列表变短，停在原页可能直接越界——统一回第 1 页
+watch([builtinQuery, builtinTag], () => {
+  builtinPage.value = 1
+})
 
 async function fork(baseId: string) {
   busyId.value = 'fork:' + baseId
@@ -390,7 +406,16 @@ const editing = ref<UserTemplateRow | null>(null)
           从空白新建
         </Button>
       </div>
-      <div class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
+      <TemplateFilterBar
+        v-model:query="builtinQuery"
+        :active-tag="builtinTag"
+        :vocab="builtinVocab"
+        :total="builtins.length"
+        :shown="filteredBuiltins.length"
+        class="mt-4"
+        @update:active-tag="toggleBuiltinTag"
+      />
+      <div v-if="filteredBuiltins.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div v-for="b in pagedBuiltins" :key="b.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
           <div
             :ref="setBoxRef('base-' + b.id)"
@@ -438,8 +463,17 @@ const editing = ref<UserTemplateRow | null>(null)
           </div>
         </div>
       </div>
+      <div
+        v-else
+        class="mt-4 flex flex-col items-center gap-2 rounded-card border border-dashed border-line px-6 py-10 text-center"
+      >
+        <p class="text-[13px] text-ink-2">没有匹配的内置模板</p>
+        <button class="cursor-pointer text-[12.5px] font-semibold text-accent hover:underline" @click="resetBuiltinFilter">
+          清空筛选条件
+        </button>
+      </div>
       <Pagination
-        v-if="builtins.length > BUILTIN_PER_PAGE"
+        v-if="filteredBuiltins.length > BUILTIN_PER_PAGE"
         class="mt-6"
         :model-value="builtinPage"
         :page-count="builtinPageCount"
