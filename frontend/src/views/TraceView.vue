@@ -196,7 +196,10 @@ function imgUrl(r: RunMeta, name: string): string {
             <Badge v-if="r.run_kind === 'customize'" tone="info">定制</Badge>
             <Badge v-if="r.run_kind === 'tplsugg'" tone="info">模板推荐</Badge>
             <span class="truncate font-mono text-[11px] text-ink-3">{{ r.run_id }}</span>
-            <span class="ml-auto shrink-0 text-[11px] text-ink-3">{{ fmtDuration(r.duration_ms) }}</span>
+            <span class="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-ink-3">
+              <span v-if="r.usage?.total?.total" :title="`输入 ${r.usage.total.prompt ?? 0} / 输出 ${r.usage.total.completion ?? 0} / 缓存 ${r.usage.total.cached ?? 0}`" class="font-mono">{{ fmtTokens(r.usage.total.total) }} tok</span>
+              <span>{{ fmtDuration(r.duration_ms) }}</span>
+            </span>
           </div>
           <p class="mt-1 line-clamp-2 text-[12px] text-ink-2">{{ r.user_content || '（无输入）' }}</p>
           <p class="mt-0.5 truncate font-mono text-[10.5px] text-ink-3">
@@ -234,7 +237,7 @@ function imgUrl(r: RunMeta, name: string): string {
             <span v-if="selected.tool_calls != null">{{ selected.tool_calls }} 次工具</span>
             <span v-if="selected.model" class="font-mono">{{ selected.model }}</span>
             <span v-if="selected.deck_id" class="font-mono">{{ selected.deck_id }}</span>
-            <span v-if="selected.usage?.total">tokens {{ fmtTokens(selected.usage.total.total) }}（缓存 {{ fmtTokens(selected.usage.total.cached) }}）</span>
+            <span v-if="selected.usage?.total" title="输入含缓存命中；输出含推理 token">tokens {{ fmtTokens(selected.usage.total.total) }}（输入 {{ fmtTokens(selected.usage.total.prompt) }} / 输出 {{ fmtTokens(selected.usage.total.completion) }}<template v-if="selected.usage.total.cached">，缓存 {{ fmtTokens(selected.usage.total.cached) }}</template><template v-if="selected.usage.total.reasoning">，推理 {{ fmtTokens(selected.usage.total.reasoning) }}</template>）</span>
           </div>
           <!-- 分项用量（主循环 / 视觉审查 / 联网搜索） -->
           <div v-if="selected.usage?.usage" class="mt-2 flex flex-wrap gap-2">

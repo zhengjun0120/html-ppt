@@ -200,6 +200,13 @@ func TestSuggestFlow(t *testing.T) {
 		if !strings.Contains(runs[0].UserContent, "AI 模板推荐") || !strings.Contains(runs[0].UserContent, "2 页") {
 			t.Errorf("user_content = %q", runs[0].UserContent)
 		}
+		if runs[0].Status != "ok" {
+			t.Errorf("status = %s, 期望 ok", runs[0].Status)
+		}
+		// run_end 带 recorder 汇总：观测台列表 tokens 列的数据源
+		if runs[0].Usage == nil || runs[0].Usage.Total.Total == 0 {
+			t.Errorf("run 汇总缺用量: %+v", runs[0].Usage)
+		}
 	})
 
 	t.Run("缓存命中不重调", func(t *testing.T) {
@@ -242,6 +249,13 @@ func TestSuggestFlow(t *testing.T) {
 			t.Fatalf("calls=%d", n)
 		}
 		traceRuns(3, "畸形输出后") // 失败的 LLM 轮也要留痕（run_end 带 error）
+		{
+			tstore := trace.NewStore(traceDir)
+			runs, _ := tstore.ListRuns(uid, suggestSessionID(id), 10, 0)
+			if runs[0].Status != "error" || runs[0].Usage == nil || runs[0].Usage.Total.Total == 0 {
+				t.Errorf("失败 run 应带 error 状态与用量: status=%s usage=%+v", runs[0].Status, runs[0].Usage)
+			}
+		}
 		// 空结果没覆盖缓存：再读（不 refresh）应拿到上一轮的 minimal-white
 		again, err := sg.Suggest(ctx, uid, id, llm, "", false)
 		if err != nil || len(again) != 1 || again[0].TemplateID != "minimal-white" {

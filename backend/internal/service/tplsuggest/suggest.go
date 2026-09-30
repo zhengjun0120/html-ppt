@@ -99,13 +99,25 @@ func (s *Service) Suggest(ctx context.Context, uid uint, deckID string, llm LLM,
 	// 观测（fail-open，与 customize 同一条原则）：缓存命中不进这里——只有真调
 	// LLM 的那一轮才算一次 run。上下文全量进 llm_request，"模型为什么推这个"
 	// 才有证据可查。
-	ctx, closeTrace := s.traceRun(ctx, uid, deckID, df.Title, len(o.Pages), llm.Model, sys, user)
+	ctx, rec, closeTrace := s.traceRun(ctx, uid, deckID, df.Title, len(o.Pages), llm.Model, sys, user)
 	defer closeTrace()
+	// run_end 带 recorder 汇总（用量/耗时/轮数）——观测台列表的 tokens 列就从这来
+	endRun := func(status string, errMsg string) {
+		if rec == nil {
+			return
+		}
+		s := rec.Summary()
+		ev := trace.Event{Kind: trace.KindRunEnd, Status: status, Summary: &s}
+		if errMsg != "" {
+			ev.Error = errMsg
+		}
+		trace.Emit(ctx, ev)
+	}
 
 	raw, finish, err := callLLM(ctx, llm, sys, user)
 	if err != nil {
 		trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, Error: err.Error()})
-		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Error: "LLM 调用失败"})
+		endRun(trace.StatusError, "LLM 调用失败")
 		log.Printf("[tplsuggest] %s LLM 调用失败 err:%v", deckID, err)
 		return []deck.TplSuggestion{}, nil
 	}
@@ -116,7 +128,7 @@ func (s *Service) Suggest(ctx context.Context, uid uint, deckID string, llm LLM,
 		raw, finish, err = callLLM(ctx, llm, sys, user)
 		if err != nil {
 			trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, Error: err.Error()})
-			trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Error: "重试仍失败"})
+			endRun(trace.StatusError, "重试仍失败")
 			log.Printf("[tplsuggest] %s LLM 重试失败 err:%v", deckID, err)
 			return []deck.TplSuggestion{}, nil
 		}
@@ -124,14 +136,14 @@ func (s *Service) Suggest(ctx context.Context, uid uint, deckID string, llm LLM,
 	sugs := sanitize(raw, candidates)
 	trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, FinishReason: finish, Content: raw})
 	if len(sugs) == 0 {
-		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Error: "无合法推荐（解析后 0 条）"})
+		endRun(trace.StatusError, "无合法推荐（解析后 0 条）")
 		log.Printf("[tplsuggest] %s 无合法推荐，原始输出：%.80s", deckID, raw)
 		return []deck.TplSuggestion{}, nil
 	}
 	if err := s.decks.SaveTemplateSuggestions(uid, deckID, sugs); err != nil {
 		log.Printf("[tplsuggest] %s 写缓存失败 err:%v", deckID, err) // 推荐照常返回，缓存下次重建
 	}
-	trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd})
+	endRun(trace.StatusOK, "")
 	return sugs, nil
 }
 
@@ -227,11 +239,12 @@ func suggestSessionID(deckID string) uint {
 }
 
 // traceRun 开一个推荐 run 的观测文件并把 recorder 挂进 ctx；发 run_start 与
-// llm_request（候选清单+大纲+诉求全量落盘）。返回清理闭包（关 recorder）。
+// llm_request（候选清单+大纲+诉求全量落盘）。返回挂好 recorder 的 ctx、recorder
+// 本体（endRun 取汇总用，关闭路径失败时为 nil）与清理闭包（关 recorder）。
 // 任何失败只打日志不阻断推荐——观测是增强不是故障源。
-func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, pages int, model, sys, user string) (context.Context, func()) {
+func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, pages int, model, sys, user string) (context.Context, *trace.Recorder, func()) {
 	if !s.traceCfg.Enabled || s.traceCfg.Dir == "" {
-		return ctx, func() {}
+		return ctx, nil, func() {}
 	}
 	sessID := suggestSessionID(deckID)
 	rec, err := trace.New(trace.Options{
@@ -245,7 +258,7 @@ func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, 
 	})
 	if err != nil {
 		log.Printf("[warn] tplsuggest: 开启观测失败，本轮不记录 err: %v", err)
-		return ctx, func() {}
+		return ctx, nil, func() {}
 	}
 	rec.Emit(trace.Event{
 		Kind: trace.KindRunStart, RunKind: "tplsugg",
@@ -264,7 +277,7 @@ func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, 
 		Kind: trace.KindLLMRequest, Model: model,
 		Messages: msgs, MessageCount: 2, Bytes: len(msgs),
 	})
-	return trace.With(ctx, rec), rec.Close
+	return trace.With(ctx, rec), rec, rec.Close
 }
 
 // suggestUsagePart SDK 用量 → 观测口径（custUsagePart 同一张表，就地复制：
