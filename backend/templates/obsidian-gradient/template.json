@@ -2,12 +2,7 @@
   "id": "obsidian-gradient",
   "name": "黑曜渐变",
   "description": "GitHub-dark 紫晕 + 居中排版 + 三停渐变字，开发者工作流 / MCP / Dev tool 教程首选",
-  "tags": [
-    "教程",
-    "开发者",
-    "工作流",
-    "暗色"
-  ],
+  "tags": ["教育", "开发者", "深色"],
   "scenario": [
     "工具教程",
     "工作流分享",

@@ -2,7 +2,7 @@
   "id": "tech-sharing",
   "name": "极客深色",
   "description": "GitHub 暗底 + JetBrains Mono 等宽点缀 + 终端代码块，面向工程团队的技术分享",
-  "tags": ["技术", "深色", "代码", "工程"],
+  "tags": ["开发者", "深色", "工程"],
   "scenario": ["技术分享", "团队培训", "工程评审", "开源项目介绍", "架构讲解"],
   "canvas": { "w": 1920, "h": 1080 },
   "variants": [

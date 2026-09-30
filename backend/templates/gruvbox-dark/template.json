@@ -2,7 +2,7 @@
   "id": "gruvbox-dark",
   "name": "Gruvbox 暗",
   "description": "琥珀与苔绿在暖灰中燃烧：复古终端的暖褐底、等宽字型与 vim 状态栏母题，终端美学从未如此温暖",
-  "tags": ["深色", "科技", "终端", "复古"],
+  "tags": ["深色", "科技", "开发者", "复古"],
   "scenario": ["Terminal/vim 社群分享", "DevOps 技术演讲", "命令行工具展示", "复古计算文化", "技术教学"],
   "canvas": { "w": 1920, "h": 1080 },
   "variants": [
