@@ -346,6 +346,18 @@ func (s *Service) SaveOutline(userID uint, id string, o *Outline, expectVersion 
 	return nil
 }
 
+// StageMismatch 阶段守卫拒绝：当前阶段不满足操作要求。典型场景是重复提交/重复
+// 确认（第一次已把阶段推进，重试撞上守卫）。handler 把它映射成 409——语义是
+// "冲突但用户可行动"：页面状态多半已前进，刷新即可，而不是 4xx 的"请求本身错了"。
+type StageMismatch struct {
+	Current string // deck 实际所处阶段
+	Require string // 此操作要求的阶段
+}
+
+func (e StageMismatch) Error() string {
+	return fmt.Sprintf("阶段不对：当前 %s，此操作要求 %s", e.Current, e.Require)
+}
+
 // transitionStage 阶段迁移的唯一入口：校验 from（期望的当前阶段）后写 DB 与 deck.json。
 // from 传空 = 不检查当前阶段（仅限初始化路径使用）。
 // 返回冲突时的实际阶段，调用方据此给用户可执行的提示。
@@ -361,7 +373,7 @@ func (s *Service) transitionStage(userID uint, id, from, to string) (string, err
 		return "", fmt.Errorf("deck %q 不存在", id)
 	}
 	if from != "" && row.Stage != from {
-		return row.Stage, fmt.Errorf("阶段不对：当前 %s，此操作要求 %s", row.Stage, from)
+		return row.Stage, StageMismatch{Current: row.Stage, Require: from}
 	}
 	if err := s.st.DB.Model(&store.Deck{}).Where("id = ?", id).Update("stage", to).Error; err != nil {
 		return row.Stage, fmt.Errorf("更新阶段失败: %w", err)

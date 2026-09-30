@@ -41,6 +41,12 @@ func mapDeckErr(c *gin.Context, err error) {
 		})
 		return
 	}
+	var mismatch deck.StageMismatch
+	if errors.As(err, &mismatch) {
+		// 重复确认/重复提交落在已前进的阶段上：不是请求错误，是状态冲突
+		response.Err(c, http.StatusConflict, err.Error())
+		return
+	}
 	var locked agent.ErrStageLocked
 	if errors.As(err, &locked) {
 		response.Err(c, http.StatusConflict, err.Error())
