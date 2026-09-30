@@ -38,18 +38,32 @@ watch(pageCount, (n) => {
 watch(page, (p) => {
   void router.replace({ query: p > 1 ? { page: String(p) } : undefined }).catch(() => {})
 })
-function setPage(p: number) {
-  page.value = p
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+// 列表滚在壳层 <main class="overflow-y-auto"> 里，window 本身不滚——记位置、回顶、
+// 恢复都得作用到这个容器上，从视图根向上找最近的滚动祖先拿它。
+const rootEl = ref<HTMLElement | null>(null)
+function scroller(): HTMLElement | null {
+  let el: HTMLElement | null = rootEl.value
+  while (el && el !== document.body) {
+    const oy = getComputedStyle(el).overflowY
+    if (oy === 'auto' || oy === 'scroll') return el
+    el = el.parentElement
+  }
+  return null
 }
 
-// —— 返回文稿：点开文稿前记下当前位置——页码进 URL query、滚动高度进 sessionStorage；
-// 返回时页码由 query 恢复、滚动由浏览器 savedPosition 原生落回（router.scrollBehavior），
-// 这里的恢复只兜「新导航直达 ?page=N」（返回按钮 fallback push / 刷新）的场景。——//
+function setPage(p: number) {
+  page.value = p
+  const el = scroller()
+  if (el) el.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// —— 返回文稿：点开文稿前记下当前位置——页码进 URL query、滚动高度进 sessionStorage。
+// 列表滚在壳层 <main> 里而非 window，savedPosition 管不到它，所以 router.back()
+// 与 fallback push 两条返回路径都靠 restoreScroll 在 onMounted 落回。——//
 function openDeck(id: string) {
   try {
     sessionStorage.setItem('decks-return-page', String(page.value))
-    sessionStorage.setItem('decks-return-y', String(window.scrollY))
+    sessionStorage.setItem('decks-return-y', String(scroller()?.scrollTop ?? 0))
   } catch {
     /* 隐私模式等存不进就算了：只损失滚动恢复，不影响导航 */
   }
@@ -65,7 +79,7 @@ async function restoreScroll() {
   sessionStorage.removeItem('decks-return-y')
   if (y > 0) {
     await nextTick()
-    window.scrollTo({ top: y })
+    scroller()?.scrollTo({ top: y })
   }
 }
 
@@ -80,7 +94,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1100px] p-6">
+  <div ref="rootEl" class="mx-auto max-w-[1100px] p-6">
     <div class="mb-5 flex items-center justify-between">
       <h1 class="text-[16px] font-bold">我的文稿</h1>
       <div class="flex items-center gap-2">
