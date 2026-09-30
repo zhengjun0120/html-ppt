@@ -71,18 +71,25 @@ func (h *Handler) PreviewTemplate(c *gin.Context) {
 	}
 	html = strings.ReplaceAll(html, `href="style.css"`, `href="`+base+`style.css"`)
 
-	// 协商缓存（revalidateStatic 同一哲学：demo 引用无指纹，不长 max-age，
-	// 每次回源问一句；内容哈希 ETag，内容变 ETag 必变，不存在换不掉的风险）。
-	// 原先的 no-store 让选模板页每次进页都全量重拉上百张缩略（合计 4-10MB），
-	// 命中 304 时浏览器复用缓存文档、服务端零传输——重新进页的加载时间近零。
-	// 304 前已经付过建 HTML 的 CPU，但那本来就只有毫秒级。
+	// 缓存策略分叉：
+	//   内置模板（绝大多数卡）——demo 运行期不可变，1 小时强缓存。重进选模板页
+	//     时上百张缩略的 HTML、css、js 全部零请求，加载近零；过期后 ETag 协商
+	//     兜底（内容变 ETag 必变）。开发期改内置模板文件后 Ctrl+F5 强刷即可。
+	//   用户模板（ut-）——定制对话随时改 style.css，保持 no-cache 逐次校验
+	//     （304 零传输），编辑完回画廊立刻看到新样子。
+	// 原先统一 no-store：选模板页每次进页全量重拉上百张缩略（合计 4-10MB），
+	// 2026-09-30 用户实测反馈"每次进来都会重新加载"。
 	sum := sha256.Sum256([]byte(html))
 	etag := `"` + hex.EncodeToString(sum[:16]) + `"`
-	c.Header("Cache-Control", "no-cache")
 	c.Header("ETag", etag)
-	if c.GetHeader("If-None-Match") == etag {
-		c.AbortWithStatus(http.StatusNotModified)
-		return
+	if strings.HasPrefix(t.ID, "ut-") {
+		c.Header("Cache-Control", "no-cache")
+		if c.GetHeader("If-None-Match") == etag {
+			c.AbortWithStatus(http.StatusNotModified)
+			return
+		}
+	} else {
+		c.Header("Cache-Control", "private, max-age=3600")
 	}
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }

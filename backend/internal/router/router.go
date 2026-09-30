@@ -18,7 +18,7 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), middleware.CORS(cfg.Server.AllowOrigins))
 
-		api := r.Group("/api")
+	api := r.Group("/api")
 	{
 		api.GET("/health", h.Health)
 
@@ -144,7 +144,7 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	// 模板目录不含用户数据，公开；实例化出的 deck 走的是 /api/decks/:id/file，
 	// 不经过这条路，归属校验不受影响。
 	if h.TemplatesAvailable() {
-		templates := r.Group("", revalidateStatic())
+		templates := r.Group("", builtinTemplateCache())
 		templates.Static("/templates", cfg.Templates.Dir)
 	}
 	// 用户自定义模板：受控伺服替代原 StaticFS 公开路由（草稿收口，
@@ -197,6 +197,24 @@ func revalidateStatic() gin.HandlerFunc {
 func assetsCORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
+		c.Next()
+	}
+}
+
+// builtinTemplateCache 内置模板静态资产的缓存策略（2026-09-30 预览缓存化）：
+// demo 是构建产物、运行期不可变（改模板 = 改文件 + 重启，开发时 Ctrl+F5 兜底），
+// 给 1 小时强缓存——选模板页一屏上百张卡、每张 demo 自带 css/js，逐个回源
+// 校验（no-cache）也会放大成可感知的加载。字体沿用 revalidateStatic 的例外
+// 条款：vendored 字体只在升级时变（文件名跟着变），7 天 max-age。
+// 用户模板（/user-templates）不在此列：定制对话随时改 style.css，保持 no-cache
+// 逐次校验（见 noCacheHeader）。
+func builtinTemplateCache() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if isFontAsset(c.Request.URL.Path) {
+			c.Header("Cache-Control", "public, max-age=604800, must-revalidate")
+		} else {
+			c.Header("Cache-Control", "private, max-age=3600")
+		}
 		c.Next()
 	}
 }
