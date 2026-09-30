@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhPlus } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhPlus } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -82,6 +82,18 @@ function newConversation() {
   chat.reset(deckId.value)
   toast.info('已开启新对话')
 }
+
+/** 返回文稿列表：从列表进来走浏览器历史（页码在 ?page、滚动由 router.scrollBehavior 原生落回）；
+ *  直链/刷新进来没有可退的历史，就带上离开时记下的页码直达（滚动由列表页 restoreScroll 兜底）。 */
+function backToDecks() {
+  const back = window.history.state?.back as string | undefined
+  if (back && back.startsWith('/decks')) {
+    router.back()
+    return
+  }
+  const savedPage = Number(sessionStorage.getItem('decks-return-page') || 0)
+  void router.push({ path: '/decks', query: savedPage > 1 ? { page: String(savedPage) } : undefined })
+}
 </script>
 
 <template>
@@ -93,7 +105,16 @@ function newConversation() {
       class="h-full"
       @history="historyOpen = true"
       @edit="editOpen = true"
-    />
+    >
+      <template #toolbar-start>
+        <button
+          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-ink"
+          @click="backToDecks"
+        >
+          <PhArrowLeft :size="12" /> 返回文稿
+        </button>
+      </template>
+    </DeckPreview>
     <div v-else class="flex min-w-0 flex-1 items-center justify-center p-6 text-[13px] text-ink-3">
       文稿不存在或尚未创建。
     </div>

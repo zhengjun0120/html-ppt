@@ -29,6 +29,13 @@ const router = createRouter({
     { path: '/', redirect: '/decks' },
     { path: '/:pathMatch(.*)*', redirect: '/decks' },
   ],
+  // 滚动恢复：浏览器前进/后退回到原生滚动位置（文稿列表返回时落回原处）；
+  // 新导航回顶；同路径仅 query 变化（列表翻页）不劫持滚动，交给 setPage 自己平滑回顶。
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.path === from.path) return false
+    return { top: 0 }
+  },
 })
 
 router.beforeEach((to) => {

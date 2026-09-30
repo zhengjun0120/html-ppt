@@ -94,6 +94,7 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
   <section class="flex min-w-0 flex-1 flex-col">
     <!-- 预览工具条 -->
     <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
+      <slot name="toolbar-start" />
       <span class="truncate text-[12.5px] font-semibold" :title="title">{{ title }}</span>
       <span v-if="props.deckId" class="truncate font-mono text-[11px] text-ink-3">{{ props.deckId }}</span>
       <span class="ml-auto flex items-center gap-1.5">
