@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,6 +70,19 @@ func (h *Handler) PreviewTemplate(c *gin.Context) {
 		base = "/user-templates/" + t.ID + "/"
 	}
 	html = strings.ReplaceAll(html, `href="style.css"`, `href="`+base+`style.css"`)
-	c.Header("Cache-Control", "no-store")
+
+	// 协商缓存（revalidateStatic 同一哲学：demo 引用无指纹，不长 max-age，
+	// 每次回源问一句；内容哈希 ETag，内容变 ETag 必变，不存在换不掉的风险）。
+	// 原先的 no-store 让选模板页每次进页都全量重拉上百张缩略（合计 4-10MB），
+	// 命中 304 时浏览器复用缓存文档、服务端零传输——重新进页的加载时间近零。
+	// 304 前已经付过建 HTML 的 CPU，但那本来就只有毫秒级。
+	sum := sha256.Sum256([]byte(html))
+	etag := `"` + hex.EncodeToString(sum[:16]) + `"`
+	c.Header("Cache-Control", "no-cache")
+	c.Header("ETag", etag)
+	if c.GetHeader("If-None-Match") == etag {
+		c.AbortWithStatus(http.StatusNotModified)
+		return
+	}
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
