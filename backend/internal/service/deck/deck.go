@@ -77,7 +77,10 @@ func (s *Service) List(userID uint) ([]Meta, error) {
 		return nil, errStorage
 	}
 	var rows []store.Deck
-	if err := s.st.DB.Where("user_id = ? AND format = ?", userID, FormatV2).Order("id").Find(&rows).Error; err != nil {
+	// 新建的排前面：按创建时间倒序（deck-9001 这类"号大但老"的测试稿按 id 排会
+	// 误霸首位），同刻再按 id 倒序兜底稳定
+	if err := s.st.DB.Where("user_id = ? AND format = ?", userID, FormatV2).
+		Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("查询 deck 列表: %w", err)
 	}
 	out := make([]Meta, 0, len(rows))

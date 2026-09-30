@@ -76,8 +76,8 @@ type UserTemplateService interface {
 	ClearUTHistory(userID uint, id string) (int, error)
 }
 
-func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService) *Handler {
-	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates, exporter: exporter, usertpl: utpl, suggest: tplsuggest.New(decks, templates)}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService, traceCfg trace.Config) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates, exporter: exporter, usertpl: utpl, suggest: tplsuggest.New(decks, templates, traceCfg)}
 }
 
 // TemplatesAvailable 模板库是否可用（router 据此决定挂不挂预览静态路由）。

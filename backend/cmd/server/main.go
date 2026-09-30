@@ -207,7 +207,13 @@ func run() error {
 		log.Printf("[info] 用户自定义模板已开启（%s）", userTplRoot)
 	}
 
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc)
+	traceCfg := trace.Config{
+		Enabled:       cfg.Features.Trace,
+		Dir:           cfg.Trace.Dir,
+		MaxFieldBytes: cfg.Trace.MaxFieldBytes,
+		RetainRuns:    cfg.Trace.RetainRunsPerSession,
+	}
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc, traceCfg)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 

@@ -194,6 +194,7 @@ function imgUrl(r: RunMeta, name: string): string {
           <div class="flex items-center gap-2">
             <Badge :tone="statusTone(r.status)">{{ r.status }}</Badge>
             <Badge v-if="r.run_kind === 'customize'" tone="info">定制</Badge>
+            <Badge v-if="r.run_kind === 'tplsugg'" tone="info">模板推荐</Badge>
             <span class="truncate font-mono text-[11px] text-ink-3">{{ r.run_id }}</span>
             <span class="ml-auto shrink-0 text-[11px] text-ink-3">{{ fmtDuration(r.duration_ms) }}</span>
           </div>
@@ -215,6 +216,7 @@ function imgUrl(r: RunMeta, name: string): string {
           <div class="flex flex-wrap items-center gap-2">
             <Badge :tone="statusTone(selected.status)">{{ selected.status }}</Badge>
             <Badge v-if="selected.run_kind === 'customize'" tone="info">定制</Badge>
+            <Badge v-if="selected.run_kind === 'tplsugg'" tone="info">模板推荐</Badge>
             <span class="font-mono text-[12px]">{{ selected.run_id }}</span>
             <span v-if="selected.parent_run_id" class="font-mono text-[10.5px] text-ink-3">← {{ selected.parent_run_id }}</span>
             <a

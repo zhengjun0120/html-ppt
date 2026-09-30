@@ -2,13 +2,14 @@
 // 从内置模板里挑 3-5 个，结果缓存进 deck.json（deck 层负责存取）。
 //
 // 依赖注入照 usertpl 的先例：LLM client/model 由装配层从 agent 服务构造
-//（handler 里 h.agent.CustomizeLLMFor），本包不 import agent，避免依赖环。
+// （handler 里 h.agent.CustomizeLLMFor），本包不 import agent，避免依赖环。
 package tplsuggest
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"strings"
 	"time"
@@ -16,9 +17,9 @@ import (
 
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
+	"html-ppt/backend/internal/trace"
 
 	"github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/shared"
 )
 
 // LLM 一次补全的接入参数（usertpl.LLM 同款形状）。
@@ -28,19 +29,21 @@ type LLM struct {
 }
 
 // Service 模板推荐服务。reg 只读元数据；decks 负责守卫依据（stage）、
-// 大纲读取与推荐缓存落盘。
+// 大纲读取与推荐缓存落盘；traceCfg 观测落盘（run_kind=tplsugg，2026-09-30 接入观测台）。
 type Service struct {
-	decks *deck.Service
-	reg   *template.Registry
+	decks    *deck.Service
+	reg      *template.Registry
+	traceCfg trace.Config
 }
 
-func New(decks *deck.Service, reg *template.Registry) *Service {
-	return &Service{decks: decks, reg: reg}
+func New(decks *deck.Service, reg *template.Registry, traceCfg trace.Config) *Service {
+	return &Service{decks: decks, reg: reg, traceCfg: traceCfg}
 }
 
-// suggestTimeout 一次推荐 LLM 调用的上限。选模板页是异步加载推荐、
-// 网格照常可用，但也不能让请求干等到请求方超时。
-const suggestTimeout = 45 * time.Second
+// suggestTimeout 一次推荐 LLM 调用的上限。上限交还模型默认后，推理模型首轮
+// 可能比原来慢；选模板页是异步加载推荐、网格照常可用，但也不能让请求干等到
+// 请求方超时。
+const suggestTimeout = 60 * time.Second
 
 // maxSuggestions 最多推荐条数；reason 上限（rune）。
 const (
@@ -92,19 +95,43 @@ func (s *Service) Suggest(ctx context.Context, uid uint, deckID string, llm LLM,
 	}
 
 	sys, user := buildPrompt(df, o, clarify, candidates)
-	raw, err := callLLM(ctx, llm, sys, user)
+
+	// 观测（fail-open，与 customize 同一条原则）：缓存命中不进这里——只有真调
+	// LLM 的那一轮才算一次 run。上下文全量进 llm_request，"模型为什么推这个"
+	// 才有证据可查。
+	ctx, closeTrace := s.traceRun(ctx, uid, deckID, df.Title, len(o.Pages), llm.Model, sys, user)
+	defer closeTrace()
+
+	raw, finish, err := callLLM(ctx, llm, sys, user)
 	if err != nil {
+		trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, Error: err.Error()})
+		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Error: "LLM 调用失败"})
 		log.Printf("[tplsuggest] %s LLM 调用失败 err:%v", deckID, err)
 		return []deck.TplSuggestion{}, nil
 	}
+	// 空回复重试一次（customize 同款兜底）：推理模型偶尔把整轮预算花在
+	// reasoning 上，正文零字——再给一次机会，还空就当失败处理。
+	if strings.TrimSpace(raw) == "" {
+		trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Content: "首次调用空回复（推理耗尽输出），重试一次"})
+		raw, finish, err = callLLM(ctx, llm, sys, user)
+		if err != nil {
+			trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, Error: err.Error()})
+			trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Error: "重试仍失败"})
+			log.Printf("[tplsuggest] %s LLM 重试失败 err:%v", deckID, err)
+			return []deck.TplSuggestion{}, nil
+		}
+	}
 	sugs := sanitize(raw, candidates)
+	trace.Emit(ctx, trace.Event{Kind: trace.KindLLMResponse, FinishReason: finish, Content: raw})
 	if len(sugs) == 0 {
+		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Error: "无合法推荐（解析后 0 条）"})
 		log.Printf("[tplsuggest] %s 无合法推荐，原始输出：%.80s", deckID, raw)
 		return []deck.TplSuggestion{}, nil
 	}
 	if err := s.decks.SaveTemplateSuggestions(uid, deckID, sugs); err != nil {
 		log.Printf("[tplsuggest] %s 写缓存失败 err:%v", deckID, err) // 推荐照常返回，缓存下次重建
 	}
+	trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd})
 	return sugs, nil
 }
 
@@ -164,27 +191,94 @@ func buildPrompt(df *deck.DeckFile, o *deck.Outline, clarify string, candidates 
 	return sys.String(), b.String()
 }
 
-// callLLM 非流式一轮补全（llmhello 先例的形状）。MaxTokens 给足——推理模型
-// 可能把预算花在推理上，正文被截成空串（usertpl 侧实测过的坑），宁多勿少。
-func callLLM(ctx context.Context, llm LLM, sys, user string) (string, error) {
+// callLLM 非流式一轮补全（llmhello 先例的形状）。**不设 MaxTokens、不设
+// ReasoningEffort**（customize 的 custStream 同款决定，2026-09-30 实测重蹈覆辙：
+// 4000 上限被 deepseek-flash 的 reasoning 全部吃满、正文零字，观测台 llm_response
+// 记到空 content 才定位）——上限交给模型/服务商默认，与 agent 主循环一致。
+// 返回正文与 finish_reason（观测要记）。
+func callLLM(ctx context.Context, llm LLM, sys, user string) (string, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, suggestTimeout)
 	defer cancel()
 	completion, err := llm.Client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:          openai.ChatModel(llm.Model),
-		ReasoningEffort: shared.ReasoningEffortLow,
+		Model: openai.ChatModel(llm.Model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(sys),
 			openai.UserMessage(user),
 		},
-		MaxTokens: openai.Int(4000),
+		Temperature: openai.Float(0.3),
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if len(completion.Choices) == 0 {
-		return "", fmt.Errorf("响应没有 choices")
+		return "", "", fmt.Errorf("响应没有 choices")
 	}
-	return completion.Choices[0].Message.Content, nil
+	trace.Usage(ctx, trace.CompMain, suggestUsagePart(completion.Usage))
+	return completion.Choices[0].Message.Content, string(completion.Choices[0].FinishReason), nil
+}
+
+// suggestSessionID 推荐 run 的伪会话号（customize 的 customSessionID 同款思路）：
+// 模板推荐没有会话表，deck id 哈希进 1e9 起步的专用段——同一 deck 的推荐 run
+// 天然聚在一个目录，按 run 数裁剪等于每 deck 各自的保留配额。
+func suggestSessionID(deckID string) uint {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte("tplsugg:" + deckID))
+	return 1_000_000_000 + uint(h.Sum32())
+}
+
+// traceRun 开一个推荐 run 的观测文件并把 recorder 挂进 ctx；发 run_start 与
+// llm_request（候选清单+大纲+诉求全量落盘）。返回清理闭包（关 recorder）。
+// 任何失败只打日志不阻断推荐——观测是增强不是故障源。
+func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, pages int, model, sys, user string) (context.Context, func()) {
+	if !s.traceCfg.Enabled || s.traceCfg.Dir == "" {
+		return ctx, func() {}
+	}
+	sessID := suggestSessionID(deckID)
+	rec, err := trace.New(trace.Options{
+		Dir:           s.traceCfg.Dir,
+		SessionID:     sessID,
+		RunID:         trace.NewRunID(time.Now()),
+		UserID:        uid,
+		DeckID:        deckID,
+		MaxFieldBytes: s.traceCfg.MaxFieldBytes,
+		RetainRuns:    s.traceCfg.RetainRuns,
+	})
+	if err != nil {
+		log.Printf("[warn] tplsuggest: 开启观测失败，本轮不记录 err: %v", err)
+		return ctx, func() {}
+	}
+	rec.Emit(trace.Event{
+		Kind: trace.KindRunStart, RunKind: "tplsugg",
+		RunID: rec.RunID(), SessionID: sessID, UserID: uid, DeckID: deckID,
+		UserContent: fmt.Sprintf("模板推荐：%s（%d 页）", title, pages),
+		Model:       model,
+	})
+	msgs, err := json.Marshal([]map[string]string{
+		{"role": "system", "content": sys},
+		{"role": "user", "content": user},
+	})
+	if err != nil {
+		msgs = json.RawMessage(`null`)
+	}
+	rec.Emit(trace.Event{
+		Kind: trace.KindLLMRequest, Model: model,
+		Messages: msgs, MessageCount: 2, Bytes: len(msgs),
+	})
+	return trace.With(ctx, rec), rec.Close
+}
+
+// suggestUsagePart SDK 用量 → 观测口径（custUsagePart 同一张表，就地复制：
+// 为一个换算函数跨包导出别的服务的内部件不值得）。
+func suggestUsagePart(u openai.CompletionUsage) trace.UsagePart {
+	return trace.UsagePart{
+		Prompt:      u.PromptTokens,
+		Completion:  u.CompletionTokens,
+		Total:       u.TotalTokens,
+		Cached:      u.PromptTokensDetails.CachedTokens,
+		Reasoning:   u.CompletionTokensDetails.ReasoningTokens,
+		ImageTokens: u.PromptTokensDetails.ImageTokens,
+		Calls:       1,
+	}
 }
 
 // ---------- 模型输出的解析与白名单过滤 ----------

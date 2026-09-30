@@ -25,6 +25,7 @@ import (
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -103,6 +104,10 @@ func TestSuggestFlow(t *testing.T) {
 			]` + "\n```"
 		case 2:
 			content = `[{"template_id":"minimal-white","reason":"极简留白，商务干净"}]`
+		case 4:
+			content = "" // 空回复（推理耗尽输出的形状）→ 触发重试
+		case 5:
+			content = `[{"template_id":"minimal-white","reason":"重试后给出的推荐"}]`
 		default:
 			content = "这不是 JSON，模型抽风了"
 		}
@@ -123,7 +128,24 @@ func TestSuggestFlow(t *testing.T) {
 	const id = "deck-suggest-flow"
 	const guardID = "deck-suggest-guard"
 	dataDir := t.TempDir()
-	svc := deck.New(dataDir, t.TempDir(), st).WithTemplateRegistry(newTestRegistry(t))
+	reg := newTestRegistry(t)
+	svc := deck.New(dataDir, t.TempDir(), st).WithTemplateRegistry(reg)
+	// 观测落盘目录：断言推荐 run 会写 trace（run_kind=tplsugg）
+	traceDir := filepath.Join(t.TempDir(), "traces")
+	traceCfg := trace.Config{Enabled: true, Dir: traceDir, MaxFieldBytes: 1 << 16, RetainRuns: 5}
+
+	// traceRuns 观测断言辅助：该 deck 名下（伪会话段）的推荐 run 数
+	traceRuns := func(want int, label string) {
+		t.Helper()
+		tstore := trace.NewStore(traceDir)
+		runs, err := tstore.ListRuns(uid, suggestSessionID(id), 10, 0)
+		if err != nil {
+			t.Fatalf("%s: ListRuns: %v", label, err)
+		}
+		if len(runs) != want {
+			t.Fatalf("%s: 期望 %d 个推荐 run, got %d", label, want, len(runs))
+		}
+	}
 	for _, row := range []struct {
 		id    string
 		title string
@@ -135,7 +157,7 @@ func TestSuggestFlow(t *testing.T) {
 		writeDeckFiles(t, dataDir, row.id, row.stage, row.title)
 	}
 
-	sg := New(svc, newTestRegistry(t))
+	sg := New(svc, reg, traceCfg)
 
 	t.Run("阶段守卫", func(t *testing.T) {
 		_, err := sg.Suggest(ctx, uid, guardID, llm, "", false)
@@ -168,6 +190,16 @@ func TestSuggestFlow(t *testing.T) {
 			t.Fatalf("第 2 条应保留模板、丢掉非法变体: %#v", got[1])
 		}
 		first = got
+		// 观测：真调 LLM 的一轮落一个 run，run_kind=tplsugg、user_content 带标题页数
+		traceRuns(1, "首调后")
+		tstore := trace.NewStore(traceDir)
+		runs, _ := tstore.ListRuns(uid, suggestSessionID(id), 10, 0)
+		if runs[0].RunKind != "tplsugg" {
+			t.Errorf("run_kind = %s, 期望 tplsugg", runs[0].RunKind)
+		}
+		if !strings.Contains(runs[0].UserContent, "AI 模板推荐") || !strings.Contains(runs[0].UserContent, "2 页") {
+			t.Errorf("user_content = %q", runs[0].UserContent)
+		}
 	})
 
 	t.Run("缓存命中不重调", func(t *testing.T) {
@@ -181,6 +213,7 @@ func TestSuggestFlow(t *testing.T) {
 		if n := atomic.LoadInt32(&calls); n != 1 {
 			t.Fatalf("缓存命中不应重调 LLM, calls=%d", n)
 		}
+		traceRuns(1, "缓存命中后") // 不新增 run
 	})
 
 	t.Run("refresh强刷覆盖缓存", func(t *testing.T) {
@@ -194,6 +227,7 @@ func TestSuggestFlow(t *testing.T) {
 		if n := atomic.LoadInt32(&calls); n != 2 {
 			t.Fatalf("refresh 应重调 LLM, calls=%d", n)
 		}
+		traceRuns(2, "refresh 后")
 	})
 
 	t.Run("畸形输出返回空且不写缓存", func(t *testing.T) {
@@ -207,6 +241,7 @@ func TestSuggestFlow(t *testing.T) {
 		if n := atomic.LoadInt32(&calls); n != 3 {
 			t.Fatalf("calls=%d", n)
 		}
+		traceRuns(3, "畸形输出后") // 失败的 LLM 轮也要留痕（run_end 带 error）
 		// 空结果没覆盖缓存：再读（不 refresh）应拿到上一轮的 minimal-white
 		again, err := sg.Suggest(ctx, uid, id, llm, "", false)
 		if err != nil || len(again) != 1 || again[0].TemplateID != "minimal-white" {
@@ -215,6 +250,21 @@ func TestSuggestFlow(t *testing.T) {
 		if n := atomic.LoadInt32(&calls); n != 3 {
 			t.Fatalf("读缓存不应重调, calls=%d", n)
 		}
+		traceRuns(3, "再读缓存后")
+	})
+
+	t.Run("空回复重试一次后成功", func(t *testing.T) {
+		got, err := sg.Suggest(ctx, uid, id, llm, "", true)
+		if err != nil {
+			t.Fatalf("Suggest: %v", err)
+		}
+		if len(got) != 1 || got[0].TemplateID != "minimal-white" || got[0].Reason != "重试后给出的推荐" {
+			t.Fatalf("重试结果不符: %#v", got)
+		}
+		if n := atomic.LoadInt32(&calls); n != 5 {
+			t.Fatalf("空回复应恰好重试一次, calls=%d", n)
+		}
+		traceRuns(4, "重试成功后") // 空回复轮+重试轮同属一个 run
 	})
 
 	t.Run("越权拒绝", func(t *testing.T) {
@@ -226,11 +276,11 @@ func TestSuggestFlow(t *testing.T) {
 	t.Run("请求prompt组装", func(t *testing.T) {
 		body, _ := firstReqBody.Load().(string)
 		for _, want := range []string{
-			"tech-sharing",       // 候选清单里有真实模板
-			"给投资人讲商业模式",         // 澄清诉求进 prompt
-			"商业模式",               // 大纲页标题进 prompt
-			"template_id",        // system prompt 里的输出格式契约
-			"周报",                 // 候选清单带中文名（weekly-report）
+			"tech-sharing", // 候选清单里有真实模板
+			"给投资人讲商业模式",    // 澄清诉求进 prompt
+			"商业模式",         // 大纲页标题进 prompt
+			"template_id",  // system prompt 里的输出格式契约
+			"周报",           // 候选清单带中文名（weekly-report）
 		} {
 			if !strings.Contains(body, want) {
 				t.Errorf("prompt 缺 %q", want)
