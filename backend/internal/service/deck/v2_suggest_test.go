@@ -10,6 +10,7 @@ package deck
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,11 +21,12 @@ import (
 )
 
 // newSuggestDeck 手动装配一份 selecting_template 阶段的 v2 deck（含大纲）。
-func newSuggestDeck(t *testing.T) (*Service, uint, string) {
+// id 由调用者给定：共享内存库里 deck 行全局唯一，一个测试二进制里每个 deck
+// 只能有一个 id（TestV2FullPipeline 占 deck-0001 的同款约束）。
+func newSuggestDeck(t *testing.T, id string) (*Service, uint, string) {
 	t.Helper()
 	s := newV2TestService(t)
 	const uid = 7
-	const id = "deck-suggest"
 	if err := s.st.DB.Create(&store.Deck{
 		ID: id, UserID: uid, Format: FormatV2, Stage: StageSelectingTemplate,
 	}).Error; err != nil {
@@ -50,8 +52,21 @@ func newSuggestDeck(t *testing.T) (*Service, uint, string) {
 	return s, uid, id
 }
 
+// TestGetHTMLNotInstantiated 未选模板的 deck（无 index.html）读页面：返回
+// ErrNotInstantiated 哨兵（预览端点据此出友好占位页），文案里不再说"不存在"。
+func TestGetHTMLNotInstantiated(t *testing.T) {
+	s, uid, id := newSuggestDeck(t, "deck-noinst")
+	if _, err := s.GetHTML(uid, id); !errors.Is(err, ErrNotInstantiated) {
+		t.Fatalf("期望 ErrNotInstantiated, got %v", err)
+	}
+	// 越权仍按"不存在"口径，不泄露存在性
+	if _, err := s.GetHTML(uid+1, id); err == nil || errors.Is(err, ErrNotInstantiated) {
+		t.Fatalf("越权读不应得到未实例化哨兵, got %v", err)
+	}
+}
+
 func TestTemplateSuggestionsCache(t *testing.T) {
-	s, uid, id := newSuggestDeck(t)
+	s, uid, id := newSuggestDeck(t, "deck-suggest")
 
 	t.Run("无缓存返回nilnil", func(t *testing.T) {
 		sugs, err := s.TemplateSuggestions(uid, id)

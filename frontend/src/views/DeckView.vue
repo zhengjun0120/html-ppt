@@ -46,15 +46,25 @@ function onRestored() {
 
 async function wizardSync(id: string) {
   await wizard.syncFromChat(id)
+  allowPreviewIfIterate()
   const step = wizard.step
   if (step && step !== 'iterate' && id) {
     void router.replace(STEP_ROUTES[step](id))
   }
 }
 
+// 预览门控：meta 确认 deck 已到迭代阶段（有 index.html）才挂 iframe。
+// 不设防的话，点"未生成的文稿"时 iframe 抢在 meta 回来前去取文件端点，
+// 把 404 的 {"error":...} 原文糊一屏，下一秒才被重定向替换掉。
+const previewAllowed = ref(false)
+function allowPreviewIfIterate() {
+  if (wizard.isV2 && wizard.stage === 'iterating') previewAllowed.value = true
+}
+
 onMounted(async () => {
   await boot(routeDeckId, (id) => wizardSync(id))
   // v2 deck 尚未到迭代阶段：回向导对应步骤
+  allowPreviewIfIterate()
   const step = wizard.step
   if (step && step !== 'iterate' && deckId.value) {
     void router.replace(STEP_ROUTES[step](deckId.value))
@@ -99,7 +109,7 @@ function backToDecks() {
 <template>
   <div class="flex h-full overflow-hidden">
     <DeckPreview
-      v-if="deckId"
+      v-if="deckId && previewAllowed"
       :key="previewKey + ':' + deckId"
       :deck-id="deckId"
       class="h-full"
@@ -115,6 +125,13 @@ function backToDecks() {
         </button>
       </template>
     </DeckPreview>
+    <div
+      v-else-if="deckId"
+      class="flex min-w-0 flex-1 items-center justify-center p-6 text-[13px] text-ink-3"
+      role="status"
+    >
+      <span class="animate-pulse">加载预览…</span>
+    </div>
     <div v-else class="flex min-w-0 flex-1 items-center justify-center p-6 text-[13px] text-ink-3">
       文稿不存在或尚未创建。
     </div>
