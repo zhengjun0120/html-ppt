@@ -19,6 +19,7 @@ import (
 	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/service/deck"
+	"html-ppt/backend/internal/service/tplsuggest"
 	"html-ppt/backend/internal/response"
 )
 
@@ -138,6 +139,37 @@ func (h *Handler) SelectTemplate(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"stage": to})
+}
+
+// TemplateSuggestions POST /api/decks/:id/template-suggestions[?refresh=1] ——
+// 选模板阶段的 AI 推荐（tplsuggest）。LLM/解析失败返回空 suggestions（200），
+// 前端静默隐藏推荐区；归属走 404 口径，阶段不对走 409（mapDeckErr）。
+// 澄清诉求是尽力而为的上下文：取不到（降级模式等）就空着，不阻断推荐。
+func (h *Handler) TemplateSuggestions(c *gin.Context) {
+	uid, ok := h.uid(c)
+	if !ok {
+		return
+	}
+	if h.suggest == nil || h.agent == nil {
+		response.Err(c, http.StatusServiceUnavailable, "推荐服务不可用")
+		return
+	}
+	clarify, err := h.agent.ClarifyUserMessages(c.Request.Context(), uid, c.Param("id"), 2000)
+	if err != nil {
+		clarify = ""
+	}
+	cl := h.agent.CustomizeLLMFor(c.Request.Context())
+	sugs, err := h.suggest.Suggest(c.Request.Context(), uid, c.Param("id"),
+		tplsuggest.LLM{Client: cl.Client, Model: cl.Model}, clarify,
+		c.Query("refresh") == "1")
+	if err != nil {
+		mapDeckErr(c, err)
+		return
+	}
+	if sugs == nil {
+		sugs = []deck.TplSuggestion{}
+	}
+	response.OK(c, gin.H{"suggestions": sugs})
 }
 
 // GenerateDeck POST /api/decks/:id/generate?session_id=N[&resume=1] —— 触发生成 run。

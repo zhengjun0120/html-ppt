@@ -127,6 +127,14 @@ type PlanAssignment struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// TplSuggestion 一条模板推荐：选模板阶段的 LLM 产物，缓存进 deck.json。
+// Reason 是给用户看的一句话推荐理由。
+type TplSuggestion struct {
+	TemplateID string `json:"template_id"`
+	VariantID  string `json:"variant_id,omitempty"`
+	Reason     string `json:"reason"`
+}
+
 // DeckFile deck.json 的结构：deck 的自描述元数据。
 type DeckFile struct {
 	ID         string           `json:"id"`
@@ -137,8 +145,11 @@ type DeckFile struct {
 	Variant    string           `json:"variant,omitempty"`
 	Canvas     template.Canvas  `json:"canvas"`
 	PagePlan   []PlanAssignment `json:"page_plan,omitempty"`
-	CreatedAt  int64            `json:"created_at"`
-	UpdatedAt  int64            `json:"updated_at"`
+	// TemplateSuggestions 模板推荐缓存（selecting_template 阶段生成）。
+	// 大纲在 gate 1 确认后冻结，推荐依据不会变，缓存天然不会失效。
+	TemplateSuggestions []TplSuggestion `json:"template_suggestions,omitempty"`
+	CreatedAt           int64           `json:"created_at"`
+	UpdatedAt           int64           `json:"updated_at"`
 }
 
 // ---------- Service 上的 v2 方法 ----------
@@ -489,6 +500,33 @@ func variantNames(tpl *template.Template) string {
 		names = append(names, v.ID)
 	}
 	return strings.Join(names, " / ")
+}
+
+// TemplateSuggestions 读缓存的模板推荐（归属校验）。无缓存返回 (nil, nil)——
+// "还没推荐过"不是错误，调用方据此决定要不要发起 LLM 调用。
+func (s *Service) TemplateSuggestions(userID uint, id string) ([]TplSuggestion, error) {
+	df, err := s.GetDeckV2(userID, id)
+	if err != nil {
+		return nil, err
+	}
+	return df.TemplateSuggestions, nil
+}
+
+// SaveTemplateSuggestions 覆盖写模板推荐缓存（归属校验 + deck 级锁）。
+// 空切片 = 清空缓存；调用方约定只在拿到合法推荐时才写，避免把失败固化下来。
+func (s *Service) SaveTemplateSuggestions(userID uint, id string, sugs []TplSuggestion) error {
+	if err := s.authorize(userID, id); err != nil {
+		return err
+	}
+	unlock := s.lockDeck(id)
+	defer unlock()
+
+	df, err := s.readDeckFile(id)
+	if err != nil {
+		return err
+	}
+	df.TemplateSuggestions = sugs
+	return s.writeDeckFile(id, df)
 }
 
 // FinishGeneration 生成 run 正常结束的落点：generating → iterating。

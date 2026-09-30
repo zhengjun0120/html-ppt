@@ -63,6 +63,7 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.PUT("/decks/:id/outline", h.PutOutline)
 			guarded.POST("/decks/:id/outline/confirm", h.ConfirmOutline)
 			guarded.POST("/decks/:id/template", h.SelectTemplate)
+			guarded.POST("/decks/:id/template-suggestions", h.TemplateSuggestions)
 			guarded.POST("/decks/:id/generate", h.GenerateDeck)
 			guarded.POST("/decks/:id/export", h.ExportDeck)
 			guarded.GET("/decks/:id/exports/:file", h.DownloadExport)

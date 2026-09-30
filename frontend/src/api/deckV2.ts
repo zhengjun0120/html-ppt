@@ -51,6 +51,13 @@ export interface DeckV2Meta {
   variants?: TemplateVariant[]
 }
 
+/** 一条模板推荐（POST /template-suggestions 的返回条目，与 deck.TplSuggestion 对齐） */
+export interface TplSuggestion {
+  template_id: string
+  variant_id?: string
+  reason: string
+}
+
 export class OutlineConflictError extends Error {
   readonly latestVersion: number
   constructor(latestVersion: number, message: string) {
@@ -79,6 +86,14 @@ export const deckV2Api = {
     request<{ stage: DeckStage }>(`/api/decks/${deckId}/template`, {
       method: 'POST',
       body: { template_id: templateId, variant },
+    }),
+
+  /** 选模板阶段的 AI 推荐。refresh=true 绕过缓存重算（LLM 调用，秒级）；
+   *  失败/无推荐返回空数组（后端已把 LLM 失败降级成 200 空结果） */
+  suggestTemplates: (deckId: string, refresh = false) =>
+    request<{ suggestions: TplSuggestion[] }>(`/api/decks/${deckId}/template-suggestions`, {
+      method: 'POST',
+      query: refresh ? { refresh: 1 } : undefined,
     }),
 }
 

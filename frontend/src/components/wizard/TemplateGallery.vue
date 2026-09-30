@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { PhCheck, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { PhArrowClockwise, PhCheck, PhCaretLeft, PhCaretRight, PhSparkle } from '@phosphor-icons/vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
 import TemplateFilterBar from '@/components/templates/TemplateFilterBar.vue'
+import { deckV2Api, type TplSuggestion } from '@/api/deckV2'
 import { templateApi, type TemplateVariant } from '@/api/templates'
 import { userTemplateApi, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
 import { useTemplateFilter } from '@/lib/templateFilter'
+import { resolveSuggestion, variantFor } from '@/lib/templateSuggest'
 import { useChatStore } from '@/stores/chat'
 import { useWizardStore } from '@/stores/wizard'
 import { useToast } from '@/stores/toast'
@@ -86,6 +88,67 @@ function pick(id: string) {
   selectedVariant.value = selectedCard.value?.variants[0]?.id ?? 'default'
 }
 
+// —— AI 推荐（tplsuggest）：进页自动算一次（LLM 秒级，异步不阻塞选模板），
+// 结果后端按 deck 缓存，重进页面/刷新都命中缓存；「重新推荐」才带 refresh 重算。
+// 点击小卡 = 预选 + 滚动定位到主网格，大预览/变体/开始生成全走既有链路——
+// 推荐只做引导，确认权仍在用户手里。失败/空结果收成一行弱化重试，不占版面。——//
+const rootEl = ref<HTMLElement | null>(null)
+const suggests = ref<TplSuggestion[]>([])
+const suggestState = ref<'idle' | 'loading' | 'ready' | 'empty' | 'failed'>('idle')
+let suggestAbort: AbortController | null = null
+
+// 推荐条目 → 画廊卡片（候选外 id / 已删模板静默丢弃，不渲染空壳）
+const suggestCards = computed(() =>
+  suggests.value
+    .map((s) => ({ s, card: resolveSuggestion(cards.value, s) }))
+    .filter((x): x is { s: TplSuggestion; card: GalleryCard } => !!x.card),
+)
+
+async function loadSuggestions(refresh = false) {
+  if (!wizard.deckId) return
+  suggestAbort?.abort()
+  const ac = new AbortController()
+  suggestAbort = ac
+  if (!suggests.value.length) suggestState.value = 'loading'
+  try {
+    const r = await deckV2Api.suggestTemplates(wizard.deckId, refresh)
+    if (ac.signal.aborted) return
+    suggests.value = r.suggestions ?? []
+    suggestState.value = suggests.value.length ? 'ready' : 'empty'
+  } catch {
+    if (ac.signal.aborted) return
+    // 已有推荐在展示时刷新失败：保住旧结果，只用 toast 提示；首次失败才收成重试行
+    if (!suggests.value.length) suggestState.value = 'failed'
+    else toast.error('重新推荐失败')
+  }
+}
+
+watch(
+  () => wizard.deckId,
+  (id, old) => {
+    if (id === old) return
+    suggests.value = []
+    if (id) void loadSuggestions()
+    else suggestState.value = 'idle'
+  },
+  { immediate: true },
+)
+
+function pickSuggestion(s: TplSuggestion) {
+  const card = resolveSuggestion(cards.value, s)
+  if (!card) return
+  // 目标卡片可能正被筛掉：先清筛选回到全量，再预选、再定位
+  if (query.value || activeTag.value) reset()
+  pick(card.id)
+  const v = variantFor(card, s)
+  if (v) selectedVariant.value = v
+  void nextTick(() => {
+    rootEl.value
+      ?.querySelector(`[data-card-id="${CSS.escape(card.id)}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
 // —— 瀑布流布局：卡片按"最短列"分配到 N 个纵向列（N 跟随视口宽度）。——//
 // 不用 CSS columns：它按列填充，会把「我的模板」沉进第一列；按列高分配
 // 保住从左到右的阅读顺序（我的模板仍在最上面一排）。列高估算 = 预览相对高
@@ -138,6 +201,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateColumns)
   ro.disconnect()
+  suggestAbort?.abort()
 })
 
 function scaleFor(c: GalleryCard): number {
@@ -166,7 +230,7 @@ async function start() {
 </script>
 
 <template>
-  <div class="mx-auto flex h-full w-full max-w-[1200px] flex-col gap-3 overflow-y-auto p-5">
+  <div ref="rootEl" class="mx-auto flex h-full w-full max-w-[1200px] flex-col gap-3 overflow-y-auto p-5">
     <div>
       <h2 class="text-[16px] font-semibold text-ink">选择模板</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">
@@ -183,6 +247,76 @@ async function start() {
       class="mt-3"
       @update:active-tag="toggleTag"
     />
+
+    <!-- AI 推荐：首算时的骨架 / 有结果的小卡横排 / 失败或空结果的一行弱化重试。
+         小卡点击=预选+定位主网格，不用小卡发起生成——确认仍在底部主链路。 -->
+    <div v-if="suggestState === 'loading' && !suggests.length" class="flex gap-3" aria-hidden="true">
+      <div v-for="i in 4" :key="i" class="h-[168px] flex-1 animate-pulse rounded-control bg-surface-2" />
+    </div>
+    <div v-else-if="suggests.length" class="rounded-card border border-line bg-surface p-3">
+      <div class="flex items-center gap-1.5">
+        <PhSparkle :size="14" class="shrink-0 text-accent" />
+        <span class="text-[13px] font-semibold text-ink">AI 推荐</span>
+        <span class="hidden truncate text-[11.5px] text-ink-3 sm:inline">按大纲和你的对话挑的，点一张直接预选</span>
+        <Button
+          class="ml-auto shrink-0"
+          size="sm"
+          variant="ghost"
+          :loading="suggestState === 'loading'"
+          @click="loadSuggestions(true)"
+        >
+          <PhArrowClockwise :size="12" />
+          重新推荐
+        </Button>
+      </div>
+      <div class="mt-2 flex gap-3 overflow-x-auto pb-1">
+        <button
+          v-for="sc in suggestCards"
+          :key="sc.s.template_id"
+          type="button"
+          class="w-[184px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-control border bg-surface text-left transition-all hover:border-accent"
+          :class="selected === sc.s.template_id ? 'border-accent shadow-[0_0_0_3px_var(--ring)]' : 'border-line'"
+          :title="'选用 ' + sc.card.name"
+          @click="pickSuggestion(sc.s)"
+        >
+          <div
+            class="relative w-full overflow-hidden bg-surface-2"
+            :style="{ aspectRatio: `${sc.card.canvas.w} / ${sc.card.canvas.h}` }"
+          >
+            <iframe
+              :src="templateApi.previewUrl(sc.s.template_id, '', 1, 1)"
+              loading="lazy"
+              class="pointer-events-none absolute left-0 top-0 border-0"
+              :style="{
+                width: `${sc.card.canvas.w}px`,
+                height: `${sc.card.canvas.h}px`,
+                transform: `scale(${184 / sc.card.canvas.w})`,
+                transformOrigin: 'top left',
+              }"
+              sandbox="allow-scripts allow-same-origin"
+              :title="sc.card.name + ' 缩略预览'"
+              aria-hidden="true"
+            />
+            <span
+              v-if="selected === sc.s.template_id"
+              class="absolute right-1.5 top-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-contrast"
+            >
+              已选
+            </span>
+          </div>
+          <div class="p-2">
+            <p class="truncate text-[12px] font-semibold text-ink">{{ sc.card.name }}</p>
+            <p class="mt-0.5 line-clamp-2 text-[11px] leading-snug text-ink-2">{{ sc.s.reason }}</p>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div v-else-if="suggestState === 'failed' || suggestState === 'empty'" class="flex items-center gap-2 text-[12px] text-ink-3">
+      <span>{{ suggestState === 'failed' ? '推荐生成失败' : '这次没给出合适的推荐' }}</span>
+      <button class="cursor-pointer font-semibold text-accent hover:underline" @click="loadSuggestions(true)">
+        重试
+      </button>
+    </div>
 
     <div v-if="filtered.length" class="mt-3 flex items-start gap-3">
       <div v-for="(col, ci) in columns" :key="ci" class="flex min-w-0 flex-1 flex-col gap-3">
