@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
@@ -85,6 +86,9 @@ func TestSuggestFlow(t *testing.T) {
 	// —— 假 OpenAI 服务：按调用次数返回不同形状的输出 ——
 	var calls int32
 	var firstReqBody atomic.Value // string，第 1 次请求的 body（带澄清诉求的那轮）
+	// 去重测试的阻塞开关：置位后新到的请求挂起等 release，返回一条合法推荐
+	var blockUntilRelease atomic.Bool
+	release := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := atomic.AddInt32(&calls, 1)
 		body, _ := readAll(r)
@@ -92,24 +96,29 @@ func TestSuggestFlow(t *testing.T) {
 			firstReqBody.Store(string(body))
 		}
 		var content string
-		switch n {
-		case 1:
-			// 围栏包裹的合法 JSON；混入：白名单外 id、重复 id、非法变体、空理由
-			content = "```json\n" + `[
-				{"template_id":"tech-sharing","variant_id":"blue","reason":"科技感与工程主题契合"},
-				{"template_id":"ut-private-tpl","reason":"不在候选里"},
-				{"template_id":"tech-sharing","reason":"重复条目"},
-				{"template_id":"weekly-report","variant_id":"no-such-variant","reason":"结构适合周报"},
-				{"template_id":"minimal-white","reason":""}
-			]` + "\n```"
-		case 2:
-			content = `[{"template_id":"minimal-white","reason":"极简留白，商务干净"}]`
-		case 4:
-			content = "" // 空回复（推理耗尽输出的形状）→ 触发重试
-		case 5:
-			content = `[{"template_id":"minimal-white","reason":"重试后给出的推荐"}]`
-		default:
-			content = "这不是 JSON，模型抽风了"
+		if blockUntilRelease.Load() {
+			<-release
+			content = `[{"template_id":"tech-sharing","reason":"去重验证"}]`
+		} else {
+			switch n {
+			case 1:
+				// 围栏包裹的合法 JSON；混入：白名单外 id、重复 id、非法变体、空理由
+				content = "```json\n" + `[
+					{"template_id":"tech-sharing","variant_id":"blue","reason":"科技感与工程主题契合"},
+					{"template_id":"ut-private-tpl","reason":"不在候选里"},
+					{"template_id":"tech-sharing","reason":"重复条目"},
+					{"template_id":"weekly-report","variant_id":"no-such-variant","reason":"结构适合周报"},
+					{"template_id":"minimal-white","reason":""}
+				]` + "\n```"
+			case 2:
+				content = `[{"template_id":"minimal-white","reason":"极简留白，商务干净"}]`
+			case 4:
+				content = "" // 空回复（推理耗尽输出的形状）→ 触发重试
+			case 5:
+				content = `[{"template_id":"minimal-white","reason":"重试后给出的推荐"}]`
+			default:
+				content = "这不是 JSON，模型抽风了"
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(completionBody(content)))
@@ -127,6 +136,7 @@ func TestSuggestFlow(t *testing.T) {
 	const uid = uint(7)
 	const id = "deck-suggest-flow"
 	const guardID = "deck-suggest-guard"
+	const dedupID = "deck-suggest-dedup"
 	dataDir := t.TempDir()
 	reg := newTestRegistry(t)
 	svc := deck.New(dataDir, t.TempDir(), st).WithTemplateRegistry(reg)
@@ -150,7 +160,7 @@ func TestSuggestFlow(t *testing.T) {
 		id    string
 		title string
 		stage string
-	}{{id, "AI 模板推荐", deck.StageSelectingTemplate}, {guardID, "还没确认大纲", deck.StageOutlineReview}} {
+	}{{id, "AI 模板推荐", deck.StageSelectingTemplate}, {guardID, "还没确认大纲", deck.StageOutlineReview}, {dedupID, "去重测试", deck.StageSelectingTemplate}} {
 		if err := st.DB.Create(&store.Deck{ID: row.id, UserID: uid, Title: row.title, Format: "v2", Stage: row.stage}).Error; err != nil {
 			t.Fatalf("登记 deck %s: %v", row.id, err)
 		}
@@ -279,6 +289,69 @@ func TestSuggestFlow(t *testing.T) {
 			t.Fatalf("空回复应恰好重试一次, calls=%d", n)
 		}
 		traceRuns(4, "重试成功后") // 空回复轮+重试轮同属一个 run
+	})
+
+	t.Run("同deck在飞去重", func(t *testing.T) {
+		// 模拟确认后的预热（A）与用户进页请求（B）同时到达：A 先拿到锁在 LLM
+		// 上阻塞，B 排队；放行后 A 写缓存，B 拿到锁直接命中——server 只被调一次
+		blockUntilRelease.Store(true)
+		type res struct {
+			sugs []deck.TplSuggestion
+			err  error
+		}
+		doneA := make(chan res, 1)
+		go func() {
+			sugs, err := sg.Suggest(ctx, uid, dedupID, llm, "", false)
+			doneA <- res{sugs, err}
+		}()
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) && atomic.LoadInt32(&calls) != 6 {
+			time.Sleep(30 * time.Millisecond)
+		}
+		if atomic.LoadInt32(&calls) != 6 {
+			t.Fatal("A 未进入 LLM 调用（阻塞点没到）")
+		}
+		doneB := make(chan res, 1)
+		go func() {
+			sugs, err := sg.Suggest(ctx, uid, dedupID, llm, "", false)
+			doneB <- res{sugs, err}
+		}()
+		time.Sleep(300 * time.Millisecond) // 给 B 时间排上锁队
+		close(release)
+		var rA, rB res
+		select {
+		case rA = <-doneA:
+		case <-time.After(5 * time.Second):
+			t.Fatal("A 未返回")
+		}
+		select {
+		case rB = <-doneB:
+		case <-time.After(5 * time.Second):
+			t.Fatal("B 未返回")
+		}
+		if rA.err != nil || rB.err != nil {
+			t.Fatalf("去重双调报错: A=%v B=%v", rA.err, rB.err)
+		}
+		if n := atomic.LoadInt32(&calls); n != 6 {
+			t.Fatalf("去重失败：B 又调了一次 LLM, calls=%d", n)
+		}
+		if len(rA.sugs) != 1 || rA.sugs[0].Reason != "去重验证" {
+			t.Fatalf("A 结果不符: %#v", rA.sugs)
+		}
+		if len(rB.sugs) != 1 || rB.sugs[0].Reason != "去重验证" {
+			t.Fatalf("B 应命中 A 写的缓存: %#v", rB.sugs)
+		}
+		// A 的 run 落在 dedupID 自己的伪会话目录（每 deck 一段），带 ok 状态与用量
+		dstore := trace.NewStore(traceDir)
+		druns, err := dstore.ListRuns(uid, suggestSessionID(dedupID), 10, 0)
+		if err != nil || len(druns) != 1 {
+			t.Fatalf("去重 deck 应有 1 个 run: %v %d", err, len(druns))
+		}
+		if druns[0].Status != "ok" || druns[0].Usage == nil || druns[0].Usage.Total.Total == 0 {
+			t.Errorf("去重 run 汇总不符: status=%s usage=%+v", druns[0].Status, druns[0].Usage)
+		}
+		// B 命中缓存不算 run：主 deck 的 run 数不变
+		traceRuns(4, "去重后")
 	})
 
 	t.Run("越权拒绝", func(t *testing.T) {

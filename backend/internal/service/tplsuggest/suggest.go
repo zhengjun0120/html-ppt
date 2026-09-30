@@ -12,6 +12,7 @@ import (
 	"hash/fnv"
 	"log"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -34,6 +35,10 @@ type Service struct {
 	decks    *deck.Service
 	reg      *template.Registry
 	traceCfg trace.Config
+	// inFlight 同 deck 的在飞去重：gate 1 确认后的后台预热与用户进模板页的
+	// 请求撞在一起时，后到者等锁、拿到后读缓存返回——同一 deck 同时只有一次
+	// LLM 调用（重复调用除了双倍额度没有任何收益）。
+	inFlight sync.Map
 }
 
 func New(decks *deck.Service, reg *template.Registry, traceCfg trace.Config) *Service {
@@ -74,6 +79,11 @@ func (s *Service) Suggest(ctx context.Context, uid uint, deckID string, llm LLM,
 	if df.Stage != deck.StageSelectingTemplate {
 		return nil, deck.StageMismatch{Current: df.Stage, Require: deck.StageSelectingTemplate}
 	}
+
+	// 缓存检查 + 计算全程持锁：后到的请求（用户进页 vs 确认后的预热）在这里
+	// 排队，前一个算完写了缓存，后一个直接命中返回——同 deck 永不重复调 LLM。
+	unlock := s.lockDeck(deckID)
+	defer unlock()
 
 	if !refresh {
 		if cached, err := s.decks.TemplateSuggestions(uid, deckID); err == nil && len(cached) > 0 {
@@ -147,6 +157,14 @@ func (s *Service) Suggest(ctx context.Context, uid uint, deckID string, llm LLM,
 	return sugs, nil
 }
 
+// lockDeck 同 deck 的在飞互斥（deck.Service 的 lockDeck 同款思路，就地小实现）。
+func (s *Service) lockDeck(deckID string) func() {
+	v, _ := s.inFlight.LoadOrStore(deckID, &sync.Mutex{})
+	mu := v.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
+
 // builtinMetas 内置模板元数据（候选白名单的来源）。用户模板（ut- 前缀）
 // 本轮不进候选——可见性因人而异，推荐了别人看不到就是废条目。
 func builtinMetas(reg *template.Registry) []*template.Meta {
@@ -162,10 +180,13 @@ func builtinMetas(reg *template.Registry) []*template.Meta {
 }
 
 // buildPrompt 组推荐请求：system 定格式契约，user 段按 标题→大纲→诉求→候选 排。
-// 候选行带变体清单，模型才有给 variant_id 的依据。
+// 候选行刻意压缩（简介截 40 字、变体只留 id）——102 个内置模板的清单是输入
+// token 的大头，行宽直接换算成首 token 延迟与费用；模型要的风格信号在
+// 标签/场景里，长简介是冗余。
 func buildPrompt(df *deck.DeckFile, o *deck.Outline, clarify string, candidates []*template.Meta) (string, string) {
 	var sys strings.Builder
 	sys.WriteString("你是 PPT 模板推荐助手。根据文稿大纲与用户在澄清对话里表达的诉求，从候选清单中挑 3-5 个最合适的模板。\n" +
+		"这是一次轻量挑选任务：候选清单很长但判断不复杂，直接挑选并输出，不要展开冗长推理。\n" +
 		"只输出 JSON 数组，不要输出任何其他文字：\n" +
 		`[{"template_id":"…","variant_id":"…（可选）","reason":"不超过40字的推荐理由"}]` + "\n" +
 		"template_id 必须逐字来自候选清单；reason 要结合文稿主题与模板风格说具体的话，不要套话；" +
@@ -182,25 +203,31 @@ func buildPrompt(df *deck.DeckFile, o *deck.Outline, clarify string, candidates 
 	}
 	b.WriteString("\n## 候选模板\n")
 	for _, m := range candidates {
-		var variants string
+		fmt.Fprintf(&b, "- %s · %s · %s", m.ID, m.Name, truncateRunes(m.Description, 40))
+		if len(m.Tags) > 0 {
+			fmt.Fprintf(&b, " · 标签[%s]", strings.Join(capped(m.Tags, 6), "/"))
+		}
+		if len(m.Scenario) > 0 {
+			fmt.Fprintf(&b, " · 场景[%s]", strings.Join(capped(m.Scenario, 4), "/"))
+		}
 		if len(m.Variants) > 0 {
 			ids := make([]string, 0, len(m.Variants))
 			for _, v := range m.Variants {
-				ids = append(ids, v.ID+":"+v.Name)
+				ids = append(ids, v.ID)
 			}
-			variants = " · 变体 " + strings.Join(ids, ",")
+			fmt.Fprintf(&b, " · 变体[%s]", strings.Join(ids, ","))
 		}
-		fmt.Fprintf(&b, "- %s · %s · %s", m.ID, m.Name, m.Description)
-		if len(m.Tags) > 0 {
-			fmt.Fprintf(&b, " · 标签[%s]", strings.Join(m.Tags, "/"))
-		}
-		if len(m.Scenario) > 0 {
-			fmt.Fprintf(&b, " · 场景[%s]", strings.Join(m.Scenario, "/"))
-		}
-		b.WriteString(variants)
 		b.WriteByte('\n')
 	}
 	return sys.String(), b.String()
+}
+
+// capped 截断字符串切片（超出丢弃——标签/场景按原序，前面的更核心）。
+func capped(list []string, n int) []string {
+	if len(list) <= n {
+		return list
+	}
+	return list[:n]
 }
 
 // callLLM 非流式一轮补全（llmhello 先例的形状）。**不设 MaxTokens、不设
