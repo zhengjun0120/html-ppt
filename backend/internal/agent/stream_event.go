@@ -1,10 +1,19 @@
 package agent
 
-import "html-ppt/backend/internal/trace"
+import (
+	"encoding/json"
+
+	"html-ppt/backend/internal/trace"
+)
 
 type StreamEvent struct {
-	Type       string `json:"type"`
-	Content    string `json:"content"`
+	Type    string `json:"type"`
+	Content string `json:"content"`
+	// Data 结构化载荷：对"content 是 JSON 字符串"的事件（stage/gate/outline_updated/
+	// page_generated/lint_report/ask_user/trace），同一份载荷同时以对象形式放在这里。
+	// API 直连的消费者直接读 data，不必对 content 做二次 JSON.parse；旧前端只读
+	// content，多出的字段对它是惰性的，契约不破。
+	Data json.RawMessage `json:"data,omitempty"`
 	ToolCallID string `json:"tool_call_id,omitempty"`
 	ToolName   string `json:"tool_name,omitempty"`
 	ToolIndex int64 `json:"tool_index,omitempty"`	// 用于区分并行调用工具时的输出

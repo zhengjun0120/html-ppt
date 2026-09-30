@@ -515,7 +515,13 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				if err := as.persistSession(sess, messages); err != nil {
 					return false, rr, err
 				}
-				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments}); emitErr != nil {
+				// Data 附结构化形态：arguments 正常是模型产的合法 JSON；防御一下
+				// 非法 JSON 时只留 Content（旧形态），不让坏载荷混进 data
+				var askData json.RawMessage
+				if json.Valid([]byte(tool.Function.Arguments)) {
+					askData = json.RawMessage(tool.Function.Arguments)
+				}
+				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments, Data: askData}); emitErr != nil {
 					return false, rr, fmt.Errorf("事件推送失败: %w", emitErr)
 				}
 				trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: `{"note":"已向用户提问，本轮暂停等回答"}`})
