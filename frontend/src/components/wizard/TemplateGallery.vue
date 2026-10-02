@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhArrowClockwise, PhCheck, PhCaretLeft, PhCaretRight, PhSparkle } from '@phosphor-icons/vue'
+import { PhArrowClockwise, PhCheck, PhCaretLeft, PhCaretRight, PhSparkle, PhSpinner } from '@phosphor-icons/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
@@ -111,10 +111,15 @@ const suggestCards = computed(() =>
 
 async function loadSuggestions(refresh = false) {
   if (!wizard.deckId) return
+  // 在飞去重：刷新要 10-20s（一次真 LLM 调用），loading 期间的重复点击
+  // 一律忽略——按钮已禁用+转圈，这里兜底组件态调用（watch/重试行）。
+  if (suggestState.value === 'loading') return
   suggestAbort?.abort()
   const ac = new AbortController()
   suggestAbort = ac
-  if (!suggests.value.length) suggestState.value = 'loading'
+  // 无条件进 loading：首次加载给骨架，刷新时旧卡保留展示、按钮转圈、卡片
+  // 压暗（见模板），点击反馈不能只在「没有旧结果」时存在。
+  suggestState.value = 'loading'
   try {
     const r = await deckV2Api.suggestTemplates(wizard.deckId, refresh)
     if (ac.signal.aborted) return
@@ -124,7 +129,10 @@ async function loadSuggestions(refresh = false) {
     if (ac.signal.aborted) return
     // 已有推荐在展示时刷新失败：保住旧结果，只用 toast 提示；首次失败才收成重试行
     if (!suggests.value.length) suggestState.value = 'failed'
-    else toast.error('重新推荐失败')
+    else {
+      suggestState.value = 'ready'
+      toast.error('重新推荐失败')
+    }
   }
 }
 
@@ -132,9 +140,12 @@ watch(
   () => wizard.deckId,
   (id, old) => {
     if (id === old) return
+    // 换 deck：在飞的旧请求作废、状态归零——否则 loading 卡住会让新 deck
+    // 的推荐被在飞守卫挡掉，骨架永远转下去。
+    suggestAbort?.abort()
+    suggestState.value = 'idle'
     suggests.value = []
     if (id) void loadSuggestions()
-    else suggestState.value = 'idle'
   },
   { immediate: true },
 )
@@ -262,7 +273,11 @@ async function start() {
       <div class="flex items-center gap-1.5">
         <PhSparkle :size="14" class="shrink-0 text-accent" />
         <span class="text-[13px] font-semibold text-ink">AI 推荐</span>
-        <span class="hidden truncate text-[11.5px] text-ink-3 sm:inline">按大纲和你的对话挑的，点一张直接预选</span>
+        <span v-if="suggestState === 'loading'" class="inline-flex items-center gap-1.5 text-[11.5px] text-accent">
+          <PhSpinner :size="11" class="animate-spin" />
+          AI 正在按大纲重新挑选…
+        </span>
+        <span v-else class="hidden truncate text-[11.5px] text-ink-3 sm:inline">按大纲和你的对话挑的，点一张直接预选</span>
         <Button
           class="ml-auto shrink-0"
           size="sm"
@@ -274,7 +289,10 @@ async function start() {
           重新推荐
         </Button>
       </div>
-      <div class="mt-2 flex gap-3 overflow-x-auto pb-1">
+      <div
+        class="mt-2 flex gap-3 overflow-x-auto pb-1 transition-opacity duration-300"
+        :class="suggestState === 'loading' ? 'pointer-events-none opacity-45' : ''"
+      >
         <button
           v-for="sc in suggestCards"
           :key="sc.s.template_id"
