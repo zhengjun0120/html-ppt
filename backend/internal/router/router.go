@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
 	"html-ppt/backend/internal/config"
@@ -25,10 +26,19 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 		// deck-v2 模板清单：公开。模板元数据不含用户数据，画廊（含登录前的
 		// 展示场景）都要用。单个模板详情走同一条鉴权豁免逻辑。
 		// preview = demo 页 HTML（?variant= 服务端换肤），供选模板页实时预览。
-		api.GET("/templates", h.ListTemplates)
-		api.GET("/templates/:id", h.GetTemplate)
-		api.GET("/templates/:id/preview", h.PreviewTemplate)
-		api.GET("/community-templates", h.CommunityTemplates)
+		// 这四条是体积最大、重访最多的公开读端点，挂传输压缩（JSON/HTML 文本
+		// 5-10 倍压缩比）。绝不挂到 /chat、/generate 这类 SSE 端点上——gzip 的
+		// 缓冲会把流式事件攒住，对话页就死了。Vary 先行：同一路由 gzip 与
+		// identity 响应共存，共享缓存必须按 Accept-Encoding 分键。
+		gz := gzip.Gzip(gzip.DefaultCompression)
+		vary := func(c *gin.Context) {
+			c.Header("Vary", "Accept-Encoding")
+			c.Next()
+		}
+		api.GET("/templates", vary, gz, h.ListTemplates)
+		api.GET("/templates/:id", vary, gz, h.GetTemplate)
+		api.GET("/templates/:id/preview", vary, gz, h.PreviewTemplate)
+		api.GET("/community-templates", vary, gz, h.CommunityTemplates)
 
 		// 视觉审查的一次性取页通道：**必须公开**——无头浏览器是"导航"到它的，
 		// 导航带不了 Authorization 头。安全性靠一次性 nonce（见 vision/grant.go）：

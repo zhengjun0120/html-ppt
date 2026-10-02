@@ -26,7 +26,12 @@ func (h *Handler) ListTemplates(c *gin.Context) {
 		response.Err(c, http.StatusServiceUnavailable, "模板库不可用")
 		return
 	}
-	etagJSON(c, h.templates.List())
+	all := h.templates.List()
+	out := make([]template.MetaSummary, 0, len(all))
+	for _, m := range all {
+		out = append(out, m.Summary())
+	}
+	etagJSON(c, out)
 }
 
 // GetTemplate GET /api/templates/:id —— 单个模板详情（含版式索引，前端向导展示用）。

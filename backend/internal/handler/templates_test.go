@@ -199,6 +199,54 @@ func TestListTemplatesCache(t *testing.T) {
 	}
 }
 
+// TestListTemplatesSlim 清单瘦身契约：列表不下发 layouts/fonts/source
+// （占体积 ~80%，前端零消费）；单模板详情仍回全量 Meta。
+func TestListTemplatesSlim(t *testing.T) {
+	h := newPreviewTestHandler(t)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/templates", nil)
+	h.ListTemplates(c)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var list []map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &list); err != nil {
+		t.Fatalf("解析清单: %v", err)
+	}
+	if len(list) == 0 {
+		t.Fatal("清单为空")
+	}
+	for _, m := range list {
+		for _, banned := range []string{"layouts", "fonts", "source"} {
+			if _, ok := m[banned]; ok {
+				t.Errorf("清单条目 %s 不应含 %q 字段", m["id"], banned)
+			}
+		}
+		if m["id"] == "" || m["name"] == "" || m["variants"] == nil {
+			t.Errorf("清单条目缺必备字段: %v", m)
+		}
+	}
+
+	// 详情仍全量：layouts 在
+	w2 := httptest.NewRecorder()
+	c2, _ := gin.CreateTestContext(w2)
+	c2.Request = httptest.NewRequest(http.MethodGet, "/api/templates/tech-sharing", nil)
+	c2.Params = gin.Params{{Key: "id", Value: "tech-sharing"}}
+	h.GetTemplate(c2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("详情 status = %d", w2.Code)
+	}
+	var detail map[string]any
+	if err := json.Unmarshal(w2.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("解析详情: %v", err)
+	}
+	if _, ok := detail["layouts"]; !ok {
+		t.Error("详情应仍含 layouts 字段")
+	}
+}
+
 // serveUTFile 的协商缓存：ut demo index/style 从 no-store 换成 ETag+no-cache，
 // 重访没变 304 零传输，改文件 ETag 变立刻拿新版。走假 usertpl 服务（只覆写 Dir）。
 type fakeUTService struct {

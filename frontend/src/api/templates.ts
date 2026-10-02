@@ -23,7 +23,8 @@ export interface TemplateMeta {
   scenario?: string[]
   canvas: { w: number; h: number }
   variants: TemplateVariant[]
-  layouts: TemplateLayoutMeta[]
+  /** 清单接口（/api/templates）已瘦身不下发；单模板详情（GET /api/templates/:id）仍有 */
+  layouts?: TemplateLayoutMeta[]
   fonts?: string[]
   source?: { derived_from: string; license: string }
   /** demo 页数（服务端统计顶层 section）；0/缺省 = 未知 */

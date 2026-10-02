@@ -70,6 +70,37 @@ type Meta struct {
 	DemoPages int `json:"demo_pages,omitempty"`
 }
 
+// MetaSummary 清单视图：不含 layouts/fonts/source。
+//
+// 这三个字段占清单体积 ~80%（108 个模板实测 310KB→58KB）：layouts 的版式
+// 索引只有后端 agent 生成管线消费（直接读注册表），前端卡片与筛选只用
+// 名称/简介/标签/场景/画布/变体。清单接口下发 Summary；单模板详情
+// （GET /api/templates/:id）仍回全量 Meta——需要版式信息的消费方从那拿。
+type MetaSummary struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Tags        []string  `json:"tags,omitempty"`
+	Scenario    []string  `json:"scenario,omitempty"`
+	Canvas      Canvas    `json:"canvas"`
+	Variants    []Variant `json:"variants"`
+	DemoPages   int       `json:"demo_pages,omitempty"`
+}
+
+// Summary 裁出清单视图。
+func (m *Meta) Summary() MetaSummary {
+	return MetaSummary{
+		ID:          m.ID,
+		Name:        m.Name,
+		Description: m.Description,
+		Tags:        m.Tags,
+		Scenario:    m.Scenario,
+		Canvas:      m.Canvas,
+		Variants:    m.Variants,
+		DemoPages:   m.DemoPages,
+	}
+}
+
 // Template 是一个已通过校验的模板：元数据 + 文件内容 + 类名清单。
 type Template struct {
 	Meta
