@@ -39,15 +39,19 @@ func (h *Handler) serveUTFile(c *gin.Context, id, name, styleHref string) {
 			html = []byte(strings.ReplaceAll(string(raw), `href="style.css"`, `href="`+styleHref+`"`))
 		}
 		deckPageHeaders(c)
-		c.Data(http.StatusOK, "text/html; charset=utf-8", html)
+		// 安全头照旧，缓存从 no-store 换成 ETag 协商：我的模板页十几张 ut 卡
+		// （index 30-60KB + css 20-60KB）每次进页全量重下太重；no-cache 逐次
+		// 校验保持"改完立刻见新版"的语义不变，没变时 304 零传输。
+		// ETag 哈希的是重写后的最终字节——token 变则 ETag 变，不会串会话。
+		c.Header("Cache-Control", "no-cache")
+		etagData(c, "text/html; charset=utf-8", html)
 	case "style.css":
 		raw, err := os.ReadFile(filepath.Join(h.usertpl.Dir(id), "style.css"))
 		if err != nil {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		c.Header("Cache-Control", "no-store")
-		c.Data(http.StatusOK, "text/css; charset=utf-8", raw)
+		etagData(c, "text/css; charset=utf-8", raw)
 	default:
 		c.Status(http.StatusNotFound)
 	}

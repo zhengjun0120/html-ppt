@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -161,6 +162,122 @@ func TestPreviewTemplateCache(t *testing.T) {
 
 	t.Run("不存在的模板404", func(t *testing.T) {
 		w := previewRequest(t, h, "no-such-tpl", "")
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("status = %d", w.Code)
+		}
+	})
+}
+
+// ListTemplates 的协商缓存：清单 ~296KB，重访没变应 304 零传输。
+func TestListTemplatesCache(t *testing.T) {
+	h := newPreviewTestHandler(t)
+
+	listRequest := func(t *testing.T, ifNoneMatch string) *httptest.ResponseRecorder {
+		t.Helper()
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		req := httptest.NewRequest(http.MethodGet, "/api/templates", nil)
+		if ifNoneMatch != "" {
+			req.Header.Set("If-None-Match", ifNoneMatch)
+		}
+		c.Request = req
+		h.ListTemplates(c)
+		return w
+	}
+
+	first := listRequest(t, "")
+	if first.Code != http.StatusOK {
+		t.Fatalf("status = %d", first.Code)
+	}
+	etag := first.Header().Get("ETag")
+	if etag == "" || first.Header().Get("Cache-Control") != "no-cache" {
+		t.Fatalf("头不符: etag=%q cc=%q", etag, first.Header().Get("Cache-Control"))
+	}
+	again := listRequest(t, etag)
+	if again.Code != http.StatusNotModified {
+		t.Fatalf("第二次应 304, got %d", again.Code)
+	}
+}
+
+// serveUTFile 的协商缓存：ut demo index/style 从 no-store 换成 ETag+no-cache，
+// 重访没变 304 零传输，改文件 ETag 变立刻拿新版。走假 usertpl 服务（只覆写 Dir）。
+type fakeUTService struct {
+	UserTemplateService
+	dir string
+}
+
+func (f *fakeUTService) Dir(string) string { return f.dir }
+
+func TestServeUTFileCache(t *testing.T) {
+	dir := t.TempDir()
+	indexHTML := `<!DOCTYPE html><html><head><link rel="stylesheet" href="style.css"></head><body>demo</body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(indexHTML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "style.css"), []byte("body{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h := &Handler{usertpl: &fakeUTService{dir: dir}}
+
+	// 走真实 gin engine：直调 handler 的话 c.Status() 的延迟 WriteHeader 不会被
+	// 冲刷（engine 的兜底 WriteHeaderNow 不在），404 这类无 body 响应测不准
+	utRequest := func(t *testing.T, name, styleHref, ifNoneMatch string) *httptest.ResponseRecorder {
+		t.Helper()
+		r := gin.New()
+		r.GET("/api/user-templates/:id/*any", func(c *gin.Context) {
+			h.serveUTFile(c, "ut-x", name, styleHref)
+		})
+		req := httptest.NewRequest(http.MethodGet, "/api/user-templates/ut-x/"+name, nil)
+		if ifNoneMatch != "" {
+			req.Header.Set("If-None-Match", ifNoneMatch)
+		}
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		return w
+	}
+
+	t.Run("index协商304", func(t *testing.T) {
+		first := utRequest(t, "index.html", "/api/user-templates/ut-x/assets/style.css?token=t", "")
+		if first.Code != http.StatusOK {
+			t.Fatalf("status = %d", first.Code)
+		}
+		if first.Header().Get("Cache-Control") != "no-cache" {
+			t.Fatalf("Cache-Control = %q", first.Header().Get("Cache-Control"))
+		}
+		// styleHref 重写发生在 ETag 之前：body 里应是重写后的引用
+		if !strings.Contains(first.Body.String(), "token=t") {
+			t.Fatal("style.css 引用未重写")
+		}
+		again := utRequest(t, "index.html", "/api/user-templates/ut-x/assets/style.css?token=t", first.Header().Get("ETag"))
+		if again.Code != http.StatusNotModified {
+			t.Fatalf("第二次应 304, got %d", again.Code)
+		}
+	})
+
+	t.Run("style协商304", func(t *testing.T) {
+		first := utRequest(t, "style.css", "", "")
+		if first.Header().Get("Cache-Control") != "no-cache" {
+			t.Fatalf("Cache-Control = %q", first.Header().Get("Cache-Control"))
+		}
+		again := utRequest(t, "style.css", "", first.Header().Get("ETag"))
+		if again.Code != http.StatusNotModified {
+			t.Fatalf("第二次应 304, got %d", again.Code)
+		}
+	})
+
+	t.Run("改文件后ETag变", func(t *testing.T) {
+		first := utRequest(t, "style.css", "", "")
+		if err := os.WriteFile(filepath.Join(dir, "style.css"), []byte("body{color:red}"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		again := utRequest(t, "style.css", "", first.Header().Get("ETag"))
+		if again.Code != http.StatusOK {
+			t.Fatalf("内容变了应 200 新版, got %d", again.Code)
+		}
+	})
+
+	t.Run("缺失文件404", func(t *testing.T) {
+		w := utRequest(t, "no-such.txt", "", "")
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("status = %d", w.Code)
 		}

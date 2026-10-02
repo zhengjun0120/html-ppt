@@ -84,7 +84,7 @@ func (h *Handler) ListUserTemplates(c *gin.Context) {
 		v.Canvas, v.Variants = h.templateVisuals(r.ID)
 		views = append(views, v)
 	}
-	response.OK(c, views)
+	etagJSON(c, views)
 }
 
 // CommunityTemplates GET /api/templates/community —— 社区模板（公开已发布，带作者署名）。
