@@ -466,11 +466,7 @@ func (r *Registry) ContentVersion(id string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("模板 %q 不存在", id)
 	}
-	h := sha256.New()
-	h.Write([]byte(t.indexHTML))
-	h.Write([]byte("\x00"))
-	h.Write([]byte(t.styleCSS))
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return r.contentVersionLocked(t)
 }
 
 // ListSummaries 清单视图 + 缩略图版本。List 的瘦身版（见 MetaSummary），
@@ -491,8 +487,14 @@ func (r *Registry) ListSummaries() []MetaSummary {
 }
 
 // contentVersionLocked 内容版本（调用方持读锁）。
+// salt 是哈希的代次：缩略图管线的解析 bug 修过后（如草稿 token 渲染），旧版本
+// 字符串对应的缓存图可能是不良产物——URL 内容寻址不会自己失效，升 salt 一次性
+// 全量换 URL。
+const contentVersionSalt = "tplthumb-v2"
+
 func (r *Registry) contentVersionLocked(t *Template) (string, error) {
 	h := sha256.New()
+	h.Write([]byte(contentVersionSalt))
 	h.Write([]byte(t.indexHTML))
 	h.Write([]byte("\x00"))
 	h.Write([]byte(t.styleCSS))

@@ -3,6 +3,7 @@ import { PhArrowClockwise, PhArrowsOutSimple, PhGlobe, PhGlobeHemisphereWest, Ph
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { authedUrl } from '@/api/client'
 import { templateApi, type TemplateMeta } from '@/api/templates'
 import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
 import TemplateFilterBar from '@/components/templates/TemplateFilterBar.vue'
@@ -238,13 +239,15 @@ const previewSandbox = computed(() =>
   preview.value?.kind === 'user' ? 'allow-scripts' : 'allow-scripts allow-same-origin',
 )
 /** 预览模式 src：?preview=1 激活 runtime 协议，之后翻页走 preview-goto
- * postMessage（无刷新、带过渡）。不再需要 #/N 深链。 */
+ * postMessage（无刷新、带过渡）。不再需要 #/N 深链。
+ * ut 走 authedUrl（?token=）：草稿态的 index.html/style.css 只对属主开放，
+ * 不带 token 就是 404 空白 iframe（iframe 带不了鉴权头，同卡片缩略图的妥协）。 */
 const previewSrc = computed(() => {
   const t = preview.value
   if (!t) return ''
   return t.kind === 'builtin'
     ? `/api/templates/${t.id}/preview?preview=1`
-    : `/user-templates/${t.id}/index.html?preview=1`
+    : authedUrl(`/user-templates/${t.id}/index.html`, { preview: 1 })
 })
 function openBuiltinPreview(b: TemplateMeta) {
   preview.value = { kind: 'builtin', id: b.id, name: b.name, canvas: b.canvas, pages: b.demo_pages }

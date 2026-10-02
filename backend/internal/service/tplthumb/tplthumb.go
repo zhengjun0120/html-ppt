@@ -49,7 +49,13 @@ func New(reg *template.Registry, baseURL, chromePath, dir string, timeout time.D
 // PNG 返回模板第 1 页缩略图。version 是清单下发的内容版本前缀（调用方已
 // 校验与当前一致）；磁盘命中直接回，未命中渲染后落盘。Chrome 不可用或渲染
 // 失败返回错误——调用方（handler）映射成 404，前端回退活 iframe。
-func (s *Service) PNG(ctx context.Context, id, version string) ([]byte, error) {
+//
+// userToken 是发起请求的用户的登录态（img 的 ?token= 原样透传）：草稿态
+// ut-* 的 demo 与 style.css 只对属主开放，渲染浏览器必须带着同一个 token
+// 才能拿到带样式的页面——demo 路由会把 token 续写进 style.css 的 href，
+// 子资源请求随之通过。内置模板公开，token 用不上。传空且模板是草稿 →
+// 渲染出无样式页或 404，属调用方未按契约传 token。
+func (s *Service) PNG(ctx context.Context, id, version, userToken string) ([]byte, error) {
 	if s.reg == nil {
 		return nil, fmt.Errorf("模板库不可用")
 	}
@@ -61,6 +67,18 @@ func (s *Service) PNG(ctx context.Context, id, version string) ([]byte, error) {
 		return png, nil
 	}
 
+	// 渲染 URL：内置走公开 preview?slide=1（单页）；ut-* 走鉴权 demo 路由
+	//（无 trim，CaptureV2 只拍第 1 页；token 经 href 重写传给 style.css）。
+	var renderURL string
+	if strings.HasPrefix(id, "ut-") {
+		renderURL = fmt.Sprintf("%s/api/user-templates/%s/demo", s.baseURL, id)
+		if userToken != "" {
+			renderURL += "?token=" + userToken
+		}
+	} else {
+		renderURL = fmt.Sprintf("%s/api/templates/%s/preview?slide=1", s.baseURL, id)
+	}
+
 	// 渲染全程限流；拿到信号量后再查一次盘——排在前面的同款请求可能刚写完
 	s.sem <- struct{}{}
 	defer func() { <-s.sem }()
@@ -68,16 +86,25 @@ func (s *Service) PNG(ctx context.Context, id, version string) ([]byte, error) {
 		return png, nil
 	}
 
-	// preview?slide=1：单页 HTML（第 1 页），内置与 ut-*（挂载层）同一条路。
-	// Shoot [0]：只要这一页的 PNG。
 	deck, err := vision.CaptureV2(ctx, vision.OptionsV2{
-		URL:        fmt.Sprintf("%s/api/templates/%s/preview?slide=1", s.baseURL, id),
+		URL:        renderURL,
 		ChromePath: s.chromePath,
 		Timeout:    s.timeout,
 		Shoot:      []int{0},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("缩略图渲染失败: %w", err)
+		// 冷启动竞态兜底：全新 Chrome + 首次加载的 demo，runtime 偶发未就绪
+		//（实测 1.7s 快速失败、重跑同 URL 即成功）。短暂等待后重试一次。
+		time.Sleep(2 * time.Second)
+		deck, err = vision.CaptureV2(ctx, vision.OptionsV2{
+			URL:        renderURL,
+			ChromePath: s.chromePath,
+			Timeout:    s.timeout,
+			Shoot:      []int{0},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("缩略图渲染失败: %w", err)
+		}
 	}
 	if len(deck.Slides) == 0 || len(deck.Slides[0].PNG) == 0 {
 		return nil, fmt.Errorf("缩略图渲染结果为空")

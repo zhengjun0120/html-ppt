@@ -116,7 +116,7 @@ func (h *Handler) TemplateThumb(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	png, err := h.thumbs.PNG(c.Request.Context(), id, cur[:8])
+	png, err := h.thumbs.PNG(c.Request.Context(), id, cur[:8], c.Query("token"))
 	if err != nil {
 		log.Printf("[warn] tplthumb: %s 渲染失败 err:%v", id, err)
 		c.Status(http.StatusNotFound)
