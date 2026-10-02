@@ -82,6 +82,11 @@ func (h *Handler) ListUserTemplates(c *gin.Context) {
 	for _, r := range rows {
 		v := userTemplateView{UserTemplate: r}
 		v.Canvas, v.Variants = h.templateVisuals(r.ID)
+		if h.templates != nil {
+			if cv, err := h.templates.ContentVersion(r.ID); err == nil && len(cv) >= 8 {
+				v.Thumb = cv[:8]
+			}
+		}
 		views = append(views, v)
 	}
 	etagJSON(c, views)
@@ -131,6 +136,9 @@ type userTemplateView struct {
 	store.UserTemplate
 	Canvas   *template.Canvas   `json:"canvas,omitempty"`
 	Variants []template.Variant `json:"variants,omitempty"`
+	// Thumb 缩略图内容版本前缀（registry.ContentVersion，编辑重挂即变）——
+	// 卡片 img 地址 /api/templates/<id>/thumb?v=<Thumb> 的 cache-bust 键
+	Thumb string `json:"thumb,omitempty"`
 }
 
 // GetUserTemplateEditor GET /api/user-templates/:id/editor —— 编辑模式的 demo 读取端点

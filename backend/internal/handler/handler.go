@@ -6,9 +6,10 @@ import (
 	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
-	"html-ppt/backend/internal/service/tplsuggest"
-	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/service/template"
+	"html-ppt/backend/internal/service/tplsuggest"
+	"html-ppt/backend/internal/service/tplthumb"
+	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
@@ -37,6 +38,9 @@ type Handler struct {
 	// suggest 模板推荐服务（New 里从 decks+templates 装配；templates 为 nil 时
 	// 其接口返回"模板库不可用"）
 	suggest *tplsuggest.Service
+	// thumbs 模板缩略图服务（可能为 nil：Chrome 不可用或未装配——thumb 端点
+	// 返回 404，前端回退活 iframe）
+	thumbs *tplthumb.Service
 }
 
 // Exporter 导出服务的最小接口。返回值用 any：export.Result 的形状 handler 不关心
@@ -76,8 +80,8 @@ type UserTemplateService interface {
 	ClearUTHistory(userID uint, id string) (int, error)
 }
 
-func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService, traceCfg trace.Config) *Handler {
-	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates, exporter: exporter, usertpl: utpl, suggest: tplsuggest.New(decks, templates, traceCfg)}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService, traceCfg trace.Config, thumbs *tplthumb.Service) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates, exporter: exporter, usertpl: utpl, suggest: tplsuggest.New(decks, templates, traceCfg), thumbs: thumbs}
 }
 
 // TemplatesAvailable 模板库是否可用（router 据此决定挂不挂预览静态路由）。

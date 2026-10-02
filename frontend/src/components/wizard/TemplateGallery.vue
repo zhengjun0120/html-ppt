@@ -47,9 +47,13 @@ interface GalleryCard {
   scenario?: string[]
   canvas: { w: number; h: number }
   variants: TemplateVariant[]
+  thumb?: string
   mine?: boolean
   published?: boolean
 }
+
+// 缩略图加载失败（Chrome 未装配/版本过期/渲染失败）→ 该卡回退活 iframe
+const thumbFailed = ref<Record<string, boolean>>({})
 
 const mineInfo = computed(() => new Map(userTemplates.value.map((u) => [u.id, u])))
 const cards = computed<GalleryCard[]>(() => {
@@ -64,6 +68,7 @@ const cards = computed<GalleryCard[]>(() => {
       scenario: ut ? undefined : t.scenario,
       canvas: t.canvas,
       variants: t.variants,
+      thumb: t.thumb,
       mine: !!ut,
       published: ut?.status === 'published',
     }
@@ -283,7 +288,17 @@ async function start() {
             class="relative w-full overflow-hidden bg-surface-2"
             :style="{ aspectRatio: `${sc.card.canvas.w} / ${sc.card.canvas.h}` }"
           >
+            <img
+              v-if="sc.card.thumb && !thumbFailed[sc.s.template_id]"
+              :src="templateApi.thumbUrl(sc.s.template_id, sc.card.thumb)"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              :alt="sc.card.name + ' 缩略图'"
+              @error="thumbFailed[sc.s.template_id] = true"
+            />
             <iframe
+              v-else
               :src="templateApi.previewUrl(sc.s.template_id, '', 1, 1)"
               loading="lazy"
               class="pointer-events-none absolute left-0 top-0 border-0"
@@ -334,8 +349,10 @@ async function start() {
             class="relative w-full overflow-hidden rounded-t-control bg-surface-2"
             :style="{ aspectRatio: `${c.canvas.w} / ${c.canvas.h}` }"
           >
-            <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
+            <!-- 选中=活预览（换肤+翻页都在这张卡上）；其余卡是截图 <img>（点击预览才拉活资源）。
+                 缩略图渲染失败/无版本 → 回退活 iframe（Chrome 不可用的环境画廊照常可用） -->
             <iframe
+              v-if="selected === c.id || thumbFailed[c.id] || !c.thumb"
               :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1, 1)"
               :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
               loading="lazy"
@@ -349,6 +366,15 @@ async function start() {
               :sandbox="c.mine ? 'allow-scripts' : 'allow-scripts allow-same-origin'"
               :title="c.name + ' 预览'"
               aria-hidden="true"
+            />
+            <img
+              v-else
+              :src="templateApi.thumbUrl(c.id, c.thumb)"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              :alt="c.name + ' 缩略图'"
+              @error="thumbFailed[c.id] = true"
             />
             <span
               v-if="selected === c.id"

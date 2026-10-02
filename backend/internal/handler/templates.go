@@ -3,6 +3,7 @@ package handler
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,12 +27,7 @@ func (h *Handler) ListTemplates(c *gin.Context) {
 		response.Err(c, http.StatusServiceUnavailable, "模板库不可用")
 		return
 	}
-	all := h.templates.List()
-	out := make([]template.MetaSummary, 0, len(all))
-	for _, m := range all {
-		out = append(out, m.Summary())
-	}
-	etagJSON(c, out)
+	etagJSON(c, h.templates.ListSummaries())
 }
 
 // GetTemplate GET /api/templates/:id —— 单个模板详情（含版式索引，前端向导展示用）。
@@ -101,4 +97,31 @@ func (h *Handler) PreviewTemplate(c *gin.Context) {
 		c.Header("Cache-Control", "private, max-age=3600")
 	}
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+}
+
+// TemplateThumb GET /api/templates/:id/thumb?v=<版本> —— 卡片缩略图 PNG
+// （tplthumb 按需渲染 + 磁盘缓存）。v 是清单下发的 Thumb 版本：不匹配（缺/
+// 旧）一律 404——img 地址内容寻址，版本对了才可能有对应文件；前端对 404
+// 回退活 iframe。URL 含版本 → 浏览器长缓存 immutable，内容变 URL 自然变。
+// Chrome 不可用（服务未装配）同样 404，前端整体回退，画廊照常可用。
+func (h *Handler) TemplateThumb(c *gin.Context) {
+	if h.thumbs == nil || h.templates == nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	id := c.Param("id")
+	v := c.Query("v")
+	cur, err := h.templates.ContentVersion(id)
+	if err != nil || len(cur) < 8 || v != cur[:8] {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	png, err := h.thumbs.PNG(c.Request.Context(), id, cur[:8])
+	if err != nil {
+		log.Printf("[warn] tplthumb: %s 渲染失败 err:%v", id, err)
+		c.Status(http.StatusNotFound)
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Data(http.StatusOK, "image/png", png)
 }

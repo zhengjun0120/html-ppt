@@ -99,6 +99,8 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)
 			// 缩略图：预览栏翻页与文稿列表封面。首次访问整本渲染（10-20s），
 			// 之后按内容版本缓存；?token= 兼容 <img> 标签带不了鉴权头。
+			// 模板卡片缩略图（img 标签带 ?token=，同 deck thumbs 的鉴权妥协）
+			guarded.GET("/templates/:id/thumb", h.TemplateThumb)
 			guarded.GET("/decks/:id/thumbs", h.DeckThumbs)
 			guarded.GET("/decks/:id/thumbs/:no", h.DeckThumb)
 			// 用户自定义模板：fork / 我的 / 详情 / 改名 / 删除 / 发布门禁 / 下架

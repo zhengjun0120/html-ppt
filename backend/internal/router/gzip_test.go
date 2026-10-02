@@ -38,7 +38,7 @@ func newGzipTestEngine(t *testing.T) *gin.Engine {
 	if err != nil {
 		t.Fatalf("模板注册表: %v", err)
 	}
-	h := handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), reg, nil, nil, trace.Config{})
+	h := handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), reg, nil, nil, trace.Config{}, nil)
 	return New(&config.Config{
 		Assets:    config.Assets{Dir: t.TempDir()},
 		Templates: config.Templates{Dir: tplDir},

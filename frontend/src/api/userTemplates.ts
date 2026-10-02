@@ -17,6 +17,8 @@ export interface UserTemplateRow {
   status: 'draft' | 'publishing' | 'published' | 'failed'
   publish_error?: string
   publish_report?: string
+  /** 缩略图内容版本（8 位）：卡片 <img> 地址 /api/templates/:id/thumb?v= 的 cache-bust 键 */
+  thumb?: string
   created_at: string
   updated_at: string
   canvas?: { w: number; h: number }

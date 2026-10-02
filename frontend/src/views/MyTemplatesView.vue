@@ -232,6 +232,8 @@ interface PreviewTarget {
   pages?: number
 }
 const preview = ref<PreviewTarget | null>(null)
+// 缩略图加载失败（Chrome 未装配/版本过期）→ 该卡回退活 iframe
+const thumbFailed = ref<Record<string, boolean>>({})
 const previewSandbox = computed(() =>
   preview.value?.kind === 'user' ? 'allow-scripts' : 'allow-scripts allow-same-origin',
 )
@@ -297,7 +299,17 @@ const editing = ref<UserTemplateRow | null>(null)
           class="relative w-full overflow-hidden border-b border-line bg-surface-2"
           :style="{ aspectRatio: `${(row.canvas?.w ?? 1920)} / ${(row.canvas?.h ?? 1080)}` }"
         >
+          <img
+            v-if="row.thumb && !thumbFailed[row.id]"
+            :src="templateApi.thumbUrl(row.id, row.thumb)"
+            loading="lazy"
+            decoding="async"
+            class="absolute inset-0 h-full w-full border-0 object-cover"
+            alt="模板缩略图"
+            @error="thumbFailed[row.id] = true"
+          />
           <iframe
+            v-else
             :src="userTemplatePreviewUrl(row.id)"
             class="pointer-events-none absolute left-0 top-0 border-0"
             :style="{
@@ -429,7 +441,17 @@ const editing = ref<UserTemplateRow | null>(null)
             class="relative w-full overflow-hidden border-b border-line bg-surface-2"
             :style="{ aspectRatio: `${b.canvas.w} / ${b.canvas.h}` }"
           >
+            <img
+              v-if="b.thumb && !thumbFailed['base-' + b.id]"
+              :src="templateApi.thumbUrl(b.id, b.thumb)"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              :alt="b.name + ' 缩略图'"
+              @error="thumbFailed['base-' + b.id] = true"
+            />
             <iframe
+              v-else
               :src="templateApi.previewUrl(b.id, '', 1, 1)"
               class="pointer-events-none absolute left-0 top-0 border-0"
               :style="{
