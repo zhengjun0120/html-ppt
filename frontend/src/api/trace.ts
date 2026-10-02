@@ -36,19 +36,9 @@ export interface RunMeta {
   bytes?: number
 }
 
-export interface SessionMeta {
-  session_id: number
-  deck_id?: string
-  runs: number
-  last_at: string
-  latest_run_id: string
-  usage: RunUsageSummary
-  running_runs: number
-}
-
 export interface TraceListResp {
-  sessions: SessionMeta[]
   runs: RunMeta[]
+  total: number
 }
 
 export interface TraceEventImage {
@@ -96,8 +86,14 @@ export interface RunReadResp {
 }
 
 export const traceApi = {
-  list: (query?: { session_id?: number; limit?: number; offset?: number }) =>
-    request<TraceListResp>('/api/traces', { query }),
+  list: (query?: {
+    session_id?: number
+    limit?: number
+    offset?: number
+    kind?: string
+    status?: string
+    q?: string
+  }) => request<TraceListResp>('/api/traces', { query }),
   run: (
     sessionId: number | string,
     runId: string,

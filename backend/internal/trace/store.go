@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -51,10 +52,23 @@ const tailWindow = 64 << 10
 type Store struct {
 	dir string
 	now func() time.Time
+
+	// mu 保护 index。观测台列表是高频读路径，每次全盘重扫（几百次"读首行+
+	// 尾行"，成本与磁盘上所有用户的 run 总数成正比）是它打开慢的根因——
+	// 索引把成本挪到"新文件/文件变化才读一次"，之后纯内存过滤。
+	mu    sync.Mutex
+	index map[string]cachedRun // key: <会话目录名>/<runID>（两侧都过白名单/来自磁盘枚举）
+}
+
+// cachedRun 一条索引：列表口径的元信息 + 用于变化检测的文件指纹。
+type cachedRun struct {
+	meta  RunMeta
+	size  int64
+	mtime time.Time
 }
 
 func NewStore(dir string) *Store {
-	return &Store{dir: dir, now: time.Now}
+	return &Store{dir: dir, now: time.Now, index: map[string]cachedRun{}}
 }
 
 // WithClock 只给测试用：把"当前时间"钉住，好断言"运行中的 run 耗时 = now - started"。
@@ -63,96 +77,158 @@ func (s *Store) WithClock(now func() time.Time) *Store {
 	return s
 }
 
-// ListRuns 列出某个用户可见的 run，新→旧。sessionID 为 0 表示不限会话。
-//
-// 只读每个文件的首行（run_start）与尾行（run_end），不解析全文：
-// 一个开了全量上下文的 run 可能几十 MB，列表页要扫几十上百个，
-// 全解析会让"打开观测页"变成一次几十秒的等待。
-func (s *Store) ListRuns(userID uint, sessionID uint, limit, offset int) ([]RunMeta, error) {
-	var dirs []string
-	if sessionID > 0 {
-		dirs = []string{filepath.Join(s.dir, strconv.FormatUint(uint64(sessionID), 10))}
-	} else {
-		entries, err := os.ReadDir(s.dir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				// 一个 trace 都还没产生：这是正常状态，不是错误
-				return []RunMeta{}, nil
-			}
-			return nil, fmt.Errorf("trace: 读取 traces 目录失败 %w", err)
-		}
-		for _, e := range entries {
-			if e.IsDir() {
-				dirs = append(dirs, filepath.Join(s.dir, e.Name()))
-			}
-		}
-	}
-
-	all := make([]RunMeta, 0, 16)
-	for _, d := range dirs {
-		metas, err := s.listRunMetas(d)
-		if err != nil {
-			// 单个会话目录坏掉不该让整个列表打不开——其余会话的记录仍然有用
-			log.Printf("[warn] trace: 列出 %s 里的 run 失败 err: %v", d, err)
-			continue
-		}
-		for _, m := range metas {
-			if m.UserID == userID {
-				all = append(all, m)
-			}
-		}
-	}
-
-	sortRunMetasNewestFirst(all)
-	all = applyWindow(all, offset, limit)
-	if all == nil {
-		all = []RunMeta{} // 空历史要序列化成 []，不是 null
-	}
-	return all, nil
+// ListFilter 列表筛选条件（全空 = 不筛）。kind/status 由 handler 白名单校验。
+type ListFilter struct {
+	SessionID uint   // 0 = 不限会话
+	Kind      string // "deck"（含旧数据的空 run_kind）/ "customize" / "tplsugg"
+	Status    string // ok / paused / error / running
+	Query     string // run_id / user_content / deck_id 的不区分大小写子串
 }
 
-// SumBySession 把 run 按会话累加。抽成纯函数（无文件系统、无 DB）是因为
-// "一次对话花了多少 token"正是用户最关心的那个数，它错了不会报错、只会悄悄偏小。
-func SumBySession(metas []RunMeta) []SessionMeta {
-	byID := map[uint]*SessionMeta{}
-	var order []uint
-	for _, m := range metas { // metas 已按新→旧，所以每个会话第一次出现的就是它最新的 run
-		sm, ok := byID[m.SessionID]
-		if !ok {
-			sm = &SessionMeta{SessionID: m.SessionID, Latest: m.RunID}
-			byID[m.SessionID] = sm
-			order = append(order, m.SessionID)
-		}
-		sm.Runs++
-		if m.StartedAt.After(sm.LastAt) {
-			sm.LastAt = m.StartedAt
-		}
-		if sm.DeckID == "" && m.DeckID != "" {
-			sm.DeckID = m.DeckID
-		}
-		if m.Status == StatusRunning {
-			sm.RunningRuns++
-		}
-		if m.Usage == nil {
+// ListRuns 列出某个用户可见的 run，新→旧，带过滤后总数（分页页数靠它）。
+//
+// 元数据走内存索引：首次列表全盘扫一遍（只读每个文件的首行与尾行——一个开了
+// 全量上下文的 run 可能几十 MB，全解析会让列表变成几十秒的等待），之后每次
+// 只做目录枚举 + Stat 比对，文件没变直接用缓存。
+func (s *Store) ListRuns(userID uint, f ListFilter, limit, offset int) ([]RunMeta, int, error) {
+	all, err := s.listMetas(f.SessionID)
+	if err != nil {
+		return nil, 0, err
+	}
+	q := strings.ToLower(f.Query)
+	filtered := make([]RunMeta, 0, len(all))
+	for _, m := range all {
+		if m.UserID != userID {
 			continue
 		}
-		sm.Usage.DurationMS += m.Usage.DurationMS
-		sm.Usage.Turns += m.Usage.Turns
-		sm.Usage.ToolCalls += m.Usage.ToolCalls
-		if sm.Usage.Usage == nil {
-			sm.Usage.Usage = make(map[string]UsagePart, len(m.Usage.Usage))
+		if f.Kind != "" && !kindMatches(m.RunKind, f.Kind) {
+			continue
 		}
-		for k, v := range m.Usage.Usage {
-			sm.Usage.Usage[k] = sm.Usage.Usage[k].Add(v)
+		if f.Status != "" && m.Status != f.Status {
+			continue
 		}
-		sm.Usage.Total = sm.Usage.Total.Add(m.Usage.Total)
+		if q != "" && !queryMatch(m, q) {
+			continue
+		}
+		filtered = append(filtered, m)
 	}
+	sortRunMetasNewestFirst(filtered)
+	window := applyWindow(filtered, offset, limit)
+	if window == nil {
+		window = []RunMeta{} // 空历史要序列化成 []，不是 null
+	}
+	return window, len(filtered), nil
+}
 
-	out := make([]SessionMeta, 0, len(order))
-	for _, id := range order {
-		out = append(out, *byID[id])
+// kindMatches run_kind 筛选口径。"deck" 是兜底：旧数据没写 run_kind（空），
+// 它们本来就是文稿对话；其余按精确匹配。
+func kindMatches(runKind, want string) bool {
+	if want == "deck" {
+		return runKind == "" || runKind == "deck"
 	}
-	return out
+	return runKind == want
+}
+
+// queryMatch q 子串匹配（q 已转小写）：run_id / 用户输入 / deck。
+func queryMatch(m RunMeta, q string) bool {
+	return strings.Contains(strings.ToLower(m.RunID), q) ||
+		strings.Contains(strings.ToLower(m.UserContent), q) ||
+		strings.Contains(strings.ToLower(m.DeckID), q)
+}
+
+// listMetas 索引读：先按磁盘现状校准索引，再返回（未过滤的）候选元数据。
+// sessionID>0 只看那一个会话，0 = 全部。
+func (s *Store) listMetas(sessionID uint) ([]RunMeta, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	dirs, err := s.sessionDirs(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	s.refreshIndex(dirs, sessionID)
+	prefix := ""
+	if sessionID > 0 {
+		prefix = strconv.FormatUint(uint64(sessionID), 10) + "/"
+	}
+	out := make([]RunMeta, 0, len(s.index))
+	for key, cr := range s.index {
+		if prefix != "" && !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		out = append(out, cr.meta)
+	}
+	return out, nil
+}
+
+// sessionDirs 待校准的会话目录名（相对 s.dir）。目录不存在是正常状态：
+// 一个 trace 都还没产生，不是错误。
+func (s *Store) sessionDirs(sessionID uint) ([]string, error) {
+	if sessionID > 0 {
+		return []string{strconv.FormatUint(uint64(sessionID), 10)}, nil
+	}
+	entries, err := os.ReadDir(s.dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("trace: 读取 traces 目录失败 %w", err)
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			names = append(names, e.Name())
+		}
+	}
+	return names, nil
+}
+
+// refreshIndex 把索引校准到磁盘现状：新文件、size+mtime 变化的文件重读首尾行，
+// 消失的被裁剪/删除的）从索引剔除，其余直接用缓存。仍在运行中的 run（没有
+// run_end）每次都重读——它的"到目前为止耗时"依赖当前时间，缓存会让列表上
+// 的耗时停摆。
+func (s *Store) refreshIndex(dirs []string, sessionID uint) {
+	seen := make(map[string]struct{}, len(s.index))
+	for _, name := range dirs {
+		sessDir := filepath.Join(s.dir, name)
+		entries, err := os.ReadDir(sessDir)
+		if err != nil {
+			continue // 目录被删/暂不可读：索引清尾负责剔掉它的旧条目
+		}
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".jsonl") {
+				continue // 图片目录 <run_id>/ 会被这里跳过
+			}
+			runID := strings.TrimSuffix(e.Name(), ".jsonl")
+			if !ValidID(runID) {
+				continue
+			}
+			key := name + "/" + runID
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			if cr, ok := s.index[key]; ok &&
+				cr.meta.Status != StatusRunning &&
+				cr.size == info.Size() && cr.mtime.Equal(info.ModTime()) {
+				seen[key] = struct{}{}
+				continue
+			}
+			m := readRunMeta(sessDir, runID, info.Size(), s.now)
+			if m == nil {
+				continue // 坏文件不进索引；旧条目交给下面的清尾逻辑
+			}
+			s.index[key] = cachedRun{meta: *m, size: info.Size(), mtime: info.ModTime()}
+			seen[key] = struct{}{}
+		}
+	}
+	for key := range s.index {
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		if sessionID == 0 || strings.HasPrefix(key, strconv.FormatUint(uint64(sessionID), 10)+"/") {
+			delete(s.index, key)
+		}
+	}
 }
 
 // ReadOptions 读事件的坐标。**增量拉取用 FromOffset，不要用 FromSeq**：
@@ -321,9 +397,29 @@ func (s *Store) runFileFor(userID uint, sessionID uint, runID string) (string, e
 	return path, nil
 }
 
-// listRunMetas 扫一个会话目录，只读每个 run 文件的首行与尾行。
-func (s *Store) listRunMetas(sessDir string) ([]RunMeta, error) {
-	return listRunMetasIn(sessDir, s.now)
+// readRunMeta 读单个 run 文件的列表口径元信息（首行 run_start + 尾行 run_end）。
+// 文件缺失或首行不是 run_start 返回 nil——调用方按"坏文件跳过"处理：
+// 观测工具自己的记录坏掉时，你更需要看到其余记录，而不是整页 500。
+// 索引刷新与 listRunMetasIn（写入侧裁剪共用）都走这里，口径不会漂移。
+func readRunMeta(sessDir, runID string, size int64, nowFn func() time.Time) *RunMeta {
+	path := filepath.Join(sessDir, runID+".jsonl")
+	line, err := readFirstLine(path)
+	if err != nil {
+		return nil
+	}
+	var head Event
+	if err := json.Unmarshal(line, &head); err != nil || head.Kind != KindRunStart {
+		return nil
+	}
+	var end *Event
+	if tail, terr := readLastLine(path); terr == nil {
+		var te Event
+		if json.Unmarshal(tail, &te) == nil && te.Kind == KindRunEnd {
+			end = &te
+		}
+	}
+	m := runMetaFrom(head, end, size, runID, nowFn)
+	return &m
 }
 
 // listRunMetasIn 是包级实现，为了写入侧（recorder 的裁剪）也能复用同一套元信息解析。
@@ -343,32 +439,13 @@ func listRunMetasIn(sessDir string, now func() time.Time) ([]RunMeta, error) {
 		if !ValidID(runID) {
 			continue
 		}
-		path := filepath.Join(sessDir, e.Name())
-
-		line, err := readFirstLine(path)
-		if err != nil {
-			continue
-		}
-		var head Event
-		if err := json.Unmarshal(line, &head); err != nil || head.Kind != KindRunStart {
-			// 首行不是 run_start：文件坏了或者版本对不上。跳过它，
-			// 别让一个坏文件把整个列表拖成 500（观测工具自己的记录坏掉时，
-			// 你更需要看到其余记录）
-			continue
-		}
-
-		var end *Event
-		if tail, terr := readLastLine(path); terr == nil {
-			var te Event
-			if json.Unmarshal(tail, &te) == nil && te.Kind == KindRunEnd {
-				end = &te
-			}
-		}
 		var size int64
 		if st, serr := e.Info(); serr == nil {
 			size = st.Size()
 		}
-		metas = append(metas, runMetaFrom(head, end, size, runID, now))
+		if m := readRunMeta(sessDir, runID, size, now); m != nil {
+			metas = append(metas, *m)
+		}
 	}
 	return metas, nil
 }

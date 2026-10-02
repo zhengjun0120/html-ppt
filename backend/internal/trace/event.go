@@ -194,19 +194,6 @@ type RunMeta struct {
 	Bytes       int64     `json:"bytes,omitempty"` // jsonl 文件大小，用来判断"这个 run 很重"
 }
 
-// SessionMeta 一个会话（= 用户眼里的"一次对话"）的汇总。
-// 一次对话可能因 ask_user 暂停而分成多个 run，所以"这次对话花了多少 token"
-// 必须跨 run 累加——单个 run 的 total 只是半场。
-type SessionMeta struct {
-	SessionID   uint      `json:"session_id"`
-	DeckID      string    `json:"deck_id,omitempty"`
-	Runs        int       `json:"runs"`
-	LastAt      time.Time `json:"last_at"`
-	Latest      string    `json:"latest_run_id"` // 最近一个 run，页面默认展开它
-	Usage       Summary   `json:"usage"`         // 跨 run 累加
-	RunningRuns int       `json:"running_runs"`  // 还在跑的 run 数（页面据此决定要不要继续轮询）
-}
-
 // Truncate 按字节上限截断字符串。0 表示不截断（默认：你选了"全量存"）。
 // 抽成函数是为了让"截断了"这件事在返回值里可见——静默截断会让人把半截 JSON
 // 当成完整的去读，和 web_search 里那个"截断了要标 Truncated"是同一个理由。

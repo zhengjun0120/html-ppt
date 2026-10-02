@@ -148,7 +148,7 @@ func TestSuggestFlow(t *testing.T) {
 	traceRuns := func(want int, label string) {
 		t.Helper()
 		tstore := trace.NewStore(traceDir)
-		runs, err := tstore.ListRuns(uid, suggestSessionID(id), 10, 0)
+		runs, _, err := tstore.ListRuns(uid, trace.ListFilter{SessionID: suggestSessionID(id)}, 10, 0)
 		if err != nil {
 			t.Fatalf("%s: ListRuns: %v", label, err)
 		}
@@ -203,7 +203,7 @@ func TestSuggestFlow(t *testing.T) {
 		// 观测：真调 LLM 的一轮落一个 run，run_kind=tplsugg、user_content 带标题页数
 		traceRuns(1, "首调后")
 		tstore := trace.NewStore(traceDir)
-		runs, _ := tstore.ListRuns(uid, suggestSessionID(id), 10, 0)
+		runs, _, _ := tstore.ListRuns(uid, trace.ListFilter{SessionID: suggestSessionID(id)}, 10, 0)
 		if runs[0].RunKind != "tplsugg" {
 			t.Errorf("run_kind = %s, 期望 tplsugg", runs[0].RunKind)
 		}
@@ -261,7 +261,7 @@ func TestSuggestFlow(t *testing.T) {
 		traceRuns(3, "畸形输出后") // 失败的 LLM 轮也要留痕（run_end 带 error）
 		{
 			tstore := trace.NewStore(traceDir)
-			runs, _ := tstore.ListRuns(uid, suggestSessionID(id), 10, 0)
+			runs, _, _ := tstore.ListRuns(uid, trace.ListFilter{SessionID: suggestSessionID(id)}, 10, 0)
 			if runs[0].Status != "error" || runs[0].Usage == nil || runs[0].Usage.Total.Total == 0 {
 				t.Errorf("失败 run 应带 error 状态与用量: status=%s usage=%+v", runs[0].Status, runs[0].Usage)
 			}
@@ -343,7 +343,7 @@ func TestSuggestFlow(t *testing.T) {
 		}
 		// A 的 run 落在 dedupID 自己的伪会话目录（每 deck 一段），带 ok 状态与用量
 		dstore := trace.NewStore(traceDir)
-		druns, err := dstore.ListRuns(uid, suggestSessionID(dedupID), 10, 0)
+		druns, _, err := dstore.ListRuns(uid, trace.ListFilter{SessionID: suggestSessionID(dedupID)}, 10, 0)
 		if err != nil || len(druns) != 1 {
 			t.Fatalf("去重 deck 应有 1 个 run: %v %d", err, len(druns))
 		}

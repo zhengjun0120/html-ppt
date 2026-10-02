@@ -1,49 +1,103 @@
 <script setup lang="ts">
 import { PhDownloadSimple, PhMagnifyingGlass } from '@phosphor-icons/vue'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, authedUrl } from '@/api/client'
-import { traceApi, type RunMeta, type SessionMeta, type TraceEvent } from '@/api/trace'
+import { traceApi, type RunMeta, type TraceEvent } from '@/api/trace'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
-import InputField from '@/components/ui/InputField.vue'
+import Pagination from '@/components/ui/Pagination.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { useToast } from '@/stores/toast'
 
 const toast = useToast()
+const router = useRouter()
+const route = useRoute()
 
-// —— 列表 ——
+// —— 列表：服务端分页 + 筛选。观测数据只增不减，旧版一次拉 100 条且没有翻页
+// UI——既慢、老记录又永远看不到。筛选与搜索都在服务端做：q 匹配的是后端索引
+// 里的全文，不受列表响应里 user_content 预览截断的影响。——//
+const PAGE_SIZE = 25
 const runs = ref<RunMeta[]>([])
-const sessions = ref<SessionMeta[]>([])
+const total = ref(0)
 const listLoading = ref(false)
-const sessionFilter = ref<number | undefined>(undefined)
 const search = ref('')
+const kind = ref<'' | 'deck' | 'customize' | 'tplsugg'>('')
 
+const kindChips: { value: '' | 'deck' | 'customize' | 'tplsugg'; label: string }[] = [
+  { value: '', label: '全部' },
+  { value: 'deck', label: '文稿对话' },
+  { value: 'customize', label: '模板定制' },
+  { value: 'tplsugg', label: '模板推荐' },
+]
+
+/** 页码 ↔ URL query（DecksView 同款）：翻页写回 ?page=N，刷新/后退落回原页 */
+function pageFromQuery(): number {
+  const n = Number(route.query.page)
+  return Number.isInteger(n) && n >= 1 ? n : 1
+}
+const page = ref(pageFromQuery())
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+// 删除/筛选后列表变短，当前页可能越界；页码变化统一写回 query（翻页/回钳都走这里）
+watch(pageCount, (n) => {
+  if (page.value > n) page.value = n
+})
+watch(page, (p) => {
+  void router.replace({ query: p > 1 ? { page: String(p) } : undefined }).catch(() => {})
+  void loadList()
+})
+
+let listAbort: AbortController | null = null
 async function loadList() {
+  // 竞态守卫：慢的旧响应回来时已被更新的请求取代，不许覆盖新数据
+  listAbort?.abort()
+  const ac = new AbortController()
+  listAbort = ac
   listLoading.value = true
   try {
-    const r = await traceApi.list({ session_id: sessionFilter.value, limit: 100 })
+    const r = await traceApi.list({
+      limit: PAGE_SIZE,
+      offset: (page.value - 1) * PAGE_SIZE,
+      kind: kind.value || undefined,
+      q: search.value.trim() || undefined,
+    })
+    if (ac.signal.aborted) return
     runs.value = r.runs
-    sessions.value = r.sessions
+    total.value = r.total
   } catch (e) {
+    if (ac.signal.aborted) return
     toast.error(e instanceof ApiError ? e.message : '观测数据加载失败')
   } finally {
-    listLoading.value = false
+    if (!ac.signal.aborted) listLoading.value = false
   }
 }
-void loadList()
 
-const filteredRuns = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  if (!q) return runs.value
-  return runs.value.filter(
-    (r) =>
-      r.run_id.toLowerCase().includes(q) ||
-      (r.user_content ?? '').toLowerCase().includes(q) ||
-      (r.deck_id ?? '').toLowerCase().includes(q),
-  )
+// 筛选/搜索变化一律回第 1 页再加载；已在第 1 页就显式拉（page watch 不会触发）
+function applyFiltersReset() {
+  if (page.value !== 1) page.value = 1
+  else void loadList()
+}
+watch(kind, applyFiltersReset)
+function setKind(k: '' | 'deck' | 'customize' | 'tplsugg') {
+  // watch(kind) 统一触发回第 1 页 + 加载，这里只改值——显式再调一次会双发请求
+  kind.value = k
+}
+// 搜索 300ms 防抖：索引过滤虽快，敲一个字发一次请求仍然没必要
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+watch(search, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(applyFiltersReset, 300)
 })
+onBeforeUnmount(() => clearTimeout(searchTimer))
+
+const listEl = ref<HTMLElement | null>(null)
+function setPage(p: number) {
+  page.value = p // watch(page) 负责加载
+  listEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+void loadList()
 
 // —— 详情（选中 run）——
 const selected = ref<RunMeta | null>(null)
@@ -164,12 +218,12 @@ function imgUrl(r: RunMeta, name: string): string {
 
 <template>
   <div class="flex h-full overflow-hidden">
-    <!-- 左：run 列表 -->
+    <!-- 左：run 列表（服务端分页 + 类型筛选 + 全文搜索） -->
     <aside class="flex min-h-0 w-[400px] shrink-0 flex-col border-r border-line bg-surface">
       <div class="border-b border-line p-3">
         <div class="mb-2 flex items-center justify-between">
           <h1 class="text-[14px] font-bold">观测台</h1>
-          <Button size="sm" @click="loadList()">刷新</Button>
+          <Button size="sm" :loading="listLoading" @click="loadList()">刷新</Button>
         </div>
         <div class="relative">
           <PhMagnifyingGlass class="absolute left-2.5 top-2.5 text-ink-3" :size="14" />
@@ -179,13 +233,25 @@ function imgUrl(r: RunMeta, name: string): string {
           class="w-full rounded-control border border-line bg-surface-2 py-1.5 pl-8 pr-2 text-[12.5px] text-ink outline-none placeholder:text-ink-3 focus-visible:border-accent"
         />
         </div>
+        <div class="mt-2 flex flex-wrap gap-1">
+          <button
+            v-for="kc in kindChips"
+            :key="kc.value"
+            type="button"
+            class="cursor-pointer rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors"
+            :class="kind === kc.value ? 'bg-accent text-accent-contrast' : 'bg-surface-2 text-ink-2 hover:text-ink'"
+            @click="setKind(kc.value)"
+          >
+            {{ kc.label }}
+          </button>
+        </div>
       </div>
 
-      <div class="min-h-0 flex-1 overflow-y-auto p-2">
+      <div ref="listEl" class="min-h-0 flex-1 overflow-y-auto p-2">
         <Skeleton v-if="listLoading && runs.length === 0" v-for="i in 5" :key="i" class="mb-2 h-16 rounded-control" />
-        <Empty v-else-if="filteredRuns.length === 0" title="没有观测记录" desc="agent 跑过对话后，这里会出现每次 run 的完整轨迹。" />
+        <Empty v-else-if="runs.length === 0" title="没有观测记录" desc="agent 跑过对话后，这里会出现每次 run 的完整轨迹。" />
         <button
-          v-for="r in filteredRuns"
+          v-for="r in runs"
           :key="r.run_id"
           class="mb-1.5 w-full cursor-pointer rounded-control border p-2.5 text-left transition-colors"
           :class="selected?.run_id === r.run_id ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-line-strong'"
@@ -206,6 +272,12 @@ function imgUrl(r: RunMeta, name: string): string {
             {{ fmtTime(r.started_at) }}<template v-if="r.deck_id"> · {{ r.deck_id }}</template><template v-if="r.turns"> · {{ r.turns }} 轮</template>
           </p>
         </button>
+      </div>
+
+      <!-- 分页脚注：Pagination 在单页时自己不渲染，共 N 条也只在有数据时露 -->
+      <div v-if="total > 0" class="border-t border-line p-2">
+        <p class="mb-1.5 text-center text-[11px] text-ink-3">共 {{ total }} 条记录</p>
+        <Pagination :model-value="page" :page-count="pageCount" @update:model-value="setPage" />
       </div>
     </aside>
 
