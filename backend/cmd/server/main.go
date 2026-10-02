@@ -237,6 +237,12 @@ func run() error {
 		}
 	}()
 
+	// 模板缩略图预热：后台把内置模板第 1 页提前渲好（磁盘命中即跳过），
+	// 用户第一次全量浏览也全走缓存；复用信号 ctx，停机时预热一并收手。
+	if thumbSvc != nil {
+		go thumbSvc.Prewarm(ctx)
+	}
+
 	// —— 4. 优雅停机：Ctrl+C 后给在途请求最多 5s 收尾 ——
 	<-ctx.Done()
 	log.Println("[info] shutting down...")
