@@ -11,6 +11,7 @@ import Empty from '@/components/ui/Empty.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { useToast } from '@/stores/toast'
+import { fieldNotes, kindNotes, roleNotes, subNameZh, subStageZh, toolNotes } from './traceNotes'
 
 const toast = useToast()
 const router = useRouter()
@@ -229,7 +230,10 @@ function splitMessages(raw: unknown): ExpandedCtx {
         })
         .filter(Boolean)
       if (names.length) {
-        blocks.push({ key: '发起工具调用', text: names.map((n) => '→ ' + n).join('\n') })
+        blocks.push({
+          key: '发起工具调用',
+          text: names.map((n) => `→ ${n}${toolNotes[n] ? ' · ' + toolNotes[n].zh : ''}`).join('\n'),
+        })
       }
     }
     return { role, blocks }
@@ -420,9 +424,12 @@ function imgUrl(r: RunMeta, name: string): string {
             >
               <div class="flex flex-wrap items-center gap-2">
                 <Badge :tone="kindTone[e.kind] ?? 'neutral'">{{ e.kind }}</Badge>
+                <span v-if="kindNotes[e.kind]" class="text-[11px] text-ink-3">{{ kindNotes[e.kind] }}</span>
                 <span v-if="e.tool_name" class="font-mono font-semibold">{{ e.tool_name }}</span>
+                <span v-if="e.tool_name && toolNotes[e.tool_name]" class="text-[11px] text-ink-3" :title="toolNotes[e.tool_name].desc">{{ toolNotes[e.tool_name].zh }}</span>
                 <!-- sub_step 的来源标签（vision / web_search · 阶段）——后端从不写 component，名字只在 sub 里 -->
                 <span v-if="e.sub" class="font-mono font-semibold">{{ e.sub.name }}<template v-if="e.sub.stage"> · {{ e.sub.stage }}</template></span>
+                <span v-if="e.sub && (subNameZh(e.sub.name) || subStageZh(e.sub.name, e.sub.stage))" class="text-[11px] text-ink-3">{{ [subNameZh(e.sub.name), subStageZh(e.sub.name, e.sub.stage)].filter(Boolean).join(' · ') }}</span>
                 <span v-if="e.finish_reason" class="text-ink-3">finish: {{ e.finish_reason }}</span>
                 <span v-if="e.message_count != null" class="text-ink-3">{{ e.message_count }} 条上下文</span>
                 <span v-if="e.component" class="text-ink-3">{{ e.component }}</span>
@@ -453,22 +460,32 @@ function imgUrl(r: RunMeta, name: string): string {
                 <!-- 工具参数/结果：对象按 key 拆块，string 值（规则/大纲/页面全文等）按真实换行渲染 -->
                 <template v-if="e.args">
                   <div class="rounded bg-code p-2">
-                    <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">参数</p>
+                    <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">
+                      参数<template v-if="e.tool_name"> · {{ e.tool_name }}<template v-if="toolNotes[e.tool_name]">（{{ toolNotes[e.tool_name].zh }}）</template></template>
+                    </p>
                     <div v-for="(b, bi) in kvBlocks(e.args)" :key="bi" :class="bi > 0 ? 'mt-2 border-t border-line/60 pt-2' : ''">
-                      <p v-if="b.key" class="mb-1 font-mono text-[10.5px] font-semibold text-accent">
-                        {{ b.key }}<span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
-                      </p>
+                      <template v-if="b.key">
+                        <p class="mb-0.5 font-mono text-[10.5px] font-semibold text-accent">
+                          {{ b.key }}<template v-if="fieldNotes[b.key]"><span class="ml-1.5 font-normal text-ink-2">{{ fieldNotes[b.key].zh }}</span></template><span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
+                        </p>
+                        <p v-if="fieldNotes[b.key]?.desc" class="mb-1 text-[10.5px] leading-snug text-ink-3">{{ fieldNotes[b.key].desc }}</p>
+                      </template>
                       <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ b.text }}</pre>
                     </div>
                   </div>
                 </template>
                 <template v-if="e.result">
                   <div class="rounded bg-code p-2">
-                    <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">结果</p>
+                    <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">
+                      结果<template v-if="e.tool_name"> · {{ e.tool_name }}<template v-if="toolNotes[e.tool_name]">（{{ toolNotes[e.tool_name].zh }}）</template></template>
+                    </p>
                     <div v-for="(b, bi) in kvBlocks(e.result)" :key="bi" :class="bi > 0 ? 'mt-2 border-t border-line/60 pt-2' : ''">
-                      <p v-if="b.key" class="mb-1 font-mono text-[10.5px] font-semibold text-accent">
-                        {{ b.key }}<span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
-                      </p>
+                      <template v-if="b.key">
+                        <p class="mb-0.5 font-mono text-[10.5px] font-semibold text-accent">
+                          {{ b.key }}<template v-if="fieldNotes[b.key]"><span class="ml-1.5 font-normal text-ink-2">{{ fieldNotes[b.key].zh }}</span></template><span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
+                        </p>
+                        <p v-if="fieldNotes[b.key]?.desc" class="mb-1 text-[10.5px] leading-snug text-ink-3">{{ fieldNotes[b.key].desc }}</p>
+                      </template>
                       <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ b.text }}</pre>
                     </div>
                   </div>
@@ -478,23 +495,30 @@ function imgUrl(r: RunMeta, name: string): string {
                 <pre v-if="e.content && e.kind !== 'llm_request'" class="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-code p-2 font-mono text-[11px] leading-relaxed text-ink-2">{{ pretty(e.content) }}</pre>
                 <!-- sub_step 的正文与结构化数据（搜索词、审查报告、逐页量测等此前完全不可见） -->
                 <div v-if="e.sub && (e.sub.text || e.sub.data != null)" class="rounded bg-code p-2">
+                  <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">
+                    {{ e.sub.name }}<template v-if="e.sub.stage"> · {{ e.sub.stage }}</template><template v-if="subNameZh(e.sub.name) || subStageZh(e.sub.name, e.sub.stage)"><span class="ml-1 font-normal text-ink-2">{{ [subNameZh(e.sub.name), subStageZh(e.sub.name, e.sub.stage)].filter(Boolean).join(' · ') }}</span></template>
+                  </p>
                   <pre v-if="e.sub.text" class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ e.sub.text }}</pre>
                   <pre v-if="e.sub.data != null" class="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all border-t border-line/60 pt-2 font-mono text-[11px] text-ink-2">{{ pretty(JSON.stringify(e.sub.data)) }}</pre>
                 </div>
                 <template v-if="e.kind === 'llm_request' && e.messages == null">
                   <p v-if="ctxState(e.seq) === 'loading'" class="text-[11px] text-ink-3">加载完整上下文…</p>
                   <p v-else-if="ctxState(e.seq) === 'error'" class="text-[11px] text-danger">{{ ctxError(e.seq) }}</p>
-                  <!-- 每条消息一块：role 徽标 + 正文按真实换行渲染（JSON 字符串正文按 key 再拆） -->
+                  <!-- 每条消息一块：role 徽标（带中文说明）+ 正文按真实换行渲染（JSON 字符串正文按 key 再拆） -->
                   <div v-else-if="ctxState(e.seq) === 'msgs'" class="flex flex-col gap-2">
                     <div v-for="(m, mi) in ctxMsgs(e.seq)" :key="mi" class="rounded bg-code p-2">
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex flex-wrap items-center gap-1.5">
                         <Badge tone="neutral">{{ m.role }}</Badge>
+                        <span v-if="roleNotes[m.role]" class="text-[10.5px] text-ink-3">{{ roleNotes[m.role] }}</span>
                       </div>
                       <div v-if="m.blocks.length" class="mt-1.5 flex flex-col gap-2">
                         <div v-for="(b, bi) in m.blocks" :key="bi">
-                          <p v-if="b.key" class="mb-1 font-mono text-[10.5px] font-semibold text-accent">
-                            {{ b.key }}<span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
-                          </p>
+                          <template v-if="b.key">
+                            <p class="mb-0.5 font-mono text-[10.5px] font-semibold text-accent">
+                              {{ b.key }}<template v-if="fieldNotes[b.key]"><span class="ml-1.5 font-normal text-ink-2">{{ fieldNotes[b.key].zh }}</span></template><span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
+                            </p>
+                            <p v-if="fieldNotes[b.key]?.desc" class="mb-1 text-[10.5px] leading-snug text-ink-3">{{ fieldNotes[b.key].desc }}</p>
+                          </template>
                           <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ b.text }}</pre>
                         </div>
                       </div>
