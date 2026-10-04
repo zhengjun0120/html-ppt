@@ -253,6 +253,31 @@ function ctxError(seq: number): string {
   return v && v.state === 'error' ? v.message : ''
 }
 
+/** 工具参数/结果展开：对象按 key 拆块——string 值按真实换行渲染。此前整包
+ * pretty JSON：长文本值（模板规则、大纲全文等）被重新转义成一行，\n 全是
+ * 字面量、换行与结构全被淹没。非对象/解析失败退回 pretty JSON 兜底。 */
+type KvBlock = { key: string; text: string; isJson?: boolean }
+function kvBlocks(raw: string): KvBlock[] {
+  let obj: unknown
+  try {
+    obj = JSON.parse(raw)
+  } catch {
+    return [{ key: '', text: raw }]
+  }
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return [{ key: '', text: pretty(raw) }]
+  }
+  const entries = Object.entries(obj as Record<string, unknown>)
+  if (entries.length === 0) {
+    return [{ key: '', text: '{}' }]
+  }
+  return entries.map(([k, v]) =>
+    typeof v === 'string'
+      ? { key: k, text: v }
+      : { key: k, text: pretty(JSON.stringify(v)), isJson: true },
+  )
+}
+
 function exportUrl(r: RunMeta): string {
   return authedUrl(`/api/traces/${r.session_id}/${r.run_id}/export`)
 }
@@ -381,6 +406,8 @@ function imgUrl(r: RunMeta, name: string): string {
               <div class="flex flex-wrap items-center gap-2">
                 <Badge :tone="kindTone[e.kind] ?? 'neutral'">{{ e.kind }}</Badge>
                 <span v-if="e.tool_name" class="font-mono font-semibold">{{ e.tool_name }}</span>
+                <!-- sub_step 的来源标签（vision / web_search · 阶段）——后端从不写 component，名字只在 sub 里 -->
+                <span v-if="e.sub" class="font-mono font-semibold">{{ e.sub.name }}<template v-if="e.sub.stage"> · {{ e.sub.stage }}</template></span>
                 <span v-if="e.finish_reason" class="text-ink-3">finish: {{ e.finish_reason }}</span>
                 <span v-if="e.message_count != null" class="text-ink-3">{{ e.message_count }} 条上下文</span>
                 <span v-if="e.component" class="text-ink-3">{{ e.component }}</span>
@@ -408,11 +435,37 @@ function imgUrl(r: RunMeta, name: string): string {
 
               <!-- 展开体：参数 / 结果 / 完整上下文 -->
               <div v-if="expanded[e.seq]" class="mt-2 flex flex-col gap-2" @click.stop>
-                <pre v-if="e.args" class="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.args) }}</pre>
-                <pre v-if="e.result" class="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.result) }}</pre>
+                <!-- 工具参数/结果：对象按 key 拆块，string 值（规则/大纲/页面全文等）按真实换行渲染 -->
+                <template v-if="e.args">
+                  <div class="rounded bg-code p-2">
+                    <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">参数</p>
+                    <div v-for="(b, bi) in kvBlocks(e.args)" :key="bi" :class="bi > 0 ? 'mt-2 border-t border-line/60 pt-2' : ''">
+                      <p v-if="b.key" class="mb-1 font-mono text-[10.5px] font-semibold text-accent">
+                        {{ b.key }}<span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
+                      </p>
+                      <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ b.text }}</pre>
+                    </div>
+                  </div>
+                </template>
+                <template v-if="e.result">
+                  <div class="rounded bg-code p-2">
+                    <p class="mb-1.5 text-[10.5px] font-semibold tracking-wider text-ink-3">结果</p>
+                    <div v-for="(b, bi) in kvBlocks(e.result)" :key="bi" :class="bi > 0 ? 'mt-2 border-t border-line/60 pt-2' : ''">
+                      <p v-if="b.key" class="mb-1 font-mono text-[10.5px] font-semibold text-accent">
+                        {{ b.key }}<span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
+                      </p>
+                      <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ b.text }}</pre>
+                    </div>
+                  </div>
+                </template>
                 <!-- 模型返回/sub_step 等的 content 全文（llm_request 没有 content，走下面的完整上下文块）；
                      JSON 形态的返回自动缩进，纯文本原样保留 -->
                 <pre v-if="e.content && e.kind !== 'llm_request'" class="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-code p-2 font-mono text-[11px] leading-relaxed text-ink-2">{{ pretty(e.content) }}</pre>
+                <!-- sub_step 的正文与结构化数据（搜索词、审查报告、逐页量测等此前完全不可见） -->
+                <div v-if="e.sub && (e.sub.text || e.sub.data != null)" class="rounded bg-code p-2">
+                  <pre v-if="e.sub.text" class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ e.sub.text }}</pre>
+                  <pre v-if="e.sub.data != null" class="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all border-t border-line/60 pt-2 font-mono text-[11px] text-ink-2">{{ pretty(JSON.stringify(e.sub.data)) }}</pre>
+                </div>
                 <template v-if="e.kind === 'llm_request' && e.messages == null">
                   <p v-if="ctxState(e.seq) === 'loading'" class="text-[11px] text-ink-3">加载完整上下文…</p>
                   <p v-else-if="ctxState(e.seq) === 'error'" class="text-[11px] text-danger">{{ ctxError(e.seq) }}</p>
