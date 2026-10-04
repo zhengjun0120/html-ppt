@@ -301,7 +301,7 @@ function imgUrl(r: RunMeta, name: string): string {
               <PhDownloadSimple :size="12" /> 导出 JSON
             </a>
           </div>
-          <p class="mt-2 text-[13px] text-ink">{{ selected.user_content || '（无输入）' }}</p>
+          <p class="mt-2 whitespace-pre-wrap break-words text-[13px] text-ink">{{ selected.user_content || '（无输入）' }}</p>
           <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-ink-3">
             <span>{{ fmtTime(selected.started_at) }}</span>
             <span>耗时 {{ fmtDuration(selected.duration_ms) }}</span>
@@ -343,10 +343,10 @@ function imgUrl(r: RunMeta, name: string): string {
                 <span v-else-if="e.bytes" class="ml-auto text-ink-3">{{ fmtTokens(e.bytes) }}B</span>
               </div>
 
-              <p v-if="e.user_content" class="mt-1 line-clamp-2 text-ink-2">{{ e.user_content }}</p>
+              <p v-if="e.user_content" class="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-ink-2">{{ e.user_content }}</p>
               <p v-if="e.content" class="mt-1 line-clamp-3 whitespace-pre-wrap break-words text-ink-2">{{ e.content }}</p>
               <p v-if="e.args" class="mt-1 truncate font-mono text-[11px] text-ink-3">{{ e.args }}</p>
-              <p v-if="e.error" class="mt-1 text-danger">{{ e.error }}</p>
+              <p v-if="e.error" class="mt-1 whitespace-pre-wrap break-words text-danger">{{ e.error }}</p>
 
               <!-- 审查截图 -->
               <div v-if="e.images?.length" class="mt-2 flex flex-wrap gap-2" @click.stop>
