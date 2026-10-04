@@ -32,6 +32,9 @@ func IsValidID(id string) bool {
 type Meta struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
+	// Stage 生成流程状态：封面缩略图只有 generating/iterating 才有得渲染，
+	// 前端据此决定要不要发封面请求（未实例化的 deck 没有 index.html）
+	Stage string `json:"stage,omitempty"`
 }
 
 // Service 负责 deck 文件的存取 + 归属校验。
@@ -91,7 +94,7 @@ func (s *Service) List(userID uint) ([]Meta, error) {
 	}
 	out := make([]Meta, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, Meta{ID: r.ID, Title: r.Title})
+		out = append(out, Meta{ID: r.ID, Title: r.Title, Stage: r.Stage})
 	}
 	return out, nil
 }

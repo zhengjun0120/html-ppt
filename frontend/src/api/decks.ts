@@ -3,6 +3,8 @@ import { request } from './client'
 export interface DeckMeta {
   id: string
   title: string
+  /** 生成流程状态：只有 generating/iterating 生成过页面、才有封面可取 */
+  stage?: string
 }
 
 export interface VersionMeta {

@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
+import type { DeckMeta } from '@/api/decks'
 import { thumbUrl } from '@/api/deckV2'
 import Button from '@/components/ui/Button.vue'
 import Empty from '@/components/ui/Empty.vue'
@@ -68,6 +69,12 @@ function openDeck(id: string) {
     /* 隐私模式等存不进就算了：只损失滚动恢复，不影响导航 */
   }
   router.push(`/decks/${id}`)
+}
+
+/** 只有生成过页面的文稿才有封面：未实例化（澄清/大纲/选模板阶段）的 deck
+ * 没有 index.html，发封面请求只会换来后端一次必然失败的渲染（404）。 */
+function hasCover(d: DeckMeta): boolean {
+  return d.stage === 'generating' || d.stage === 'iterating'
 }
 
 /** 滚动落回：仅当 URL ?page 与离开时记录一致才回滚；恢复即清，避免之后的普通进入被旧位置拽走 */
@@ -139,7 +146,7 @@ onMounted(async () => {
       >
         <div class="relative flex h-[130px] items-center justify-center overflow-hidden bg-linear-to-br from-surface-3 to-surface-2 text-ink-3 transition-colors group-hover:text-ink-2">
           <img
-            v-if="!coverFailed[d.id]"
+            v-if="hasCover(d) && !coverFailed[d.id]"
             :src="thumbUrl(d.id, 1)"
             :alt="`${d.title} 封面`"
             class="absolute inset-0 h-full w-full object-cover object-top"
