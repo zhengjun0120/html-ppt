@@ -389,7 +389,8 @@ function imgUrl(r: RunMeta, name: string): string {
               </div>
 
               <p v-if="e.user_content" class="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-ink-2">{{ e.user_content }}</p>
-              <p v-if="e.content" class="mt-1 line-clamp-3 whitespace-pre-wrap break-words text-ink-2">{{ e.content }}</p>
+              <!-- 折叠行是 3 行预览（结尾的 … 就是它），展开后由展开体里的全文块接管 -->
+              <p v-if="e.content && !expanded[e.seq]" class="mt-1 line-clamp-3 whitespace-pre-wrap break-words text-ink-2">{{ e.content }}</p>
               <p v-if="e.args" class="mt-1 truncate font-mono text-[11px] text-ink-3">{{ e.args }}</p>
               <p v-if="e.error" class="mt-1 whitespace-pre-wrap break-words text-danger">{{ e.error }}</p>
 
@@ -409,6 +410,9 @@ function imgUrl(r: RunMeta, name: string): string {
               <div v-if="expanded[e.seq]" class="mt-2 flex flex-col gap-2" @click.stop>
                 <pre v-if="e.args" class="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.args) }}</pre>
                 <pre v-if="e.result" class="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.result) }}</pre>
+                <!-- 模型返回/sub_step 等的 content 全文（llm_request 没有 content，走下面的完整上下文块）；
+                     JSON 形态的返回自动缩进，纯文本原样保留 -->
+                <pre v-if="e.content && e.kind !== 'llm_request'" class="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-code p-2 font-mono text-[11px] leading-relaxed text-ink-2">{{ pretty(e.content) }}</pre>
                 <template v-if="e.kind === 'llm_request' && e.messages == null">
                   <p v-if="ctxState(e.seq) === 'loading'" class="text-[11px] text-ink-3">加载完整上下文…</p>
                   <p v-else-if="ctxState(e.seq) === 'error'" class="text-[11px] text-danger">{{ ctxError(e.seq) }}</p>
