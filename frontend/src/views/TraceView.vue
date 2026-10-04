@@ -193,19 +193,64 @@ const kindTone: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'acce
   run_end: 'neutral',
 }
 
-/** llm_request 单事件展开时按需拉完整上下文（messages 很大，默认不下发） */
-const expandedMessages = ref<Record<number, string | 'loading'>>({})
+/** llm_request 展开后的完整上下文。按消息拆块渲染（role 徽标 + 正文按真实
+ * 换行显示）——此前是整包 pretty JSON：几 KB 的 content 字符串被 JSON 转义成
+ * 一行，把缩进结构和换行全部淹没，用户看到的就是一坨带字面 \n 的文本。 */
+type ExpandedMessage = { role: string; content: string; isJson?: boolean }
+type ExpandedCtx =
+  | { state: 'loading' }
+  | { state: 'error'; message: string }
+  | { state: 'msgs'; msgs: ExpandedMessage[] }
+  | { state: 'json'; json: string }
+const expandedCtx = ref<Record<number, ExpandedCtx | undefined>>({})
+
+// messages 里的 content 通常是带真实换行的文本，直接渲染；非字符串（多模态
+// 数组等）退回 pretty JSON。整个 messages 不是消息数组时（老数据/异常形状）
+// 整体退回 pretty JSON——难看但完整。
+function splitMessages(raw: unknown): ExpandedCtx {
+  if (!Array.isArray(raw)) {
+    return { state: 'json', json: pretty(JSON.stringify(raw ?? null)) }
+  }
+  const msgs = raw.map((m): ExpandedMessage => {
+    const obj = (typeof m === 'object' && m !== null ? m : {}) as Record<string, unknown>
+    const role = typeof obj.role === 'string' ? obj.role : '?'
+    if (typeof obj.content === 'string') {
+      return { role, content: obj.content }
+    }
+    return { role, content: pretty(JSON.stringify(obj.content ?? null)), isJson: true }
+  })
+  return { state: 'msgs', msgs }
+}
+
 async function toggleEvent(e: TraceEvent) {
   expanded.value[e.seq] = !expanded.value[e.seq]
   if (expanded.value[e.seq] && e.kind === 'llm_request' && selected.value && e.messages == null) {
-    expandedMessages.value[e.seq] = 'loading'
+    expandedCtx.value[e.seq] = { state: 'loading' }
     try {
       const full = await traceApi.event(selected.value.session_id, selected.value.run_id, e.seq)
-      expandedMessages.value[e.seq] = pretty(JSON.stringify(full.messages ?? null))
+      expandedCtx.value[e.seq] = splitMessages(full.messages ?? null)
     } catch (err) {
-      expandedMessages.value[e.seq] = `加载失败：${err instanceof ApiError ? err.message : '未知错误'}`
+      expandedCtx.value[e.seq] = {
+        state: 'error',
+        message: `加载失败：${err instanceof ApiError ? err.message : '未知错误'}`,
+      }
     }
   }
+}
+function ctxState(seq: number): ExpandedCtx['state'] | 'none' {
+  return expandedCtx.value[seq]?.state ?? 'none'
+}
+function ctxMsgs(seq: number): ExpandedMessage[] {
+  const v = expandedCtx.value[seq]
+  return v && v.state === 'msgs' ? v.msgs : []
+}
+function ctxJson(seq: number): string {
+  const v = expandedCtx.value[seq]
+  return v && v.state === 'json' ? v.json : ''
+}
+function ctxError(seq: number): string {
+  const v = expandedCtx.value[seq]
+  return v && v.state === 'error' ? v.message : ''
 }
 
 function exportUrl(r: RunMeta): string {
@@ -365,11 +410,21 @@ function imgUrl(r: RunMeta, name: string): string {
                 <pre v-if="e.args" class="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.args) }}</pre>
                 <pre v-if="e.result" class="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ pretty(e.result) }}</pre>
                 <template v-if="e.kind === 'llm_request' && e.messages == null">
-                  <p class="text-[11px] text-ink-3">
-                    {{ expandedMessages[e.seq] === 'loading' ? '加载完整上下文…' : (expandedMessages[e.seq] ?? '点击已展开；完整上下文在再次点击时加载') }}
-                  </p>
+                  <p v-if="ctxState(e.seq) === 'loading'" class="text-[11px] text-ink-3">加载完整上下文…</p>
+                  <p v-else-if="ctxState(e.seq) === 'error'" class="text-[11px] text-danger">{{ ctxError(e.seq) }}</p>
+                  <!-- 每条消息一块：role 徽标 + 正文按真实换行渲染 -->
+                  <div v-else-if="ctxState(e.seq) === 'msgs'" class="flex flex-col gap-2">
+                    <div v-for="(m, mi) in ctxMsgs(e.seq)" :key="mi" class="rounded bg-code p-2">
+                      <div class="flex items-center gap-1.5">
+                        <Badge tone="neutral">{{ m.role }}</Badge>
+                        <span v-if="m.isJson" class="text-[10.5px] text-ink-3">非文本内容，按 JSON 展示</span>
+                      </div>
+                      <pre class="mt-1.5 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ m.content }}</pre>
+                    </div>
+                  </div>
+                  <pre v-else-if="ctxState(e.seq) === 'json'" class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ ctxJson(e.seq) }}</pre>
+                  <p v-else class="text-[11px] text-ink-3">点击已展开；完整上下文在再次点击时加载</p>
                 </template>
-                <pre v-if="e.kind === 'llm_request' && expandedMessages[e.seq] && expandedMessages[e.seq] !== 'loading'" class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ expandedMessages[e.seq] }}</pre>
                 <div v-if="e.usage" class="text-[11px] text-ink-3">
                   tokens：{{ e.usage.total }}（输入 {{ e.usage.prompt }} / 输出 {{ e.usage.completion }}，缓存 {{ e.usage.cached }}<template v-if="e.usage.reasoning">，推理 {{ e.usage.reasoning }}</template>）
                 </div>
