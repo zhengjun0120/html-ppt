@@ -196,7 +196,7 @@ const kindTone: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'acce
 /** llm_request 展开后的完整上下文。按消息拆块渲染（role 徽标 + 正文按真实
  * 换行显示）——此前是整包 pretty JSON：几 KB 的 content 字符串被 JSON 转义成
  * 一行，把缩进结构和换行全部淹没，用户看到的就是一坨带字面 \n 的文本。 */
-type ExpandedMessage = { role: string; content: string; isJson?: boolean }
+type ExpandedMessage = { role: string; blocks: KvBlock[] }
 type ExpandedCtx =
   | { state: 'loading' }
   | { state: 'error'; message: string }
@@ -204,9 +204,10 @@ type ExpandedCtx =
   | { state: 'json'; json: string }
 const expandedCtx = ref<Record<number, ExpandedCtx | undefined>>({})
 
-// messages 里的 content 通常是带真实换行的文本，直接渲染；非字符串（多模态
-// 数组等）退回 pretty JSON。整个 messages 不是消息数组时（老数据/异常形状）
-// 整体退回 pretty JSON——难看但完整。
+// 消息正文三种形态：散文（JSON 解析失败 → 原样）、JSON 字符串（tool 结果，
+// 如 {"rules":…} → 按 key 拆块、真换行）、非字符串（多模态等 → pretty JSON）。
+// assistant 发起工具调用的消息 content 为 null，列出工具名单即可——参数全文
+// 在时间线的 tool_call 卡片里，重复展示只会变成第二个转义沼泽。
 function splitMessages(raw: unknown): ExpandedCtx {
   if (!Array.isArray(raw)) {
     return { state: 'json', json: pretty(JSON.stringify(raw ?? null)) }
@@ -214,10 +215,24 @@ function splitMessages(raw: unknown): ExpandedCtx {
   const msgs = raw.map((m): ExpandedMessage => {
     const obj = (typeof m === 'object' && m !== null ? m : {}) as Record<string, unknown>
     const role = typeof obj.role === 'string' ? obj.role : '?'
+    const blocks: KvBlock[] = []
     if (typeof obj.content === 'string') {
-      return { role, content: obj.content }
+      if (obj.content.trim() !== '') blocks.push(...kvBlocks(obj.content))
+    } else if (obj.content != null) {
+      blocks.push({ key: '', text: pretty(JSON.stringify(obj.content)), isJson: true })
     }
-    return { role, content: pretty(JSON.stringify(obj.content ?? null)), isJson: true }
+    if (Array.isArray(obj.tool_calls)) {
+      const names = (obj.tool_calls as unknown[])
+        .map((tc) => {
+          const fn = (typeof tc === 'object' && tc !== null ? (tc as Record<string, unknown>).function : null) as Record<string, unknown> | null
+          return fn && typeof fn.name === 'string' ? fn.name : ''
+        })
+        .filter(Boolean)
+      if (names.length) {
+        blocks.push({ key: '发起工具调用', text: names.map((n) => '→ ' + n).join('\n') })
+      }
+    }
+    return { role, blocks }
   })
   return { state: 'msgs', msgs }
 }
@@ -469,14 +484,21 @@ function imgUrl(r: RunMeta, name: string): string {
                 <template v-if="e.kind === 'llm_request' && e.messages == null">
                   <p v-if="ctxState(e.seq) === 'loading'" class="text-[11px] text-ink-3">加载完整上下文…</p>
                   <p v-else-if="ctxState(e.seq) === 'error'" class="text-[11px] text-danger">{{ ctxError(e.seq) }}</p>
-                  <!-- 每条消息一块：role 徽标 + 正文按真实换行渲染 -->
+                  <!-- 每条消息一块：role 徽标 + 正文按真实换行渲染（JSON 字符串正文按 key 再拆） -->
                   <div v-else-if="ctxState(e.seq) === 'msgs'" class="flex flex-col gap-2">
                     <div v-for="(m, mi) in ctxMsgs(e.seq)" :key="mi" class="rounded bg-code p-2">
                       <div class="flex items-center gap-1.5">
                         <Badge tone="neutral">{{ m.role }}</Badge>
-                        <span v-if="m.isJson" class="text-[10.5px] text-ink-3">非文本内容，按 JSON 展示</span>
                       </div>
-                      <pre class="mt-1.5 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ m.content }}</pre>
+                      <div v-if="m.blocks.length" class="mt-1.5 flex flex-col gap-2">
+                        <div v-for="(b, bi) in m.blocks" :key="bi">
+                          <p v-if="b.key" class="mb-1 font-mono text-[10.5px] font-semibold text-accent">
+                            {{ b.key }}<span v-if="b.isJson" class="ml-1.5 font-normal text-ink-3">非文本，按 JSON</span>
+                          </p>
+                          <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ink-2">{{ b.text }}</pre>
+                        </div>
+                      </div>
+                      <p v-else class="mt-1.5 text-[11px] text-ink-3">（无文本正文）</p>
                     </div>
                   </div>
                   <pre v-else-if="ctxState(e.seq) === 'json'" class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-code p-2 font-mono text-[11px] text-ink-2">{{ ctxJson(e.seq) }}</pre>
