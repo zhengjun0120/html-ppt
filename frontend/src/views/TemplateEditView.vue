@@ -391,6 +391,12 @@ async function unpublish() {
       <ul v-if="checkupReport.render?.flaws?.length" class="mt-1.5 list-disc pl-5 text-ink-2">
         <li v-for="f in checkupReport.render.flaws" :key="f">{{ f }}</li>
       </ul>
+      <div v-if="checkupReport.taste?.length" class="mt-1.5">
+        <span class="font-semibold text-ink-2">AI 味提示（{{ checkupReport.taste.length }} 处）：示例文案是生成范本，建议修掉</span>
+        <ul class="mt-1 list-disc pl-5 text-ink-2">
+          <li v-for="t in checkupReport.taste" :key="t">{{ t }}</li>
+        </ul>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">

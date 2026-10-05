@@ -43,6 +43,8 @@ export interface CommunityTemplate {
 export interface PublishReport {
   structure: string
   render?: { pages: number; min_fill: number; max_flag_font: number; flaws?: string[] }
+  /** AI 味提示（taste-skill 词表，体检时对 demo 各页跑 lint；示例文案是生成范本） */
+  taste?: string[]
   note?: string
 }
 

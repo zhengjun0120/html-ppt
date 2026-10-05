@@ -295,9 +295,11 @@ func (s *Service) Unpublish(userID uint, id string) error {
 
 // PublishReport 发布/体检的结果（进 publish_report 字段，前端展示）。
 // Render 只在体检（Checkup）里出现；发布自 2026-09-28 起不再跑渲染量测。
+// Taste 是 AI 味提示（taste-skill 词表，体检时对 demo 各页跑 lint），只报告。
 type PublishReport struct {
 	Structure string            `json:"structure"`
 	Render    *RenderGateResult `json:"render,omitempty"`
+	Taste     []string          `json:"taste,omitempty"`
 	Note      string            `json:"note,omitempty"`
 }
 
@@ -383,6 +385,10 @@ func (s *Service) Checkup(ctx context.Context, userID uint, id string) (*Publish
 	report := &PublishReport{Structure: "ok",
 		Render: evaluateRender(d.Slides, layoutPatterns(filepath.Join(dir, "layouts.md"))),
 		Note:   "体检报告（不影响发布）：flaws 为空即未发现溢出/稀疏/小字号问题"}
+	// AI 味提示（taste-skill 词表）：demo 示例文案是生成范本，发布前让作者可见
+	if raw, err := os.ReadFile(filepath.Join(dir, "index.html")); err == nil {
+		report.Taste = lintDemoSections(string(raw))
+	}
 	rep, _ := json.Marshal(report)
 	// 落到 publish_report 字段，刷新页面后报告还在。发布报告（publish 时写的）
 	// 会被最近一次体检覆盖——两份都是"诊断快照"，留最新即可

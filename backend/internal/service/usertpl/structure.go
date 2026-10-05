@@ -632,6 +632,11 @@ func (s *Service) AddLayout(userID uint, id string, spec AddLayoutSpec) (string,
 	if demoNote != "" {
 		summary += " " + demoNote
 	}
+	if spec.DemoHTML != "" {
+		if hints := lintDemoFragment(spec.DemoHTML); len(hints) > 0 {
+			summary += "\nAI 味提示（示例文案是生成范本，注意自修）：\n- " + strings.Join(hints, "\n- ")
+		}
+	}
 	_ = s.recordVersionUT(id, OpStruct, summary)
 	return summary, nil
 }

@@ -378,7 +378,13 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 		if err := s.remountUT(row.ID); err != nil {
 			return fmt.Sprintf("index.html 已写入并记入历史，但注册表校验未过：%v。预览可见，但生成侧可能仍挂旧版——最常见原因是发明了 layouts.md 里没有的 data-layout，请改回已登记的版式。", err), true
 		}
-		return "demo index.html 已整体更新，预览刷新即可看到。", true
+		msg := "demo index.html 已整体更新，预览刷新即可看到。"
+		// demo 示例文案是生成时模仿的范本，AI 腔会传染给每一次生成——
+		// 整份逐页 lint（taste-skill 词表，与生成侧 write_pages 同源），提示不阻塞
+		if hints := lintDemoSections(in.HTML); len(hints) > 0 {
+			msg += "\nAI 味提示（品味问题不阻塞，下一轮顺手修）：\n- " + strings.Join(hints, "\n- ")
+		}
+		return msg, true
 	case "set_meta":
 		var in struct {
 			Name        string `json:"name"`
@@ -588,6 +594,12 @@ func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
 		"- 结构契约：加/删版式只能走 add_layout / remove_layout，不要用 write_demo 顺手发明版式；" +
 		"改样式时类名沿用模板既有体系。role 只能从词表选：" +
 		"cover/toc/divider/content/data/quote/code/cta/thanks，每个版式最多 3 个。\n" +
+		"- 品味纪律（去 AI 味；demo 示例文案是生成时模仿的范本，服务端会对 demo 跑 lint 并把提示回给你）："+
+		"文案不写「赋能/无缝/闭环/elevate/seamless」这类腔调词；不用 em-dash（—）；"+
+		"示例数字要有机（47.2% 优于没有语境的 99.99%，编造的数字标「估算」）；"+
+		"示例品牌/人名要真实（不要 Acme、John Doe）。"+
+		"视觉不写纯黑 #000（用近黑如 #17181a），强调色别过饱和，不堆外发光/霓虹效果，"+
+		"卡片阵列避免机械三等分（内容确实等重才用）。\n" +
 		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
 		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +
 		"- 模板名：" + row.Name + "（base：" + row.BaseID + "）。\n\n" +
