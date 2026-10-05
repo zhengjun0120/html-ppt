@@ -280,8 +280,8 @@ const editing = ref<UserTemplateRow | null>(null)
   <div class="mx-auto max-w-[1100px] p-6">
     <div class="mb-5 flex items-center justify-between">
       <div>
-        <h1 class="text-[16px] font-bold">我的模板</h1>
-        <p class="mt-0.5 text-[12px] text-ink-3">从内置模板派生，对话里定制视觉；过自动门禁后公开给所有人用。</p>
+        <h1 class="text-[16px] font-bold">模板</h1>
+        <p class="mt-0.5 text-[12px] text-ink-3">从内置或社区模板派生，对话里定制视觉；过自动门禁后公开给所有人用。</p>
       </div>
       <Button :loading="loading" @click="load">
         <PhArrowClockwise :size="13" />
@@ -289,8 +289,12 @@ const editing = ref<UserTemplateRow | null>(null)
       </Button>
     </div>
 
-    <!-- 我的模板 -->
-    <div v-if="loading" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <!-- 模块一：我的模板 -->
+    <div class="scroll-mt-4">
+      <h2 class="text-[14px] font-bold">我的模板</h2>
+      <p class="mt-0.5 text-[12px] text-ink-3">你自己派生与定制的模板副本：编辑、发布、下架都在这里。</p>
+    </div>
+    <div v-if="loading" class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="i in 3" :key="i" class="overflow-hidden rounded-card border border-line bg-surface">
         <div class="flex h-[130px] items-center justify-center"><PhSpinner :size="20" class="animate-spin text-ink-3" /></div>
       </div>
@@ -298,11 +302,11 @@ const editing = ref<UserTemplateRow | null>(null)
     <Empty
       v-else-if="mine.length === 0"
       title="还没有自己的模板"
-      desc="在下方「从内置模板派生」里挑一个起点，克隆后在定制工作台里和 agent 一起改出你的风格。"
+      desc="在下方「内置模板」里挑一个起点，克隆后在定制工作台里和 agent 一起改出你的风格。"
     >
       <template #icon><PhGlobeHemisphereWest /></template>
     </Empty>
-    <div v-else ref="mineSection" class="scroll-mt-4">
+    <div v-else ref="mineSection" class="mt-3 scroll-mt-4">
       <div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div v-for="row in pagedMine" :key="row.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface">
         <div
@@ -404,7 +408,7 @@ const editing = ref<UserTemplateRow | null>(null)
       />
     </div>
 
-    <!-- 社区模板 -->
+    <!-- 模块二：社区模板 -->
     <div class="mt-8">
       <h2 class="text-[14px] font-bold">社区模板</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">其他用户发布并通过门禁的模板，可以直接选用或再派生。</p>
@@ -477,12 +481,12 @@ const editing = ref<UserTemplateRow | null>(null)
       <p v-else class="mt-2 text-[12px] text-ink-3">还没有公开的社区模板——发布第一个吧。</p>
     </div>
 
-    <!-- 从内置模板派生 -->
+    <!-- 模块三：内置模板 -->
     <div ref="builtinSection" class="mt-8 scroll-mt-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 class="text-[14px] font-bold">从内置模板派生</h2>
-          <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
+          <h2 class="text-[14px] font-bold">内置模板</h2>
+          <p class="mt-0.5 text-[12px] text-ink-3">官方模板库：选一个接近的起点派生，结构契约继承，定制只动视觉 token，质量有底。</p>
         </div>
         <Button @click="openBlankDialog">
           从空白新建

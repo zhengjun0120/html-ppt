@@ -6,7 +6,7 @@ import type { TagVocabEntry } from '@/lib/templateFilter'
 
 /**
  * 模板筛选工具条（docs/template-filter-plan.md）：搜索框 + 标签 chip 行。
- * 画廊（向导选模板）与我的模板页「从内置模板派生」共用；筛选状态在父组件
+ * 画廊（向导选模板）与模板页「内置模板」共用；筛选状态在父组件
  * （useTemplateFilter），这里只回传 v-model，词表与计数都由父级算好传入。
  * 词表实测 220+ 个（长尾全是 count=1）：只平铺前 LIMIT 个，其余进「更多」展开，
  * 不然十几行 chip 会把卡片区整个淹没。选中的长尾标签在折叠时也保持可见。
