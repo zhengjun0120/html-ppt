@@ -118,10 +118,10 @@ async function fork(baseId: string) {
   busyId.value = 'fork:' + baseId
   try {
     const row = await userTemplateApi.fork(baseId)
-    toast.info(`已复制「${baseName(row.base_id)}」，去定制工作台改出你的风格`)
+    toast.info(`已基于「${baseName(row.base_id)}」新建你的模板，去定制工作台改出你的风格`)
     await router.push(`/my-templates/${row.id}/edit`)
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : '复制失败')
+    toast.error(e instanceof Error ? e.message : '基于模板新建失败')
   } finally {
     busyId.value = ''
   }
@@ -316,7 +316,7 @@ const editing = ref<UserTemplateRow | null>(null)
 
     <!-- 模块一：我的模板 -->
     <div v-if="tab === 'mine'" class="mt-6">
-      <p class="text-[12px] text-ink-3">你自己复制的模板副本：编辑、发布、下架都在这里。</p>
+      <p class="text-[12px] text-ink-3">你基于模板新建的版本：编辑、发布、下架都在这里。</p>
       <div v-if="loading" class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="i in 3" :key="i" class="overflow-hidden rounded-card border border-line bg-surface">
         <div class="flex h-[130px] items-center justify-center"><PhSpinner :size="20" class="animate-spin text-ink-3" /></div>
@@ -325,7 +325,7 @@ const editing = ref<UserTemplateRow | null>(null)
     <Empty
       v-else-if="mine.length === 0"
       title="还没有自己的模板"
-      desc="在下方「内置模板」里挑一个喜欢的，点「复制一份」，再到定制工作台里和 agent 一起改出你的风格。"
+      desc="在下方「内置模板」里挑一个喜欢的，基于它新建，再到定制工作台里和 agent 一起改出你的风格。"
     >
       <template #icon><PhGlobeHemisphereWest /></template>
     </Empty>
@@ -397,7 +397,7 @@ const editing = ref<UserTemplateRow | null>(null)
               {{ STATUS_LABELS[row.status] ?? row.status }}
             </span>
           </div>
-          <p class="text-[11px] text-ink-3">复制自「{{ baseName(row.base_id) }}」</p>
+          <p class="text-[11px] text-ink-3">基于「{{ baseName(row.base_id) }}」</p>
           <p v-if="row.publish_error" class="line-clamp-3 rounded bg-danger-soft p-1.5 text-[11px] text-danger" :title="row.publish_error">
             {{ row.publish_error }}
           </p>
@@ -435,7 +435,7 @@ const editing = ref<UserTemplateRow | null>(null)
 
     <!-- 模块二：社区模板 -->
     <div v-else-if="tab === 'community'" class="mt-6">
-      <p class="text-[12px] text-ink-3">其他用户发布并通过审核的模板，点「复制一份」就能变成自己的。</p>
+      <p class="text-[12px] text-ink-3">其他用户发布并通过审核的模板，点一下按钮就能新建自己的版本。</p>
       <div v-if="community.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div
           v-for="c in community"
@@ -493,7 +493,7 @@ const editing = ref<UserTemplateRow | null>(null)
                 @click.stop="fork(c.id)"
               >
                 <PhPlus :size="11" class="inline" />
-                复制一份
+                基于此模板新建
               </button>
             </div>
             <p class="mt-0.5 truncate text-[11px] text-ink-3">
@@ -508,7 +508,7 @@ const editing = ref<UserTemplateRow | null>(null)
     <!-- 模块三：内置模板 -->
     <div v-else ref="builtinSection" class="mt-6 scroll-mt-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-[12px] text-ink-3">官方提供的模板，挑一个顺眼的点「复制一份」，再到定制工作台里改成你想要的样式。</p>
+        <p class="text-[12px] text-ink-3">官方提供的模板，挑一个顺眼的新建你的版本，再到定制工作台里改成你想要的样式。</p>
         <Button @click="openBlankDialog">
           从空白新建
         </Button>
@@ -574,7 +574,7 @@ const editing = ref<UserTemplateRow | null>(null)
             <div class="pt-1">
               <Button size="sm" :loading="busyId === 'fork:' + b.id" @click="fork(b.id)">
                 <PhPlus :size="12" />
-                复制一份
+                基于此模板新建
               </Button>
             </div>
           </div>
