@@ -294,3 +294,35 @@ func TestEmitClientGone(t *testing.T) {
 		t.Errorf("断开后不应再请求模型: %d 次", n)
 	}
 }
+
+// 思考增量透传：推理模型的 reasoning_content 分片 → CustEvThink 事件（正文之外的
+// 通道），最终答复不受影响。非推理模型没有该字段，一条 think 事件都不会有。
+func TestCustomizeThinkStream(t *testing.T) {
+	s, _, id := newTraceService(t, "think")
+	llm, _ := newFakeLLM(t, [][]string{
+		{
+			chunkSSE("fake-model", `{"index":0,"delta":{"role":"assistant","reasoning_content":"先看看当前"},"finish_reason":null}`, ""),
+			chunkSSE("fake-model", `{"index":0,"delta":{"reasoning_content":"主色再定对比。"},"finish_reason":null}`, ""),
+			chunkSSE("fake-model", `{"index":0,"delta":{"content":"好的"},"finish_reason":null}`, ""),
+			chunkSSE("fake-model", `{"index":0,"delta":{},"finish_reason":"stop"}`, ""),
+			chunkSSE("fake-model", "", `{"prompt_tokens":5,"completion_tokens":9,"total_tokens":14}`),
+		},
+	})
+
+	var thinks []string
+	reply, err := s.Customize(t.Context(), 9, id, "把主色调一下", llm, func(ev CustEvent) error {
+		if ev.Type == CustEvThink {
+			thinks = append(thinks, ev.Content)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Customize: %v", err)
+	}
+	if reply != "好的" {
+		t.Errorf("答复 = %q", reply)
+	}
+	if got := strings.Join(thinks, ""); got != "先看看当前主色再定对比。" {
+		t.Errorf("思考增量不对: %q", got)
+	}
+}

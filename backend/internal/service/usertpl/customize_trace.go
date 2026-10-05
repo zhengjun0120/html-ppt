@@ -42,6 +42,7 @@ const (
 	CustEvToolProgress = "tool_progress" // 大参数工具（write_style/write_demo）生成中的字节数心跳
 	CustEvToolDone     = "tool_done"     // 工具执行完毕（Content = 结果摘要）
 	CustEvDelta        = "delta"         // 模型正文增量（不经 finish 直接回话的收尾轮）
+	CustEvThink        = "think"         // 模型思考增量（reasoning_content，非推理模型不会有）
 	CustEvDone         = "done"
 	CustEvError        = "error"
 )
@@ -164,6 +165,19 @@ func (s *Service) custStream(ctx context.Context, sess *customizeSession, llm LL
 			if emitErr := emit(CustEvent{Type: CustEvDelta, Content: delta.Content}); emitErr != nil {
 				stream.Close()
 				return openai.ChatCompletionMessage{}, "", openai.CompletionUsage{}, fmt.Errorf("事件推送失败: %w", emitErr)
+			}
+		}
+		// 思考增量（deepseek 系推理模型的 reasoning_content，与文稿侧 EventTypeThink
+		// 同一提取方式：SDK 不认识这个字段，走原始 JSON ExtraFields）
+		if emit != nil {
+			if f, ok := delta.JSON.ExtraFields["reasoning_content"]; ok {
+				var reasoning string
+				if err := json.Unmarshal([]byte(f.Raw()), &reasoning); err == nil && reasoning != "" {
+					if emitErr := emit(CustEvent{Type: CustEvThink, Content: reasoning}); emitErr != nil {
+						stream.Close()
+						return openai.ChatCompletionMessage{}, "", openai.CompletionUsage{}, fmt.Errorf("事件推送失败: %w", emitErr)
+					}
+				}
 			}
 		}
 	}

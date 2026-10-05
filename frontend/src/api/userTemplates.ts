@@ -155,8 +155,8 @@ export async function fetchTemplateStyle(id: string): Promise<string> {
 
 /** 定制对话的 SSE 事件（后端 usertpl.CustEvent，窄集合） */
 export interface CustomizeEvent {
-  type: 'tool_start' | 'tool_progress' | 'tool_done' | 'delta' | 'done' | 'error'
-  content?: string // delta 文本 / tool_done 结果摘要 / error 消息
+  type: 'tool_start' | 'tool_progress' | 'tool_done' | 'delta' | 'think' | 'done' | 'error'
+  content?: string // delta 文本 / think 思考增量 / tool_done 结果摘要 / error 消息
   tool_name?: string
   tool_call_id?: string
   tool_index?: number

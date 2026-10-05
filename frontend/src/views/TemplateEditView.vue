@@ -22,7 +22,7 @@ const toast = useToast()
 const utId = String(route.params.id)
 const row = ref<UserTemplateRow | null>(null)
 const name = ref('')
-const messages = ref<{ role: 'user' | 'agent'; text: string }[]>([])
+const messages = ref<{ role: 'user' | 'agent'; text: string; think?: string }[]>([])
 const input = ref('')
 const sending = ref(false)
 const publishing = ref(false)
@@ -36,15 +36,21 @@ const previewKeyedSrc = computed(() => previewKey.value + ':' + previewSrc.value
 const checking = ref(false)
 const checkupReport = ref<PublishReport | null>(null)
 
-// —— 对话进行中的实时活动（工具气泡 + 字节数进度 + 流式草稿）——//
+// —— 对话进行中的实时活动（思考流 + 工具气泡 + 字节数进度 + 流式草稿）——//
 interface ActivityStep {
   name: string
   brief: string
   bytes: number
   running: boolean
 }
-const activity = ref<{ steps: ActivityStep[]; draft: string } | null>(null)
+const activity = ref<{ steps: ActivityStep[]; draft: string; think: string } | null>(null)
 const chatBody = ref<HTMLElement | null>(null)
+
+// 思考流预览：折叠行显示最新一行（与文稿对话 ChatMessages 的 think 块同一交互）
+function thinkPreview(text: string): string {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  return lines.length ? lines[lines.length - 1] : ''
+}
 
 const TOOL_LABEL: Record<string, string> = {
   write_tokens: '改设计 token',
@@ -59,7 +65,7 @@ const TOOL_LABEL: Record<string, string> = {
 }
 
 watch(
-  () => [messages.value.length, activity.value?.steps.length, activity.value?.draft.length],
+  () => [messages.value.length, activity.value?.steps.length, activity.value?.draft.length, activity.value?.think.length],
   async () => {
     await nextTick()
     chatBody.value?.scrollTo({ top: chatBody.value.scrollHeight })
@@ -224,7 +230,7 @@ async function send() {
   input.value = ''
   messages.value.push({ role: 'user', text })
   sending.value = true
-  activity.value = { steps: [], draft: '' }
+  activity.value = { steps: [], draft: '', think: '' }
   const stepByIndex = new Map<number, ActivityStep>()
   const stepByCall = new Map<string, ActivityStep>()
   try {
@@ -256,8 +262,15 @@ async function send() {
         case 'delta':
           act.draft += ev.content ?? ''
           break
+        case 'think':
+          act.think += ev.content ?? ''
+          break
         case 'done':
-          messages.value.push({ role: 'agent', text: ev.reply || '（本轮无回复）' })
+          messages.value.push({
+            role: 'agent',
+            text: ev.reply || '（本轮无回复）',
+            think: act.think || undefined, // 思考过程随消息留存（与文稿对话一致，可回看）
+          })
           if (ev.dirty) {
             previewKey.value += 1 // 已写入磁盘，刷新预览
             if (styleOpen.value) void loadStyle() // 对话可能整体重写过 style.css
@@ -569,10 +582,21 @@ async function unpublish() {
             class="rounded-control px-3 py-2 text-[12.5px] leading-relaxed"
             :class="m.role === 'user' ? 'ml-6 bg-accent-soft text-ink' : 'mr-2 bg-surface-2 text-ink'"
           >
+            <details v-if="m.think" class="mb-1 border-l-2 border-line-strong pl-2.5 text-[11.5px] text-ink-3">
+              <summary class="cursor-pointer select-none hover:text-ink-2">已展开思考过程</summary>
+              <div class="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap break-words">{{ m.think }}</div>
+            </details>
             {{ m.text }}
           </div>
           <!-- 进行中的工具气泡 + 生成进度 + 流式草稿 -->
           <div v-if="activity" class="mr-2 rounded-control bg-surface-2 px-3 py-2 text-[12.5px]">
+            <!-- 思考流：折叠行实时显示最新一行（与文稿对话的思考块同一交互） -->
+            <details v-if="activity.think" class="border-l-2 border-line-strong py-0.5 pl-2.5 text-[12px] text-ink-3">
+              <summary class="cursor-pointer select-none truncate hover:text-ink-2" :title="activity.think">
+                {{ thinkPreview(activity.think) || '思考中…' }}
+              </summary>
+              <div class="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap break-words">{{ activity.think }}</div>
+            </details>
             <div v-for="(s, i) in activity.steps" :key="i" class="flex items-center gap-2 py-0.5">
               <PhCircleNotch v-if="s.running" :size="12" class="shrink-0 animate-spin text-accent" />
               <PhCheck v-else :size="12" class="shrink-0 text-success" />
@@ -586,7 +610,7 @@ async function unpublish() {
               </span>
             </div>
             <p v-if="activity.draft" class="mt-1 whitespace-pre-wrap break-words text-ink-2">{{ activity.draft }}</p>
-            <p v-if="!activity.steps.length && !activity.draft" class="animate-pulse text-ink-3">正在思考…</p>
+            <p v-if="!activity.steps.length && !activity.draft && !activity.think" class="animate-pulse text-ink-3">正在思考…</p>
           </div>
         </div>
         <div class="border-t border-line p-2">
