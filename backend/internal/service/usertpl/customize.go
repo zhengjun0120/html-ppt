@@ -129,6 +129,37 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 		},
 	}),
 	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "add_layout",
+		Description: openai.String("新增一个版式（写新骨架 + 登记类名 + 可选新 CSS + 可选 demo 示例页），服务端全量校验、失败自动整体回滚。什么时候用：用户想要的内容现有版式装不下（如要三步流程、对比表格、时间线）。要求：layout_id 用小写字母开头的短横线命名（3-40 位）；skeleton 必须是单个顶层 <section class=\"slide …\" data-layout=\"layout_id\">，带 {{中文占位符}}，可带 <div class=\"notes\">讲稿</div>；classes 列出骨架里用到的每一个类（base 原语 + 新类都算），骨架里出现而未声明的类会被拒；fingerprint 从 8 词表选一个（满版居中=hero，纵向条列=stack，卡片阵列=cards，左右分栏=split，代码主导=code，表格行=table，数据图表=chart，大段引用=quote）；新类名必须在 css_append 里给规则（.tpl- 作用域写法、禁网络外链）——只复用既有类就不用传；demo_html 建议提供（完整 <section>，预览与质量体检靠它），占位符用具体示例文案。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout_id":   map[string]any{"type": "string", "description": "版式 id：小写字母开头，3-40 位小写字母/数字/短横线（如 blank-flow）"},
+				"name":        map[string]any{"type": "string", "description": "版式名称（≤40 字）"},
+				"use":         map[string]any{"type": "string", "description": "用途：什么内容适合用它，写具体（≤200 字），直接影响生成时的选择"},
+				"roles":       map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"cover", "toc", "divider", "content", "data", "quote", "code", "cta", "thanks"}}, "description": "适用场景（≤3 个）：决定生成时哪些页面角色会选中它"},
+				"fingerprint": map[string]any{"type": "string", "enum": []string{"hero", "stack", "cards", "split", "code", "table", "chart", "quote"}, "description": "视觉指纹：节奏校验按它判「连续页面长得一样」"},
+				"classes":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "该版式的合法类名全集：骨架里用到的每个类都必须在这里（含 base 原语如 slide/kicker/h2/grid/card/mt-* 等）"},
+				"skeleton":    map[string]any{"type": "string", "description": "骨架 HTML：单个顶层 <section>，data-layout=layout_id，只准用 classes 里声明的类，{{中文占位符 · 提示}} 风格"},
+				"css_append":  map[string]any{"type": "string", "description": "可选：新类名的 CSS 规则（追加到 style.css 末尾，.tpl- 作用域，禁网络外链）；只用既有类就不用传"},
+				"demo_html":   map[string]any{"type": "string", "description": "可选但建议：demo 示例页（完整 <section>，data-layout=layout_id，用具体示例文案代替占位符）"},
+				"constraints": map[string]any{"type": "string", "description": "可选：内容约束（如「2-4 步；每步 12-30 字」）"},
+			},
+			"required": []string{"layout_id", "name", "use", "roles", "fingerprint", "classes", "skeleton"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "remove_layout",
+		Description: openai.String("删除一个版式：自动清理 demo 里引用它的示例页，并做死锁健康检查——删后正文（content）候选不足 3 个会被拒绝（5 页以上的 deck 会因同版式连续超限无合法解），此时应先建议用户加新版式。失败自动整体回滚。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout_id": map[string]any{"type": "string", "description": "要删除的版式 id（结构契约里登记的）"},
+			},
+			"required": []string{"layout_id"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 		Name:        "finish",
 		Description: openai.String("本轮定制结束。把做了什么、让用户去看哪里复述给用户。"),
 		Parameters: openai.FunctionParameters{
@@ -399,6 +430,28 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 			return warning, true
 		}
 		return "版式元数据已更新（template.json 为权威，注册表已重挂，生成侧立即生效）。", true
+	case "add_layout":
+		var in AddLayoutSpec
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		summary, err := s.AddLayout(row.UserID, row.ID, in)
+		if err != nil {
+			return "新增版式失败: " + err.Error(), false
+		}
+		return summary, true
+	case "remove_layout":
+		var in struct {
+			LayoutID string `json:"layout_id"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		summary, err := s.RemoveLayout(row.UserID, row.ID, in.LayoutID)
+		if err != nil {
+			return "删除版式失败: " + err.Error(), false
+		}
+		return summary, true
 	case "finish":
 		var out struct {
 			Reply string `json:"reply"`
@@ -527,10 +580,13 @@ func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
 		"必须保留 body 的 tpl- 作用域类与 /assets/deck-v2/runtime.js 引用。\n" +
 		"- 改版式的适用场景（role）或名称/用途：set_layout_roles / set_layout_meta——" +
 		"layout 传下方结构契约里登记的版式 id。\n" +
+		"- 加/删版式：add_layout / remove_layout——服务端全量校验、失败自动回滚；" +
+		"骨架只准用 classes 里声明的类，新类名的 CSS 必须随 css_append 一起提交。\n" +
 		"- 改模板名/描述：set_meta。\n\n" +
 		"纪律：\n" +
 		"- 一次改动要成套（改主色时同步考虑 --accent-2/--accent-3 的协调，以及文字在新底色上的可读性）。\n" +
-		"- 结构契约：不要发明 layouts.md 里没有的版式；类名沿用模板既有体系。role 只能从词表选：" +
+		"- 结构契约：加/删版式只能走 add_layout / remove_layout，不要用 write_demo 顺手发明版式；" +
+		"改样式时类名沿用模板既有体系。role 只能从词表选：" +
 		"cover/toc/divider/content/data/quote/code/cta/thanks，每个版式最多 3 个。\n" +
 		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
 		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +

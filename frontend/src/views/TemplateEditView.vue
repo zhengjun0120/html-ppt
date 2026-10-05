@@ -53,6 +53,8 @@ const TOOL_LABEL: Record<string, string> = {
   set_meta: '改名称/描述',
   set_layout_roles: '改版式适用场景',
   set_layout_meta: '改版式名称/用途',
+  add_layout: '新增版式',
+  remove_layout: '删除版式',
   finish: '汇报总结',
 }
 
@@ -443,7 +445,7 @@ async function unpublish() {
             <div v-else-if="!contract" class="py-8 text-center text-[12px] text-ink-3">结构契约加载失败，请刷新重试</div>
             <template v-else>
               <p class="mb-3 text-[11.5px] leading-relaxed text-ink-3">
-                共 {{ contract.layouts.length }} 个版式。「适用场景」决定生成时哪些页面角色会选中它（同一版式最多 3 个）；骨架与类名是生成侧的硬契约，只能在这里看、不能改。
+                共 {{ contract.layouts.length }} 个版式。「适用场景」决定生成时哪些页面角色会选中它（同一版式最多 3 个）。骨架与类名是生成侧的硬契约；增删版式走右侧对话（模型写骨架后自动过注册表校验，失败自动回滚）。
               </p>
               <div class="space-y-3">
                 <div v-for="l in contract.layouts" :key="l.id" class="rounded-card border border-line bg-surface-2 p-3">

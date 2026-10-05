@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"html-ppt/backend/internal/service/template"
 )
@@ -331,4 +332,589 @@ func syncRolesLine(md, layoutID string, roles []string) (string, bool) {
 		return md, false
 	}
 	return md[:start] + newBlock + md[end:], true
+}
+
+// ---------- 层 3：对话加/删版式（骨架 + 类名 + CSS 的结构编辑） ----------
+//
+// 与层 2（元数据补丁）的本质差别：加/删动的是结构性文件，挂载校验失败的概率
+// 不低（模型写的骨架类名可能不存在、双向登记可能不一致），而结构坏的模板会让
+// 面板（读挂载快照）与生成侧脱节。所以写路径是"内存快照 → 落盘 → MountUser →
+// 失败整体回滚再恢复挂载"，盘上永远不留坏状态；历史版本（五件套 bundle）是
+// 第二重兜底。
+//
+// 数量契约（数量：class=N 行）v1 不开放：骨架类计数自动化会把 h2=1 这类
+// 非并列元素误登记成契约，需要模型显式声明才有意义——留待手动编辑或后续迭代。
+
+const (
+	maxSkeletonBytes  = 128 << 10
+	maxDemoHTMLBytes  = 128 << 10
+	maxCSSAppendBytes = 64 << 10
+	maxClasses        = 60
+	maxConstraintsLen = 120
+)
+
+// layoutFingerprints 指纹词表（与 template 包 loadTemplate 的校验同源——
+// 8 个视觉模式；add_layout 必填显式声明，不做骨架推断）。
+var layoutFingerprints = map[string]bool{
+	"hero": true, "stack": true, "cards": true, "split": true,
+	"code": true, "table": true, "chart": true, "quote": true,
+}
+
+var (
+	newLayoutIDRe = regexp.MustCompile(`^[a-z][a-z0-9_-]{2,39}$`)
+	newClassRe    = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
+	// 骨架/demo 片段里的 class 属性（片段校验用）
+	skeletonClassAttrRe = regexp.MustCompile(`class="([^"]*)"`)
+)
+
+// AddLayoutSpec add_layout 工具参数（对话是唯一入口）。CSSAppend 承载新类名的
+// 样式规则——合法类名必须在 base∪模板文件里真实存在，而模板类来自 style.css
+// 选择器与 index.html class token，所以"新类名"与"新 CSS"必须一次原子提交。
+type AddLayoutSpec struct {
+	LayoutID    string   `json:"layout_id"`
+	Name        string   `json:"name"`
+	Use         string   `json:"use"`
+	Roles       []string `json:"roles"`
+	Fingerprint string   `json:"fingerprint"`
+	Classes     []string `json:"classes"`
+	Skeleton    string   `json:"skeleton"`
+	CSSAppend   string   `json:"css_append,omitempty"`
+	DemoHTML    string   `json:"demo_html,omitempty"`
+	Constraints string   `json:"constraints,omitempty"`
+}
+
+// normalize 去首尾空白、去空项、类名去重（保序）。
+func (sp *AddLayoutSpec) normalize() {
+	sp.LayoutID = strings.TrimSpace(sp.LayoutID)
+	sp.Name = strings.TrimSpace(sp.Name)
+	sp.Use = strings.TrimSpace(sp.Use)
+	sp.Fingerprint = strings.TrimSpace(sp.Fingerprint)
+	sp.Constraints = strings.TrimSpace(sp.Constraints)
+	sp.Roles = normalizeRoles(sp.Roles)
+	classes := sp.Classes[:0]
+	seen := map[string]bool{}
+	for _, c := range sp.Classes {
+		c = strings.TrimSpace(c)
+		if c == "" || seen[c] {
+			continue
+		}
+		seen[c] = true
+		classes = append(classes, c)
+	}
+	sp.Classes = classes
+	sp.CSSAppend = strings.TrimSpace(sp.CSSAppend)
+	sp.DemoHTML = strings.TrimSpace(sp.DemoHTML)
+}
+
+// validate 预检：命名/词表/长度/黑名单。类名是否"真实存在"（base∪模板文件）
+// 不在这里查——MountUser 全量校验是权威，失败由回滚兜底。
+func (sp AddLayoutSpec) validate() error {
+	if !newLayoutIDRe.MatchString(sp.LayoutID) {
+		return fmt.Errorf("版式 id %q 不合法：小写字母开头，3-40 位小写字母/数字/短横线", sp.LayoutID)
+	}
+	if sp.Name == "" {
+		return errors.New("缺少版式名称")
+	}
+	if len([]rune(sp.Name)) > maxLayoutNameLen {
+		return fmt.Errorf("版式名称超 %d 字", maxLayoutNameLen)
+	}
+	if sp.Use == "" {
+		return errors.New("缺少用途描述（生成模型按它决定什么时候用这个版式）")
+	}
+	if len([]rune(sp.Use)) > maxLayoutUseLen {
+		return fmt.Errorf("用途超 %d 字", maxLayoutUseLen)
+	}
+	if len(sp.Constraints) > maxConstraintsLen {
+		return fmt.Errorf("内容约束超 %d 字", maxConstraintsLen)
+	}
+	if len(sp.Roles) > maxLayoutRoleCnt {
+		return fmt.Errorf("角色最多 %d 个", maxLayoutRoleCnt)
+	}
+	if !layoutFingerprints[sp.Fingerprint] {
+		return fmt.Errorf("指纹 %q 不在词表（hero/stack/cards/split/code/table/chart/quote）", sp.Fingerprint)
+	}
+	if len(sp.Classes) == 0 || len(sp.Classes) > maxClasses {
+		return fmt.Errorf("合法类名需 1-%d 个", maxClasses)
+	}
+	for _, c := range sp.Classes {
+		if !newClassRe.MatchString(c) {
+			return fmt.Errorf("类名 %q 不合法（小写字母开头的字母/数字/短横线）", c)
+		}
+	}
+	if sp.Skeleton == "" {
+		return errors.New("缺少骨架代码")
+	}
+	if len(sp.Skeleton) > maxSkeletonBytes {
+		return fmt.Errorf("骨架 %d 字节超上限 %d", len(sp.Skeleton), maxSkeletonBytes)
+	}
+	if len(sp.DemoHTML) > maxDemoHTMLBytes {
+		return fmt.Errorf("demo_html %d 字节超上限 %d", len(sp.DemoHTML), maxDemoHTMLBytes)
+	}
+	if len(sp.CSSAppend) > maxCSSAppendBytes {
+		return fmt.Errorf("css_append %d 字节超上限 %d", len(sp.CSSAppend), maxCSSAppendBytes)
+	}
+	if err := scanSkeleton(sp.Skeleton, sp.LayoutID, sp.Classes); err != nil {
+		return fmt.Errorf("骨架校验未过: %w", err)
+	}
+	if sp.DemoHTML != "" {
+		if err := scanSkeleton(sp.DemoHTML, sp.LayoutID, sp.Classes); err != nil {
+			return fmt.Errorf("demo_html 校验未过: %w", err)
+		}
+	}
+	if sp.CSSAppend != "" {
+		if err := scanCSS(sp.CSSAppend); err != nil {
+			return fmt.Errorf("css_append 校验未过: %w", err)
+		}
+	}
+	return nil
+}
+
+// scanSkeleton 版式片段校验：单个顶层 section、data-layout 一致、危险内容黑名单、
+// 用到的类必须都在声明清单里（给模型精准报错；类是否真实存在由 MountUser 终审）。
+func scanSkeleton(fragment, layoutID string, classes []string) error {
+	if !utf8.ValidString(fragment) {
+		return errors.New("含非法 UTF-8 字节")
+	}
+	trim := strings.TrimSpace(fragment)
+	if !strings.HasPrefix(trim, "<section") || !strings.HasSuffix(trim, "</section>") {
+		return errors.New("必须是单个顶层 <section>…</section> 片段")
+	}
+	low := strings.ToLower(trim)
+	for _, bad := range []string{"<script", "<iframe", "<object", "<embed", "javascript:"} {
+		if strings.Contains(low, bad) {
+			return fmt.Errorf("含被禁用的 %q", bad)
+		}
+	}
+	for _, ev := range []string{" onload=", " onerror=", " onclick=", " onmouseover=", " onfocus="} {
+		if strings.Contains(low, ev) {
+			return fmt.Errorf("含内联事件 %q", strings.TrimSpace(ev))
+		}
+	}
+	if strings.Count(trim, "<section") != 1 || strings.Count(trim, "</section>") != 1 {
+		return errors.New("必须是单个顶层 <section>（骨架里不允许出现嵌套/额外的 section）")
+	}
+	m := demoLayoutRe.FindStringSubmatch(trim)
+	if m == nil {
+		return errors.New(`缺 data-layout 属性`)
+	}
+	if m[1] != layoutID {
+		return fmt.Errorf("data-layout=%q 与版式 id %q 不一致", m[1], layoutID)
+	}
+	allowed := map[string]bool{}
+	for _, c := range classes {
+		allowed[c] = true
+	}
+	for _, attr := range skeletonClassAttrRe.FindAllStringSubmatch(trim, -1) {
+		for _, tok := range strings.Fields(attr[1]) {
+			if !newClassRe.MatchString(tok) {
+				continue // 形状怪的 token 交给 MountUser 报
+			}
+			if !allowed[tok] {
+				return fmt.Errorf("骨架用了类 .%s，但 classes 清单里没有（骨架里用到的每个类都必须声明）", tok)
+			}
+		}
+	}
+	return nil
+}
+
+// AddLayout 新增版式：预检 → 持锁 → 四文件落盘（css 追加/json 加条目/md 加条目/
+// demo 追加页）→ MountUser → 失败整体回滚并恢复挂载。成功返回给模型的摘要。
+func (s *Service) AddLayout(userID uint, id string, spec AddLayoutSpec) (string, error) {
+	row, err := s.GetOwned(userID, id)
+	if err != nil {
+		return "", err
+	}
+	if row.Status == "published" || row.Status == "publishing" {
+		return "", ErrPublished
+	}
+	// 词表校验在 normalize 之前：normalizeRoles 会静默丢弃非法词，
+	// 模型写错必须收到明确报错而不是被悄悄清空。
+	for _, r := range spec.Roles {
+		if !layoutRoles[r] {
+			return "", fmt.Errorf("角色 %q 不在词表（cover/toc/divider/content/data/quote/code/cta/thanks）", r)
+		}
+	}
+	spec.normalize()
+	if err := spec.validate(); err != nil {
+		return "", err
+	}
+
+	unlock := s.lockUT(id)
+	defer unlock()
+
+	dir := s.Dir(id)
+	paths := map[string]string{
+		"template.json": filepath.Join(dir, "template.json"),
+		"layouts.md":    filepath.Join(dir, "layouts.md"),
+		"style.css":     filepath.Join(dir, "style.css"),
+		"index.html":    filepath.Join(dir, "index.html"),
+	}
+	snap := map[string]string{}
+	for name, p := range paths {
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			return "", fmt.Errorf("读 %s 失败: %w", name, err)
+		}
+		snap[name] = string(raw)
+	}
+
+	// template.json：重名检查 + 追加条目
+	var meta map[string]any
+	if err := json.Unmarshal([]byte(snap["template.json"]), &meta); err != nil {
+		return "", fmt.Errorf("template.json 解析失败: %w", err)
+	}
+	layouts, _ := meta["layouts"].([]any)
+	for _, it := range layouts {
+		if m, ok := it.(map[string]any); ok && m["id"] == spec.LayoutID {
+			return "", fmt.Errorf("版式 id %q 已存在", spec.LayoutID)
+		}
+	}
+	entry := map[string]any{
+		"id": spec.LayoutID, "name": spec.Name, "use": spec.Use, "roles": spec.Roles,
+	}
+	if spec.Constraints != "" {
+		entry["constraints"] = spec.Constraints
+	}
+	meta["layouts"] = append(layouts, entry)
+
+	// layouts.md：文件尾追加条目
+	newMD := snap["layouts.md"] + "\n" + renderLayoutEntry(spec)
+	// style.css：追加新类名规则
+	newCSS := snap["style.css"]
+	if spec.CSSAppend != "" {
+		newCSS += "\n" + spec.CSSAppend + "\n"
+	}
+	// index.html：demo 示例页
+	newIDX := snap["index.html"]
+	demoNote := ""
+	if spec.DemoHTML != "" {
+		var ok bool
+		if newIDX, ok = appendDemoSection(newIDX, spec.DemoHTML); !ok {
+			return "", errors.New("index.html 缺 SLIDES 挂载标记，无法追加示例页")
+		}
+	} else {
+		demoNote = "（未附 demo 示例页：预览与质量体检看不到它，建议补一页）"
+	}
+
+	restore := func() {
+		_ = atomicWriteFile(paths["template.json"], []byte(snap["template.json"]))
+		_ = atomicWriteFile(paths["layouts.md"], []byte(snap["layouts.md"]))
+		_ = atomicWriteFile(paths["style.css"], []byte(snap["style.css"]))
+		_ = atomicWriteFile(paths["index.html"], []byte(snap["index.html"]))
+		_ = s.remountUT(id) // 回滚后恢复原挂载
+	}
+	if err := atomicWriteFile(paths["template.json"], marshalIndent(meta)); err != nil {
+		restore()
+		return "", fmt.Errorf("写 template.json 失败: %w", err)
+	}
+	if err := atomicWriteFile(paths["layouts.md"], []byte(newMD)); err != nil {
+		restore()
+		return "", fmt.Errorf("写 layouts.md 失败: %w", err)
+	}
+	if newCSS != snap["style.css"] {
+		if err := atomicWriteFile(paths["style.css"], []byte(newCSS)); err != nil {
+			restore()
+			return "", fmt.Errorf("写 style.css 失败: %w", err)
+		}
+	}
+	if newIDX != snap["index.html"] {
+		if err := atomicWriteFile(paths["index.html"], []byte(newIDX)); err != nil {
+			restore()
+			return "", fmt.Errorf("写 index.html 失败: %w", err)
+		}
+	}
+	if err := s.remountUT(id); err != nil {
+		restore()
+		return "", fmt.Errorf("注册表校验未过，已整体回滚：%v。按报错修正后重试", err)
+	}
+	summary := fmt.Sprintf("新增版式「%s」（%s）：角色 %s，指纹 %s。当前共 %d 个版式。",
+		spec.Name, spec.LayoutID, roleListCN(spec.Roles), spec.Fingerprint, len(layouts)+1)
+	if demoNote != "" {
+		summary += " " + demoNote
+	}
+	_ = s.recordVersionUT(id, OpStruct, summary)
+	return summary, nil
+}
+
+// RemoveLayout 删除版式：清理 template.json/layouts.md 条目与 demo 引用页，
+// 删前做死锁健康检查（content 候选 <3 阻塞——R101 下 plan_pages 无合法解），
+// 指纹降级与 cover/thanks 缺失降级为警告（就近退化可用）。
+func (s *Service) RemoveLayout(userID uint, id, layoutID string) (string, error) {
+	row, err := s.GetOwned(userID, id)
+	if err != nil {
+		return "", err
+	}
+	if row.Status == "published" || row.Status == "publishing" {
+		return "", ErrPublished
+	}
+
+	unlock := s.lockUT(id)
+	defer unlock()
+
+	dir := s.Dir(id)
+	paths := map[string]string{
+		"template.json": filepath.Join(dir, "template.json"),
+		"layouts.md":    filepath.Join(dir, "layouts.md"),
+		"index.html":    filepath.Join(dir, "index.html"),
+	}
+	snap := map[string]string{}
+	for name, p := range paths {
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			return "", fmt.Errorf("读 %s 失败: %w", name, err)
+		}
+		snap[name] = string(raw)
+	}
+
+	var meta map[string]any
+	if err := json.Unmarshal([]byte(snap["template.json"]), &meta); err != nil {
+		return "", fmt.Errorf("template.json 解析失败: %w", err)
+	}
+	layouts, _ := meta["layouts"].([]any)
+	idx := -1
+	for i, it := range layouts {
+		if m, ok := it.(map[string]any); ok && m["id"] == layoutID {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		return "", fmt.Errorf("版式 %q 未登记", layoutID)
+	}
+	victim, _ := layouts[idx].(map[string]any)
+	display := layoutDisplay(victim)
+
+	remaining := make([]map[string]any, 0, len(layouts)-1)
+	kept := make([]any, 0, len(layouts)-1)
+	for i, it := range layouts {
+		if i == idx {
+			continue
+		}
+		kept = append(kept, it)
+		if m, ok := it.(map[string]any); ok {
+			remaining = append(remaining, m)
+		}
+	}
+	if len(remaining) == 0 {
+		return "", errors.New("这是最后一个版式，删除后模板无法生成任何页面")
+	}
+	contentCount, hasCover, hasThanks := 0, false, false
+	for _, m := range remaining {
+		for _, r := range entryRoles(m) {
+			switch r {
+			case "content":
+				contentCount++
+			case "cover":
+				hasCover = true
+			case "thanks":
+				hasThanks = true
+			}
+		}
+	}
+	if contentCount < 3 {
+		return "", fmt.Errorf("删掉「%s」后正文（content）候选只剩 %d 个：5 页以上的 deck 会因同版式连续超限在 plan_pages 死锁。先加一个新版式再来删", display, contentCount)
+	}
+	patterns := layoutMDPatterns(snap["layouts.md"])
+	warnings := removalWarnings(remaining, patterns, hasCover, hasThanks)
+
+	meta["layouts"] = kept
+	newTJ := marshalIndent(meta)
+	newMD, mdOK := removeLayoutMD(snap["layouts.md"], layoutID)
+	newIDX, removed := removeDemoSections(snap["index.html"], layoutID)
+
+	restore := func() {
+		_ = atomicWriteFile(paths["template.json"], []byte(snap["template.json"]))
+		_ = atomicWriteFile(paths["layouts.md"], []byte(snap["layouts.md"]))
+		_ = atomicWriteFile(paths["index.html"], []byte(snap["index.html"]))
+		_ = s.remountUT(id)
+	}
+	if err := atomicWriteFile(paths["template.json"], newTJ); err != nil {
+		restore()
+		return "", fmt.Errorf("写 template.json 失败: %w", err)
+	}
+	if mdOK {
+		if err := atomicWriteFile(paths["layouts.md"], []byte(newMD)); err != nil {
+			restore()
+			return "", fmt.Errorf("写 layouts.md 失败: %w", err)
+		}
+	}
+	if removed > 0 {
+		if err := atomicWriteFile(paths["index.html"], []byte(newIDX)); err != nil {
+			restore()
+			return "", fmt.Errorf("写 index.html 失败: %w", err)
+		}
+	}
+	if err := s.remountUT(id); err != nil {
+		restore()
+		return "", fmt.Errorf("注册表校验未过，已整体回滚：%v", err)
+	}
+	summary := fmt.Sprintf("删除版式「%s」（%s），demo 引用页清理 %d 页。当前共 %d 个版式。",
+		display, layoutID, removed, len(kept))
+	if len(warnings) > 0 {
+		summary += " 注意：" + strings.Join(warnings, "；")
+	}
+	_ = s.recordVersionUT(id, OpStruct, summary)
+	return summary, nil
+}
+
+// entryRoles 读 template.json 条目的 roles（any 形状安全解包）。
+func entryRoles(entry map[string]any) []string {
+	raw, _ := entry["roles"].([]any)
+	out := make([]string, 0, len(raw))
+	for _, r := range raw {
+		if s, ok := r.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// layoutMDPatterns 从 layouts.md 提取 版式 id → 指纹（删除警告用；缺指纹行的不计入）。
+var mdPatternRe = regexp.MustCompile(`(?m)^指纹[：:]\s*(\S+)\s*$`)
+
+func layoutMDPatterns(md string) map[string]string {
+	out := map[string]string{}
+	head := regexp.MustCompile(`(?m)^##\s+([A-Za-z][A-Za-z0-9_-]*)`)
+	matches := head.FindAllStringSubmatchIndex(md, -1)
+	for i, h := range matches {
+		id := md[h[2]:h[3]]
+		end := len(md)
+		if i+1 < len(matches) {
+			end = matches[i+1][2]
+		}
+		if m := mdPatternRe.FindStringSubmatch(md[h[0]:end]); m != nil {
+			out[id] = m[1]
+		}
+	}
+	return out
+}
+
+// removalWarnings 删除后的非阻塞降级提示。
+func removalWarnings(remaining []map[string]any, patterns map[string]string, hasCover, hasThanks bool) []string {
+	var out []string
+	distinct := map[string]bool{}
+	for _, m := range remaining {
+		if fp := patterns[fmt.Sprint(m["id"])]; fp != "" && layoutFingerprints[fp] {
+			distinct[fp] = true
+		}
+	}
+	if len(distinct) > 0 && len(distinct) < 4 {
+		out = append(out, fmt.Sprintf("视觉指纹只剩 %d 种（<4）：假多样性检查会停用，注意别让连续页面长得一样", len(distinct)))
+	}
+	if !hasCover {
+		out = append(out, "没有任何版式声明 cover 角色：封面页会按用途就近退化，建议给某个满版版式勾上封面")
+	}
+	if !hasThanks {
+		out = append(out, "没有任何版式声明 thanks 角色：收尾页会就近退化")
+	}
+	return out
+}
+
+// roleListCN 角色清单的可读形态（报错与摘要用）。
+func roleListCN(roles []string) string {
+	if len(roles) == 0 {
+		return "无（不限场景）"
+	}
+	return strings.Join(roles, "/")
+}
+
+// renderLayoutEntry 把新条目渲染成 layouts.md 的文本块（格式与脚手架条目一致）。
+func renderLayoutEntry(spec AddLayoutSpec) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "## %s（%s）\n", spec.LayoutID, spec.Name)
+	fmt.Fprintf(&b, "指纹：%s\n\n", spec.Fingerprint)
+	fmt.Fprintf(&b, "用途：%s\n", spec.Use)
+	fmt.Fprintf(&b, "适用 role：%s。\n", roleListMD(spec.Roles))
+	if spec.Constraints != "" {
+		fmt.Fprintf(&b, "内容约束：%s\n", spec.Constraints)
+	}
+	fmt.Fprintf(&b, "\n合法类名：%s\n\n", strings.Join(spec.Classes, ", "))
+	fmt.Fprintf(&b, "```html\n%s\n```\n", strings.TrimSpace(spec.Skeleton))
+	return b.String()
+}
+
+// roleListMD layouts.md 文档行的角色形态。
+func roleListMD(roles []string) string {
+	if len(roles) == 0 {
+		return "（无，不限场景）"
+	}
+	return strings.Join(roles, "、")
+}
+
+// appendDemoSection 把示例 section 插到 SLIDES:END 标记前。
+func appendDemoSection(idxHTML, demoHTML string) (string, bool) {
+	end := strings.Index(idxHTML, slidesEndMark)
+	if end < 0 {
+		return idxHTML, false
+	}
+	return idxHTML[:end] + strings.TrimSpace(demoHTML) + "\n" + idxHTML[end:], true
+}
+
+// removeDemoSections 删除 SLIDES 区间内所有 data-layout == layoutID 的顶层
+// section（契约：不嵌套，首个 </section> 即边界）。返回新全文与删除数。
+func removeDemoSections(idxHTML, layoutID string) (string, int) {
+	start := strings.Index(idxHTML, slidesStartMark)
+	if start < 0 {
+		return idxHTML, 0
+	}
+	relEnd := strings.Index(idxHTML[start:], slidesEndMark)
+	if relEnd < 0 {
+		return idxHTML, 0
+	}
+	segStart := start + len(slidesStartMark)
+	segEnd := start + relEnd
+	seg := idxHTML[segStart:segEnd]
+
+	var b strings.Builder
+	b.WriteString(idxHTML[:segStart])
+	removed := 0
+	rest := seg
+	for {
+		i := strings.Index(rest, "<section")
+		if i < 0 {
+			b.WriteString(rest)
+			break
+		}
+		relJ := strings.Index(rest[i:], "</section>")
+		if relJ < 0 {
+			b.WriteString(rest)
+			break
+		}
+		secEnd := i + relJ + len("</section>")
+		sec := rest[i:secEnd]
+		if m := demoLayoutRe.FindStringSubmatch(sec); m != nil && m[1] == layoutID {
+			removed++
+		} else {
+			b.WriteString(rest[:secEnd])
+		}
+		rest = rest[secEnd:]
+	}
+	b.WriteString(idxHTML[segEnd:])
+	return b.String(), removed
+}
+
+// removeLayoutMD 从 layouts.md 删除该条目块（多吃的空行按一个换行归还）。
+func removeLayoutMD(md, layoutID string) (string, bool) {
+	head := "## " + layoutID
+	start := strings.Index(md, head)
+	if start < 0 {
+		return md, false
+	}
+	end := len(md)
+	if i := strings.Index(md[start+1:], "\n## "); i >= 0 {
+		end = start + 1 + i
+	}
+	cutFrom := start
+	for cutFrom > 0 && (md[cutFrom-1] == '\n' || md[cutFrom-1] == '\r') {
+		cutFrom--
+	}
+	return md[:cutFrom] + "\n" + md[end:], true
+}
+
+// marshalIndent JSON 缩进输出（与模板既有格式一致）。
+func marshalIndent(v any) []byte {
+	out, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return []byte("{}")
+	}
+	return out
 }
