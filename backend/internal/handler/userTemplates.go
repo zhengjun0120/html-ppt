@@ -106,6 +106,17 @@ func (h *Handler) CommunityTemplates(c *gin.Context) {
 	for _, m := range rows {
 		if id, ok := m["id"].(string); ok {
 			m["canvas"], m["variants"] = h.templateVisuals(id)
+			// 封面缩略图的内容版本前缀：与我的模板清单同口径，前端拼
+			// /templates/:id/thumb?v= 拉快照（社区模板已公开，鉴权路由任何
+			// 登录用户可读；tplthumb 对 ut-* 走带 token 的 demo 路由渲染）
+			if h.templates != nil {
+				if v, err := h.templates.ContentVersion(id); err == nil && len(v) >= 8 {
+					m["thumb"] = v[:8]
+				}
+				if t, err := h.templates.Get(id); err == nil && t.DemoPages > 0 {
+					m["demo_pages"] = t.DemoPages
+				}
+			}
 		}
 	}
 	response.OK(c, rows)

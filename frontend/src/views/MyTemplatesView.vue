@@ -252,6 +252,15 @@ const previewSrc = computed(() => {
 function openBuiltinPreview(b: TemplateMeta) {
   preview.value = { kind: 'builtin', id: b.id, name: b.name, canvas: b.canvas, pages: b.demo_pages }
 }
+function openCommunityPreview(c: CommunityTemplate) {
+  preview.value = {
+    kind: 'user',
+    id: c.id,
+    name: c.name,
+    canvas: c.canvas ?? { w: 1920, h: 1080 },
+    pages: c.demo_pages,
+  }
+}
 function openUserPreview(row: UserTemplateRow) {
   const base = row.base_id ? metaOf.value.get(row.base_id) : undefined
   preview.value = {
@@ -399,19 +408,71 @@ const editing = ref<UserTemplateRow | null>(null)
     <div class="mt-8">
       <h2 class="text-[14px] font-bold">社区模板</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">其他用户发布并通过门禁的模板，可以直接选用或再派生。</p>
-      <div v-if="community.length" class="mt-3 flex flex-wrap gap-2">
-        <span
+      <div v-if="community.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
+        <div
           v-for="c in community"
           :key="c.id"
-          class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-ink-2"
+          class="mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent"
+          title="点击预览"
+          @click="openCommunityPreview(c)"
         >
-          {{ c.name }}
-          <span class="text-ink-3">来自 {{ c.author }}</span>
-          <button class="cursor-pointer font-semibold text-accent hover:underline" @click="fork(c.id)">
-            <PhPlus :size="11" class="inline" />
-            派生
-          </button>
-        </span>
+          <div
+            :ref="setBoxRef('community-' + c.id)"
+            :data-card-id="'community-' + c.id"
+            class="relative w-full overflow-hidden border-b border-line bg-surface-2"
+            :style="{ aspectRatio: `${(c.canvas?.w ?? 1920)} / ${(c.canvas?.h ?? 1080)}` }"
+          >
+            <img
+              v-if="c.thumb && !thumbFailed['community-' + c.id]"
+              :src="templateApi.thumbUrl(c.id, c.thumb)"
+              :alt="c.name + ' 封面'"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              @error="thumbFailed['community-' + c.id] = true"
+            />
+            <iframe
+              v-else
+              :src="userTemplatePreviewUrl(c.id)"
+              class="pointer-events-none absolute left-0 top-0 border-0"
+              :style="{
+                width: `${c.canvas?.w ?? 1920}px`,
+                height: `${c.canvas?.h ?? 1080}px`,
+                transform: `scale(${scaleFor('community-' + c.id, c.canvas ?? { w: 1920, h: 1080 })})`,
+                transformOrigin: 'top left',
+              }"
+              sandbox="allow-scripts"
+              loading="lazy"
+              :title="c.name + ' 预览'"
+            />
+            <button
+              type="button"
+              class="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ink-2 shadow-sm backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+              title="放大预览"
+              @click.stop="openCommunityPreview(c)"
+            >
+              <PhArrowsOutSimple :size="11" />
+              预览
+            </button>
+          </div>
+          <div class="p-3">
+            <div class="flex items-center gap-2">
+              <p class="truncate text-[13.5px] font-semibold" :title="c.name">{{ c.name }}</p>
+              <button
+                type="button"
+                class="ml-auto inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11px] font-semibold text-accent transition-colors hover:bg-accent-soft"
+                title="以此模板为起点创建自己的副本"
+                @click.stop="fork(c.id)"
+              >
+                <PhPlus :size="11" class="inline" />
+                派生
+              </button>
+            </div>
+            <p class="mt-0.5 truncate text-[11px] text-ink-3">
+              来自 {{ c.author }}<template v-if="c.description"> · {{ c.description }}</template>
+            </p>
+          </div>
+        </div>
       </div>
       <p v-else class="mt-2 text-[12px] text-ink-3">还没有公开的社区模板——发布第一个吧。</p>
     </div>

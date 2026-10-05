@@ -34,6 +34,10 @@ export interface CommunityTemplate {
   updated_at: string
   canvas?: { w: number; h: number }
   variants?: TemplateVariant[]
+  /** 封面缩略图的内容版本前缀，拼 templateApi.thumbUrl 用 */
+  thumb?: string
+  /** demo 页数（预览弹窗的"第 X / N 页"） */
+  demo_pages?: number
 }
 
 export interface PublishReport {
