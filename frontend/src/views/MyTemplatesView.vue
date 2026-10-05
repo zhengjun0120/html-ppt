@@ -624,7 +624,7 @@ const editing = ref<UserTemplateRow | null>(null)
     <Dialog
       :open="blankOpen"
       title="从空白新建"
-      desc="空白起点：自带两个最基础的说明版式，配色、字体、版式都在工作台里从零定制。"
+      desc="空白起点：自带九个最简版式（封面到收尾，正文另有四种可选），配色、字体、版式都在工作台里从零定制。"
       confirm-text="创建"
       @confirm="createBlank"
       @close="blankOpen = false"

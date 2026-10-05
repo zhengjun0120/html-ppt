@@ -21,6 +21,7 @@ import (
 
 	"github.com/openai/openai-go/v3"
 
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 )
@@ -93,6 +94,38 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 				"html": map[string]any{"type": "string", "description": "index.html 完整新全文"},
 			},
 			"required": []string{"html"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "set_layout_roles",
+		Description: openai.String("改某个版式的适用场景（role，覆盖式不是增量）。roles 是词表的子集、最多 3 个：cover（封面）/toc（目录）/divider（章节）/content（正文）/data（数据）/quote（金句）/code（代码）/cta（行动号召）/thanks（收尾）。用户说「这个版式也能用在数据页」「封面不要用这个」时用它；空数组 = 清空限定（任何场景按内容性质选用）。layout 必须是结构契约里登记的版式 id。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout": map[string]any{"type": "string", "description": "版式 id（结构契约里登记的，如 blank-data）"},
+				"roles": map[string]any{
+					"type": "array",
+					"items": map[string]any{
+						"type": "string",
+						"enum": []string{"cover", "toc", "divider", "content", "data", "quote", "code", "cta", "thanks"},
+					},
+					"description": "新的角色清单（整组替换，最多 3 个）；空数组 = 清空限定",
+				},
+			},
+			"required": []string{"layout", "roles"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "set_layout_meta",
+		Description: openai.String("改某个版式给生成模型看的名称与用途描述（直接影响生成时的版式选择，写得越具体模型选得越准）。name ≤40 字、use ≤200 字；不改的字段省略。layout 必须是结构契约里登记的版式 id。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout": map[string]any{"type": "string", "description": "版式 id（结构契约里登记的）"},
+				"name":   map[string]any{"type": "string", "description": "新版式名称；不改就省略"},
+				"use":    map[string]any{"type": "string", "description": "新用途描述（一句话说清什么内容适合用它）；不改就省略"},
+			},
+			"required": []string{"layout"},
 		},
 	}),
 	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
@@ -339,6 +372,33 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (st
 			}
 		}
 		return "名称/描述已更新。", len(updates) > 0
+	case "set_layout_roles", "set_layout_meta":
+		var in struct {
+			Layout string   `json:"layout"`
+			Roles  []string `json:"roles"`
+			Name   *string  `json:"name"`
+			Use    *string  `json:"use"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		patch := LayoutMetaPatch{}
+		if name == "set_layout_roles" {
+			patch.Roles = &in.Roles
+		} else {
+			if in.Name == nil && in.Use == nil {
+				return "name/use 至少传一个（只改适用场景请用 set_layout_roles）", false
+			}
+			patch.Name, patch.Use = in.Name, in.Use
+		}
+		warning, err := s.UpdateLayoutMeta(row.UserID, row.ID, in.Layout, patch)
+		if err != nil {
+			return "修改失败: " + err.Error(), false
+		}
+		if warning != "" {
+			return warning, true
+		}
+		return "版式元数据已更新（template.json 为权威，注册表已重挂，生成侧立即生效）。", true
 	case "finish":
 		var out struct {
 			Reply string `json:"reply"`
@@ -465,14 +525,47 @@ func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
 		"style.css——必须基于下方当前全文改造，输出完整新全文。\n" +
 		"- 改 demo 页面结构（加删页面/卡片、改布局骨架）：用 write_demo 整体重写 index.html——" +
 		"必须保留 body 的 tpl- 作用域类与 /assets/deck-v2/runtime.js 引用。\n" +
+		"- 改版式的适用场景（role）或名称/用途：set_layout_roles / set_layout_meta——" +
+		"layout 传下方结构契约里登记的版式 id。\n" +
 		"- 改模板名/描述：set_meta。\n\n" +
 		"纪律：\n" +
 		"- 一次改动要成套（改主色时同步考虑 --accent-2/--accent-3 的协调，以及文字在新底色上的可读性）。\n" +
-		"- 结构契约：不要发明 layouts.md 里没有的版式；类名沿用模板既有体系。\n" +
+		"- 结构契约：不要发明 layouts.md 里没有的版式；类名沿用模板既有体系。role 只能从词表选：" +
+		"cover/toc/divider/content/data/quote/code/cta/thanks，每个版式最多 3 个。\n" +
 		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
 		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +
 		"- 模板名：" + row.Name + "（base：" + row.BaseID + "）。\n\n" +
+		"结构契约（版式清单：id · 名称 · 角色 · 用途）：\n" + s.layoutContractSummary(row.ID) + "\n\n" +
 		"当前 style.css 全文：\n" + styleAll
+}
+
+// layoutContractSummary 读 template.json 的 layouts 清单拼成模型可读的结构摘要
+// （system prompt 注入用；读盘而非注册表——会话里刚发生的修改也能反映）。
+// 读不到时返回占位说明，不让定制对话直接失败。
+func (s *Service) layoutContractSummary(id string) string {
+	raw, err := os.ReadFile(filepath.Join(s.Dir(id), "template.json"))
+	if err != nil {
+		return "（读不到 template.json，本模板没有版式元数据可改）"
+	}
+	var meta struct {
+		Layouts []template.LayoutMeta `json:"layouts"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return "（template.json 解析失败，本模板没有版式元数据可改）"
+	}
+	var b strings.Builder
+	for _, l := range meta.Layouts {
+		roles := "无（不限场景）"
+		if len(l.Roles) > 0 {
+			roles = strings.Join(l.Roles, "/")
+		}
+		use := l.Use
+		if use == "" {
+			use = "（未填用途）"
+		}
+		fmt.Fprintf(&b, "- %s（%s）· 角色：%s · %s\n", l.ID, l.Name, roles, use)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 var bodyClassRe = regexp.MustCompile(`<body class="([^"]*)">`)

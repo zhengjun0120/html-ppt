@@ -30,6 +30,7 @@ const OP_LABEL: Record<string, string> = {
   chat: '对话定制',
   edit: '手动修改',
   meta: '元数据',
+  structure: '调整版式',
   restore: '恢复',
 }
 

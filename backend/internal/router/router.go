@@ -120,6 +120,9 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/user-templates/:id/editor", h.GetUserTemplateEditor)
 			guarded.PUT("/user-templates/:id/file", h.SaveUserTemplateFile)
 			guarded.PUT("/user-templates/:id/style", h.SaveUserTemplateStyle)
+			// 结构契约（版式面板）：读挂载态契约 / 改版式元数据（roles/名称/用途）
+			guarded.GET("/user-templates/:id/structure", h.GetUserTemplateStructure)
+			guarded.PUT("/user-templates/:id/layouts/:layoutId", h.UpdateUserTemplateLayout)
 			// 鉴权预览与资产（工作台/编辑弹窗；草稿收口后不再依赖公开静态）
 			guarded.GET("/user-templates/:id/demo", h.GetUserTemplateDemo)
 			guarded.GET("/user-templates/:id/assets/:name", h.GetUserTemplateAsset)

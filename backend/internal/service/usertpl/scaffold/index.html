@@ -17,12 +17,66 @@
   <h1 class="h1 mt-m">{{主标题}}</h1>
   <p class="lede mt-m">{{一句话定位}}</p>
 </section>
+<section class="slide" data-layout="blank-toc">
+  <p class="kicker">{{kicker · 目录}}</p>
+  <h2 class="h2 mt-s">{{议程标题，≤12 字}}</h2>
+  <div class="bl-toc mt-l">
+    <div class="bl-toc-row"><span class="mono bl-toc-n">{{01}}</span><span class="bl-toc-t">{{条目标题}}</span><span class="dim bl-toc-d">{{一句看点}}</span></div>
+    <div class="bl-toc-row"><span class="mono bl-toc-n">{{02}}</span><span class="bl-toc-t">{{条目标题}}</span><span class="dim bl-toc-d">{{一句看点}}</span></div>
+    <div class="bl-toc-row"><span class="mono bl-toc-n">{{03}}</span><span class="bl-toc-t">{{条目标题}}</span><span class="dim bl-toc-d">{{一句看点}}</span></div>
+  </div>
+</section>
+<section class="slide full" data-layout="blank-divider">
+  <p class="kicker">{{kicker · part 1}}</p>
+  <h1 class="h1 mt-m">{{章节标题}}</h1>
+  <p class="lede mt-m">{{这一部分回答的问题}}</p>
+  <div class="bl-ghost">{{1}}</div>
+</section>
 <section class="slide" data-layout="blank-content">
   <h2 class="h2">{{小节标题}}</h2>
   <div class="grid g2 mt-l">
     <div class="card"><h4 class="h4">{{卡标题}}</h4><p class="dim mt-s">{{卡正文}}</p></div>
     <div class="card"><h4 class="h4">{{卡标题}}</h4><p class="dim mt-s">{{卡正文}}</p></div>
   </div>
+</section>
+<section class="slide" data-layout="blank-list">
+  <p class="kicker">{{kicker · 要点}}</p>
+  <h2 class="h2 mt-s">{{这组要点回答什么}}</h2>
+  <div class="stack mt-l">
+    <div class="row bl-list-row"><span class="mono bl-list-n">{{01}}</span><div><p class="bl-list-t">{{要点一句话}}</p><p class="dim mt-s">{{展开说明}}</p></div></div>
+    <div class="row bl-list-row"><span class="mono bl-list-n">{{02}}</span><div><p class="bl-list-t">{{要点一句话}}</p><p class="dim mt-s">{{展开说明}}</p></div></div>
+    <div class="row bl-list-row"><span class="mono bl-list-n">{{03}}</span><div><p class="bl-list-t">{{要点一句话}}</p><p class="dim mt-s">{{展开说明}}</p></div></div>
+  </div>
+</section>
+<section class="slide" data-layout="blank-split">
+  <p class="kicker">{{kicker · 对照}}</p>
+  <h2 class="h2 mt-s">{{对比主题}}</h2>
+  <div class="grid g2 mt-l">
+    <div class="card bl-panel"><h4 class="h4">{{左侧方案名}}</h4><p class="dim mt-s">{{左侧说明}}</p><p class="bl-panel-note">{{左侧适用前提}}</p></div>
+    <div class="card bl-panel"><h4 class="h4">{{右侧方案名}}</h4><p class="dim mt-s">{{右侧说明}}</p><p class="bl-panel-note">{{右侧适用前提}}</p></div>
+  </div>
+</section>
+<section class="slide" data-layout="blank-data">
+  <p class="kicker">{{kicker · 关键数字}}</p>
+  <h2 class="h2 mt-s">{{这些数字回答什么}}</h2>
+  <div class="grid g3 mt-l">
+    <div class="bl-stat"><div class="bl-stat-v">{{数值}}</div><div class="bl-stat-l">{{指标名}}</div><p class="dim bl-stat-note">{{口径或对比}}</p></div>
+    <div class="bl-stat"><div class="bl-stat-v">{{数值}}</div><div class="bl-stat-l">{{指标名}}</div><p class="dim bl-stat-note">{{口径或对比}}</p></div>
+    <div class="bl-stat"><div class="bl-stat-v">{{数值}}</div><div class="bl-stat-l">{{指标名}}</div><p class="dim bl-stat-note">{{口径或对比}}</p></div>
+  </div>
+  <p class="dim bl-source mt-m">{{来源：数据出处}}</p>
+</section>
+<section class="slide full" data-layout="blank-quote">
+  <p class="kicker">{{kicker · 引用}}</p>
+  <p class="bl-quote mt-l">{{引文}}</p>
+  <p class="mono bl-quote-src mt-m">—— {{出处}}</p>
+  <p class="dim mt-m">{{为什么记下它}}</p>
+</section>
+<section class="slide full" data-layout="blank-thanks">
+  <p class="kicker">{{kicker · 收尾}}</p>
+  <h1 class="h1 mt-m">{{收束标题}}</h1>
+  <p class="lede mt-m">{{带走的几件事或一句致谢}}</p>
+  <p class="mono bl-contact mt-l">{{联系方式或下一步}}</p>
 </section>
 <!-- SLIDES:END -->
 </div>

@@ -263,6 +263,61 @@ func (h *Handler) SaveUserTemplateStyle(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
+// GetUserTemplateStructure GET /api/user-templates/:id/structure —— 结构契约
+// （版式面板数据源）：挂载态的版式清单（含骨架/指纹/数量契约）+ demo 页映射 +
+// rules.md。面板展示的是"生成侧实际生效的契约"，所以读注册表快照而非磁盘文件。
+func (h *Handler) GetUserTemplateStructure(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	v, err := h.usertpl.StructureContract(uid, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, usertpl.ErrPublished) {
+			response.Err(c, http.StatusConflict, err.Error())
+			return
+		}
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, v)
+}
+
+// UpdateUserTemplateLayout PUT /api/user-templates/:id/layouts/:layoutId —— 改
+// 版式元数据（name/use/roles，可选补丁）。warning 非空 = 重挂未过（盘上已是新值、
+// 已记历史），前端当提示展示。
+func (h *Handler) UpdateUserTemplateLayout(c *gin.Context) {
+	if h.usertpl == nil {
+		response.Err(c, http.StatusServiceUnavailable, "用户模板不可用（需要数据库）")
+		return
+	}
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	var req usertpl.LayoutMetaPatch
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Err(c, http.StatusBadRequest, "请求体不是合法 JSON")
+		return
+	}
+	warning, err := h.usertpl.UpdateLayoutMeta(uid, c.Param("id"), c.Param("layoutId"), req)
+	if err != nil {
+		if errors.Is(err, usertpl.ErrPublished) {
+			response.Err(c, http.StatusConflict, err.Error())
+			return
+		}
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true, "warning": warning})
+}
+
 // ListUserTemplateHistory GET /api/user-templates/:id/history —— 版本历史（新→旧）。
 func (h *Handler) ListUserTemplateHistory(c *gin.Context) {
 	if h.usertpl == nil {

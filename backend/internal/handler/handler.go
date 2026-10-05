@@ -71,6 +71,9 @@ type UserTemplateService interface {
 	GetOwned(userID uint, id string) (*store.UserTemplate, error)
 	SaveIndexHTML(userID uint, id, html string) error
 	SaveStyleCSS(userID uint, id, css string) error
+	// 结构契约（版式面板）：读挂载态契约 / 改版式元数据（roles/名称/用途）
+	StructureContract(userID uint, id string) (*usertpl.StructureContractView, error)
+	UpdateLayoutMeta(userID uint, id, layoutID string, patch usertpl.LayoutMetaPatch) (string, error)
 	// Peek 无归属读行（受控公开端点先看状态再决定鉴权，user-template-history-plan.md §3.5）
 	Peek(id string) (*store.UserTemplate, error)
 	// 历史版本（user-template-history-plan.md §4）：列表/回滚/删单版/清空

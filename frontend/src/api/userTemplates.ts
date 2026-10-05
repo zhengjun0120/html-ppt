@@ -50,9 +50,42 @@ export interface PublishReport {
 export interface UTVersionMeta {
   version: string
   time: number
-  operation: 'fork' | 'chat' | 'edit' | 'meta' | 'restore'
+  operation: 'fork' | 'chat' | 'edit' | 'meta' | 'structure' | 'restore'
   detail: string
   changed?: string[]
+}
+
+// —— 结构契约（版式面板；后端 usertpl.StructureContractView）——//
+
+export interface StructureLayout {
+  id: string
+  name: string
+  use?: string
+  roles?: string[]
+  constraints?: string
+  /** 视觉指纹（hero/stack/cards/split/code/table/chart/quote），节奏校验按它判"假多样性" */
+  pattern?: string
+  /** 数量契约：该类元素必须恰好 N 个 */
+  repeats?: Record<string, number>
+  skeleton?: string
+}
+
+export interface DemoPage {
+  no: number
+  layout: string
+}
+
+export interface StructureContract {
+  layouts: StructureLayout[]
+  demo_pages: DemoPage[]
+  rules_md: string
+}
+
+/** 版式元数据补丁：null 字段 = 不改（与"清空"语义区分） */
+export interface LayoutMetaPatch {
+  name?: string
+  use?: string
+  roles?: string[]
 }
 
 export const userTemplateApi = {
@@ -87,6 +120,14 @@ export const userTemplateApi = {
       method: 'PUT',
       body: css,
       raw: true,
+    }),
+  /** 结构契约（版式面板）：挂载态版式清单 + demo 页映射 + rules.md */
+  structure: (id: string) => request<StructureContract>(`/api/user-templates/${id}/structure`),
+  /** 改版式元数据（roles/名称/用途）；warning 非空 = 重挂未过（已记历史） */
+  updateLayout: (id: string, layoutId: string, patch: LayoutMetaPatch) =>
+    request<{ ok: boolean; warning?: string }>(`/api/user-templates/${id}/layouts/${layoutId}`, {
+      method: 'PUT',
+      body: patch,
     }),
   // —— 历史版本（docs/user-template-history-plan.md §4）——//
   history: (id: string) => request<UTVersionMeta[]>(`/api/user-templates/${id}/history`),

@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TemplateHistoryDrawer from '@/components/usertpl/TemplateHistoryDrawer.vue'
-import { customizeChatStream, fetchTemplateStyle, userTemplateApi, userTemplatePreviewUrl, type PublishReport, type UserTemplateRow } from '@/api/userTemplates'
+import { customizeChatStream, fetchTemplateStyle, userTemplateApi, userTemplatePreviewUrl, type LayoutMetaPatch, type PublishReport, type StructureContract, type StructureLayout, type UserTemplateRow } from '@/api/userTemplates'
 import Button from '@/components/ui/Button.vue'
 import { useToast } from '@/stores/toast'
 
@@ -51,6 +51,8 @@ const TOOL_LABEL: Record<string, string> = {
   write_style: '重写 style.css',
   write_demo: '重写页面结构',
   set_meta: '改名称/描述',
+  set_layout_roles: '改版式适用场景',
+  set_layout_meta: '改版式名称/用途',
   finish: '汇报总结',
 }
 
@@ -104,7 +106,99 @@ function toggleStyle() {
 function onRestored() {
   previewKey.value += 1
   if (styleOpen.value) void loadStyle()
+  contract.value = null // 回滚可能改了结构契约，回到版式视图时重拉
   void load()
+}
+
+// —— 版式面板（结构契约）：预览 | 版式 双视图切换 ——//
+// 面板展示"生成侧实际生效的契约"（后端读注册表挂载快照）；role 点选即保存。
+
+const ROLE_LABELS: Record<string, string> = {
+  cover: '封面', toc: '目录', divider: '章节', content: '正文',
+  data: '数据', quote: '引用', code: '代码', cta: '行动', thanks: '收尾',
+}
+const ROLE_ORDER = ['cover', 'toc', 'divider', 'content', 'data', 'quote', 'code', 'cta', 'thanks']
+
+const mainView = ref<'preview' | 'layouts'>('preview')
+const contract = ref<StructureContract | null>(null)
+const contractLoading = ref(false)
+const savingLayout = ref('')
+const expandedSkeleton = ref('')
+const editingLayout = ref('')
+const editName = ref('')
+const editUse = ref('')
+
+const published = computed(() => row.value?.status === 'published' || row.value?.status === 'publishing')
+
+/** 版式 → 演示它的 demo 页码列表（徽标用） */
+const demoByLayout = computed(() => {
+  const m = new Map<string, number[]>()
+  for (const p of contract.value?.demo_pages ?? []) {
+    const arr = m.get(p.layout) ?? []
+    arr.push(p.no)
+    m.set(p.layout, arr)
+  }
+  return m
+})
+
+function switchToLayouts() {
+  mainView.value = 'layouts'
+  if (!contract.value && !contractLoading.value) void loadContract()
+}
+
+async function loadContract() {
+  contractLoading.value = true
+  try {
+    contract.value = await userTemplateApi.structure(utId)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '结构契约加载失败')
+  } finally {
+    contractLoading.value = false
+  }
+}
+
+async function saveLayout(l: StructureLayout, patch: LayoutMetaPatch) {
+  if (savingLayout.value || published.value) return
+  savingLayout.value = l.id
+  try {
+    const res = await userTemplateApi.updateLayout(utId, l.id, patch)
+    if (res.warning) toast.error(res.warning)
+    else toast.success('已保存并记入历史')
+    await loadContract()
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '版式保存失败')
+  } finally {
+    savingLayout.value = ''
+  }
+}
+
+async function toggleRole(l: StructureLayout, role: string) {
+  if (savingLayout.value || published.value) return
+  const cur = l.roles ?? []
+  const next = cur.includes(role) ? cur.filter((r) => r !== role) : [...cur, role]
+  if (next.length > 3) {
+    toast.error('一个版式最多 3 个适用场景')
+    return
+  }
+  await saveLayout(l, { roles: next })
+}
+
+function startEditLayout(l: StructureLayout) {
+  editingLayout.value = l.id
+  editName.value = l.name
+  editUse.value = l.use ?? ''
+}
+
+async function saveLayoutMeta(l: StructureLayout) {
+  const patch: LayoutMetaPatch = {}
+  if (editName.value.trim() !== l.name) patch.name = editName.value.trim()
+  if (editUse.value.trim() !== (l.use ?? '')) patch.use = editUse.value.trim()
+  if (!('name' in patch) && !('use' in patch)) {
+    editingLayout.value = ''
+    return
+  }
+  await saveLayout(l, patch)
+  if (!savingLayout.value) editingLayout.value = ''
 }
 
 async function load() {
@@ -165,6 +259,8 @@ async function send() {
           if (ev.dirty) {
             previewKey.value += 1 // 已写入磁盘，刷新预览
             if (styleOpen.value) void loadStyle() // 对话可能整体重写过 style.css
+            if (mainView.value === 'layouts') void loadContract() // 对话可能改了版式元数据
+            else contract.value = null // 回版式视图时重拉
           }
           break
         case 'error':
@@ -283,12 +379,27 @@ async function unpublish() {
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <!-- 预览 -->
+      <!-- 预览 / 版式 双视图 -->
       <div class="lg:col-span-2">
         <div class="overflow-hidden rounded-card border border-line bg-surface">
           <div class="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] text-ink-2">
-            <span>实时预览（demo）</span>
-            <span class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1">
+              <button
+                class="cursor-pointer rounded px-2 py-0.5 transition-colors"
+                :class="mainView === 'preview' ? 'bg-accent-soft font-semibold text-accent' : 'hover:text-ink'"
+                @click="mainView = 'preview'"
+              >
+                实时预览
+              </button>
+              <button
+                class="cursor-pointer rounded px-2 py-0.5 transition-colors"
+                :class="mainView === 'layouts' ? 'bg-accent-soft font-semibold text-accent' : 'hover:text-ink'"
+                @click="switchToLayouts"
+              >
+                版式
+              </button>
+            </div>
+            <span v-if="mainView === 'preview'" class="flex items-center gap-1.5">
               <button
                 class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong"
                 @click="demoPage = Math.max(1, demoPage - 1)"
@@ -314,8 +425,9 @@ async function unpublish() {
                 样式
               </button>
             </span>
+            <span v-else class="text-[11px] text-ink-3">生成时模型按「适用场景 → 版式」选页型；点标签即改</span>
           </div>
-          <div class="h-[460px] overflow-hidden bg-surface-2">
+          <div v-if="mainView === 'preview'" class="h-[460px] overflow-hidden bg-surface-2">
             <iframe
               v-if="row"
               :key="previewKeyedSrc"
@@ -325,7 +437,96 @@ async function unpublish() {
               title="模板定制预览"
             />
           </div>
+          <!-- 版式面板：结构契约（只读部分）+ role 点选 / 名称用途编辑（写路径） -->
+          <div v-else class="max-h-[620px] overflow-y-auto p-3">
+            <div v-if="contractLoading" class="py-8 text-center text-[12px] text-ink-3">加载结构契约…</div>
+            <div v-else-if="!contract" class="py-8 text-center text-[12px] text-ink-3">结构契约加载失败，请刷新重试</div>
+            <template v-else>
+              <p class="mb-3 text-[11.5px] leading-relaxed text-ink-3">
+                共 {{ contract.layouts.length }} 个版式。「适用场景」决定生成时哪些页面角色会选中它（同一版式最多 3 个）；骨架与类名是生成侧的硬契约，只能在这里看、不能改。
+              </p>
+              <div class="space-y-3">
+                <div v-for="l in contract.layouts" :key="l.id" class="rounded-card border border-line bg-surface-2 p-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-[13.5px] font-semibold text-ink">{{ l.name }}</span>
+                    <span class="font-mono text-[11px] text-ink-3">{{ l.id }}</span>
+                    <span v-if="l.pattern" class="rounded-full border border-line px-2 py-0.5 font-mono text-[10.5px] text-ink-3" title="视觉指纹：节奏校验按它判「版面长得一样」的假多样性">{{ l.pattern }}</span>
+                    <span
+                      v-for="n in demoByLayout.get(l.id) ?? []"
+                      :key="n"
+                      class="rounded-full bg-accent-soft px-2 py-0.5 text-[10.5px] text-ink-2"
+                      title="演示该版式的 demo 页"
+                    >
+                      示例 {{ n }}
+                    </span>
+                    <button
+                      class="ml-auto cursor-pointer rounded border border-line px-2 py-0.5 text-[11px] transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-50"
+                      :disabled="published"
+                      :title="published ? '已发布模板先下架再改' : '编辑名称与用途'"
+                      @click="startEditLayout(l)"
+                    >
+                      编辑
+                    </button>
+                  </div>
+                  <p v-if="l.use" class="mt-1.5 text-[12px] leading-relaxed text-ink-2">{{ l.use }}</p>
+                  <p v-if="l.constraints" class="mt-1 text-[11.5px] text-ink-3">约束：{{ l.constraints }}</p>
+                  <p v-if="l.repeats && Object.keys(l.repeats).length" class="mt-1 text-[11.5px] text-ink-3">
+                    数量契约：
+                    <span v-for="(n, cls) in l.repeats" :key="cls" class="mr-2 font-mono">{{ cls }}={{ n }}</span>
+                  </p>
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="text-[11px] text-ink-3">适用场景：</span>
+                    <button
+                      v-for="r in ROLE_ORDER"
+                      :key="r"
+                      class="cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                      :class="(l.roles ?? []).includes(r) ? 'border-accent bg-accent-soft font-semibold text-accent' : 'border-line text-ink-3 hover:border-line-strong'"
+                      :disabled="published || savingLayout === l.id"
+                      :title="published ? '已发布模板先下架再改' : (l.roles ?? []).includes(r) ? '点击取消该场景' : '点击加上该场景'"
+                      @click="toggleRole(l, r)"
+                    >
+                      {{ ROLE_LABELS[r] }}
+                    </button>
+                  </div>
+                  <div v-if="editingLayout === l.id" class="mt-2 space-y-2 rounded-control border border-line bg-surface p-2">
+                    <input
+                      v-model="editName"
+                      class="w-full rounded-control border border-line bg-surface-2 px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus-visible:border-accent"
+                      placeholder="版式名称（≤40 字）"
+                      maxlength="40"
+                    />
+                    <textarea
+                      v-model="editUse"
+                      class="h-[64px] w-full resize-y rounded-control border border-line bg-surface-2 px-2.5 py-1.5 text-[12.5px] leading-relaxed text-ink outline-none focus-visible:border-accent"
+                      placeholder="用途：什么内容适合用这个版式（写具体一点，生成时模型按它选页型；≤200 字）"
+                      maxlength="200"
+                    />
+                    <div class="flex gap-2">
+                      <Button size="sm" variant="primary" :loading="savingLayout === l.id" @click="saveLayoutMeta(l)">保存</Button>
+                      <Button size="sm" @click="editingLayout = ''">取消</Button>
+                    </div>
+                  </div>
+                  <button
+                    v-if="l.skeleton"
+                    class="mt-2 cursor-pointer text-[11px] text-ink-3 hover:text-ink"
+                    @click="expandedSkeleton = expandedSkeleton === l.id ? '' : l.id"
+                  >
+                    {{ expandedSkeleton === l.id ? '收起骨架' : '查看骨架' }}
+                  </button>
+                  <pre
+                    v-if="expandedSkeleton === l.id"
+                    class="mt-1 overflow-x-auto rounded-control bg-surface-2 p-2 font-mono text-[11px] leading-relaxed text-ink-2"
+                  >{{ l.skeleton }}</pre>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div class="mb-1 text-[11.5px] font-semibold text-ink-2">模板质量规则（rules.md，生成时注入模型）</div>
+                <pre class="whitespace-pre-wrap rounded-control bg-surface-2 p-2 font-mono text-[11px] leading-relaxed text-ink-2">{{ contract.rules_md }}</pre>
+              </div>
+            </template>
+          </div>
         </div>
+        <template v-if="mainView === 'preview'">
         <!-- 样式面板：style.css 手动编辑（安全预检与历史同对话路径） -->
         <div v-if="styleOpen" class="mt-3 overflow-hidden rounded-card border border-line bg-surface">
           <div class="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] text-ink-2">
@@ -350,6 +551,7 @@ async function unpublish() {
         <p class="mt-2 text-[11.5px] text-ink-3">
           对话里的每次改动都会实时落盘并记入历史；「质量体检」可随时量测溢出/填充率/字号，发布秒级完成。
         </p>
+        </template>
       </div>
 
       <!-- 定制对话 -->

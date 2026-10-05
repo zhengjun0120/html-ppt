@@ -55,8 +55,37 @@ func TestCreateBlank(t *testing.T) {
 		}
 	}
 	// 注册表里挂上了（生成管线立即可用）
-	if _, err := reg.Get(row.ID); err != nil {
-		t.Errorf("注册表查不到新建的空白模板: %v", err)
+	tpl, err := reg.Get(row.ID)
+	if err != nil {
+		t.Fatalf("注册表查不到新建的空白模板: %v", err)
+	}
+	// 死锁回归（R101 同版式连续 ≥3 阻塞 / R106 同视觉模式连续 ≥3 阻塞）：
+	// content 候选 ≥3 且视觉指纹 ≥4 种，任意长度 deck 的 plan_pages 才有合法解。
+	if len(tpl.Layouts) != 9 {
+		t.Errorf("脚手架版式数 = %d，应为 9", len(tpl.Layouts))
+	}
+	if got := tpl.DistinctPatterns(); got < 4 {
+		t.Errorf("视觉指纹只有 %d 种（R106 启用门槛 4），plan_pages 会死锁", got)
+	}
+	contentCapable := 0
+	for _, l := range tpl.Layouts {
+		for _, r := range l.Roles {
+			if r == "content" {
+				contentCapable++
+				break
+			}
+		}
+	}
+	if contentCapable < 3 {
+		t.Errorf("content 可用版式只有 %d 个（≥3 才能凑出 R101 的间隔），plan_pages 会死锁", contentCapable)
+	}
+	// demo 页与版式一一登记（每个 section 的 data-layout 都在 layouts 里）
+	idx, err := os.ReadFile(filepath.Join(s.Dir(row.ID), "index.html"))
+	if err != nil {
+		t.Fatalf("读 index.html: %v", err)
+	}
+	if got := strings.Count(string(idx), `data-layout="blank-`); got != 9 {
+		t.Errorf("demo section 数 = %d，应为 9", got)
 	}
 	// 起点版本
 	versions, err := s.ListUTVersions(9, row.ID)

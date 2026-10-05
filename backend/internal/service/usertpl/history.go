@@ -32,11 +32,12 @@ const (
 )
 
 const (
-	OpFork    = "fork"    // 克隆初始化（起点基线）
-	OpChat    = "chat"    // 定制对话（一轮有实际文件改动 = 一版）
-	OpEdit    = "edit"    // 手动保存（index.html / style.css）
-	OpMeta    = "meta"    // 改名/描述
-	OpRestore = "restore" // 回滚本身也记版，历史永不重写
+	OpFork    = "fork"      // 克隆初始化（起点基线）
+	OpChat    = "chat"      // 定制对话（一轮有实际文件改动 = 一版）
+	OpEdit    = "edit"      // 手动保存（index.html / style.css）
+	OpMeta    = "meta"      // 改名/描述
+	OpStruct  = "structure" // 版式元数据（roles/名称/用途）
+	OpRestore = "restore"   // 回滚本身也记版，历史永不重写
 )
 
 var utVersionPattern = regexp.MustCompile(`^v\d{6}$`)
