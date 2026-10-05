@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { PhArrowClockwise, PhArrowsOutSimple, PhGlobe, PhGlobeHemisphereWest, PhPencilSimple, PhPlus, PhSpinner, PhTrash } from '@phosphor-icons/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { authedUrl } from '@/api/client'
 import { templateApi, type TemplateMeta } from '@/api/templates'
@@ -26,6 +26,19 @@ import { watch } from 'vue'
 
 const router = useRouter()
 const toast = useToast()
+const route = useRoute()
+
+// —— 二级导航：三个模块各自独立页面（/my-templates/mine|community|builtin），
+// 缺省与非法值回退「我的模板」；数据仍在挂载时一次拉全，切 tab 不重复请求。——//
+type TemplateTab = 'mine' | 'community' | 'builtin'
+const tabs: { value: TemplateTab; label: string }[] = [
+  { value: 'mine', label: '我的模板' },
+  { value: 'community', label: '社区模板' },
+  { value: 'builtin', label: '内置模板' },
+]
+const tab = computed<TemplateTab>(() =>
+  route.params.tab === 'community' || route.params.tab === 'builtin' ? (route.params.tab as TemplateTab) : 'mine',
+)
 const mine = ref<UserTemplateRow[]>([])
 const community = ref<CommunityTemplate[]>([])
 const templates = ref<TemplateMeta[]>([])
@@ -289,12 +302,23 @@ const editing = ref<UserTemplateRow | null>(null)
       </Button>
     </div>
 
+    <!-- 二级导航 -->
+    <nav class="flex flex-wrap gap-2" aria-label="模板分类">
+      <RouterLink
+        v-for="t in tabs"
+        :key="t.value"
+        :to="`/my-templates/${t.value}`"
+        class="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors"
+        :class="tab === t.value ? 'bg-accent text-accent-contrast' : 'bg-surface-2 text-ink-2 hover:text-ink'"
+      >
+        {{ t.label }}
+      </RouterLink>
+    </nav>
+
     <!-- 模块一：我的模板 -->
-    <div class="scroll-mt-4">
-      <h2 class="text-[14px] font-bold">我的模板</h2>
-      <p class="mt-0.5 text-[12px] text-ink-3">你自己派生与定制的模板副本：编辑、发布、下架都在这里。</p>
-    </div>
-    <div v-if="loading" class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div v-if="tab === 'mine'" class="mt-6">
+      <p class="text-[12px] text-ink-3">你自己派生与定制的模板副本：编辑、发布、下架都在这里。</p>
+      <div v-if="loading" class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="i in 3" :key="i" class="overflow-hidden rounded-card border border-line bg-surface">
         <div class="flex h-[130px] items-center justify-center"><PhSpinner :size="20" class="animate-spin text-ink-3" /></div>
       </div>
@@ -408,10 +432,11 @@ const editing = ref<UserTemplateRow | null>(null)
       />
     </div>
 
+    </div>
+
     <!-- 模块二：社区模板 -->
-    <div class="mt-8">
-      <h2 class="text-[14px] font-bold">社区模板</h2>
-      <p class="mt-0.5 text-[12px] text-ink-3">其他用户发布并通过门禁的模板，可以直接选用或再派生。</p>
+    <div v-else-if="tab === 'community'" class="mt-6">
+      <p class="text-[12px] text-ink-3">其他用户发布并通过门禁的模板，可以直接选用或再派生。</p>
       <div v-if="community.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div
           v-for="c in community"
@@ -482,12 +507,9 @@ const editing = ref<UserTemplateRow | null>(null)
     </div>
 
     <!-- 模块三：内置模板 -->
-    <div ref="builtinSection" class="mt-8 scroll-mt-4">
+    <div v-else ref="builtinSection" class="mt-6 scroll-mt-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 class="text-[14px] font-bold">内置模板</h2>
-          <p class="mt-0.5 text-[12px] text-ink-3">官方模板库：选一个接近的起点派生，结构契约继承，定制只动视觉 token，质量有底。</p>
-        </div>
+        <p class="text-[12px] text-ink-3">官方模板库：选一个接近的起点派生，结构契约继承，定制只动视觉 token，质量有底。</p>
         <Button @click="openBlankDialog">
           从空白新建
         </Button>

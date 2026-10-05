@@ -19,7 +19,8 @@ const router = createRouter({
     { path: '/new/template', name: 'wizard-template', component: () => import('@/views/wizard/WizardView.vue') },
     { path: '/new/generating', name: 'wizard-generate', component: () => import('@/views/wizard/WizardView.vue') },
     // 第 5 步 · 成品预览 + 迭代（旧工作台瘦身版）
-    { path: '/my-templates', component: () => import('@/views/MyTemplatesView.vue') },
+    // :tab? = 二级导航（mine/community/builtin），缺省与非法值在视图内回退「我的模板」
+    { path: '/my-templates/:tab?', component: () => import('@/views/MyTemplatesView.vue') },
     { path: '/my-templates/:id/edit', component: () => import('@/views/TemplateEditView.vue') },
     { path: '/decks', component: () => import('@/views/DecksView.vue') },
     { path: '/decks/new', redirect: '/new' },
