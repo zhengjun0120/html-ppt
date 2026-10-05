@@ -47,7 +47,7 @@ const busyId = ref('')
 const publishReport = ref('')
 
 const STATUS_LABELS: Record<string, string> = {
-  draft: '草稿', publishing: '门禁运行中', published: '已公开', failed: '门禁未过',
+  draft: '草稿', publishing: '发布审核中', published: '已公开', failed: '未通过审核',
 }
 
 const metaOf = computed(() => new Map(templates.value.map((t) => [t.id, t])))
@@ -294,7 +294,6 @@ const editing = ref<UserTemplateRow | null>(null)
     <div class="mb-5 flex items-center justify-between">
       <div>
         <h1 class="text-[16px] font-bold">模板</h1>
-        <p class="mt-0.5 text-[12px] text-ink-3">从内置或社区模板派生，对话里定制视觉；过自动门禁后公开给所有人用。</p>
       </div>
       <Button :loading="loading" @click="load">
         <PhArrowClockwise :size="13" />
@@ -436,7 +435,7 @@ const editing = ref<UserTemplateRow | null>(null)
 
     <!-- 模块二：社区模板 -->
     <div v-else-if="tab === 'community'" class="mt-6">
-      <p class="text-[12px] text-ink-3">其他用户发布并通过门禁的模板，可以直接选用或再派生。</p>
+      <p class="text-[12px] text-ink-3">其他用户发布并通过审核的模板，挑一个点「派生」就能变成自己的。</p>
       <div v-if="community.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div
           v-for="c in community"
@@ -509,7 +508,7 @@ const editing = ref<UserTemplateRow | null>(null)
     <!-- 模块三：内置模板 -->
     <div v-else ref="builtinSection" class="mt-6 scroll-mt-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-[12px] text-ink-3">官方模板库：选一个接近的起点派生，结构契约继承，定制只动视觉 token，质量有底。</p>
+        <p class="text-[12px] text-ink-3">官方提供的模板，挑一个顺眼的点「派生」变成自己的副本，再到定制工作台里改成你想要的样式。</p>
         <Button @click="openBlankDialog">
           从空白新建
         </Button>
@@ -625,7 +624,7 @@ const editing = ref<UserTemplateRow | null>(null)
     <Dialog
       :open="blankOpen"
       title="从空白新建"
-      desc="中性灰阶的空白起点：先给两个最小说明版式搭好结构契约，配色、字体、版式都在工作台里从零定制。"
+      desc="空白起点：自带两个最基础的说明版式，配色、字体、版式都在工作台里从零定制。"
       confirm-text="创建"
       @confirm="createBlank"
       @close="blankOpen = false"
