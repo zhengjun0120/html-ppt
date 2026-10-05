@@ -26,7 +26,7 @@ const loaded = ref(false)
 const confirm = ref<null | { kind: 'restore' | 'delete' | 'clear'; version?: string }>(null)
 
 const OP_LABEL: Record<string, string> = {
-  fork: '克隆起点',
+  fork: '复制创建',
   chat: '对话定制',
   edit: '手动修改',
   meta: '元数据',
