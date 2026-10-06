@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhArrowClockwise, PhCheck, PhCircleNotch, PhClockCounterClockwise, PhGlobe, PhPaperPlaneTilt, PhPulse } from '@phosphor-icons/vue'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TemplateHistoryDrawer from '@/components/usertpl/TemplateHistoryDrawer.vue'
@@ -29,8 +29,47 @@ const publishing = ref(false)
 const previewKey = ref(0)
 const demoPage = ref(1)
 
-const previewSrc = computed(() => (row.value ? userTemplatePreviewUrl(utId, demoPage.value) + (previewKey.value ? `&v=${previewKey.value}` : '') : ''))
-const previewKeyedSrc = computed(() => previewKey.value + ':' + previewSrc.value)
+// —— 实时预览（runtime 预览模式协议）——//
+// src 带 ?preview=1 让 demo 内的 runtime.js 进单页锁定模式；翻页向 iframe
+// postMessage {type:'preview-goto', idx}（0 基），iframe 只加载一次、内部按
+// base.css 的 .5s 淡入+位移过渡换页——与文稿编辑器/模板预览弹窗同一套协议。
+// 此前"页码进 src + :key 绑 src"每次翻页整个重建 iframe：白屏一闪、无过渡、
+// 且页码无上界（2026-10-06 用户反馈）。
+// v= 是 cache-bust：刷新按钮/对话改动后递增，:key 只绑它——只有这两类事件
+// 才整帧重建，纯翻页不动 iframe。
+const previewReady = ref(false)
+const previewFrame = ref<HTMLIFrameElement | null>(null)
+const previewSrc = computed(() =>
+  row.value ? userTemplatePreviewUrl(utId) + `&preview=1&v=${previewKey.value}` : '',
+)
+
+function gotoPreviewPage(i: number) {
+  previewFrame.value?.contentWindow?.postMessage({ type: 'preview-goto', idx: i }, '*')
+}
+function onPreviewMessage(e: MessageEvent) {
+  if (e.source !== previewFrame.value?.contentWindow) return
+  if ((e.data as { type?: string } | null)?.type === 'preview-ready') {
+    previewReady.value = true
+    gotoPreviewPage(demoPage.value - 1) // 就绪前点的翻页在这里补发
+  }
+}
+function prevPage() {
+  if (demoPage.value <= 1) return
+  demoPage.value -= 1
+  if (previewReady.value) gotoPreviewPage(demoPage.value - 1)
+}
+function nextPage() {
+  const n = totalPages.value
+  if (n && demoPage.value >= n) return
+  demoPage.value += 1
+  if (previewReady.value) gotoPreviewPage(demoPage.value - 1)
+}
+// 整帧重建（手动刷新 / 对话改动后）必定回到第 1 页：新加载的预览从第一页开始
+function refreshPreview() {
+  previewKey.value += 1
+  demoPage.value = 1
+  previewReady.value = false
+}
 
 // —— 质量体检（渲染量测：溢出/填充率/最小字号；只报告不拦发布）——//
 const checking = ref(false)
@@ -112,9 +151,9 @@ function toggleStyle() {
 }
 
 function onRestored() {
-  previewKey.value += 1
+  refreshPreview()
   if (styleOpen.value) void loadStyle()
-  contract.value = null // 回滚可能改了结构契约，回到版式视图时重拉
+  void loadContract() // 回滚可能改了结构契约
   void load()
 }
 
@@ -147,6 +186,16 @@ const demoByLayout = computed(() => {
     m.set(p.layout, arr)
   }
   return m
+})
+
+/** 总页数（翻页上界与「第 N / M 页」）——必须在 contract 声明之后（TDZ） */
+const totalPages = computed(() => contract.value?.demo_pages.length ?? 0)
+// 对话可能增删 demo 页：契约重拉后页数收缩时把当前页钳回界内
+watch(totalPages, (n) => {
+  if (n && demoPage.value > n) {
+    demoPage.value = n
+    if (previewReady.value) gotoPreviewPage(n - 1)
+  }
 })
 
 function switchToLayouts() {
@@ -222,7 +271,12 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  window.addEventListener('message', onPreviewMessage)
+  void load()
+  void loadContract() // 总页数与版式面板共用，挂载即拉
+})
+onBeforeUnmount(() => window.removeEventListener('message', onPreviewMessage))
 
 async function send() {
   const text = input.value.trim()
@@ -272,10 +326,9 @@ async function send() {
             think: act.think || undefined, // 思考过程随消息留存（与文稿对话一致，可回看）
           })
           if (ev.dirty) {
-            previewKey.value += 1 // 已写入磁盘，刷新预览
+            refreshPreview() // 已写入磁盘，整帧重建回第 1 页
             if (styleOpen.value) void loadStyle() // 对话可能整体重写过 style.css
-            if (mainView.value === 'layouts') void loadContract() // 对话可能改了版式元数据
-            else contract.value = null // 回版式视图时重拉
+            void loadContract() // 对话可能改了版式/页数——总页数与版式面板共用
           }
           break
         case 'error':
@@ -422,19 +475,21 @@ async function unpublish() {
             </div>
             <span v-if="mainView === 'preview'" class="flex items-center gap-1.5">
               <button
-                class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong"
-                @click="demoPage = Math.max(1, demoPage - 1)"
+                class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
+                :disabled="demoPage <= 1"
+                @click="prevPage"
               >
                 ←
               </button>
-              <span class="font-mono text-[11px]">第 {{ demoPage }} 页</span>
+              <span class="font-mono text-[11px]">第 {{ demoPage }}{{ totalPages ? ' / ' + totalPages : '' }} 页</span>
               <button
-                class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong"
-                @click="demoPage = demoPage + 1"
+                class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
+                :disabled="totalPages > 0 && demoPage >= totalPages"
+                @click="nextPage"
               >
                 →
               </button>
-              <button class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong" title="刷新预览" @click="previewKey += 1">
+              <button class="cursor-pointer rounded border border-line px-2 py-0.5 transition-colors hover:border-line-strong" title="刷新预览" @click="refreshPreview">
                 <PhArrowClockwise :size="11" />
               </button>
               <button
@@ -451,7 +506,8 @@ async function unpublish() {
           <div v-if="mainView === 'preview'" class="h-[460px] overflow-hidden bg-surface-2">
             <iframe
               v-if="row"
-              :key="previewKeyedSrc"
+              ref="previewFrame"
+              :key="previewKey"
               :src="previewSrc"
               class="h-full w-full border-0"
               sandbox="allow-scripts"
