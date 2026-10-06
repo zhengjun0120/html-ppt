@@ -13,6 +13,7 @@ package usertpl
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 )
@@ -48,8 +49,11 @@ func scanCSS(css string) error {
 }
 
 // scanHTML index.html 安全预检。禁 runtime.js 之外的一切脚本与 iframe/object/embed、
-// 禁内联事件；并要求 demo 的两个结构前提：有 <section>（页面集）、引用
-// /assets/deck-v2/runtime.js（没有它 demo 无法翻页/单页化）。
+// 禁内联事件；并要求 demo 的结构前提：有 <section>（页面集）、引用
+// /assets/deck-v2/runtime.js（没有它 demo 无法翻页/单页化）、head 里保留
+// style.css 链接与 /assets/deck-v2/ 样式引用——demo 端点靠前者重写到受控资产
+// 地址，后者承载翻页堆叠与字号底线（write_demo 丢 head link 的实测事故
+// 2026-10-06：base.css 没了，所有 slide 掉进文档流，翻页失效且注册表校验不查）。
 func scanHTML(html string) error {
 	if !utf8.ValidString(html) {
 		return fmt.Errorf("index.html 含非法 UTF-8 字节")
@@ -87,5 +91,16 @@ func scanHTML(html string) error {
 	if !strings.Contains(low, "/assets/deck-v2/runtime.js") {
 		return fmt.Errorf("index.html 缺少 /assets/deck-v2/runtime.js 引用（没有它 demo 无法翻页）")
 	}
+	if !strings.Contains(low, `href="style.css"`) {
+		return fmt.Errorf(`index.html 缺 href="style.css" 引用（demo 端点靠它重写到受控资产地址，丢了整页没样式）`)
+	}
+	// 必须有 link 标签引用 /assets/deck-v2/ 样式——runtime.js 的 script 也含这个
+	// 子串，所以按 <link + href 联合匹配，不能用裸子串判
+	if !linkAssetRe.MatchString(low) {
+		return fmt.Errorf("index.html 缺 /assets/deck-v2/ 样式引用（head 里的 base.css 等 link 必须保留，丢了翻页堆叠与字号底线全失效）")
+	}
 	return nil
 }
+
+// linkAssetRe head 里指向框架样式资产的 link 标签。
+var linkAssetRe = regexp.MustCompile(`<link[^>]+href="[^"]*/assets/deck-v2/`)

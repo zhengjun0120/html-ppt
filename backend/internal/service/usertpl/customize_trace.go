@@ -28,7 +28,7 @@ import (
 // CustEvent 定制对话推给前端的事件（SSE 帧 data 体）。
 type CustEvent struct {
 	Type       string `json:"type"`
-	Content    string `json:"content,omitempty"`  // delta 文本 / tool_done 结果摘要 / error 消息
+	Content    string `json:"content,omitempty"` // delta 文本 / tool_done 结果摘要 / error 消息
 	ToolName   string `json:"tool_name,omitempty"`
 	ToolCallID string `json:"tool_call_id,omitempty"`
 	ToolIndex  int64  `json:"tool_index,omitempty"`

@@ -522,7 +522,7 @@ func TestScanSkeleton(t *testing.T) {
 		t.Fatalf("合法片段被拒: %v", err)
 	}
 	cases := map[string]string{
-		"脚本":   `<section class="slide" data-layout="x"><script>a</script></section>`,
+		"脚本":     `<section class="slide" data-layout="x"><script>a</script></section>`,
 		"iframe": `<section class="slide" data-layout="x"><iframe src="//e.com"></iframe></section>`,
 		"嵌套":     `<section class="slide" data-layout="x"><section class="slide"></section></section>`,
 		"内联事件":   `<section class="slide" data-layout="x" onclick="a"><h2 class="h2">{{a}}</h2></section>`,

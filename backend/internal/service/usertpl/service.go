@@ -463,7 +463,7 @@ func layoutPatterns(layoutsMDPath string) map[string]string {
 }
 
 // layoutHeadRe 与注册表解析器同一条规则：## 后第一个 token 是版式 id
-//（id 与中文名之间可以没有空格，如 `## qa（问答收尾）`）。
+// （id 与中文名之间可以没有空格，如 `## qa（问答收尾）`）。
 var layoutHeadRe = regexp.MustCompile(`^##\s*([A-Za-z][A-Za-z0-9_-]*)`)
 
 // ---------- helpers ----------

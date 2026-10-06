@@ -40,16 +40,18 @@ func TestScanCSS(t *testing.T) {
 }
 
 func TestScanHTML(t *testing.T) {
-	good := `<body class="tpl-x"><div class="deck"><section class="slide">a</section></div><script src="/assets/deck-v2/runtime.js"></script></body>`
+	good := `<html><head><link rel="stylesheet" href="/assets/deck-v2/base.css"><link rel="stylesheet" href="style.css"></head><body class="tpl-x"><div class="deck"><section class="slide">a</section></div><script src="/assets/deck-v2/runtime.js"></script></body></html>`
 	if err := scanHTML(good); err != nil {
 		t.Errorf("合法 demo 不应报错: %v", err)
 	}
 	for name, bad := range map[string]string{
-		"第二个脚本":    `<section/>` + `<script src="/evil.js"></script>` + `<script src="/assets/deck-v2/runtime.js"></script>`,
-		"iframe":   `<iframe src="https://evil.com"></iframe><section/><script src="/assets/deck-v2/runtime.js"></script>`,
-		"内联事件":     `<section onload="alert(1)"></section><script src="/assets/deck-v2/runtime.js"></script>`,
-		"缺section": `<div>hello</div><script src="/assets/deck-v2/runtime.js"></script>`,
-		"缺runtime": `<section class="slide">a</section>`,
+		"第二个脚本":        `<section/>` + `<script src="/evil.js"></script>` + `<script src="/assets/deck-v2/runtime.js"></script>`,
+		"iframe":       `<iframe src="https://evil.com"></iframe><section/><script src="/assets/deck-v2/runtime.js"></script>`,
+		"内联事件":         `<section onload="alert(1)"></section><script src="/assets/deck-v2/runtime.js"></script>`,
+		"缺section":     `<div>hello</div><script src="/assets/deck-v2/runtime.js"></script>`,
+		"缺runtime":     `<section class="slide">a</section>`,
+		"丢style.css链接": `<html><head><link rel="stylesheet" href="/assets/deck-v2/base.css"></head><body><div class="deck"><section class="slide">a</section></div><script src="/assets/deck-v2/runtime.js"></script></body></html>`,
+		"丢框架样式link":    `<html><head><link rel="stylesheet" href="style.css"></head><body><div class="deck"><section class="slide">a</section></div><script src="/assets/deck-v2/runtime.js"></script></body></html>`,
 	} {
 		if err := scanHTML(bad); err == nil {
 			t.Errorf("%s 应被拒绝", name)

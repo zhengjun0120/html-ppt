@@ -87,7 +87,7 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 	}),
 	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 		Name:        "write_demo",
-		Description: openai.String("整体重写模板 demo 的 index.html（全文替换）。必须保留 body 上的 tpl- 作用域 class 与 /assets/deck-v2/runtime.js 脚本引用；页面是 .deck 下的 <section class=\"slide\"> 序列，版式与类名沿用模板既有体系（不要发明 layouts.md 里没有的版式）。"),
+		Description: openai.String("整体重写模板 demo 的 index.html（全文替换）。必须保留 head 里的 /assets/deck-v2/ 样式引用（fonts/base/animations.css）与 href=\"style.css\" 链接（丢了 base.css 翻页堆叠和字号底线全失效）、body 上的 tpl- 作用域 class 与 /assets/deck-v2/runtime.js 脚本引用；页面是 .deck 下的 <section class=\"slide\"> 序列，版式与类名沿用模板既有体系（不要发明 layouts.md 里没有的版式）。"),
 		Parameters: openai.FunctionParameters{
 			"type": "object",
 			"properties": map[string]any{
@@ -320,7 +320,7 @@ func truncateNote(s string) string {
 }
 
 // execCustomTool 执行一个定制工具，返回给模型的结果文本与"是否写了文件"
-//（dirty = 本轮对话需要记一条历史版本）。
+// （dirty = 本轮对话需要记一条历史版本）。
 func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (string, bool) {
 	// D2 已发布锁定（修现状问题 C：此前 write_tokens 可绕过门禁改已发布模板）。
 	// 门禁运行态（publishing）同理——量测期间内容不能变。finish 不受影响。
@@ -594,11 +594,11 @@ func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
 		"- 结构契约：加/删版式只能走 add_layout / remove_layout，不要用 write_demo 顺手发明版式；" +
 		"改样式时类名沿用模板既有体系。role 只能从词表选：" +
 		"cover/toc/divider/content/data/quote/code/cta/thanks，每个版式最多 3 个。\n" +
-		"- 品味纪律（去 AI 味；demo 示例文案是生成时模仿的范本，服务端会对 demo 跑 lint 并把提示回给你）："+
-		"文案不写「赋能/无缝/闭环/elevate/seamless」这类腔调词；不用 em-dash（—）；"+
-		"示例数字要有机（47.2% 优于没有语境的 99.99%，编造的数字标「估算」）；"+
-		"示例品牌/人名要真实（不要 Acme、John Doe）。"+
-		"视觉不写纯黑 #000（用近黑如 #17181a），强调色别过饱和，不堆外发光/霓虹效果，"+
+		"- 品味纪律（去 AI 味；demo 示例文案是生成时模仿的范本，服务端会对 demo 跑 lint 并把提示回给你）：" +
+		"文案不写「赋能/无缝/闭环/elevate/seamless」这类腔调词；不用 em-dash（—）；" +
+		"示例数字要有机（47.2% 优于没有语境的 99.99%，编造的数字标「估算」）；" +
+		"示例品牌/人名要真实（不要 Acme、John Doe）。" +
+		"视觉不写纯黑 #000（用近黑如 #17181a），强调色别过饱和，不堆外发光/霓虹效果，" +
 		"卡片阵列避免机械三等分（内容确实等重才用）。\n" +
 		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
 		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +

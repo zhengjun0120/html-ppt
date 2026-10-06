@@ -12,7 +12,7 @@ func TestChangedOnlyIndex(t *testing.T) {
 		t.Fatalf("SaveStyleCSS: %v", err)
 	}
 	// 模拟 v8：编辑弹窗只改 index.html（style 保持 stub）
-	newIndex := "<body class=\"tpl-x\"><div class=\"deck\"><section class=\"slide\">v8</section></div><script src=\"/assets/deck-v2/runtime.js\"></script></body>"
+	newIndex := "<html><head><link rel=\"stylesheet\" href=\"/assets/deck-v2/base.css\"><link rel=\"stylesheet\" href=\"style.css\"></head><body class=\"tpl-x\"><div class=\"deck\"><section class=\"slide\">v8</section></div><script src=\"/assets/deck-v2/runtime.js\"></script></body></html>"
 	if err := s.SaveIndexHTML(uid, id, newIndex); err != nil {
 		t.Fatalf("SaveIndexHTML: %v", err)
 	}

@@ -107,8 +107,10 @@ func TestSaveIndexHTML(t *testing.T) {
 	})
 }
 
-// demoHTML 构造能过 scanHTML 的最小 demo（<section> + 唯一的 runtime.js 脚本）。
+// demoHTML 构造能过 scanHTML 的最小 demo（<section> + 唯一的 runtime.js 脚本 +
+// head 的框架样式 link 与 style.css 引用——2026-10-06 起是 scanHTML 的结构前提）。
 func demoHTML(tag string) string {
-	return `<body class="tpl-x"><div class="deck"><section class="slide">` + tag + `</section></div>` +
-		`<script src="/assets/deck-v2/runtime.js"></script></body>`
+	return `<html><head><link rel="stylesheet" href="/assets/deck-v2/base.css"><link rel="stylesheet" href="style.css"></head>` +
+		`<body class="tpl-x"><div class="deck"><section class="slide">` + tag + `</section></div>` +
+		`<script src="/assets/deck-v2/runtime.js"></script></body></html>`
 }
