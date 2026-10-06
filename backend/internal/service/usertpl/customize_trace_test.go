@@ -125,7 +125,7 @@ func TestCustomizeTraceAndEmit(t *testing.T) {
 	_ = s.recordVersionUT(id, OpFork, "起点")
 
 	var events []CustEvent
-	reply, err := s.Customize(t.Context(), 9, id, "把主色换成蓝色", llm, func(ev CustEvent) error {
+	reply, err := s.Customize(t.Context(), 9, id, "把主色换成蓝色", nil, llm, func(ev CustEvent) error {
 		events = append(events, ev)
 		return nil
 	})
@@ -247,7 +247,7 @@ func TestCustomizeLLMError(t *testing.T) {
 	s, _, id := newTraceService(t, "err")
 	// 第一轮就空流（无任何 chunk 直接结束）→ 累加器没有 finish_reason → 报错
 	llm, _ := newFakeLLM(t, [][]string{{}})
-	if _, err := s.Customize(t.Context(), 9, id, "改个色", llm, nil); err == nil {
+	if _, err := s.Customize(t.Context(), 9, id, "改个色", nil, llm, nil); err == nil {
 		t.Fatal("断流应报错")
 	}
 	walk := filepath.Join(s.traceCfg.Dir, strconv.FormatUint(uint64(customSessionID(id)), 10))
@@ -281,7 +281,7 @@ func TestEmitClientGone(t *testing.T) {
 		toolRound("finish", `{"reply":"不该到达"}`),
 	})
 	gone := errors.New("client gone")
-	_, err := s.Customize(t.Context(), 9, id, "改个色", llm, func(ev CustEvent) error {
+	_, err := s.Customize(t.Context(), 9, id, "改个色", nil, llm, func(ev CustEvent) error {
 		if ev.Type == CustEvToolDone {
 			return gone // 第一个工具执行完就"断开"
 		}
@@ -310,7 +310,7 @@ func TestCustomizeThinkStream(t *testing.T) {
 	})
 
 	var thinks []string
-	reply, err := s.Customize(t.Context(), 9, id, "把主色调一下", llm, func(ev CustEvent) error {
+	reply, err := s.Customize(t.Context(), 9, id, "把主色调一下", nil, llm, func(ev CustEvent) error {
 		if ev.Type == CustEvThink {
 			thinks = append(thinks, ev.Content)
 		}

@@ -497,6 +497,29 @@ func (h *Handler) UnpublishUserTemplate(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
+// maxChatBodyBytes 定制对话请求体上限。文本很小，大头是附图：base64 比原始
+// 字节膨胀 ~4/3，3 张 × 4MB 原图的极限在 16MB，20MB 留了余量。
+const maxChatBodyBytes = 20 << 20
+
+// bindCustomizeChat 两个定制对话端点共用的请求绑定：文本与附图至少一个非空，
+// 图片的合法性（形态/大小/真实格式）在服务层 normalizeUserImages 里统一校验。
+func bindCustomizeChat(c *gin.Context) (message string, images []string, ok bool) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxChatBodyBytes)
+	var body struct {
+		Message string   `json:"message"`
+		Images  []string `json:"images"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Err(c, http.StatusRequestEntityTooLarge, "请求超限或格式错误（含图片时整体不超过 20MB）")
+		return "", nil, false
+	}
+	if strings.TrimSpace(body.Message) == "" && len(body.Images) == 0 {
+		response.Err(c, http.StatusBadRequest, "消息不能为空（文本与图片至少一个）")
+		return "", nil, false
+	}
+	return body.Message, body.Images, true
+}
+
 // CustomizeUserTemplate POST /api/user-templates/:id/chat —— 对话定制（同步版）。
 // 用 agent 服务的 LLM 接入（BYOK 优先）跑受限工具循环。前端已改走 /chat/stream
 // （SSE，工具气泡实时可见）；这个端点保留给 curl/脚本/降级路径，emit 传 nil。
@@ -510,15 +533,12 @@ func (h *Handler) CustomizeUserTemplate(c *gin.Context) {
 		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
-	var body struct {
-		Message string `json:"message"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil || body.Message == "" {
-		response.Err(c, http.StatusBadRequest, "message 不能为空")
+	message, images, ok := bindCustomizeChat(c)
+	if !ok {
 		return
 	}
 	cl := h.agent.CustomizeLLMFor(c.Request.Context())
-	reply, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), body.Message, usertpl.LLM{Client: cl.Client, Model: cl.Model}, nil)
+	reply, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), message, images, usertpl.LLM{Client: cl.Client, Model: cl.Model}, nil)
 	if err != nil {
 		response.Err(c, http.StatusBadRequest, err.Error())
 		return
@@ -540,11 +560,8 @@ func (h *Handler) CustomizeUserTemplateStream(c *gin.Context) {
 		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
-	var body struct {
-		Message string `json:"message"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil || body.Message == "" {
-		response.Err(c, http.StatusBadRequest, "message 不能为空")
+	message, images, ok := bindCustomizeChat(c)
+	if !ok {
 		return
 	}
 
@@ -556,7 +573,7 @@ func (h *Handler) CustomizeUserTemplateStream(c *gin.Context) {
 	ch := make(chan usertpl.CustEvent, 16)
 	go func() {
 		defer close(ch)
-		_, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), body.Message,
+		_, err := h.usertpl.Customize(c.Request.Context(), uid, c.Param("id"), message, images,
 			usertpl.LLM{Client: cl.Client, Model: cl.Model},
 			func(ev usertpl.CustEvent) error {
 				select {

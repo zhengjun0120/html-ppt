@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { PhArrowClockwise, PhCheck, PhCircleNotch, PhClockCounterClockwise, PhGlobe, PhPaperPlaneTilt, PhPulse } from '@phosphor-icons/vue'
+import { PhArrowClockwise, PhCheck, PhCircleNotch, PhClockCounterClockwise, PhGlobe, PhImage, PhPaperPlaneTilt, PhPulse, PhX } from '@phosphor-icons/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TemplateHistoryDrawer from '@/components/usertpl/TemplateHistoryDrawer.vue'
 import { customizeChatStream, fetchTemplateStyle, userTemplateApi, userTemplatePreviewUrl, type LayoutMetaPatch, type PublishReport, type StructureContract, type StructureLayout, type UserTemplateRow } from '@/api/userTemplates'
 import Button from '@/components/ui/Button.vue'
+import { MAX_CHAT_IMAGES, fileToChatImage } from '@/lib/image'
 import { useToast } from '@/stores/toast'
 
 /**
@@ -22,12 +23,43 @@ const toast = useToast()
 const utId = String(route.params.id)
 const row = ref<UserTemplateRow | null>(null)
 const name = ref('')
-const messages = ref<{ role: 'user' | 'agent'; text: string; think?: string }[]>([])
+const messages = ref<{ role: 'user' | 'agent'; text: string; think?: string; images?: string[] }[]>([])
 const input = ref('')
 const sending = ref(false)
 const publishing = ref(false)
 const previewKey = ref(0)
 const demoPage = ref(1)
+
+// —— 用户附图（参考图/配色灵感；压缩后随消息发，服务端校验 ≤3 张）——//
+const pendingImages = ref<string[]>([])
+const attaching = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+async function onPickImages(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (!files?.length) return
+  attaching.value = true
+  try {
+    for (const f of Array.from(files)) {
+      if (pendingImages.value.length >= MAX_CHAT_IMAGES) {
+        toast.error(`一次最多附 ${MAX_CHAT_IMAGES} 张图`)
+        break
+      }
+      try {
+        pendingImages.value.push(await fileToChatImage(f))
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '图片处理失败')
+      }
+    }
+  } finally {
+    attaching.value = false
+    e.target.value = '' // 允许重选同一个文件
+  }
+}
+
+function removePendingImage(i: number) {
+  pendingImages.value.splice(i, 1)
+}
 
 // —— 实时预览（runtime 预览模式协议）——//
 // src 带 ?preview=1 让 demo 内的 runtime.js 进单页锁定模式；翻页向 iframe
@@ -280,15 +312,17 @@ onBeforeUnmount(() => window.removeEventListener('message', onPreviewMessage))
 
 async function send() {
   const text = input.value.trim()
-  if (!text || sending.value) return
+  const imgs = [...pendingImages.value]
+  if ((!text && !imgs.length) || sending.value || attaching.value) return
   input.value = ''
-  messages.value.push({ role: 'user', text })
+  pendingImages.value = []
+  messages.value.push({ role: 'user', text, images: imgs.length ? imgs : undefined })
   sending.value = true
   activity.value = { steps: [], draft: '', think: '' }
   const stepByIndex = new Map<number, ActivityStep>()
   const stepByCall = new Map<string, ActivityStep>()
   try {
-    await customizeChatStream(utId, text, (ev) => {
+    await customizeChatStream(utId, text, imgs, (ev) => {
       const act = activity.value
       if (!act) return
       switch (ev.type) {
@@ -648,7 +682,10 @@ async function unpublish() {
               <summary class="cursor-pointer select-none hover:text-ink-2">已展开思考过程</summary>
               <div class="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap break-words">{{ m.think }}</div>
             </details>
-            {{ m.text }}
+            <div v-if="m.images?.length" class="mb-1.5 flex flex-wrap gap-1.5">
+              <img v-for="src in m.images" :key="src" :src="src" loading="lazy" class="h-20 rounded-control border border-line" alt="附图" />
+            </div>
+            <template v-if="m.text">{{ m.text }}</template>
           </div>
           <!-- 进行中的工具气泡 + 生成进度 + 流式草稿 -->
           <div v-if="activity" class="mr-2 rounded-control bg-surface-2 px-3 py-2 text-[12.5px]">
@@ -676,11 +713,42 @@ async function unpublish() {
           </div>
         </div>
         <div class="border-t border-line p-2">
+          <!-- 待发附图条 -->
+          <div v-if="pendingImages.length" class="mb-2 flex flex-wrap gap-1.5">
+            <div v-for="(src, i) in pendingImages" :key="src" class="relative">
+              <img :src="src" class="h-14 rounded-control border border-line" alt="待发送附图" />
+              <button
+                class="absolute -right-1.5 -top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-ink text-surface hover:bg-danger"
+                :aria-label="`移除第 ${i + 1} 张附图`"
+                @click="removePendingImage(i)"
+              >
+                <PhX :size="10" weight="bold" />
+              </button>
+            </div>
+          </div>
           <div class="flex gap-2">
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              class="hidden"
+              @change="onPickImages"
+            />
+            <button
+              class="flex shrink-0 items-center justify-center rounded-control border border-line px-2.5 text-ink-2 hover:border-accent hover:text-accent disabled:opacity-50"
+              :disabled="sending || attaching || pendingImages.length >= MAX_CHAT_IMAGES"
+              :title="pendingImages.length >= MAX_CHAT_IMAGES ? `一次最多附 ${MAX_CHAT_IMAGES} 张图` : '附图（最多 3 张，自动压缩）'"
+              aria-label="附图"
+              @click="fileInput?.click()"
+            >
+              <PhCircleNotch v-if="attaching" :size="14" class="animate-spin" />
+              <PhImage v-else :size="14" />
+            </button>
             <input
               v-model="input"
               class="min-w-0 flex-1 rounded-control border border-line bg-surface-2 px-3 py-1.5 text-[12.5px] outline-none focus-visible:border-accent"
-              placeholder="描述想改的视觉（回车发送）"
+              placeholder="描述想改的视觉，或附一张参考图（回车发送）"
               @keydown.enter="send"
             />
             <Button variant="primary" :loading="sending" aria-label="发送" @click="send">

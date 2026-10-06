@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,6 +25,10 @@ import (
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 )
+
+// imageDataURLRe 从序列化后的消息 JSON 里抠出图片 data URL（llm_request 脱敏用）。
+// 必须匹配到引号边界：替换值本身也是合法 JSON 字符串，抠完文件仍是合法 JSON。
+var imageDataURLRe = regexp.MustCompile(`"data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+"`)
 
 // CustEvent 定制对话推给前端的事件（SSE 帧 data 体）。
 type CustEvent struct {
@@ -62,7 +67,9 @@ var custToolNames = []string{"finish", "set_meta", "write_demo", "write_style", 
 
 // openCustRecorder 开一个定制 run 的观测文件。fail-open 与 agent 侧同一条原则：
 // 观测是增强不是故障源，任何失败只打 warn，定制对话照跑。
-func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message, model string) *trace.Recorder {
+// 用户附图构造成 ImageEvent 挂在 run_start 上：Bytes 由 recorder 落到 <run>/img/，
+// JSONL 只留相对路径（capture 关闭时只记张数，与视觉截图同一开关语义）。
+func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message string, imgs []userImage, model string) *trace.Recorder {
 	if !s.traceCfg.Enabled || s.traceCfg.Dir == "" {
 		return trace.Discard
 	}
@@ -75,16 +82,25 @@ func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message
 		DeckID:        row.ID,
 		MaxFieldBytes: s.traceCfg.MaxFieldBytes,
 		RetainRuns:    s.traceCfg.RetainRuns,
+		CaptureImages: s.traceCfg.CaptureImages, // 用户附图与视觉截图同一开关
 	})
 	if err != nil {
 		log.Printf("[warn] usertpl: 开启定制观测失败，本轮不记录 err: %v", err)
 		return trace.Discard
 	}
-	rec.Emit(trace.Event{
+	ev := trace.Event{
 		Kind: trace.KindRunStart, RunKind: "customize",
 		RunID: rec.RunID(), SessionID: sessID, UserID: userID,
 		DeckID: row.ID, UserContent: message, Model: model, Tools: custToolNames,
-	})
+	}
+	for i, im := range imgs {
+		ev.Images = append(ev.Images, trace.ImageEvent{
+			Name:  fmt.Sprintf("u%03d.png", i+1),
+			Label: fmt.Sprintf("用户附图 %d", i+1),
+			Bytes: im.Bytes,
+		})
+	}
+	rec.Emit(ev)
 	return rec
 }
 
@@ -103,12 +119,15 @@ func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message
 func (s *Service) custStream(ctx context.Context, sess *customizeSession, llm LLM, emit func(CustEvent) error) (openai.ChatCompletionMessage, string, openai.CompletionUsage, error) {
 	// 观测：这一轮实际发给模型的东西（含 style.css 注入的全文）。只记工具输入输出
 	// 回答不了"模型为什么这么改"，上下文才是证据；MB 级序列化只在观测开启时做。
+	// 附图的 data URL 在这里脱敏——原图已落 <run>/img/，base64 内联进 JSONL 只会
+	// 把逐行拉取的观测文件撑爆。
 	if trace.Active(ctx) {
 		raw, err := json.Marshal(sess.messages)
 		if err != nil {
 			log.Printf("[warn] usertpl: 序列化定制上下文失败 err: %v", err)
 			raw = json.RawMessage(`null`)
 		}
+		raw = imageDataURLRe.ReplaceAll(raw, []byte(`"data:image/*;base64,[用户附图已脱敏，原图见 img/]"`))
 		trace.Emit(ctx, trace.Event{
 			Kind: trace.KindLLMRequest, Model: llm.Model,
 			Messages: raw, MessageCount: len(sess.messages), Bytes: len(raw),

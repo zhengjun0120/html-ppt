@@ -172,18 +172,24 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 	}),
 }
 
-// Customize 一轮对话：把用户消息追加进会话，跑到 finish 或轮次上限。
-// 本轮有实际文件写入时记一条 chat 版本（docs/user-template-history-plan.md §3.2），
-// 备注用 finish 的汇报——历史列表因此可读。
+// Customize 一轮对话：把用户消息（可带附图）追加进会话，跑到 finish 或轮次上限。
+// 附图只在本轮可见：本轮成功结束后降级为文本占位（customize_images.go 的设计
+// 说明）；本轮失败时保留，重试那轮模型还能看到。本轮有实际文件写入时记一条
+// chat 版本（docs/user-template-history-plan.md §3.2），备注用 finish 的汇报
+// ——历史列表因此可读。
 //
 // emit 为 SSE 客户端的事件出口（nil = 同步调用，只落观测不推流）。
 // 整轮同时落 trace 事件（customize_trace.go），观测台可见。
-func (s *Service) Customize(ctx context.Context, userID uint, id, message string, llm LLM, emit func(CustEvent) error) (string, error) {
+func (s *Service) Customize(ctx context.Context, userID uint, id, message string, images []string, llm LLM, emit func(CustEvent) error) (string, error) {
 	row, err := s.GetOwned(userID, id)
 	if err != nil {
 		return "", err
 	}
-	if message == "" {
+	imgs, err := normalizeUserImages(images)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(message) == "" && len(imgs) == 0 {
 		return "", fmt.Errorf("消息不能为空")
 	}
 
@@ -195,13 +201,17 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 	if len(sess.messages) == 0 {
 		sess.messages = append(sess.messages, openai.SystemMessage(s.customizeSystemPrompt(row)))
 	}
-	sess.messages = append(sess.messages, openai.UserMessage(message))
+	userMsgIdx := len(sess.messages)
+	sess.messages = append(sess.messages, buildUserMessage(message, imgs))
 
-	rec := s.openCustRecorder(userID, row, message, llm.Model)
+	rec := s.openCustRecorder(userID, row, message, imgs, llm.Model)
 	defer rec.Close()
 	ctx = trace.With(ctx, rec)
 
 	reply, dirty, note, loopErr := s.customizeLoop(ctx, sess, row, llm, emit)
+	if loopErr == nil {
+		degradeUserMessage(sess, userMsgIdx, len(imgs), message)
+	}
 	if loopErr != nil {
 		// 中途出错的 run 也要收尾：不落 run_end，观测页会永远停在"运行中"并一直轮询
 		trace.Emit(ctx, trace.Event{Kind: trace.KindError, Error: loopErr.Error()})
@@ -601,6 +611,8 @@ func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
 		"视觉不写纯黑 #000（用近黑如 #17181a），强调色别过饱和，不堆外发光/霓虹效果，" +
 		"卡片阵列避免机械三等分（内容确实等重才用）。\n" +
 		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
+		"- 用户可能随消息附图（风格参考/配色灵感/版式示意）：把它当设计参考理解意图并落到样式上；" +
+		"不要把图片内容当正文素材，不要把照片里的真实人物/品牌标志搬进模板。\n" +
 		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +
 		"- 模板名：" + row.Name + "（base：" + row.BaseID + "）。\n\n" +
 		"结构契约（版式清单：id · 名称 · 角色 · 用途）：\n" + s.layoutContractSummary(row.ID) + "\n\n" +

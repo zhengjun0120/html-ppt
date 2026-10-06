@@ -169,10 +169,11 @@ export interface CustomizeEvent {
 
 const CUSTOMIZE_BASE: string = import.meta.env.VITE_API_BASE ?? ''
 
-/** 流式定制对话。onEvent 逐帧回调；调用方负责错误展示与 finally 复位。 */
+/** 流式定制对话。images 是用户附图（压缩好的 data URL，≤3 张）。onEvent 逐帧回调；调用方负责错误展示与 finally 复位。 */
 export async function customizeChatStream(
   id: string,
   message: string,
+  images: string[],
   onEvent: (ev: CustomizeEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -183,7 +184,7 @@ export async function customizeChatStream(
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, images }),
     signal,
   })
   if (!res.ok) {
@@ -204,10 +205,10 @@ export async function customizeChatStream(
 }
 
 /** 同步版定制对话（保留给降级路径；前端正常走 customizeChatStream） */
-export function customizeChat(id: string, message: string) {
+export function customizeChat(id: string, message: string, images: string[] = []) {
   return request<{ reply: string }>(`/api/user-templates/${id}/chat`, {
     method: 'POST',
-    body: { message },
+    body: { message, images },
   })
 }
 
