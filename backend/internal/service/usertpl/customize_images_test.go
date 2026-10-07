@@ -25,6 +25,8 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+
+	"html-ppt/backend/internal/chatimg"
 )
 
 func testPNG(t *testing.T, w, h int) []byte {
@@ -70,7 +72,7 @@ func newCapturingFakeLLM(t *testing.T, rounds [][]string) (LLM, *[]string) {
 
 func TestNormalizeUserImages(t *testing.T) {
 	t.Run("空输入放行", func(t *testing.T) {
-		imgs, err := normalizeUserImages(nil)
+		imgs, err := chatimg.Normalize(nil)
 		if err != nil || len(imgs) != 0 {
 			t.Fatalf("nil 应放行: %v %v", imgs, err)
 		}
@@ -79,7 +81,7 @@ func TestNormalizeUserImages(t *testing.T) {
 	t.Run("合法png且mime按魔数归一", func(t *testing.T) {
 		// 客户端谎报 jpeg，服务端按魔数改回 png
 		url := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(testPNG(t, 2, 3))
-		imgs, err := normalizeUserImages([]string{url})
+		imgs, err := chatimg.Normalize([]string{url})
 		if err != nil {
 			t.Fatalf("合法 png 被拒: %v", err)
 		}
@@ -93,7 +95,7 @@ func TestNormalizeUserImages(t *testing.T) {
 		if err := jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 6, 6)), nil); err != nil {
 			t.Fatal(err)
 		}
-		imgs, err := normalizeUserImages([]string{"data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())})
+		imgs, err := chatimg.Normalize([]string{"data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())})
 		if err != nil || !strings.HasPrefix(imgs[0].DataURL, "data:image/jpeg;base64,") {
 			t.Fatalf("合法 jpeg 应放行: %v", err)
 		}
@@ -111,7 +113,7 @@ func TestNormalizeUserImages(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := normalizeUserImages([]string{c.in})
+			_, err := chatimg.Normalize([]string{c.in})
 			if err == nil || !strings.Contains(err.Error(), c.want) {
 				t.Fatalf("want err 含 %q, got %v", c.want, err)
 			}
@@ -119,19 +121,19 @@ func TestNormalizeUserImages(t *testing.T) {
 	}
 
 	t.Run("超过单张大小", func(t *testing.T) {
-		big := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0}, maxImageBytes+1))
-		_, err := normalizeUserImages([]string{"data:image/png;base64," + big})
+		big := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0}, chatimg.MaxBytes+1))
+		_, err := chatimg.Normalize([]string{"data:image/png;base64," + big})
 		if err == nil || !strings.Contains(err.Error(), "MB") {
 			t.Fatalf("超大应拒: %v", err)
 		}
 	})
 
 	t.Run("超过条数", func(t *testing.T) {
-		four := make([]string, maxUserImages+1)
+		four := make([]string, chatimg.MaxPerMessage+1)
 		for i := range four {
 			four[i] = pngDataURL(t, 1, 1)
 		}
-		_, err := normalizeUserImages(four)
+		_, err := chatimg.Normalize(four)
 		if err == nil || !strings.Contains(err.Error(), "最多") {
 			t.Fatalf("超条数应拒: %v", err)
 		}

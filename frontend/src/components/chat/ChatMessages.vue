@@ -96,12 +96,15 @@ function itemKey(item: RenderItem): string {
         <!-- 相邻同类型工具的折叠组 -->
         <ToolGroupCard v-if="Array.isArray(item)" :name="item[0].name || ''" :tools="item" />
 
-        <!-- 用户气泡：主色淡底（长文本压实色太吵） -->
+        <!-- 用户气泡：主色淡底（长文本压实色太吵）；附图缩略图在文字上方 -->
         <div
           v-else-if="item.kind === 'user'"
           class="max-w-[88%] self-end rounded-xl rounded-br-sm border border-accent-border bg-accent-soft px-3 py-2 text-[13.5px] whitespace-pre-wrap break-words"
         >
-          {{ item.text }}
+          <div v-if="item.images?.length" class="mb-1.5 flex flex-wrap gap-1.5">
+            <img v-for="src in item.images" :key="src" :src="src" loading="lazy" class="h-20 rounded-lg border border-line" alt="附图" />
+          </div>
+          <template v-if="item.text">{{ item.text }}</template>
         </div>
 
         <!-- agent 气泡 -->

@@ -16,19 +16,15 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/openai/openai-go/v3"
 
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 )
-
-// imageDataURLRe 从序列化后的消息 JSON 里抠出图片 data URL（llm_request 脱敏用）。
-// 必须匹配到引号边界：替换值本身也是合法 JSON 字符串，抠完文件仍是合法 JSON。
-var imageDataURLRe = regexp.MustCompile(`"data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+"`)
 
 // CustEvent 定制对话推给前端的事件（SSE 帧 data 体）。
 type CustEvent struct {
@@ -69,7 +65,7 @@ var custToolNames = []string{"finish", "set_meta", "write_demo", "write_style", 
 // 观测是增强不是故障源，任何失败只打 warn，定制对话照跑。
 // 用户附图构造成 ImageEvent 挂在 run_start 上：Bytes 由 recorder 落到 <run>/img/，
 // JSONL 只留相对路径（capture 关闭时只记张数，与视觉截图同一开关语义）。
-func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message string, imgs []userImage, model string) *trace.Recorder {
+func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message string, imgs []chatimg.Image, model string) *trace.Recorder {
 	if !s.traceCfg.Enabled || s.traceCfg.Dir == "" {
 		return trace.Discard
 	}
@@ -127,7 +123,7 @@ func (s *Service) custStream(ctx context.Context, sess *customizeSession, llm LL
 			log.Printf("[warn] usertpl: 序列化定制上下文失败 err: %v", err)
 			raw = json.RawMessage(`null`)
 		}
-		raw = imageDataURLRe.ReplaceAll(raw, []byte(`"data:image/*;base64,[用户附图已脱敏，原图见 img/]"`))
+		raw = chatimg.RedactDataURLs(raw)
 		trace.Emit(ctx, trace.Event{
 			Kind: trace.KindLLMRequest, Model: llm.Model,
 			Messages: raw, MessageCount: len(sess.messages), Bytes: len(raw),

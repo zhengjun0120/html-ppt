@@ -7,6 +7,7 @@ import (
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/param"
 
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/store"
 )
 
@@ -154,12 +155,12 @@ func TestSessionSummary_PendingFlag(t *testing.T) {
 func TestProjectTranscript_SkipsSyntheticUserMsgs(t *testing.T) {
 	msgs := []openai.ChatCompletionMessageParamUnion{
 		openai.SystemMessage("系统提示词"),
-		openai.UserMessage(kickoffGenerateMsg),   // seq 1：滤
-		openai.UserMessage("把第 3 页再改改"),     // seq 2：真用户消息，保留
+		openai.UserMessage(kickoffGenerateMsg), // seq 1：滤
+		openai.UserMessage("把第 3 页再改改"),        // seq 2：真用户消息，保留
 		assistantMsg("好的", "call_1", "list_slides", `{}`),
-		openai.UserMessage(resumeGenerateMsg),    // seq 4：滤
-		openai.UserMessage(budgetWarnMsg),        // seq 5：滤
-		openai.UserMessage(budgetFinalMsg),       // seq 6：滤
+		openai.UserMessage(resumeGenerateMsg), // seq 4：滤
+		openai.UserMessage(budgetWarnMsg),     // seq 5：滤
+		openai.UserMessage(budgetFinalMsg),    // seq 6：滤
 	}
 
 	got := projectTranscript(msgs, "", 0)
@@ -173,5 +174,37 @@ func TestProjectTranscript_SkipsSyntheticUserMsgs(t *testing.T) {
 	}
 	if got[1].Seq != 3 || got[1].Role != "assistant" {
 		t.Errorf("assistant 消息应保留: %+v", got[1])
+	}
+}
+
+// 带图用户消息：parts 数组形态经 DB JSON 往返后，回放要同时拿回文字与缩略图
+// （这是"图存库可回看"的关键链路——contentString 旧实现会把 parts 当空串）。
+func TestProjectTranscript_UserImageMessage(t *testing.T) {
+	imgs := []chatimg.Image{{DataURL: "data:image/png;base64,AAAA"}}
+	msgs := []openai.ChatCompletionMessageParamUnion{
+		openai.SystemMessage("系统提示词"),
+		chatimg.BuildUserMessage("参考这张图", imgs),
+		assistantMsg("收到", "", "", ""),
+	}
+	// 模拟落库再读回
+	raw, err := json.Marshal(msgs)
+	if err != nil {
+		t.Fatalf("序列化: %v", err)
+	}
+	var back []openai.ChatCompletionMessageParamUnion
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatalf("反序列化: %v", err)
+	}
+
+	got := projectTranscript(back, "", 0)
+	if len(got) != 2 {
+		t.Fatalf("回放应 2 条（system 跳过），得到 %d 条", len(got))
+	}
+	u := got[0]
+	if u.Role != "user" || u.Content != "参考这张图" {
+		t.Fatalf("带图消息文字投影不对: %+v", u)
+	}
+	if len(u.Images) != 1 || u.Images[0] != imgs[0].DataURL {
+		t.Fatalf("缩略图应随回放带出: %+v", u.Images)
 	}
 }

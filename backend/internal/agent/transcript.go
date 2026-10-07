@@ -2,8 +2,10 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/store"
 	"time"
 
@@ -51,10 +53,13 @@ type TranscriptToolCall struct {
 // 工具调用挂在产生它的 assistant 消息上（ToolCalls）；工具结果单独一条
 // role=tool 的消息，用 ToolCallID 关联。ToolName 是顺手解好的名字——
 // 协议里 tool 消息只有 id，不解好的话每个前端都得自己往前翻 assistant 声明。
+// Images 是用户消息的附图（data URL，与库里消息 JSON 同源）——刷新恢复
+// 缩略图全靠它；模型侧可见性由滑动窗口另行控制，与回放无关。
 type TranscriptMessage struct {
 	Seq        int64                `json:"seq"`
 	Role       string               `json:"role"` // user | assistant | tool
 	Content    string               `json:"content"`
+	Images     []string             `json:"images,omitempty"`
 	ToolCalls  []TranscriptToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string               `json:"tool_call_id,omitempty"`
 	ToolName   string               `json:"tool_name,omitempty"`
@@ -231,10 +236,17 @@ func projectTranscript(messages []openai.ChatCompletionMessageParamUnion, pendin
 		seq := int64(i)
 		switch {
 		case m.OfUser != nil:
-			// 合成的工作流指令（开工/续跑/预算）不进对话流——用户没说过这话，
-			// 展示出来就是"系统预设提示词漏到前端"。seq 照样占位（口径同 system）。
-			if content := contentString(m.OfUser.Content.OfString); !isSyntheticUserMsg(content) {
-				out = append(out, TranscriptMessage{Seq: seq, Role: "user", Content: content})
+			// 带图消息的 content 是 parts 数组，走 wire JSON 提取文本与图片
+			//（字符串形态与旧路径等价）。合成的工作流指令（开工/续跑/预算）不进
+			// 对话流——用户没说过这话，展示出来就是"系统预设提示词漏到前端"。
+			// seq 照样占位（口径同 system）。
+			userWire, merr := json.Marshal(m.OfUser)
+			content, userImages := "", []string(nil)
+			if merr == nil {
+				content, userImages = chatimg.UserTextAndImages(userWire)
+			}
+			if !isSyntheticUserMsg(content) {
+				out = append(out, TranscriptMessage{Seq: seq, Role: "user", Content: content, Images: userImages})
 			}
 		case m.OfAssistant != nil:
 			tm := TranscriptMessage{Seq: seq, Role: "assistant", Content: contentString(m.OfAssistant.Content.OfString)}

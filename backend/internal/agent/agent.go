@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html-ppt/backend/internal/authctx"
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
@@ -210,7 +211,7 @@ func refreshSystem(messages []openai.ChatCompletionMessageParamUnion, systemProm
 	return messages
 }
 
-func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID string, emit func(StreamEvent) error) (uint, error) {
+func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID string, imgs []chatimg.Image, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
 	client := as.clientFor(ctx)
 
@@ -248,7 +249,10 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		messages = append(messages, openai.SystemMessage(dec.sys))
 	}
 
-	messages = append(messages, openai.UserMessage(userContent))
+	// 用户消息（可带附图）落进会话历史并持久化。图存库是**有意的**：文稿对话
+	// 的会话刷新可恢复，图随消息 JSON 落库，回放能拿回缩略图；模型侧的可见性
+	// 由 streamOnce 里的滑动窗口控制（最近 4 张，更早的请求时降级不落库）。
+	messages = append(messages, chatimg.BuildUserMessage(userContent, imgs))
 	if err := as.persistSession(sess, messages); err != nil {
 		return sess.ID, err
 	}
@@ -726,8 +730,18 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 }
 
 func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, opt openai.ChatCompletionNewParams, fullText *strings.Builder, emit func(StreamEvent) error) (openai.ChatCompletionMessage, openai.CompletionUsage, error) {
+	// 滑动窗口（chatimg.KeepRecentImages）：历史里只保留最近 N 张用户附图，
+	// 更早的在**请求时**降级为文字占位。只变换本次请求，不落库——库里的完整
+	// 历史与刷新回放的缩略图不受影响。无图历史是零开销快速路径。
+	if windowed, changed, werr := chatimg.WindowOldestImages(opt.Messages, chatimg.KeepRecentImages); werr != nil {
+		log.Printf("[warn] agent: 附图窗口变换失败，本轮按原样发送 err: %v", werr)
+	} else if changed {
+		opt.Messages = windowed
+	}
+
 	// 观测：把这一轮**实际发给模型的东西**记下来。这是"模型为什么这么答"唯一能查的证据——
 	// 只记工具的输入输出是不够的：同一个工具结果，在不同上下文里会被理解成不同的意思。
+	// 附图的 data URL 在这里脱敏（原图在会话库里，不在观测文件里）。
 	//
 	// trace.Active 这层判断是必要的：序列化整份上下文是 MB 级的开销（每轮重发整份消息），
 	// 关掉观测就不该白做一遍。其余地方的 Emit 不用套它——Discard 本身就是空操作。
@@ -739,6 +753,7 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 			log.Printf("[warn] trace: 序列化上下文失败 err: %v", err)
 			raw = json.RawMessage(`null`)
 		}
+		raw = chatimg.RedactDataURLs(raw)
 		trace.Emit(ctx, trace.Event{
 			Kind:         trace.KindLLMRequest,
 			Model:        as.ModelID,

@@ -497,12 +497,8 @@ func (h *Handler) UnpublishUserTemplate(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
-// maxChatBodyBytes 定制对话请求体上限。文本很小，大头是附图：base64 比原始
-// 字节膨胀 ~4/3，3 张 × 4MB 原图的极限在 16MB，20MB 留了余量。
-const maxChatBodyBytes = 20 << 20
-
 // bindCustomizeChat 两个定制对话端点共用的请求绑定：文本与附图至少一个非空，
-// 图片的合法性（形态/大小/真实格式）在服务层 normalizeUserImages 里统一校验。
+// 图片的合法性（形态/大小/真实格式）在服务层 chatimg.Normalize 里统一校验。
 func bindCustomizeChat(c *gin.Context) (message string, images []string, ok bool) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxChatBodyBytes)
 	var body struct {

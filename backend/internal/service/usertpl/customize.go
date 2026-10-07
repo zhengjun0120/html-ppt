@@ -21,6 +21,7 @@ import (
 
 	"github.com/openai/openai-go/v3"
 
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
@@ -185,7 +186,7 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 	if err != nil {
 		return "", err
 	}
-	imgs, err := normalizeUserImages(images)
+	imgs, err := chatimg.Normalize(images)
 	if err != nil {
 		return "", err
 	}
@@ -202,7 +203,7 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 		sess.messages = append(sess.messages, openai.SystemMessage(s.customizeSystemPrompt(row)))
 	}
 	userMsgIdx := len(sess.messages)
-	sess.messages = append(sess.messages, buildUserMessage(message, imgs))
+	sess.messages = append(sess.messages, chatimg.BuildUserMessage(message, imgs))
 
 	rec := s.openCustRecorder(userID, row, message, imgs, llm.Model)
 	defer rec.Close()
