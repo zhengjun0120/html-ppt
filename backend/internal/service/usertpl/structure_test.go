@@ -559,7 +559,7 @@ func TestCustomizeAddLayoutFlow(t *testing.T) {
 		toolRound("add_layout", string(args)),
 		toolRound("finish", `{"reply":"已新增三步流程版式。"}`),
 	})
-	reply, err := s.Customize(t.Context(), uid, row.ID, "加一个三步流程版式", llm, nil)
+	reply, err := s.Customize(t.Context(), uid, row.ID, "加一个三步流程版式", nil, llm, nil)
 	if err != nil {
 		t.Fatalf("Customize: %v", err)
 	}

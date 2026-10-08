@@ -61,6 +61,8 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   query?: Record<string, string | number | boolean | undefined>
   body?: unknown
+  /** true 时 body 原样发送（text/html），不 JSON.stringify——编辑器全量保存用 */
+  raw?: boolean
   signal?: AbortSignal
 }
 
@@ -70,8 +72,13 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   if (token) headers.Authorization = `Bearer ${token}`
   let body: string | undefined
   if (opts.body !== undefined) {
-    headers['Content-Type'] = 'application/json'
-    body = JSON.stringify(opts.body)
+    if (opts.raw) {
+      headers['Content-Type'] = 'text/html; charset=utf-8'
+      body = String(opts.body)
+    } else {
+      headers['Content-Type'] = 'application/json'
+      body = JSON.stringify(opts.body)
+    }
   }
 
   const res = await fetch(buildUrl(path, opts.query), {
