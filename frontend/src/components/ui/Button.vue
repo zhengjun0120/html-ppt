@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { PhSpinner } from '@phosphor-icons/vue'
 import { computed } from 'vue'
-import Spinner from './Spinner.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -41,7 +41,7 @@ const sizeClass = computed(() => ({ sm: 'h-7 px-2.5 text-xs', md: 'h-9 px-4 text
     :class="[variantClass, sizeClass]"
     @click="emit('click', $event)"
   >
-    <Spinner v-if="loading" :size="13" />
+    <PhSpinner v-if="loading" :size="13" class="animate-spin" />
     <slot />
   </button>
 </template>

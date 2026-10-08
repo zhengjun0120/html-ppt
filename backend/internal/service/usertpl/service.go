@@ -14,14 +14,15 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
 )
 
@@ -30,16 +31,32 @@ type Service struct {
 	st         *store.Store
 	root       string // data/user-templates
 	chromePath string
-	baseURL    string // 回环地址（demo 渲染走公开静态 /user-templates/）
+	baseURL    string         // 回环地址（demo 渲染走 nonce 端点）
+	grants     *vision.Grants // 体检渲染的一次性授权（Peek 语义，见 vision/grant.go）
+	traceCfg   trace.Config   // 定制对话的观测落盘（2026-09-28 定制接入观测台）
 
 	// 定制对话的会话表（内存态；重启即清空——对话历史不是重要数据）
 	custMu   sync.Mutex
 	sessions map[string]*customizeSession
+
+	// per-template 写锁（history.go lockUT）：对话与手动保存可能并发写同一模板
+	locksMu sync.Mutex
+	locks   map[string]*sync.Mutex
 }
 
-func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string) *Service {
-	return &Service{reg: reg, st: st, root: root, chromePath: chromePath, baseURL: baseURL,
+func New(reg *template.Registry, st *store.Store, root, chromePath, baseURL string, grants *vision.Grants, traceCfg trace.Config) *Service {
+	return &Service{reg: reg, st: st, root: root, chromePath: chromePath, baseURL: baseURL, grants: grants, traceCfg: traceCfg,
 		sessions: make(map[string]*customizeSession)}
+}
+
+// Peek 读模板行，不做归属判断（受控公开端点专用：先看状态再决定要不要鉴权，
+// 见 handler 的 UserTemplatePublicFile）。
+func (s *Service) Peek(id string) (*store.UserTemplate, error) {
+	var row store.UserTemplate
+	if err := s.st.DB.First(&row, "id = ?", id).Error; err != nil {
+		return nil, fmt.Errorf("模板不存在")
+	}
+	return &row, nil
 }
 
 func (s *Service) sessionFor(key string) *customizeSession {
@@ -64,7 +81,13 @@ func (s *Service) Dir(id string) string { return filepath.Join(s.root, id) }
 var forkCopies = []string{"template.json", "index.html", "style.css", "layouts.md", "rules.md"}
 
 // Fork 从内置模板克隆一份私有副本。
+// baseID == "_blank" 是约定的"空白来源"：走 CreateBlank 脚手架而不是克隆目录。
+// 用 :id 的取值而不是静态路由段（/api/templates/blank/fork 之类），避开 gin 的
+// 静态段与参数段同位 panic（router.go 的 recent-sessions 注释记过同一个坑）。
 func (s *Service) Fork(userID uint, baseID, name string) (*store.UserTemplate, error) {
+	if baseID == "_blank" {
+		return s.CreateBlank(userID, name)
+	}
 	src, err := s.reg.BuiltinDir(baseID)
 	if err != nil {
 		return nil, err
@@ -112,9 +135,9 @@ func (s *Service) Fork(userID uint, baseID, name string) (*store.UserTemplate, e
 
 	row := &store.UserTemplate{
 		ID: id, UserID: userID, BaseID: baseID,
-		Name: fmt.Sprint(meta["name"]),
+		Name:        fmt.Sprint(meta["name"]),
 		Description: fmt.Sprint(meta["description"]),
-		Visibility: "private", Status: "draft",
+		Visibility:  "private", Status: "draft",
 	}
 	if err := s.st.DB.Create(row).Error; err != nil {
 		return nil, err
@@ -123,8 +146,11 @@ func (s *Service) Fork(userID uint, baseID, name string) (*store.UserTemplate, e
 	// 的 ut- 归属校验，非 owner 拿不到私有模板）。
 	if err := s.reg.MountUser(dir); err != nil {
 		_ = s.st.DB.Delete(row)
+		_ = os.RemoveAll(dir) // 连目录一起清：只删行会留孤儿目录（实测遗留问题）
 		return nil, fmt.Errorf("克隆出的模板没过校验（源模板损坏？）: %w", err)
 	}
+	// 起点基线：fork 本身记一版，"回得去起点"从这里开始
+	_ = s.recordVersionUT(id, OpFork, "克隆自 builtin:"+baseID)
 	return row, nil
 }
 
@@ -185,6 +211,26 @@ func (s *Service) UpdateMeta(userID uint, id, name, description string) error {
 	if err != nil {
 		return err
 	}
+	if name == "" && description == "" {
+		return nil
+	}
+	// published：只改 DB（改名/描述是列表管理，不动文件——D2 的文件锁不含它，
+	// 但也不记版本：没改设计内容）。社区列表的名称来自 DB，展示即时生效。
+	if row.Status == "published" {
+		updates := map[string]any{}
+		if name != "" {
+			updates["name"] = name
+		}
+		if description != "" {
+			updates["description"] = description
+		}
+		return s.st.DB.Model(row).Updates(updates).Error
+	}
+	// draft：DB 与 template.json 一起改（单一真相），并记一条 meta 版本。
+	// 现状问题修正：此前 UpdateMeta 只改 DB，template.json 会与 DB 漂移。
+	if err := s.applyMetaFile(id, name, description); err != nil {
+		return err
+	}
 	updates := map[string]any{}
 	if name != "" {
 		updates["name"] = name
@@ -192,10 +238,10 @@ func (s *Service) UpdateMeta(userID uint, id, name, description string) error {
 	if description != "" {
 		updates["description"] = description
 	}
-	if len(updates) == 0 {
-		return nil
+	if err := s.st.DB.Model(row).Updates(updates).Error; err != nil {
+		return err
 	}
-	return s.st.DB.Model(row).Updates(updates).Error
+	return s.recordVersionUT(id, OpMeta, "改名/描述")
 }
 
 func (s *Service) Delete(userID uint, id string) error {
@@ -245,13 +291,16 @@ func (s *Service) Unpublish(userID uint, id string) error {
 	}).Error
 }
 
-// ---------- 发布门禁（自动，两关） ----------
+// ---------- 发布与质量体检 ----------
 
-// PublishReport 两关门禁的结果（进 PublishReport 字段，前端展示）。
+// PublishReport 发布/体检的结果（进 publish_report 字段，前端展示）。
+// Render 只在体检（Checkup）里出现；发布自 2026-09-28 起不再跑渲染量测。
+// Taste 是 AI 味提示（taste-skill 词表，体检时对 demo 各页跑 lint），只报告。
 type PublishReport struct {
-	Structure string           `json:"structure"`
+	Structure string            `json:"structure"`
 	Render    *RenderGateResult `json:"render,omitempty"`
-	Note      string           `json:"note,omitempty"`
+	Taste     []string          `json:"taste,omitempty"`
+	Note      string            `json:"note,omitempty"`
 }
 
 type RenderGateResult struct {
@@ -261,20 +310,23 @@ type RenderGateResult struct {
 	Flaws   []string `json:"flaws,omitempty"`
 }
 
-// Publish 跑发布门禁：
-//  1. 结构校验（与内置模板同一套 loadTemplate 规则 + CSS 黑名单扫描）；
-//  2. demo 渲染量测（headless 实拍：无溢出、填充率 ≥45%、无 <13px 内容字号）。
+// Publish 发布（2026-09-28 门禁降级，用户拍板）：
+//  1. 安全扫描（写入时各路径已各自强制，这里兜底防绕过产品的直改）；
+//  2. 挂载校验——MountUser 内部就是全量 loadTemplate 结构校验，挂不上 =
+//     模板坏了，failed + 可读原因。
 //
-// 全过 → public + published + Registry 挂载；任一失败 → failed + 可读原因。
-// 注：规划阶段的"LLM 真生成冒烟"在 v1 以渲染量测替代（确定性、零额度消耗）；
-// LLM 冒烟留给从零构建一起做。
+// 渲染量测（Chrome 实拍：溢出/填充率/最小字号）从发布门禁里拿掉了：它是唯一
+// "看法类"的阈值（45%/13px 是审美不是功能），又是唯一贵的（10-30s），还把
+// 空白骨架这类稀疏 demo 卡死在线外。完整保留为 Checkup 质量体检（不拦发布）。
+// 结构安全不因降级而松动：结构坏 = 挂不上 = 生成侧解析不到，社区拿到手的
+// 永远是挂载成功的模板。
 func (s *Service) Publish(ctx context.Context, userID uint, id string) (*PublishReport, error) {
 	row, err := s.GetOwned(userID, id)
 	if err != nil {
 		return nil, err
 	}
 	if row.Status == "publishing" {
-		return nil, fmt.Errorf("发布门禁正在运行，请稍候")
+		return nil, fmt.Errorf("发布正在运行，请稍候")
 	}
 	if err := s.setPublishing(row); err != nil {
 		return nil, err
@@ -285,27 +337,70 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 	}
 
 	dir := s.Dir(id)
-
-	// 门禁 1：结构校验（registry 同一套规则）+ 用户模板专属黑名单
-	if err := s.reg.ValidateUserDir(dir); err != nil {
-		return fail(fmt.Errorf("结构校验未过：%v", err))
-	}
 	if err := s.securityScan(dir); err != nil {
 		return fail(fmt.Errorf("安全扫描未过：%v", err))
 	}
+	if err := s.reg.MountUser(dir); err != nil {
+		return fail(fmt.Errorf("结构校验未过：%v", err))
+	}
+	report := &PublishReport{Structure: "ok",
+		Note: "发布即挂载校验，秒级完成；溢出/填充率等视觉质量可用「质量体检」随时检查"}
+	rep, _ := json.Marshal(report)
+	if err := s.markPublished(row, string(rep)); err != nil {
+		return nil, err
+	}
+	return report, nil
+}
 
-	// 门禁 2：demo 渲染量测（公开静态 /user-templates/<id>/index.html）
-	url := strings.TrimRight(s.baseURL, "/") + "/user-templates/" + id + "/index.html"
+// Checkup 质量体检（2026-09-28，从发布门禁降级而来）：headless 实拍 demo，
+// 量测溢出/填充率/最小字号，报告返回给前端并落到 publish_report 字段。
+// **不改状态、不拦任何东西**——draft 与 published 都能跑（纯只读诊断）。
+// 发布者自己拿它当修复线索；社区质量靠发布者的自觉 + 体检报告可查。
+func (s *Service) Checkup(ctx context.Context, userID uint, id string) (*PublishReport, error) {
+	row, err := s.GetOwned(userID, id)
+	if err != nil {
+		return nil, err
+	}
+	dir := s.Dir(id)
+	if err := s.securityScan(dir); err != nil {
+		return &PublishReport{Structure: err.Error(), Note: "安全扫描未过：写入时本应拦截，请检查文件是否被绕过产品直接修改"}, nil
+	}
+
+	// 渲染走一次性 nonce 端点（草稿收口后 headless 导航带不了鉴权头，
+	// nonce 是唯一的桥，docs/user-template-history-plan.md §3.5）
+	if s.grants == nil {
+		return nil, fmt.Errorf("渲染授权不可用")
+	}
+	nonce, err := s.grants.Issue(userID, "ut:"+id)
+	if err != nil {
+		return nil, fmt.Errorf("渲染授权签发失败: %w", err)
+	}
+	url := strings.TrimRight(s.baseURL, "/") + "/api/user-template-render/" + nonce + "/index.html"
 	d, err := vision.CaptureV2(ctx, vision.OptionsV2{URL: url, ChromePath: s.chromePath, Timeout: 2 * time.Minute})
 	if err != nil {
-		return fail(fmt.Errorf("demo 渲染失败：%v（检查 demo 是否可独立打开）", err))
+		return nil, fmt.Errorf("demo 渲染失败：%v（检查 demo 是否可独立打开）", err)
 	}
 	// 填充率下限按版式指纹豁免：hero（封面/章节/收尾）与 quote 是刻意的稀疏页，
-	// 它们的质量靠"有没有视觉锚点"而不是"塞没塞满"——把 anchor 判断留给量测
-	// 的溢出/字号项与人工预览。内容型版式一律 ≥45%。
-	patterns := layoutPatterns(filepath.Join(dir, "layouts.md"))
-	render := &RenderGateResult{Pages: len(d.Slides), MinFill: 100}
-	for _, sl := range d.Slides {
+	// 它们的质量靠"有没有视觉锚点"而不是"塞没塞满"。内容型版式一律 ≥45%。
+	report := &PublishReport{Structure: "ok",
+		Render: evaluateRender(d.Slides, layoutPatterns(filepath.Join(dir, "layouts.md"))),
+		Note:   "体检报告（不影响发布）：flaws 为空即未发现溢出/稀疏/小字号问题"}
+	// AI 味提示（taste-skill 词表）：demo 示例文案是生成范本，发布前让作者可见
+	if raw, err := os.ReadFile(filepath.Join(dir, "index.html")); err == nil {
+		report.Taste = lintDemoSections(string(raw))
+	}
+	rep, _ := json.Marshal(report)
+	// 落到 publish_report 字段，刷新页面后报告还在。发布报告（publish 时写的）
+	// 会被最近一次体检覆盖——两份都是"诊断快照"，留最新即可
+	_ = s.st.DB.Model(row).Updates(map[string]any{"publish_report": string(rep)}).Error
+	return report, nil
+}
+
+// evaluateRender 量测评估（纯函数，无 IO）：逐页算 flaw，返回量测结果。
+// 从发布门禁时代原样搬来——阈值只在这一处，体检与未来任何调用方共用一套口径。
+func evaluateRender(slides []vision.Slide2, patterns map[string]string) *RenderGateResult {
+	render := &RenderGateResult{Pages: len(slides), MinFill: 100}
+	for _, sl := range slides {
 		if sl.OverflowY || sl.OverflowX {
 			render.Flaws = append(render.Flaws, fmt.Sprintf("第 %d 页溢出画布", sl.Index+1))
 		}
@@ -324,55 +419,24 @@ func (s *Service) Publish(ctx context.Context, userID uint, id string) (*Publish
 			render.MaxFont = sl.MinFontPx
 		}
 	}
-	if len(render.Flaws) > 0 {
-		return fail(fmt.Errorf("渲染量测未过：%s", strings.Join(render.Flaws, "；")))
-	}
-
-	// 全过：挂进注册表 + 落状态
-	if err := s.reg.MountUser(dir); err != nil {
-		return fail(fmt.Errorf("注册失败：%v", err))
-	}
-	report := &PublishReport{Structure: "ok", Render: render,
-		Note: "v1 冒烟为 demo 渲染量测（确定性）；LLM 真生成冒烟计划于从零构建版本加入"}
-	rep, _ := json.Marshal(report)
-	if err := s.markPublished(row, string(rep)); err != nil {
-		return nil, err
-	}
-	return report, nil
+	return render
 }
 
-// securityScan 用户模板的安全黑名单：style.css 禁外链与表达式；index.html 禁
-// 额外脚本与内联事件（demo 会被其他用户渲染）。
+// securityScan 用户模板的安全黑名单（写入预检与发布门禁共用的组合入口）：
+// style.css 与 index.html 的规则见 scan.go（scanCSS/scanHTML 纯函数）。
 func (s *Service) securityScan(dir string) error {
 	css, err := os.ReadFile(filepath.Join(dir, "style.css"))
 	if err != nil {
 		return fmt.Errorf("style.css 缺失")
 	}
-	cssLow := strings.ToLower(string(css))
-	for _, bad := range []string{"url(", "@import", "expression(", "behavior:", "-moz-binding"} {
-		if strings.Contains(cssLow, bad) {
-			return fmt.Errorf("style.css 含被禁用的 %q（外链/表达式是数据渗出通道）", bad)
-		}
+	if err := scanCSS(string(css)); err != nil {
+		return err
 	}
 	html, err := os.ReadFile(filepath.Join(dir, "index.html"))
 	if err != nil {
 		return fmt.Errorf("index.html 缺失")
 	}
-	htmlLow := strings.ToLower(string(html))
-	for _, tag := range []string{"<script", "<iframe", "<object", "<embed"} {
-		if idx := strings.Index(htmlLow, tag); idx >= 0 {
-			// runtime.js 是唯一的合法脚本（本仓库资产，且 head 引用固定）
-			if tag != "<script" || !strings.Contains(htmlLow[idx:], "/assets/deck-v2/runtime.js") {
-				return fmt.Errorf("index.html 含被禁用的元素 %q", tag)
-			}
-		}
-	}
-	for _, ev := range []string{" onload=", " onerror=", " onclick="} {
-		if strings.Contains(htmlLow, ev) {
-			return fmt.Errorf("index.html 含内联事件 %q", strings.TrimSpace(ev))
-		}
-	}
-	return nil
+	return scanHTML(string(html))
 }
 
 // layoutPatterns 从 layouts.md 提取 版式 id → 指纹（发布门禁的稀疏豁免判据）。
@@ -399,7 +463,7 @@ func layoutPatterns(layoutsMDPath string) map[string]string {
 }
 
 // layoutHeadRe 与注册表解析器同一条规则：## 后第一个 token 是版式 id
-//（id 与中文名之间可以没有空格，如 `## qa（问答收尾）`）。
+// （id 与中文名之间可以没有空格，如 `## qa（问答收尾）`）。
 var layoutHeadRe = regexp.MustCompile(`^##\s*([A-Za-z][A-Za-z0-9_-]*)`)
 
 // ---------- helpers ----------

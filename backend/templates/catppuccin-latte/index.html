@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>浅色编辑器主题的设计</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-catppuccin-latte">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="lt-kicker">拿铁主题组 · 设计复盘</p>
+    <h1 class="h1 mt-m">把午后光线，<br>装进编辑器。</h1>
+    <div class="lt-line mt-s"></div>
+    <p class="lede mt-m" style="max-width:50ch">拿铁主题 1.0 背后的一次完整复盘：45 人眼动疲劳实验、三颗糖果色的车道划分，和一份你可以直接抄走的色板。</p>
+    <div class="row mt-l" style="gap:18px">
+      <span class="lt-pill lt-pill-accent">浅色 · 开发者向</span>
+      <span class="lt-pill">2025-10-11 · 线上分享</span>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场破个题：浅色不是深色的对立面，是另一种专注。今天讲我们怎么把它做出来、测出来。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="lt-kicker">分享议程</p>
+    <h2 class="h2 mt-m">复盘四段</h2>
+    <div class="lt-card mt-l" style="margin-top:44px">
+      <div class="lt-item"><span class="lt-n">01</span><span class="lt-t">为什么做浅色</span><span class="lt-d">下午会议室窗帘一拉开，深色主题就瞎了</span></div>
+      <div class="lt-item"><span class="lt-n">02</span><span class="lt-t">数据说话</span><span class="lt-d">一次 45 人、90 分钟的校对实验怎么做的</span></div>
+      <div class="lt-item"><span class="lt-n">03</span><span class="lt-t">色板三颗糖</span><span class="lt-d">薰衣草、青、粉的车道划分与取舍</span></div>
+      <div class="lt-item"><span class="lt-n">04</span><span class="lt-t">色板进配置</span><span class="lt-d">把设计决定写成一份可以抄走的主题文件</span></div>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">重点在第二、三段：实验是我们自己做的，数据拿得到口径；色板部分有一页配置可以照抄。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="lt-kicker">可读性实验 · 2025-03</p>
+    <h2 class="h2 mt-m">数据先说话</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="lt-stat"><div class="lt-stat-v">90<span class="lt-stat-u">分钟</span></div><div class="lt-stat-l">单次校对任务</div><p class="lt-stat-note">45 人分两组各做 90 分钟长文校对，中途不休息</p></div>
+      <div class="lt-stat"><div class="lt-stat-v">-12<span class="lt-stat-u">%</span></div><div class="lt-stat-l">浅色组更省力</div><p class="lt-stat-note">实验后疲劳自评均值差：浅色组低 12%，样本 N=45</p></div>
+      <div class="lt-stat"><div class="lt-stat-v">7.1<span class="lt-stat-u">:1</span></div><div class="lt-stat-l">正文对比度</div><p class="lt-stat-note">#4C4F69 对 #EFF1F5 实算，AA 线 4.5:1 之上留足余量</p></div>
+    </div>
+    <p class="mt-m" style="margin-top:44px;font-size:17px;color:#8C8FA1;letter-spacing:.04em">来源：拿铁主题组内部可读性测试（2025-03，N=45，1-7 分自评量表）；对比度按 WCAG 相对亮度公式。</p>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">声明口径：这是组内行为实验，不是临床眼动研究。自评量表便宜，但方向和文献一致。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="lt-kicker">第三段 · 色板设计</p>
+    <h1 class="h1 mt-m">三颗糖果，<br>各管一摊。</h1>
+    <p class="lede mt-m" style="max-width:48ch">浅色主题最怕颜色打架：我们把强调色砍到三颗，再给每颗划好车道，谁也不越线。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="lt-pill lt-pill-accent">结构用薰衣草</span>
+      <span class="lt-pill">内容用青</span>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">内测版有五个强调色，用户反馈「不知道看哪」。砍到三颗、划车道，是这版最大的设计决定。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="lt-kicker">色板设计</p>
+    <h2 class="h2 mt-m">三颗糖的车道</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="lt-card lt-card-top"><span class="lt-pill lt-pill-accent">#7287FD</span><h4 class="mt-m">薰衣草管结构</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#5C5F77">关键词、缩进参考线、当前行：结构元素统一走薰衣草，扫读时眼睛不会迷路。</p></div>
+      <div class="lt-card lt-card-top"><span class="lt-pill lt-pill-teal">#179299</span><h4 class="mt-m">青管内容</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#5C5F77">字符串、函数名、成功状态：内容层交给青色，和结构层永远不打架。</p></div>
+      <div class="lt-card lt-card-top"><span class="lt-pill">#EA76CB</span><h4 class="mt-m">粉管提醒</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#5C5F77">粉只出现在需要回头的地方：未保存标记、断点、报错。一屏至多一处。</p></div>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">车道划分的检验法在下一页：转成灰度看层级。颜色可以调，车道不能换。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="lt-kicker">设计方法</p>
+    <h2 class="h2 mt-m">对比度是设计出来的</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">浅底上的深字不是随手挑的。正文拿铁灰 #4C4F69 对底实算 7.1:1；注释灰退到 4.4:1——注释就该退后，但退得不看不见。</p>
+        <p class="mt-m" style="font-size:19px;line-height:1.8;color:#5C5F77">我们的检验法：把设计稿转灰度，结构层仍要比内容层深一档，才算合格。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="lt-pill lt-pill-accent">灰度检验</span>
+          <span class="lt-pill">退后不消失</span>
+        </div>
+      </div>
+      <div class="lt-card">
+        <div class="lt-step"><span class="lt-n">1</span><p class="lt-mini-t">定底色：奶白 #EFF1F5，白纸感但不上炫</p></div>
+        <div class="lt-step"><span class="lt-n">2</span><p class="lt-mini-t">定正文：#4C4F69，对比度过 AA 线再留余量</p></div>
+        <div class="lt-step"><span class="lt-n">3</span><p class="lt-mini-t">定点缀：三颗糖按「结构/内容/提醒」分工</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">三步的顺序不能换：先底、再正文、最后点缀。从点缀开始调的主题，最后都会变花。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="lt-kicker">色板速览 · 照抄即可</p>
+    <h2 class="h2 mt-m">把色板写进主题</h2>
+    <div class="lt-term mt-l" style="margin-top:38px">
+      <div class="lt-bar"><span class="lt-dot" style="background:#d20f39"></span><span class="lt-dot" style="background:#df8e1d"></span><span class="lt-dot" style="background:#40a02b"></span><span class="lt-file">latte-colors.jsonc</span><span class="lt-lang">JSONC</span></div>
+      <pre class="lt-codeblock"><code>{
+  <span class="lt-kw">"editor.background"</span>: <span class="lt-str">"#eff1f5"</span>,
+  <span class="lt-kw">"editor.foreground"</span>: <span class="lt-str">"#4c4f69"</span>,
+  <span class="lt-kw">"keyword"</span>:  <span class="lt-str">"#7287fd"</span>,   <span class="lt-cm">// 薰衣草：结构</span>
+  <span class="lt-kw">"string"</span>:   <span class="lt-str">"#179299"</span>,   <span class="lt-cm">// 青：内容</span>
+  <span class="lt-kw">"comment"</span>:  <span class="lt-str">"#9ca0b0"</span>,   <span class="lt-cm">// 灰：退后一档</span>
+  <span class="lt-kw">"editorError.foreground"</span>: <span class="lt-fn">"#ea76cb"</span>  <span class="lt-cm">// 粉：提醒</span>
+}</code></pre>
+    </div>
+    <p class="mt-m" style="font-size:18px;line-height:1.7;color:#5C5F77">八行就是整份色板的分工表：结构、内容、提醒各就各位，注释退后一档。</p>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">这份文件在仓库 gist 里，拿走改两个色值就能跑。注意粉只给了报错，别手痒多加。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="lt-kicker">主题迭代史</p>
+    <h2 class="h2 mt-m">两年，四步走完</h2>
+    <div class="lt-tl mt-l" style="margin-top:52px">
+      <div class="lt-tl-item"><div class="lt-tl-dot">1</div><div class="lt-tl-t">2024.02</div><p class="lt-tl-d">内测版 8 色发布，用户说「好看但花」</p></div>
+      <div class="lt-tl-item"><div class="lt-tl-dot">2</div><div class="lt-tl-t">2024.09</div><p class="lt-tl-d">引入校对实验，强调色从 5 颗砍到 3 颗</p></div>
+      <div class="lt-tl-item"><div class="lt-tl-dot">3</div><div class="lt-tl-t">2025.03</div><p class="lt-tl-d">正文对比度定稿 7.1:1，补齐灰度检验</p></div>
+      <div class="lt-tl-item"><div class="lt-tl-dot">4</div><div class="lt-tl-t">2025.08</div><p class="lt-tl-d">发布 1.0 稳定版，下载破两万</p></div>
+    </div>
+    <p class="mt-m" style="margin-top:44px;font-size:17px;color:#8C8FA1;letter-spacing:.04em">口径：时间取自主题仓库 release 记录，下载数截至 2025-08-31。</p>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">这条线的规律：每次大改都是先砍东西。色板和代码一样，减法做完才算设计完。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="lt-kicker">发布说明里的一句话</p>
+    <p class="lt-quote mt-l" style="margin-top:40px">「浅色不是深色的对立面，<br>是另一种专注。」</p>
+    <p class="lt-src mt-m">—— 拿铁主题组 1.0 发布说明</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="lt-pill lt-pill-accent">两万下载</span>
+      <span class="lt-pill">零推广</span>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">这句话写在 1.0 的 README 第一行，也是今天整场分享的注脚。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="lt-kicker">拿走即用</p>
+    <h1 class="h1 mt-m">去换一次<br>午后光线。</h1>
+    <p class="lede mt-m" style="max-width:48ch">色板与主题文件都在仓库里，MIT 协议。试用一周，不合口欢迎来 issue 区跟我们讲道理。</p>
+    <div class="row mt-l" style="gap:22px">
+      <span class="lt-btn">拿走色板</span>
+      <span class="lt-pill">MIT · latte-theme 仓库</span>
+    </div>
+    <div class="deck-footer"><span>拿铁主题组 · 2025</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾动作只有一个：领色板。下周三晚8点有 follow-up 直播，讲深浅两版的同步维护。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

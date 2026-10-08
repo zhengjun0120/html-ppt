@@ -1,0 +1,99 @@
+/* blueprint — 蓝图。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/blueprint（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 工程蓝图纸 #0D2A52 + 白色制图线稿：细网格铺满每页、双线图框收边，
+ * 标注框方正无圆角、全站等宽字体。图例蓝（#60A5FA/#3B82F6）只做线与强调，
+ * 文字用浅蓝白（#DBEAFE/#93C5FD）保证深底对比度。网格与图框是每页自动
+ * 衬底的 ambient 层（z-index:-1，画在 .deck 背景之上、全部内容之下，骨架
+ * 零成本）。禁暖色、禁圆角、禁非等宽标题。 */
+.tpl-blueprint{
+  --bg:#0D2A52;              /* 蓝图纸底（letterbox 同色，翻页不跳） */
+  --bg-2:#0E2D5A;            /* 纸面渐变深端 */
+  --ink:#DBEAFE;             /* 浅蓝白（标题/数字） */
+  --ink-2:#93C5FD;           /* 中蓝正文（上游制图线色之一） */
+  --ink-3:#7FA6DC;           /* 远蓝小字 */
+  --border:rgba(147,197,253,.32);
+  --border-soft:rgba(147,197,253,.18);
+  --line:#60A5FA;            /* 亮蓝图线 */
+  --line-2:#3B82F6;          /* 制图蓝 */
+  --box:rgba(255,255,255,.04); /* 标注框底 */
+  font-family:'JetBrains Mono','Noto Sans SC',monospace;
+}
+
+/* 字阶：等宽标题 + 等宽正文，保持制图的机械节奏 */
+.tpl-blueprint .h1{font-size:72px;line-height:1.14;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:12px}
+.tpl-blueprint .h2{font-size:48px;line-height:1.2;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-blueprint h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.03em}
+.tpl-blueprint .lede{font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.01em}
+.tpl-blueprint .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：细网格（铺满）+ 双线图框（收边），z-index:-1 画在内容之下 ---- */
+.tpl-blueprint .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M24 0V120M48 0V120M72 0V120M96 0V120M0 24H120M0 48H120M0 72H120M0 96H120' stroke='%23DBEAFE' stroke-opacity='.05'/%3E%3Cpath d='M.5 0V120M0 .5H120' stroke='%23DBEAFE' stroke-opacity='.11'/%3E%3C/svg%3E");
+  background-size:120px 120px;
+}
+.tpl-blueprint .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' preserveAspectRatio='none'%3E%3Crect x='30.5' y='30.5' width='1859' height='1019' fill='none' stroke='%23DBEAFE' stroke-opacity='.2'/%3E%3Crect x='42.5' y='42.5' width='1835' height='995' fill='none' stroke='%23DBEAFE' stroke-opacity='.08'/%3E%3Cpath d='M14 62V14H62M1858 14H1906V62M1906 1018V1066H1858M62 1066H14V1018' fill='none' stroke='%23DBEAFE' stroke-opacity='.3'/%3E%3C/svg%3E");
+  background-size:100% 100%;
+}
+.tpl-blueprint .slide{background:linear-gradient(145deg,#0C2749 0%,#0D2A52 52%,#0E2D5A 100%);color:var(--ink-2)}
+
+/* ---- 图纸题签：方点引导的等宽小字标签（页首） ---- */
+.tpl-blueprint .bp-kicker{display:flex;align-items:center;gap:16px;font-size:16px;letter-spacing:.36em;color:var(--ink-2)}
+.tpl-blueprint .bp-kicker::before{content:"";width:9px;height:9px;border:1.5px solid var(--line);background:transparent}
+
+/* ---- 图签章：双线方章，全模板唯一的标识重音（盖在封面/引言/收尾） ---- */
+.tpl-blueprint .bp-stamp{flex:none;padding:14px 18px;border:2px solid var(--line);outline:1px solid var(--border-soft);outline-offset:4px;color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;font-size:19px;font-weight:700;line-height:1.3;letter-spacing:.14em}
+
+/* ---- 尺寸标注线：文字两端的引出线，量测的隐喻 ---- */
+.tpl-blueprint .bp-dim{display:flex;align-items:center;gap:16px;font-size:17px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-blueprint .bp-dim::before,.tpl-blueprint .bp-dim::after{content:"";flex:1;height:1px;background:var(--border);min-width:36px}
+
+/* ---- 标注框：半透明暗蓝底 + 工程细描边，方正无圆角无阴影 ---- */
+.tpl-blueprint .bp-box{background:var(--box);border:1px solid var(--border);padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 图例框头：标注框顶部的虚线分隔标签行 ---- */
+.tpl-blueprint .bp-box-head{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px dashed var(--border-soft);padding-bottom:14px;font-size:16px;letter-spacing:.22em;color:var(--ink-3)}
+
+/* ---- 描边药丸：方角描边小签，浅蓝与亮蓝两档 ---- */
+.tpl-blueprint .bp-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid var(--border);font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-blueprint .bp-pill-accent{border-color:var(--line);color:var(--ink)}
+
+/* ---- 目录行：方框编号 + 篇名 + 说明 ---- */
+.tpl-blueprint .bp-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-blueprint .bp-item:last-child{border-bottom:none}
+.tpl-blueprint .bp-n{flex:none;width:52px;height:52px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-blueprint .bp-t{flex:none;width:260px;font-size:28px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-blueprint .bp-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 尺寸数字：数据页主视觉，顶部亮蓝粗线如引出线 ---- */
+.tpl-blueprint .bp-stat{border-top:3px solid var(--line);padding-top:30px}
+.tpl-blueprint .bp-stat-v{font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.tpl-blueprint .bp-stat-u{font-size:26px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-blueprint .bp-stat-l{margin-top:20px;font-size:25px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-blueprint .bp-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 图注引言：等宽大字 ---- */
+.tpl-blueprint .bp-quote{font-size:56px;line-height:1.6;font-weight:700;letter-spacing:.03em;color:var(--ink);max-width:25em;margin:0}
+.tpl-blueprint .bp-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 施工轴：方框节点 + 虚线连接 ---- */
+.tpl-blueprint .bp-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-blueprint .bp-tl-item{flex:1;position:relative}
+.tpl-blueprint .bp-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:0;border-top:1px dashed var(--border)}
+.tpl-blueprint .bp-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--line);background:#0C2749;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-blueprint .bp-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--ink);letter-spacing:.04em}
+.tpl-blueprint .bp-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-blueprint .bp-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-blueprint .bp-step:last-child{border-bottom:none}
+.tpl-blueprint .bp-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 行动钮：双线方框，收尾页 ---- */
+.tpl-blueprint .bp-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:2px solid var(--ink);outline:1px solid var(--border);outline-offset:4px;font-size:22px;font-weight:700;letter-spacing:.18em;color:var(--ink)}
+
+/* ---- 页面切换（翻页动画）：像翻一页图纸，干脆利落 ---- */
+.tpl-blueprint{--page-shift:14px;--page-dur:.4s}

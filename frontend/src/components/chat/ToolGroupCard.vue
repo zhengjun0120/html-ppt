@@ -24,7 +24,7 @@ const groupChip = computed(() => {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-[10px] border border-line bg-surface-2 text-[12.5px]">
+  <div class="overflow-hidden rounded-card border border-line bg-surface-2 text-[12.5px]">
     <button
       class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left"
       :aria-expanded="expanded"

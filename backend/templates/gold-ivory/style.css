@@ -1,0 +1,98 @@
+/* gold-ivory — 鎏金象牙 · 高级质感。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/gold-ivory（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 象牙白书页底 + 细密斜纹 + 双线金框：外线 inset 40px、内线再退 8px，
+ * 两道伪元素 pointer-events:none（z-index 在内容之上，只占页缘留白带，不拦点击）；
+ * 鎏金棕只做大字与色块（gi-mark/gi-btn/gi-stat-v），香槟金只做细线与菱形——
+ * 奢华是留白，不是堆金。 */
+.tpl-gold-ivory{
+  --bg:#E8DCC8;              /* 象牙白（丝光） */
+  --bg-soft:#EFE6D6;         /* 淡象牙（卡底/棕底上的字色） */
+  --ink:#4A2E15;             /* 深棕正文 */
+  --ink-2:#5A3A1F;           /* 棕灰正文 */
+  --ink-3:#8C7A63;           /* 浅棕小字 */
+  --border:rgba(122,78,29,.28);
+  --border-soft:rgba(122,78,29,.14);
+  --accent:#7A4E1D;          /* 鎏金棕（身份色：大字/色块） */
+  --brown:#7A4E1D;           /* 鎏金棕 */
+  --gold:#C9A876;            /* 香槟金（细线/菱形/花饰） */
+  --gold-soft:rgba(201,168,118,.4);
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：衬线大字 + 无衬线细体正文，对称稳重是骨架的一半 ---- */
+.tpl-gold-ivory .h1{font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:92px;line-height:1.12;font-weight:700;letter-spacing:.14em;color:var(--brown);margin-bottom:10px}
+.tpl-gold-ivory .h2{font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:52px;line-height:1.18;font-weight:700;letter-spacing:.12em;color:var(--brown);margin-bottom:8px}
+.tpl-gold-ivory h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.08em}
+.tpl-gold-ivory .lede{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:300;letter-spacing:.03em}
+.tpl-gold-ivory .deck-footer{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.22em;bottom:52px}
+
+/* ---- ambient：细密斜纹（.slide 背景，4% 香槟金）+ 双线金框（外 40px / 内 8px） ---- */
+.tpl-gold-ivory .slide{
+  background-color:var(--bg);
+  background-image:repeating-linear-gradient(115deg,rgba(201,168,118,.04) 0,rgba(201,168,118,.04) 1px,transparent 1px,transparent 4px);
+}
+.tpl-gold-ivory .slide::before{
+  content:"";position:absolute;inset:40px;border:1px solid var(--gold);pointer-events:none;z-index:6;
+}
+.tpl-gold-ivory .slide::after{
+  content:"";position:absolute;inset:48px;border:1px solid var(--gold-soft);pointer-events:none;z-index:6;
+}
+
+/* ---- 题签：菱形引导的小字标签（页首） ---- */
+.tpl-gold-ivory .gi-kicker{display:flex;align-items:center;gap:16px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:15px;font-weight:600;letter-spacing:.38em;color:var(--brown)}
+.tpl-gold-ivory .gi-kicker::before{content:"◆";font-size:13px;color:var(--gold)}
+
+/* ---- 花饰行：金线—菱形—金线，博物馆铭牌式点缀 ---- */
+.tpl-gold-ivory .gi-orn{display:inline-flex;align-items:center;gap:18px;color:var(--gold);font-size:15px;letter-spacing:.3em}
+.tpl-gold-ivory .gi-orn::before,.tpl-gold-ivory .gi-orn::after{content:"";width:56px;height:1px;background:var(--gold);opacity:.7}
+
+/* ---- 鎏金印记：棕色方块 + 内圈金色细线（双线母题的 miniature） ---- */
+.tpl-gold-ivory .gi-mark{flex:none;width:72px;height:72px;background:var(--brown);color:var(--bg-soft);display:flex;align-items:center;justify-content:center;text-align:center;font-family:Georgia,'Songti SC',serif;font-size:19px;font-weight:700;line-height:1.3;letter-spacing:.12em;box-shadow:inset 0 0 0 5px var(--brown),inset 0 0 0 6px rgba(201,168,118,.55)}
+
+/* ---- 金色渐变字：只许标题局部 2-4 字 ---- */
+.tpl-gold-ivory .gi-gold{background:linear-gradient(180deg,#C9A876 0%,#7A4E1D 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+
+/* ---- 象牙卡：半透明底 + 香槟金细边框，直角 ---- */
+.tpl-gold-ivory .gi-card{background:rgba(239,230,214,.72);border:1px solid var(--gold-soft);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：直角小签，博物馆标签气质 ---- */
+.tpl-gold-ivory .gi-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--gold);border-radius:2px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:15px;letter-spacing:.22em;color:var(--brown);white-space:nowrap}
+.tpl-gold-ivory .gi-pill-accent{background:var(--brown);border-color:var(--brown);color:var(--bg-soft)}
+
+/* ---- 目录行：方框衬线编号 + 篇名 + 说明 ---- */
+.tpl-gold-ivory .gi-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-gold-ivory .gi-item:last-child{border-bottom:none}
+.tpl-gold-ivory .gi-n{flex:none;width:52px;height:52px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:Georgia,'Songti SC',serif;font-size:20px;font-weight:700;color:var(--brown);align-self:center}
+.tpl-gold-ivory .gi-t{flex:none;width:260px;font-family:Georgia,'Songti SC',serif;font-size:29px;font-weight:700;letter-spacing:.1em;color:var(--brown)}
+.tpl-gold-ivory .gi-d{flex:1;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:18px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 鎏金数字：衬线大字，数据页主视觉 ---- */
+.tpl-gold-ivory .gi-stat{border-top:1px solid var(--gold);padding-top:30px}
+.tpl-gold-ivory .gi-stat-v{font-family:Georgia,'Songti SC',serif;font-size:100px;line-height:1;font-weight:700;letter-spacing:0;color:var(--brown)}
+.tpl-gold-ivory .gi-stat-u{font-size:26px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-gold-ivory .gi-stat-l{margin-top:20px;font-family:Georgia,'Songti SC',serif;font-size:26px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
+.tpl-gold-ivory .gi-stat-note{font-family:'Noto Sans SC','PingFang SC',sans-serif;margin:12px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 题铭引言：衬线大字 ---- */
+.tpl-gold-ivory .gi-quote{font-family:Georgia,'Songti SC','STSong',serif;font-size:60px;line-height:1.65;font-weight:700;letter-spacing:.06em;color:var(--brown);max-width:26em;margin:0}
+.tpl-gold-ivory .gi-src{margin:0;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:18px;letter-spacing:.18em;color:var(--ink-3)}
+
+/* ---- 时间线：菱形节点 + 金色连接线 ---- */
+.tpl-gold-ivory .gi-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-gold-ivory .gi-tl-item{flex:1;position:relative}
+.tpl-gold-ivory .gi-tl-item:not(:last-child)::before{content:"";position:absolute;top:14px;left:56px;right:-44px;height:1px;background:var(--gold);opacity:.7}
+.tpl-gold-ivory .gi-tl-dot{position:relative;z-index:1;width:19px;height:19px;transform:rotate(45deg);background:var(--brown);border:1px solid var(--gold);margin:4px 0 0 6px}
+.tpl-gold-ivory .gi-tl-t{margin-top:22px;font-family:'Noto Sans SC',sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:var(--brown)}
+.tpl-gold-ivory .gi-tl-d{margin-top:8px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-gold-ivory .gi-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-gold-ivory .gi-step:last-child{border-bottom:none}
+.tpl-gold-ivory .gi-mini-t{margin:0;font-family:'Noto Sans SC',sans-serif;font-size:19px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：鎏金棕色块，收尾页的仪式感 ---- */
+.tpl-gold-ivory .gi-btn{display:inline-flex;align-items:center;gap:14px;padding:16px 44px;background:var(--brown);color:var(--bg-soft);font-family:Georgia,'Songti SC',serif;font-size:22px;font-weight:700;letter-spacing:.24em;box-shadow:inset 0 0 0 1px rgba(239,230,214,.35)}
+
+/* ---- 页面切换（翻页动画）：如帷幔沉稳合拢（ease-in-out） ---- */
+.tpl-gold-ivory{--page-shift:10px;--page-dur:.58s;--page-ease:cubic-bezier(.45,.05,.55,.95)}

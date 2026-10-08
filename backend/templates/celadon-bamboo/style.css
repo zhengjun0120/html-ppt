@@ -1,0 +1,99 @@
+/* celadon-bamboo — 青瓷竹影。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/celadon-bamboo（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 浅黄绿纸面 + 青瓷绿三阶 + 深青远景 + 朱砂小印：信息像题跋一样安静落在画面里，
+ * 卡用半透明纸面底 + 低对比描边细线，无阴影；右侧竹简竖条（border 实现）与
+ * 左下竹叶薄雾是每页自动衬底的 ambient 层（z-index:-1，骨架零成本）。 */
+.tpl-celadon-bamboo{
+  --bg:#F3F1D5;              /* 浅黄绿纸面 */
+  --bg-soft:#EEF0D6;         /* 淡月白纸面（卡底） */
+  --ink:#1B1A18;             /* 墨字 */
+  --ink-2:#55625B;           /* 灰绿正文 */
+  --ink-3:#8A958C;           /* 淡灰绿小字 */
+  --border:rgba(27,26,24,.14);
+  --border-soft:rgba(27,26,24,.09);
+  --celadon:#9DCB95;         /* 青瓷浅绿 */
+  --celadon-deep:#6FAF82;    /* 青瓷深绿 */
+  --celadon-teal:#5DA8A7;    /* 青瓷青 */
+  --deep-teal:#2F7D91;       /* 远景深青（题签/关键数据） */
+  --seal-red:#B53A2D;        /* 朱砂印 */
+  --seal-ink:#F3F1D5;
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：Georgia/宋体衬线高对比标题，正文细宋体拉开行距 ---- */
+.tpl-celadon-bamboo .h1{font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:88px;line-height:1.14;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:10px}
+.tpl-celadon-bamboo .h2{font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:52px;line-height:1.18;font-weight:700;letter-spacing:.06em;color:var(--ink);margin-bottom:8px}
+.tpl-celadon-bamboo h4{font-family:Georgia,'Songti SC','STSong','SimSun',serif;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.04em}
+.tpl-celadon-bamboo .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-celadon-bamboo .deck-footer{font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：右侧竹简竖条（border 实现，低透明度）画在内容之下 ---- */
+.tpl-celadon-bamboo .slide::before{
+  content:"";position:absolute;top:0;bottom:0;right:64px;width:12px;z-index:-1;
+  border-left:7px solid rgba(111,175,130,.26);
+  border-right:2px solid rgba(157,203,149,.30);
+  background:repeating-linear-gradient(180deg,rgba(111,175,130,.14) 0 148px,transparent 148px 160px);
+}
+.tpl-celadon-bamboo .slide::after{
+  content:"";position:absolute;left:0;bottom:0;width:500px;height:280px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 280' preserveAspectRatio='none'%3E%3Cellipse cx='310' cy='238' rx='250' ry='42' fill='%23F6F5E2' opacity='0.85'/%3E%3Cpath d='M10,280 Q120,205 245,168' stroke='%236FAF82' stroke-width='3' fill='none' opacity='0.45'/%3E%3Cpath d='M245,168 Q330,132 395,150 Q320,178 245,168 Z' fill='%239DCB95' opacity='0.50'/%3E%3Cpath d='M120,246 Q190,210 258,196 Q210,238 120,246 Z' fill='%239DCB95' opacity='0.40'/%3E%3Cpath d='M40,278 Q100,240 150,226' stroke='%235DA8A7' stroke-width='2' fill='none' opacity='0.35'/%3E%3C/svg%3E") no-repeat bottom left;
+}
+
+/* ---- 题签：细线引导的小字标签（页首），线用青瓷青 ---- */
+.tpl-celadon-bamboo .qc-kicker{display:flex;align-items:center;gap:16px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.42em;color:var(--deep-teal)}
+.tpl-celadon-bamboo .qc-kicker::before{content:"";width:44px;height:1px;background:var(--celadon-teal)}
+
+/* ---- 朱砂小印：小方块印，全模板唯一的红底元素 ---- */
+.tpl-celadon-bamboo .qc-seal{flex:none;width:64px;height:64px;background:var(--seal-red);color:var(--seal-ink);display:flex;align-items:center;justify-content:center;text-align:center;font-family:Georgia,'STKaiti','KaiTi',serif;font-size:18px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 低对比细线：标题下的一根，青瓷青渐隐 ---- */
+.tpl-celadon-bamboo .qc-line{width:210px;height:2px;background:linear-gradient(90deg,var(--celadon-teal) 0%,var(--celadon) 55%,transparent 100%);opacity:.75}
+
+/* ---- 纸面卡：半透明纸面底 + 低对比描边，无阴影 ---- */
+.tpl-celadon-bamboo .qc-card{background:rgba(238,240,214,.72);border:1px solid var(--border-soft);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：细描边胶囊，轻而安静 ---- */
+.tpl-celadon-bamboo .qc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-celadon-bamboo .qc-pill-accent{border-color:var(--seal-red);color:var(--seal-red)}
+
+/* ---- 目录行：圈码编号 + 展段名 + 说明 ---- */
+.tpl-celadon-bamboo .qc-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-celadon-bamboo .qc-item:last-child{border-bottom:none}
+.tpl-celadon-bamboo .qc-n{flex:none;width:52px;height:52px;border:1.5px solid var(--deep-teal);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:19px;font-weight:700;color:var(--deep-teal);align-self:center}
+.tpl-celadon-bamboo .qc-t{flex:none;width:260px;font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:30px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-celadon-bamboo .qc-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 深青数字：数据页主视觉（朱砂不做数字，留给印） ---- */
+.tpl-celadon-bamboo .qc-stat{border-top:2px solid var(--deep-teal);padding-top:30px}
+.tpl-celadon-bamboo .qc-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:104px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--deep-teal)}
+.tpl-celadon-bamboo .qc-stat-u{font-size:28px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-celadon-bamboo .qc-stat-l{margin-top:20px;font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:27px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-celadon-bamboo .qc-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：衬线大字；出处是题跋小字 ---- */
+.tpl-celadon-bamboo .qc-quote{font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:60px;line-height:1.6;font-weight:700;letter-spacing:.05em;color:var(--ink);max-width:26em;margin:0}
+.tpl-celadon-bamboo .qc-src{margin:0;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:18px;letter-spacing:.30em;color:var(--ink-2)}
+
+/* ---- 竖排短句：只放留白处 ---- */
+.tpl-celadon-bamboo .qc-verse{writing-mode:vertical-rl;font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:25px;letter-spacing:.5em;line-height:2.1;color:var(--ink-2)}
+.tpl-celadon-bamboo .qc-verse-accent{color:var(--seal-red)}
+
+/* ---- 时间线：圈码圆点 + 细青连接线 ---- */
+.tpl-celadon-bamboo .qc-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-celadon-bamboo .qc-tl-item{flex:1;position:relative}
+.tpl-celadon-bamboo .qc-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1px;background:var(--border)}
+.tpl-celadon-bamboo .qc-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--deep-teal);border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--deep-teal)}
+.tpl-celadon-bamboo .qc-tl-t{margin-top:20px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--deep-teal);letter-spacing:.04em}
+.tpl-celadon-bamboo .qc-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-celadon-bamboo .qc-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-celadon-bamboo .qc-step:last-child{border-bottom:none}
+.tpl-celadon-bamboo .qc-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：细描边按钮，禁强对比商业钮 ---- */
+.tpl-celadon-bamboo .qc-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:1.5px solid var(--ink);font-family:Georgia,'Songti SC','STSong','SimSun',serif;font-size:23px;font-weight:700;letter-spacing:.18em;color:var(--ink)}
+
+/* ---- 页面切换（翻页动画）：如竹简轻轻滑入 ---- */
+.tpl-celadon-bamboo{--page-shift:14px;--page-dur:.58s;--page-ease:cubic-bezier(.22,.61,.36,1)}

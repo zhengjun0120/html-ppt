@@ -1,0 +1,101 @@
+/* handdrawn-watercolor — 治愈手绘水彩。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/handdrawn-watercolor（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 米白纸纹底 + 低饱和天蓝/湖蓝 + 少量珊瑚色点缀：色块一律是"晕开"的
+ * 径向渐变（无清晰边界），描边是低透明度的铅笔软线，圆角不规则，
+ * 整页保持绘本式的充足留白。
+ * 右上淡蓝水彩晕与页底纸纹波浪是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-handdrawn-watercolor{
+  --bg:#F5F5DC;              /* 米白纸底（上游原色） */
+  --bg-soft:#FBF9EC;         /* 亮一档的画纸白 */
+  --ink:#55503E;             /* 深暖灰棕正文 */
+  --ink-2:#7A7260;           /* 次级文字 */
+  --ink-3:#A79C84;           /* 铅笔灰小字 */
+  --heading:#6B705C;         /* 灰绿标题色（上游预览题字色） */
+  --border:rgba(122,114,96,.30);
+  --border-soft:rgba(122,114,96,.16);
+  --accent:#5FA8C9;          /* 湖蓝（天蓝 #87CEEB 收深一档，可作文字色） */
+  --accent-deep:#3E7C99;     /* 深湖蓝（数字/强调文字） */
+  --sky:#87CEEB;             /* 上游天蓝（只做晕染与浅底） */
+  --coral:#E4693F;           /* 珊瑚（原 #FF7F50 收暗一档，投屏不刺眼） */
+  font-family:'Varela Round','Yuanti SC','YouYuan','Comic Sans MS','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：圆体绘本标题 + 宽松行距，治愈感一半来自呼吸 ---- */
+.tpl-handdrawn-watercolor .h1{font-size:84px;line-height:1.16;font-weight:700;letter-spacing:.05em;color:var(--heading);margin-bottom:12px}
+.tpl-handdrawn-watercolor .h2{font-size:48px;line-height:1.22;font-weight:700;letter-spacing:.04em;color:var(--heading);margin-bottom:8px}
+.tpl-handdrawn-watercolor h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.04em}
+.tpl-handdrawn-watercolor .lede{font-size:23px;line-height:1.95;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-handdrawn-watercolor .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：右上淡蓝水彩晕（径向渐变，无边界）+ 页底纸纹与波浪涂鸦 ---- */
+.tpl-handdrawn-watercolor .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(360px 360px at 90% 4%, rgba(135,206,235,.32), transparent 66%),
+    radial-gradient(210px 210px at 97% 26%, rgba(135,206,235,.18), transparent 70%),
+    radial-gradient(150px 150px at 76% 12%, rgba(255,127,80,.10), transparent 70%),
+    radial-gradient(260px 260px at 3% 90%, rgba(255,127,80,.12), transparent 70%),
+    radial-gradient(170px 170px at 12% 68%, rgba(135,206,235,.10), transparent 70%);
+}
+.tpl-handdrawn-watercolor .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.45 0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23n)'/%3E%3C/svg%3E") repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 120'%3E%3Cpath d='M20,58 Q45,32 70,58 T120,58 T170,58 T220,58 T270,58' stroke='%235FA8C9' stroke-width='3.5' fill='none' opacity='.35' stroke-linecap='round'/%3E%3Cpath d='M60,92 Q85,70 110,92 T160,92' stroke='%23FF7F50' stroke-width='3' fill='none' opacity='.3' stroke-linecap='round'/%3E%3Ccircle cx='330' cy='40' r='26' fill='none' stroke='%235FA8C9' stroke-width='2.5' stroke-dasharray='6 7' opacity='.3'/%3E%3C/svg%3E") no-repeat right bottom;
+  background-size:280px 280px, 420px 120px;
+  background-position:left top, right 44px bottom 88px;
+}
+
+/* ---- 小签：波浪线引导的天蓝小字标签（页首） ---- */
+.tpl-handdrawn-watercolor .hw-kicker{display:flex;align-items:center;gap:14px;font-size:16px;font-weight:700;letter-spacing:.32em;color:var(--accent-deep)}
+.tpl-handdrawn-watercolor .hw-kicker::before{content:"";flex:none;width:56px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 12'%3E%3Cpath d='M2,8 Q10,2 18,8 T34,8 T50,8' stroke='%235FA8C9' stroke-width='3' fill='none' opacity='.8' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / contain}
+
+/* ---- 波浪下划线：标题下的一笔水痕 ---- */
+.tpl-handdrawn-watercolor .hw-wave{width:190px;height:16px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 16'%3E%3Cpath d='M4,10 Q20,2 36,10 T68,10 T100,10 T132,10 T164,10 T186,10' stroke='%235FA8C9' stroke-width='3.5' fill='none' opacity='.7' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / contain}
+
+/* ---- 纸卡：画纸白 + 铅笔软描边 + 不规则圆角 + 极轻投影 ---- */
+.tpl-handdrawn-watercolor .hw-card{background:rgba(255,253,242,.78);border:1.6px solid var(--border);border-radius:26px 34px 24px 36px / 34px 24px 38px 26px;padding:36px 40px;box-shadow:0 8px 26px rgba(122,114,96,.08);display:flex;flex-direction:column}
+
+/* ---- 药丸：淡彩晕染胶囊（湖蓝 / 珊瑚两味） ---- */
+.tpl-handdrawn-watercolor .hw-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border-radius:999px;background:rgba(135,206,235,.18);font-size:17px;font-weight:700;letter-spacing:.1em;color:var(--accent-deep);white-space:nowrap}
+.tpl-handdrawn-watercolor .hw-pill-coral{background:rgba(255,127,80,.15);color:var(--coral)}
+
+/* ---- 目录行：晕染圆点编号 + 篇名 + 说明 ---- */
+.tpl-handdrawn-watercolor .hw-item{display:flex;align-items:center;gap:26px;padding:26px 6px;border-bottom:1.6px dashed var(--border-soft)}
+.tpl-handdrawn-watercolor .hw-item:last-child{border-bottom:none}
+.tpl-handdrawn-watercolor .hw-n{flex:none;width:54px;height:54px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#2E5E74;background:radial-gradient(circle at 34% 30%, rgba(176,224,240,.95), rgba(135,206,235,.55) 55%, rgba(135,206,235,.18));border-radius:50% 44% 52% 48% / 46% 54% 46% 52%}
+.tpl-handdrawn-watercolor .hw-t{flex:none;width:250px;font-size:27px;font-weight:700;letter-spacing:.06em;color:var(--heading)}
+.tpl-handdrawn-watercolor .hw-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 湖蓝数字：数据页主视觉 ---- */
+.tpl-handdrawn-watercolor .hw-stat{background:rgba(255,253,242,.72);border:1.6px solid var(--border-soft);border-radius:24px 32px 26px 34px / 32px 26px 34px 24px;padding:30px 32px}
+.tpl-handdrawn-watercolor .hw-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--accent-deep)}
+.tpl-handdrawn-watercolor .hw-stat-u{font-size:26px;font-weight:700;color:var(--ink-3);margin-left:8px}
+.tpl-handdrawn-watercolor .hw-stat-l{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.05em;color:var(--heading)}
+.tpl-handdrawn-watercolor .hw-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 扉页引文：圆体大字 + 竖排短语 ---- */
+.tpl-handdrawn-watercolor .hw-quote{font-size:58px;line-height:1.6;font-weight:700;letter-spacing:.05em;color:var(--heading);max-width:26em;margin:0}
+.tpl-handdrawn-watercolor .hw-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+.tpl-handdrawn-watercolor .hw-vert{writing-mode:vertical-rl;font-size:24px;font-weight:700;letter-spacing:.5em;line-height:1.9;color:var(--accent-deep);opacity:.85}
+
+/* ---- 时间线：晕染圆点 + 铅笔虚线 ---- */
+.tpl-handdrawn-watercolor .hw-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-handdrawn-watercolor .hw-tl-item{flex:1;position:relative}
+.tpl-handdrawn-watercolor .hw-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:56px;right:-44px;border-top:2px dashed var(--border)}
+.tpl-handdrawn-watercolor .hw-tl-dot{position:relative;z-index:1;width:53px;height:53px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#2E5E74;background:radial-gradient(circle at 34% 30%, rgba(176,224,240,.95), rgba(135,206,235,.55) 55%, rgba(135,206,235,.18));border-radius:50% 46% 52% 48% / 48% 52% 44% 52%}
+.tpl-handdrawn-watercolor .hw-tl-t{margin-top:18px;font-size:21px;font-weight:700;color:var(--coral);letter-spacing:.04em}
+.tpl-handdrawn-watercolor .hw-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列纸卡） ---- */
+.tpl-handdrawn-watercolor .hw-step{display:flex;align-items:center;gap:20px;padding:25px 4px;border-bottom:1.6px dashed var(--border-soft)}
+.tpl-handdrawn-watercolor .hw-step:last-child{border-bottom:none}
+.tpl-handdrawn-watercolor .hw-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：珊瑚实心，软圆角 ---- */
+.tpl-handdrawn-watercolor .hw-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 42px;background:var(--coral);color:#FFF7EF;font-size:22px;font-weight:800;letter-spacing:.14em;border-radius:22px 30px 24px 32px / 30px 22px 32px 24px;box-shadow:0 10px 24px rgba(228,105,63,.22)}
+
+/* ---- 页面切换（翻页动画）：像水一样缓缓漾开 ---- */
+.tpl-handdrawn-watercolor{--page-shift:10px;--page-dur:.6s;--page-ease:cubic-bezier(.22,.61,.36,1)}

@@ -80,3 +80,6 @@
 .tpl-course-module.cm-warm{--accent:#ea580c}
 
 .tpl-course-module.cm-forest{--accent:#16a34a}
+
+/* ---- 页面切换（翻页动画）：纯淡入。教学页切换要稳重，不抢内容 ---- */
+.tpl-course-module{--page-shift:0px;--page-dur:.45s}

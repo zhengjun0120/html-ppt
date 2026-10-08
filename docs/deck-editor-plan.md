@@ -14,12 +14,12 @@
 
 | # | 决策点 | 结论 |
 |---|--------|------|
-| 1 | 首版能力 | **文本自由编辑 + 拖动/缩放卡片** 两项。样式面板、元素增删复制、页级操作全部二期 |
+| 1 | 首版能力 | **文本自由编辑 + 拖动/缩放卡片** 两项。样式面板、元素增删复制、页级操作全部二期。（2026-09-26 晚追加：**字号缩放**提前做了——工具栏 A−/A+ 步进器 + Ctrl+=/Ctrl+-，选中块及其内部文字等比缩放，px 行高随动） |
 | 2 | 编辑器形态 | **预览弹窗内编辑**（不做独立全屏路由） |
 | 3 | 保存机制 | **显式保存**（Ctrl+S / 按钮）+ 文稿写 history 版本可回滚 |
 | 4 | 可编辑对象 | **用户文稿（deck）+ 我的模板（ut-*）**；内置模板画廊 demo 只读 |
 | 5 | 拖动语义 | 拖走后**原位置留等大占位块**，其余元素不动（PPT 心理模型）；占位块是真实内容，随保存持久化，用户可后续手动删 |
-| 6 | 可选中元素 | **两层**：`.slide` 直接子元素 + grid/flex 容器内的卡片；点击选中最内层，Esc 逐级上选 |
+| 6 | 可选中元素 | **两层**：`.slide` 直接子元素 + grid/flex 容器内的卡片；点击选中最内层，Esc 逐级上选。（2026-09-26 晚升级为**方案 A**：候选=块级元素 + 有盒子样式的行内元素（背景/边框/内边距，如 span.tag 小卡片），深度不限，点击选中最深候选，Esc 逐层上退；纯文字行内（渐变字/mono）与装饰元素排除；候选集按页缓存、随结构变更失效；行内候选的占位块用 inline-block） |
 | 7 | AI 与手改 | **覆盖 + 历史可回滚**：AI 重新生成/对话改稿会盖掉手改，不锁页；每次 AI 写入和手动保存都在 history 里 |
 | 8 | 模板备份 | 用户模板保存时服务端**自动留最近 5 版**（滚动） |
 | — | 临时默认（用户可验收前改） | 占位块带 `data-ed-placeholder` 标记；编辑入口按钮在弹窗右上角 / 预览工具栏 |
@@ -270,9 +270,11 @@ pointerdown 在已选中元素上（非手柄）→ 开始拖动：
   scale = slide.getBoundingClientRect().width / slide.clientWidth   // .deck 被 --deck-scale 缩放，全部坐标换算除以它
   第一次拖动该元素时（transform 化）：
     rect = el.getBoundingClientRect()
-    // 占位块：插在原 DOM 位次，顶住流式空间——其余元素纹丝不动的关键
-    ph = <div data-ed-placeholder>，style: width=(rect.width/scale)px; height=(rect.height/scale)px;
-         margin = 拷贝 el 的 computed margin; flex:'0 0 auto'; display:'block'
+    // 占位块 = 原元素的浅克隆（类名/结构属性全保留）：布局算法看到的是和原元素
+  // 完全相同的盒子（display/flex 分配/min-width 一应俱全），兄弟元素在数学上
+  // 必然冻结——合成 div 只拷宽高 margin，弹性/grid 重排会挤动没选中的兄弟。
+  // 皮肤透明（背景/边框/阴影/文字色 inline 置空 + 伪元素 content:none），
+  // 空洞看起来是空的但不影响布局。占位块是真实内容，随 serialize 保留。
     el.before(ph)
     // 转绝对定位（包含块 = .slide 的 padding box，rect 差值坐标直接可用）
     el.style.position='absolute'
@@ -292,9 +294,22 @@ pointerdown 在已选中元素上（非手柄）→ 开始拖动：
 **缩放（八手柄）**：
 
 ```
-pointerdown 在 .ed-handle 上 → 按方向改 width/height（角手柄同时改 left/top），
+pointerdown 在 .ed-handle 上 → beginResize 必须先 transformToAbsolute（与拖动同一条纪律）。
+  ——实测教训：流式元素上直接写 width/height 会引发居中布局（justify-content:center）
+  整页回流，元素带着选中框"跳走"，且 left/top 对流式元素不生效。
+转换后按方向改 width/height（角手柄同时改 left/top），
 最小 48×24（slide-local），实时写 style，pointerup 时 pushUndo + reportDirty。
-文本自然回流（流式内容的固有行为，接受）。
+**角手柄（nw/ne/se/sw）= 内容等比缩放**：拖动中以「起始字号 ×（当前宽/起始宽）」
+实时换算选中块内所有文字的 font-size 与 px 行高（基准是拖动开始时的现值，避免连乘漂移），
+与盒子同一条 undo；边手柄（n/s/e/w）不动字号。文本自然回流（流式内容的固有行为，接受）。
+**resize 解除 max 钳制**（2026-09-27，0079 s4 实测教训：原设计把 max-width 当
+"模板护栏"，但 `.lede{max-width:62ch}` 让 east 手柄完全拉不动——行内 width 写到
+1162px、渲染仍停在 796px，用户视角是功能坏了）：beginResize 按方向先把现尺寸
+钉成 px（width/height:auto 的盒子在解锁瞬间会被内容撑开，先钉住防跳），再写
+`max-width/max-height:none`（行内必赢样式表非 !important 规则）。解锁随 serialize
+落盘——"能扩到多宽"是用户 resize 的意图，持久生效；undo 恢复视觉状态，解锁作为
+arming 状态保留（与绝对定位+占位块同一条纪律：begin* 阶段的变更不单独成 undo 项）。
+拖动（不改尺寸）不解 max。
 ```
 
 **智能参考线（吸附）**：
@@ -315,6 +330,8 @@ dblclick 选中元素 → el.contentEditable='plaintext-only'（Chrome 支持；
   paste 拦截：preventDefault + execCommand('insertText', false, 纯文本)
   Enter 拦截：preventDefault + execCommand('insertLineBreak')   // 防止 h1 里长出嵌套 <div>
   blur / Esc → 提交：移除 contenteditable、class；pushUndo + reportDirty
+  换行持久化：plaintext-only 的 Enter 产出纯文本 \n（编辑态按 pre-wrap 渲染，
+  退出后会被流式渲染折叠成空格）——退出编辑/serialize 前把 \n 归一化成 <br>
 span 保留：contenteditable 天然保留既有内联 span（xw-grad/xw-focus/mono…）——只要不全选删光
 全选删光会丢 span：v1 接受，写进已知妥协
 ```
@@ -369,7 +386,9 @@ function serialize() {
 | ←iframe | `{type:'preview-ready'}` | runtime 既有 |
 | ←iframe | `{type:'editor-ready', pages:N}` | 就绪 + 页数（顺带解决页数来源） |
 | ←iframe | `{type:'editor-dirty', dirty:boolean}` | 脏标记变化（首次变更 true、保存后 false） |
+| ←iframe | `{type:'editor-selection', selected:boolean, fontSize:number\|null}` | 选中态变化；父页据此启用字号步进器并显示当前字号 |
 | ←iframe | `{type:'editor-serialize', html:string}` | 全量 HTML（对 editor-save / Ctrl+S 的响应） |
+| →iframe | `{type:'editor-font', factor:number}` | 字号等比缩放选中块及其内部文字（0.9/1.1） |
 
 安全：`onMessage` 一律先 `e.source === frameEl.contentWindow` 再处理（TemplatePreviewModal 既有做法）；目标侧 `postMessage(...,'*')`（opaque origin 无源可指定，既有约定）。
 

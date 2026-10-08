@@ -1,0 +1,103 @@
+/* chinese-ink-landscape — 中式水墨意境·山水。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/chinese-ink-landscape（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 云雾白 + 青黛蓝 + 远山灰蓝 + 暖沙米 + 朱砂印：留白即云雾，卡用宣纸米半透明底 +
+ * 细线框，不用硬阴影；层叠山峦（灰蓝/青黛/墨三层）是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-chinese-ink-landscape{
+  --bg:#F4F1EA;              /* 云雾白 */
+  --bg-soft:#EDE7DA;         /* 宣纸米（卡底） */
+  --ink:#2C3E50;             /* 墨黛 */
+  --ink-2:#5D6D7E;           /* 暖灰正文 */
+  --ink-3:#8C9BAA;           /* 远山灰小字 */
+  --border:rgba(44,62,80,.16);
+  --border-soft:rgba(44,62,80,.10);
+  --peak:#4A90A4;            /* 青黛蓝 */
+  --mist-blue:#8B9DC3;       /* 远山灰蓝 */
+  --sand:#D4C4A0;            /* 暖沙米 */
+  --cinnabar:#A93226;        /* 朱砂（印章、关键数据） */
+  --cinnabar-ink:#F4F1EA;
+  font-family:'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：宋体加粗大字距标题，气势沉稳；正文行高 1.9 ---- */
+.tpl-chinese-ink-landscape .h1{font-family:'Songti SC','STSong','SimSun',serif;font-size:92px;line-height:1.14;font-weight:700;letter-spacing:.16em;color:var(--ink);margin-bottom:10px}
+.tpl-chinese-ink-landscape .h2{font-family:'Songti SC','STSong','SimSun',serif;font-size:54px;line-height:1.18;font-weight:700;letter-spacing:.12em;color:var(--ink);margin-bottom:8px}
+.tpl-chinese-ink-landscape h4{font-family:'Songti SC','STSong','SimSun',serif;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.06em}
+.tpl-chinese-ink-landscape .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-chinese-ink-landscape .deck-footer{font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：云雾（radial-gradient 两抹，上半区）+ 层叠山峦（页底三层 SVG） ---- */
+.tpl-chinese-ink-landscape .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(ellipse 460px 96px at 24% 16%, rgba(244,241,234,.92) 0%, transparent 70%),
+    radial-gradient(ellipse 560px 88px at 70% 36%, rgba(244,241,234,.85) 0%, transparent 70%);
+}
+.tpl-chinese-ink-landscape .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:310px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 320' preserveAspectRatio='none'%3E%3Cpath d='M0,320 L0,145 Q240,72 480,132 Q720,186 960,98 Q1200,34 1440,124 Q1680,190 1920,112 L1920,320 Z' fill='%238B9DC3' opacity='0.28'/%3E%3Cpath d='M0,320 L0,212 Q300,146 600,200 Q900,246 1200,176 Q1500,120 1920,200 L1920,320 Z' fill='%234A90A4' opacity='0.25'/%3E%3Cpath d='M0,320 L0,264 Q480,232 960,266 Q1440,292 1920,256 L1920,320 Z' fill='%232C3E50' opacity='0.18'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：朱砂细线引导的小字标签（页首） ---- */
+.tpl-chinese-ink-landscape .cl-kicker{display:flex;align-items:center;gap:16px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.42em;color:var(--ink-2)}
+.tpl-chinese-ink-landscape .cl-kicker::before{content:"";width:44px;height:2px;background:var(--cinnabar)}
+
+/* ---- 朱砂印：正方块小印，全模板唯一的红底元素 ---- */
+.tpl-chinese-ink-landscape .cl-seal{flex:none;width:72px;height:72px;background:var(--cinnabar);color:var(--cinnabar-ink);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 山棱线：标题下的一笔，从青黛蓝到透明，如远山轮廓 ---- */
+.tpl-chinese-ink-landscape .cl-ridge{width:230px;height:5px;background:linear-gradient(90deg,var(--peak) 0%,var(--mist-blue) 55%,transparent 100%)}
+
+/* ---- 宣纸卡：半透明宣纸米底 + 细线框，无阴影 ---- */
+.tpl-chinese-ink-landscape .cl-card{background:rgba(237,231,218,.72);border:1px solid var(--border-soft);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：细描边胶囊，低调印章感 ---- */
+.tpl-chinese-ink-landscape .cl-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-chinese-ink-landscape .cl-pill-accent{border-color:var(--cinnabar);color:var(--cinnabar)}
+
+/* ---- 色卡方块组：山水四色的正面示意，只放封面/收尾的留白处 ---- */
+.tpl-chinese-ink-landscape .cl-swatches{display:flex;gap:12px;align-items:center}
+.tpl-chinese-ink-landscape .cl-sw{width:32px;height:32px;border:1px solid var(--border-soft)}
+
+/* ---- 目录行：墨圈编号 + 卷名 + 说明 ---- */
+.tpl-chinese-ink-landscape .cl-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-ink-landscape .cl-item:last-child{border-bottom:none}
+.tpl-chinese-ink-landscape .cl-n{flex:none;width:52px;height:52px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:19px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-chinese-ink-landscape .cl-t{flex:none;width:260px;font-family:'Songti SC','STSong','SimSun',serif;font-size:30px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-ink-landscape .cl-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 朱砽数字：数据页主视觉 ---- */
+.tpl-chinese-ink-landscape .cl-stat{border-top:2px solid var(--peak);padding-top:30px}
+.tpl-chinese-ink-landscape .cl-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:104px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--cinnabar)}
+.tpl-chinese-ink-landscape .cl-stat-u{font-size:28px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-chinese-ink-landscape .cl-stat-l{margin-top:20px;font-family:'Songti SC','STSong','SimSun',serif;font-size:27px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-ink-landscape .cl-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：宋体大字，如登高时念的一句诗 ---- */
+.tpl-chinese-ink-landscape .cl-quote{font-family:'Songti SC','STSong','SimSun',serif;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:26em;margin:0}
+.tpl-chinese-ink-landscape .cl-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排题款：诗句/点缀，只放留白处 ---- */
+.tpl-chinese-ink-landscape .cl-vert{writing-mode:vertical-rl;font-family:'STKaiti','KaiTi',serif;font-size:26px;letter-spacing:.5em;line-height:2.1;color:var(--ink-2)}
+.tpl-chinese-ink-landscape .cl-vert-accent{color:var(--cinnabar)}
+
+/* ---- 时间线：墨圈圆点 + 细灰蓝连接线 ---- */
+.tpl-chinese-ink-landscape .cl-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-chinese-ink-landscape .cl-tl-item{flex:1;position:relative}
+.tpl-chinese-ink-landscape .cl-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1px;background:var(--border)}
+.tpl-chinese-ink-landscape .cl-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--ink);border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-chinese-ink-landscape .cl-tl-t{margin-top:20px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--cinnabar);letter-spacing:.04em}
+.tpl-chinese-ink-landscape .cl-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-chinese-ink-landscape .cl-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-ink-landscape .cl-step:last-child{border-bottom:none}
+.tpl-chinese-ink-landscape .cl-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：墨框描边，收尾页 ---- */
+.tpl-chinese-ink-landscape .cl-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:2px solid var(--ink);font-family:'Songti SC','STSong','SimSun',serif;font-size:23px;font-weight:700;letter-spacing:.18em;color:var(--ink)}
+
+/* ---- 页面切换（翻页动画）：如云雾缓缓聚散 ---- */
+.tpl-chinese-ink-landscape{--page-shift:16px;--page-dur:.62s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

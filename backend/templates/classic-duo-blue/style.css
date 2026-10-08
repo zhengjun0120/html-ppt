@@ -1,0 +1,105 @@
+/* classic-duo-blue — 经典双色·米黄深蓝。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/classic-duo-blue（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 暖米黄 #F9F2E0 与深海蓝 #1660AB 的强对比双色：米黄如典籍封面，深蓝似扉页；
+ * 衬线大字、细金线、衬线斜体序号是全部装饰语言。金棕 #B8860B 只作线与
+ * 序号的点缀，深海蓝只作标题、色块与按钮。四角金色书角与右上暖调纸感
+ * 是每页自动衬底的 ambient 层（z-index:-1，画在 .deck 背景之上、内容之下）。 */
+.tpl-classic-duo-blue{
+  --bg:#FBF5E6;              /* 米白纸底 */
+  --bg-soft:#FFFCF2;         /* 象牙（卡底） */
+  --surface:#F9F2E0;
+  --surface-2:#FCF6E8;
+  --ink:#2C2416;             /* 暖墨正文 */
+  --ink-2:#5A4E38;           /* 暖灰正文 */
+  --ink-3:#97876B;           /* 淡金褐小字 */
+  --border:rgba(13,61,110,.18);
+  --border-soft:rgba(13,61,110,.12);
+  --navy:#1660AB;            /* 深海蓝（主色） */
+  --navy-deep:#0D3D6E;       /* 藏青（标题） */
+  --gold:#B8860B;            /* 金棕（线与序号） */
+  --beige:#F9F2E0;           /* 米黄（深蓝上的文字） */
+  font-family:'Playfair Display','Noto Serif SC','Songti SC','STSong','SimSun',Georgia,serif;
+}
+
+/* ---- 字阶：衬线大字压深海蓝，正文宋体宽行距，书卷气的一半在行距里 ---- */
+.tpl-classic-duo-blue .h1{font-size:84px;line-height:1.15;font-weight:800;letter-spacing:.06em;color:var(--navy-deep);margin-bottom:12px}
+.tpl-classic-duo-blue .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.05em;color:var(--navy-deep);margin-bottom:10px}
+.tpl-classic-duo-blue h4{font-family:inherit;color:var(--navy-deep);font-weight:700;font-size:25px;letter-spacing:.04em}
+.tpl-classic-duo-blue .lede{font-size:23px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-classic-duo-blue .deck-footer{font-family:Georgia,'Noto Serif SC',serif;font-size:14px;color:var(--ink-3);letter-spacing:.28em}
+
+/* ---- ambient：四角金色书角 + 右上暖调纸感光晕（典籍装帧的呼吸） ---- */
+.tpl-classic-duo-blue .slide::before{
+  content:"";position:absolute;inset:26px;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(var(--gold),var(--gold)) 0 0/26px 2px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 0 0/2px 26px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 100% 0/26px 2px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 100% 0/2px 26px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 0 100%/26px 2px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 0 100%/2px 26px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 100% 100%/26px 2px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) 100% 100%/2px 26px no-repeat;
+  opacity:.55;
+}
+.tpl-classic-duo-blue .slide::after{
+  content:"";position:absolute;right:-140px;top:-140px;width:480px;height:480px;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle,rgba(184,134,11,.10) 0%,rgba(184,134,11,0) 68%);
+}
+
+/* ---- 金线题签：金棕短线 + 藏青字距小字，像扉页的丛书名 ---- */
+.tpl-classic-duo-blue .cd-kicker{display:flex;align-items:center;gap:16px;font-size:16px;font-weight:600;letter-spacing:.3em;color:var(--navy-deep)}
+.tpl-classic-duo-blue .cd-kicker::before{content:"";flex:none;width:34px;height:2px;background:var(--gold)}
+
+/* ---- 金棕细线：标题下的一笔 ---- */
+.tpl-classic-duo-blue .cd-rule{width:180px;height:2px;background:var(--gold)}
+
+/* ---- 标识块：深蓝渐变方标 + 米色衬线字，典籍封面的一角 ---- */
+.tpl-classic-duo-blue .cd-badge{flex:none;width:74px;height:74px;background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);color:var(--beige);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;letter-spacing:.1em}
+
+/* ---- 米色卡：暖米黄半透明 + 深蓝细描边，无阴影 ---- */
+.tpl-classic-duo-blue .cd-card{background:rgba(249,242,224,.95);border:1px solid var(--border-soft);padding:36px 40px;display:flex;flex-direction:column;min-height:260px}
+
+/* ---- 药丸：细描边近直角，金棕描边为强调 ---- */
+.tpl-classic-duo-blue .cd-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:2px;font-size:16px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-classic-duo-blue .cd-pill-accent{border-color:var(--gold);color:var(--gold);font-weight:600}
+
+/* ---- 目录行：金棕衬线序号 + 篇名 + 说明 ---- */
+.tpl-classic-duo-blue .cd-item{display:flex;align-items:baseline;gap:24px;padding:25px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-classic-duo-blue .cd-item:last-child{border-bottom:none}
+.tpl-classic-duo-blue .cd-n{flex:none;width:56px;font-family:'Playfair Display',Georgia,'Songti SC',serif;font-style:italic;font-size:25px;color:var(--gold);align-self:center}
+.tpl-classic-duo-blue .cd-t{flex:none;width:280px;font-size:27px;font-weight:700;letter-spacing:.06em;color:var(--navy-deep)}
+.tpl-classic-duo-blue .cd-d{flex:1;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 基线数字：金棕顶线 + 深蓝衬线大数字 ---- */
+.tpl-classic-duo-blue .cd-stat{border-top:2px solid var(--gold);padding-top:26px}
+.tpl-classic-duo-blue .cd-stat-v{font-family:'Playfair Display',Georgia,'Songti SC',serif;font-size:98px;line-height:1;font-weight:700;color:var(--navy)}
+.tpl-classic-duo-blue .cd-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-classic-duo-blue .cd-stat-l{margin-top:16px;font-size:26px;font-weight:700;letter-spacing:.06em;color:var(--navy-deep)}
+.tpl-classic-duo-blue .cd-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 题铭引言 + 深蓝书脊色块（竖排题铭） ---- */
+.tpl-classic-duo-blue .cd-quote{font-size:58px;line-height:1.6;font-weight:700;letter-spacing:.04em;color:var(--navy-deep);max-width:20em;margin:0}
+.tpl-classic-duo-blue .cd-src{margin:0;font-size:19px;letter-spacing:.14em;color:var(--ink-3)}
+.tpl-classic-duo-blue .cd-panel{position:absolute;right:0;top:0;bottom:0;width:380px;background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);display:flex;align-items:center;justify-content:center;pointer-events:none}
+.tpl-classic-duo-blue .cd-vert{writing-mode:vertical-rl;font-size:25px;letter-spacing:.5em;line-height:2.2;color:rgba(249,242,224,.92)}
+
+/* ---- 时间线：衬线序号圆点 + 细蓝连接线 ---- */
+.tpl-classic-duo-blue .cd-tl{display:flex;gap:42px;margin-top:6px}
+.tpl-classic-duo-blue .cd-tl-item{flex:1;position:relative}
+.tpl-classic-duo-blue .cd-tl-item:not(:last-child)::before{content:"";position:absolute;top:30px;left:60px;right:-42px;height:1px;background:var(--border)}
+.tpl-classic-duo-blue .cd-tl-dot{position:relative;z-index:1;width:60px;height:60px;border:1.5px solid var(--navy-deep);border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',Georgia,'Songti SC',serif;font-style:italic;font-size:22px;color:var(--navy-deep)}
+.tpl-classic-duo-blue .cd-tl-t{margin-top:18px;font-size:21px;font-weight:700;letter-spacing:.08em;color:var(--gold)}
+.tpl-classic-duo-blue .cd-tl-d{margin-top:8px;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-classic-duo-blue .cd-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-classic-duo-blue .cd-step:last-child{border-bottom:none}
+.tpl-classic-duo-blue .cd-mini-t{margin:0;font-size:20px;line-height:1.7;color:var(--ink)}
+
+/* ---- 行动钮：深蓝实底近直角，收尾页唯一的按钮 ---- */
+.tpl-classic-duo-blue .cd-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 44px;border-radius:2px;background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);color:var(--beige);font-size:21px;font-weight:700;letter-spacing:.2em;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：如翻过一页典籍，从容 ---- */
+.tpl-classic-duo-blue{--page-shift:12px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

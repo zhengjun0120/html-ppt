@@ -65,7 +65,10 @@ const renderItems = computed<RenderItem[]>(() => {
       last.push(e)
       continue
     }
-    if (!Array.isArray(last) && last.kind === 'tool' && last.name === e.name) {
+    // last 可能是 undefined：首事件就可以是 tool（模型开场即调工具、无前导
+    // 文字——回放里后端已过滤合成的开工消息），out 为空时直接读 last.kind
+    // 会把整个视图渲染打崩（黑屏，2026-09-27 实测 24/55 文稿命中）。
+    if (last && !Array.isArray(last) && last.kind === 'tool' && last.name === e.name) {
       out[out.length - 1] = [last, e]
       continue
     }
@@ -93,12 +96,15 @@ function itemKey(item: RenderItem): string {
         <!-- 相邻同类型工具的折叠组 -->
         <ToolGroupCard v-if="Array.isArray(item)" :name="item[0].name || ''" :tools="item" />
 
-        <!-- 用户气泡：主色淡底（长文本压实色太吵） -->
+        <!-- 用户气泡：主色淡底（长文本压实色太吵）；附图缩略图在文字上方 -->
         <div
           v-else-if="item.kind === 'user'"
           class="max-w-[88%] self-end rounded-xl rounded-br-sm border border-accent-border bg-accent-soft px-3 py-2 text-[13.5px] whitespace-pre-wrap break-words"
         >
-          {{ item.text }}
+          <div v-if="item.images?.length" class="mb-1.5 flex flex-wrap gap-1.5">
+            <img v-for="src in item.images" :key="src" :src="src" loading="lazy" class="h-20 rounded-lg border border-line" alt="附图" />
+          </div>
+          <template v-if="item.text">{{ item.text }}</template>
         </div>
 
         <!-- agent 气泡 -->
@@ -106,7 +112,7 @@ function itemKey(item: RenderItem): string {
           v-else-if="item.kind === 'agent'"
           class="max-w-[95%] self-start rounded-xl rounded-bl-sm bg-surface-2 px-3 py-2 text-[13.5px]"
         >
-          <div class="prose-sm break-words [&_a]:text-accent [&_a]:underline [&_code]:rounded [&_code]:bg-code-bg [&_code]:px-1 [&_code]:font-mono [&_code]:text-[12px] [&_li]:ml-4 [&_li]:list-disc [&_ol]:list-decimal [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-1" v-html="renderMarkdown(item.text)" />
+          <div class="prose-sm break-words [&_a]:text-accent [&_a]:underline [&_code]:rounded [&_code]:bg-code [&_code]:px-1 [&_code]:font-mono [&_code]:text-[12px] [&_li]:ml-4 [&_li]:list-disc [&_ol]:list-decimal [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-1" v-html="renderMarkdown(item.text)" />
           <span v-if="item.streaming" class="mt-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-accent align-middle" />
         </div>
 

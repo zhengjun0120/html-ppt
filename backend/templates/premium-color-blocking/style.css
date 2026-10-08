@@ -1,0 +1,94 @@
+/* premium-color-blocking — 高级撞色。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/premium-color-blocking（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 奶白底 + 珊瑚橙对峙深墨蓝：平涂色块、锐利边缘、粗实线分隔、狠留白，
+ * 像杂志封面的强对峙；左侧双色书脊与右上描边圆是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-premium-color-blocking{
+  --bg:#F4EFE6;              /* 奶白纸底（letterbox 同值，翻页不跳） */
+  --surface:#FFFDF8;         /* 白卡底 */
+  --ink:#1B2A4A;             /* 深墨蓝（主字兼对峙冷色） */
+  --ink-2:#46557A;           /* 蓝灰正文 */
+  --ink-3:#8B93A8;           /* 弱说明字 */
+  --border:rgba(27,42,74,.24);
+  --border-soft:rgba(27,42,74,.12);
+  --coral:#FF6B47;           /* 珊瑚橙（主暖色） */
+  --amber:#F5A623;           /* 琥珀橘 */
+  --lemon:#F4D35E;           /* 柠黄点缀 */
+  --night:#0F3B4C;           /* 午夜青 */
+  --paper:#F4EFE6;           /* 纸白（压在色块上的字） */
+  font-family:'Inter','Noto Sans SC','PingFang SC','Helvetica Neue',sans-serif;
+}
+
+/* ---- 画布：奶白平涂，色块交给专属类与 ambient ---- */
+.tpl-premium-color-blocking .slide{background:var(--bg)}
+
+/* ---- 字阶：超粗收紧的无衬线，「我说了算」的确定感 ---- */
+.tpl-premium-color-blocking .h1{font-size:100px;line-height:.98;font-weight:900;letter-spacing:-.03em;color:var(--ink);margin-bottom:12px}
+.tpl-premium-color-blocking .h2{font-size:58px;line-height:1.06;font-weight:900;letter-spacing:-.02em;color:var(--ink);margin-bottom:8px}
+.tpl-premium-color-blocking h4{font-family:inherit;color:var(--ink);font-weight:800;font-size:25px;letter-spacing:-.01em}
+.tpl-premium-color-blocking .lede{font-size:23px;line-height:1.7;color:var(--ink-2);font-weight:400}
+.tpl-premium-color-blocking .deck-footer{font-size:14px;font-weight:600;color:var(--ink-3);letter-spacing:.24em;text-transform:uppercase}
+
+/* ---- ambient：左缘双色书脊（橙/墨蓝斜切）+ 右上描边大圆，z-index:-1 ---- */
+.tpl-premium-color-blocking .slide::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:14px;z-index:-1;
+  background:linear-gradient(180deg,var(--coral) 0 62%,var(--ink) 62% 100%);
+}
+.tpl-premium-color-blocking .slide::after{
+  content:"";position:absolute;right:-150px;top:-170px;width:470px;height:470px;border-radius:50%;z-index:-1;
+  border:2px solid rgba(255,107,71,.22);
+}
+
+/* ---- 柠黄标签：色块小签，页首的身份记号 ---- */
+.tpl-premium-color-blocking .pc-kicker{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 16px;background:var(--lemon);color:var(--ink);font-weight:700;font-size:15px;letter-spacing:.28em}
+
+/* ---- 斜切色带：标题下的斜切橙条，丝网印刷的锐利 ---- */
+.tpl-premium-color-blocking .pc-slash{width:130px;height:9px;background:var(--coral);transform:skewX(-24deg)}
+
+/* ---- 锐利白卡：2px 墨蓝粗边 + 零圆角零阴影 ---- */
+.tpl-premium-color-blocking .pc-card{background:var(--surface);border:2px solid var(--ink);padding:36px 38px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 墨蓝实色块：撞色的另一半，整块反白 ---- */
+.tpl-premium-color-blocking .pc-card-ink{background:var(--ink);color:var(--paper);padding:36px 38px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 方角药丸：粗描边标签，撞色用填色表达 ---- */
+.tpl-premium-color-blocking .pc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 18px;border:2px solid var(--ink);font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--ink);white-space:nowrap}
+.tpl-premium-color-blocking .pc-pill-accent{background:var(--coral);border-color:var(--coral);color:#FFF6EF}
+
+/* ---- 目录行：橙色大序号 + 章名 + 说明，粗实线分组 ---- */
+.tpl-premium-color-blocking .pc-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:3px solid var(--border-soft)}
+.tpl-premium-color-blocking .pc-item:last-child{border-bottom:none}
+.tpl-premium-color-blocking .pc-n{flex:none;min-width:58px;font-weight:900;font-size:34px;line-height:1;letter-spacing:-.02em;color:var(--coral);align-self:center}
+.tpl-premium-color-blocking .pc-t{flex:none;width:260px;font-weight:900;font-size:28px;letter-spacing:-.01em;color:var(--ink)}
+.tpl-premium-color-blocking .pc-d{flex:1;font-size:19px;line-height:1.65;font-weight:500;color:var(--ink-2)}
+
+/* ---- 撞色数字：粗黑上边线 + 橙色超大数字 ---- */
+.tpl-premium-color-blocking .pc-stat{border-top:6px solid var(--ink);padding-top:28px}
+.tpl-premium-color-blocking .pc-stat-v{font-size:110px;line-height:.95;font-weight:900;letter-spacing:-.04em;color:var(--coral)}
+.tpl-premium-color-blocking .pc-stat-u{font-size:26px;font-weight:800;color:var(--ink);margin-left:6px}
+.tpl-premium-color-blocking .pc-stat-l{margin-top:18px;font-weight:900;font-size:26px;letter-spacing:.02em;color:var(--ink)}
+.tpl-premium-color-blocking .pc-stat-note{margin:10px 0 0;font-size:19px;line-height:1.7;font-weight:500;color:var(--ink-2)}
+
+/* ---- 宣言引文：超粗大字 ---- */
+.tpl-premium-color-blocking .pc-quote{font-size:68px;line-height:1.3;font-weight:900;letter-spacing:-.02em;color:var(--ink);max-width:24em;margin:0}
+.tpl-premium-color-blocking .pc-src{margin:0;font-weight:700;font-size:17px;letter-spacing:.18em;color:var(--ink-3)}
+
+/* ---- 时间线：墨蓝方块点 + 粗色带连线 ---- */
+.tpl-premium-color-blocking .pc-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-premium-color-blocking .pc-tl-item{flex:1;position:relative}
+.tpl-premium-color-blocking .pc-tl-item:not(:last-child)::before{content:"";position:absolute;top:22px;left:48px;right:-40px;height:4px;background:var(--ink)}
+.tpl-premium-color-blocking .pc-tl-dot{position:relative;z-index:1;width:48px;height:48px;background:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:var(--paper)}
+.tpl-premium-color-blocking .pc-tl-t{margin-top:18px;font-weight:900;font-size:21px;letter-spacing:.04em;color:var(--coral)}
+.tpl-premium-color-blocking .pc-tl-d{margin-top:8px;font-size:19px;line-height:1.6;font-weight:500;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右侧墨蓝块内） ---- */
+.tpl-premium-color-blocking .pc-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:3px solid rgba(244,239,230,.25)}
+.tpl-premium-color-blocking .pc-step:last-child{border-bottom:none}
+.tpl-premium-color-blocking .pc-mini-t{margin:0;font-size:20px;line-height:1.55;font-weight:600;color:var(--paper)}
+
+/* ---- 行动钮：墨蓝实底，收尾页 ---- */
+.tpl-premium-color-blocking .pc-btn{display:inline-flex;align-items:center;gap:12px;padding:16px 42px;background:var(--ink);font-weight:900;font-size:20px;letter-spacing:.20em;color:var(--paper)}
+
+/* ---- 页面切换：翻杂志的「啪」一下，干脆利落 ---- */
+.tpl-premium-color-blocking{--page-shift:26px;--page-dur:.45s;--page-ease:cubic-bezier(.3,.7,.3,1)}

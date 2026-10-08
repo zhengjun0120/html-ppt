@@ -55,4 +55,31 @@ describe('api client', () => {
     expect(authedUrl('/api/decks/deck-0001/file')).toContain('token=tk')
     expect(authedUrl('/api/decks/deck-0001/file', { foo: 1 })).toContain('foo=1')
   })
+
+  it('structure / updateLayout 请求形状（版式面板）', async () => {
+    configureClient({ getToken: () => 'tk' })
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response(
+        JSON.stringify({
+          layouts: [{ id: 'blank-data', name: '空白数据页', roles: ['data', 'content'], pattern: 'chart' }],
+          demo_pages: [{ no: 1, layout: 'blank-cover' }],
+          rules_md: '# rules',
+        }),
+        { status: 200 },
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { userTemplateApi } = await import('./userTemplates')
+    const contract = await userTemplateApi.structure('ut-abc')
+    expect(contract.layouts[0].pattern).toBe('chart')
+    expect(contract.demo_pages[0].no).toBe(1)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/user-templates/ut-abc/structure')
+
+    await userTemplateApi.updateLayout('ut-abc', 'blank-data', { roles: ['content', 'data'] })
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
+    expect(url).toBe('/api/user-templates/ut-abc/layouts/blank-data')
+    expect(init.method).toBe('PUT')
+    expect(JSON.parse(String(init.body))).toEqual({ roles: ['content', 'data'] })
+  })
 })

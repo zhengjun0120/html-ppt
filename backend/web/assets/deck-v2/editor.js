@@ -107,6 +107,7 @@
     redoStack.push({ slide: entry.slide, html: entry.slide.innerHTML });
     entry.slide.innerHTML = entry.html;
     cleanSlideArtifacts(entry.slide);
+    invalidateCandidates();
     setDirty(true);
   }
 
@@ -118,6 +119,7 @@
     undoStack.push({ slide: entry.slide, html: entry.slide.innerHTML });
     entry.slide.innerHTML = entry.html;
     cleanSlideArtifacts(entry.slide);
+    invalidateCandidates();
     setDirty(true);
   }
 
@@ -132,19 +134,41 @@
       (!el.textContent.trim() && !el.querySelector('img,svg,video,canvas'));
   }
 
+  // 候选判定（§1 决策 6 · 方案 A）：块级元素一律可选；行内元素须有盒子样式
+  // （背景/边框/内边距，如 span.tag 小卡片）才可选——纯文字行内（渐变字、mono
+  // 高亮）不选，想改它的字双击进编辑即可。深度不限，点击选中最深候选。
+  function isCandidate(el) {
+    // 讲稿区、编辑器自身的框/手柄/参考线/占位块及其子孙，永不参与候选
+    if (el.closest('[data-ed-frame],[data-ed-guide],[data-ed-placeholder],.notes,.speaker-notes')) return false;
+    if (isExcluded(el)) return false;
+    var s = getComputedStyle(el);
+    var d = s.display;
+    if (d === 'none' || d === 'contents') return false;
+    if (d === 'inline') {
+      var bg = s.backgroundColor;
+      return s.borderWidth !== '0px' ||
+        (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') ||
+        parseFloat(s.paddingLeft) > 0 || parseFloat(s.paddingTop) > 0;
+    }
+    return true;
+  }
+
+  // 候选集按页缓存：hover 每次 pointermove 都要查，150+ 元素逐个 getComputedStyle
+  // 不可接受。缓存随一切结构变更失效（pointerup / 退出编辑 / 撤销重做 / 转绝对定位）。
+  var candCache = null; // { slide, set }
+
+  function invalidateCandidates() {
+    candCache = null;
+  }
+
   function collectCandidates(slide) {
+    if (candCache && candCache.slide === slide) return candCache.set;
     var set = new Set();
-    var add = function (el) { if (!set.has(el)) set.add(el); };
-    slide.childNodes.forEach(function (el) {
-      if (el.nodeType !== 1 || isExcluded(el)) return;
-      add(el);
-      var d = getComputedStyle(el).display;
-      if (d.indexOf('grid') >= 0 || d.indexOf('flex') >= 0) {
-        el.childNodes.forEach(function (c) {
-          if (c.nodeType === 1 && !isExcluded(c)) add(c);
-        });
-      }
-    });
+    var all = slide.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      if (isCandidate(all[i])) set.add(all[i]);
+    }
+    candCache = { slide: slide, set: set };
     return set;
   }
 
@@ -219,6 +243,7 @@
     sel = { el: el, slide: slide };
     el.classList.add('ed-selected');
     showFrame(el);
+    postSelection();
   }
 
   function deselect() {
@@ -228,34 +253,157 @@
     sel = null;
     hideFrame();
     clearGuides();
+    postSelection();
+  }
+
+  /* ===================== 选中态上报（父页工具栏据此启用字号步进器） ===================== */
+
+  function postSelection() {
+    var size = null;
+    if (sel && sel.el) {
+      size = Math.round(parseFloat(getComputedStyle(sel.el).fontSize)) || null;
+    }
+    post({ type: 'editor-selection', selected: !!sel, fontSize: size });
+  }
+
+  /* ===================== 字号缩放（§4.4：选中块及其内部文字等比缩放） ===================== */
+
+  var FONT_MIN = 10, FONT_MAX = 200;
+  var fontTimer = null; // 撤销突发合并，与方向键微移同套路
+
+  // 选中元素自身 + 所有"直接持有文本"的后代。两层选择模型选不到卡片里的
+  // 单个文字（如 grid 卡里的 h3），所以字号作用于整块——PPT 的文本块语义。
+  function textLeaves(root) {
+    var out = [];
+    var hasDirectText = function (el) {
+      for (var n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3 && n.nodeValue.trim()) return true;
+      }
+      return false;
+    };
+    if (hasDirectText(root)) out.push(root);
+    var all = root.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      if (hasDirectText(all[i])) out.push(all[i]);
+    }
+    return out;
+  }
+
+  function applyFontFactor(factor) {
+    if (!sel) return;
+    var first = fontTimer === null;
+    if (first) pushUndo(sel.slide);
+    clearTimeout(fontTimer);
+    fontTimer = setTimeout(function () { fontTimer = null; }, NUDGE_BURST_MS);
+    var targets = textLeaves(sel.el);
+    for (var i = 0; i < targets.length; i++) {
+      var el = targets[i];
+      var cs = getComputedStyle(el);
+      var size = parseFloat(cs.fontSize) || 16;
+      var next = Math.min(FONT_MAX, Math.max(FONT_MIN, Math.round(size * factor * 10) / 10));
+      el.style.fontSize = next + 'px';
+      // px 行高随动；无量纲/normal 行高天然等比，不动
+      var lh = parseFloat(cs.lineHeight);
+      if (!isNaN(lh)) el.style.lineHeight = Math.round(lh * factor * 10) / 10 + 'px';
+    }
+    // 盒子高度随动：转换时锁定的高度不跟着字号长，文字就会溢出框外
+    if (sel.el.style.height) {
+      var h = parseFloat(sel.el.style.height);
+      if (!isNaN(h)) sel.el.style.height = Math.max(MIN_H, Math.round(h * factor * 10) / 10) + 'px';
+    }
+    healHeight(sel.el);
+    updateFrame();
+    setDirty(true);
+    postSelection();
+  }
+
+  // 溢出自愈：锁高盒子的内容长高了（字号/改字/宽度变窄换行）就把高度贴到内容。
+  // 只对纯流式内容生效——子元素里有绝对定位的（设计型盒子）内容量不可信，不动。
+  function healHeight(el) {
+    if (!el.style.height) return;
+    var kids = el.children;
+    for (var i = 0; i < kids.length; i++) {
+      if (getComputedStyle(kids[i]).position === 'absolute') return;
+    }
+    if (el.scrollHeight > el.clientHeight + 1) {
+      el.style.height = el.scrollHeight + 'px';
+    }
   }
 
   /* ===================== 流式 → 绝对定位 + 占位块（决策 5 的核心） ===================== */
 
   // 元素第一次被拖/缩/微移时调用：原 DOM 位次插等大占位块顶住流式空间，
-  // 元素转绝对定位（包含块 = .slide 的 padding box，slideLocalRect 直接可用），
-  // append 到 slide 末位——后画的在上层，无需 z-index。
+  // 元素原地转绝对定位（不搬出原父容器！）。
+  //
+  // 为什么不 append 到 slide 末尾：模板装饰样式全是层级选择器
+  // （.tpl-x .terminal .bar .dot{...}），搬出容器后选择器不再命中——
+  // 终端标题条的三个圆点、底色当场裸奔（0079 实测事故）。
+  // 代价：若原容器 overflow:hidden，拖出容器边界的部分会被裁掉——
+  // CSS 完整性优先，跨容器拖移作为后续课题。
+  // 包含块：最近的 position != static 的祖先；没有则 slide 的 padding box。
+  function containingBlockOf(el, slide) {
+    var cb = el.parentElement;
+    while (cb && cb !== slide && getComputedStyle(cb).position === 'static') {
+      cb = cb.parentElement;
+    }
+    if (!cb || cb === document.body) cb = slide;
+    return cb;
+  }
+
   function transformToAbsolute(el, slide) {
-    if (el.style.position === 'absolute' && el.parentElement === slide) return;
+    if (el.style.position === 'absolute') return;
     var r = slideLocalRect(slide, el);
-    var ph = document.createElement('div');
-    ph.setAttribute('data-ed-placeholder', '1');
     var m = getComputedStyle(el);
-    ph.style.cssText = 'box-sizing:border-box;display:block;flex:0 0 auto;' +
-      'width:' + r.w + 'px;height:' + r.h + 'px;' +
-      'margin:' + m.marginTop + ' ' + m.marginRight + ' ' + m.marginBottom + ' ' + m.marginLeft + ';';
+
+    var cb = containingBlockOf(el, slide);
+    var cbRect = cb.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    var k = slideScale(slide);
+    var cbBorderL = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
+    var cbBorderT = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
+    var x = (elRect.left - cbRect.left - cbBorderL) / k;
+    var y = (elRect.top - cbRect.top - cbBorderT) / k;
+
+    // 占位块 = 原元素的浅克隆（类名/结构属性全保留）：布局算法看到的是和原元素
+    // 完全相同的盒子（display/flex 分配/min-width/伪元素钩子类一应俱全），
+    // 兄弟元素在数学上必然冻结。合成 div 只拷宽高 margin，弹性/grid 重排
+    // 会挤动没被选中的兄弟（实测事故）。
+    var ph = el.cloneNode(false);
+    ph.removeAttribute('id');
+    ph.setAttribute('data-ed-placeholder', '1');
+    ph.classList.remove('ed-selected', 'ed-hoverable', 'ed-editing');
+    // 克隆没有内容，盒子尺寸/弹性分配用原元素现值显式钉死
+    ph.style.width = r.w + 'px';
+    ph.style.height = r.h + 'px';
+    ph.style.margin = m.marginTop + ' ' + m.marginRight + ' ' + m.marginBottom + ' ' + m.marginLeft;
+    ph.style.flex = m.flex;
+    ph.style.alignSelf = m.alignSelf;
+    ph.style.boxSizing = m.boxSizing;
+    // 空洞视觉中性化：皮肤透明（不影响布局），伪元素装饰关掉
+    ph.style.backgroundColor = 'transparent';
+    ph.style.borderColor = 'transparent';
+    ph.style.boxShadow = 'none';
+    ph.style.color = 'transparent';
+    // 空的行内级盒子没有文本基线（CSS 退到底边对齐），行盒会和原元素不一样，
+    // 同行兄弟被顶下/挪位（0079 第二页实测）。塞一个零宽空格给它一条与原元素
+    // 相同度量的文本基线（类名相同=字体相同）；对块级/flex 占位块无副作用。
+    if (m.display.indexOf('inline') === 0) {
+      ph.appendChild(document.createTextNode('\u200B'));
+    }
     // grid 手工定位项原样带走（罕见，但带走无害）
     if (el.style.gridColumn) ph.style.gridColumn = el.style.gridColumn;
     if (el.style.gridRow) ph.style.gridRow = el.style.gridRow;
     el.parentNode.insertBefore(ph, el);
 
     el.style.position = 'absolute';
-    el.style.left = r.x + 'px';
-    el.style.top = r.y + 'px';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
     el.style.width = r.w + 'px';
     el.style.height = r.h + 'px';
     el.style.margin = '0';
-    slide.appendChild(el);
+    // 不搬家：留在原父容器，层级选择器继续命中，装饰与子孙样式无损
+    invalidateCandidates(); // DOM 结构变了（占位块），候选集重建
+    return { cb: cb, x: x, y: y };
   }
 
   /* ===================== 智能参考线 ===================== */
@@ -296,8 +444,9 @@
     var sw = slide.clientWidth, sh = slide.clientHeight;
     var addX = function (v) { refs.xs.push(v); };
     var addY = function (v) { refs.ys.push(v); };
-    slide.childNodes.forEach(function (el) {
-      if (el.nodeType !== 1 || el === exclude || isExcluded(el)) return;
+    var set = collectCandidates(slide);
+    set.forEach(function (el) {
+      if (el === exclude) return;
       var r = slideLocalRect(slide, el);
       addX(r.x); addX(r.x + r.w / 2); addX(r.x + r.w);
       addY(r.y); addY(r.y + r.h / 2); addY(r.y + r.h);
@@ -321,25 +470,83 @@
 
   /* ===================== 拖动 / 缩放 ===================== */
 
+  // 角手柄缩放的字号基准：选中元素内所有"直接持有文本"的节点的现值
+  function fontBasesOf(root) {
+    return textLeaves(root).map(function (el) {
+      var cs = getComputedStyle(el);
+      return { el: el, size: parseFloat(cs.fontSize) || 16, lh: parseFloat(cs.lineHeight) };
+    });
+  }
+
   function beginDrag(e, el, slide) {
     var k = slideScale(slide);
-    var r = slideLocalRect(slide, el);
+    // 拖动全程用包含块坐标（left/top 的参照系）。已是绝对定位的现在就算好；
+    // 流式元素在首次移动转换时补（transformToAbsolute 返回 cb 与 CB 相对坐标）。
+    var cb = el.style.position === 'absolute' ? containingBlockOf(el, slide) : null;
+    var start;
+    if (cb) {
+      var elRect = el.getBoundingClientRect();
+      var cbRect = cb.getBoundingClientRect();
+      var bl = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
+      var bt = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
+      var lr = slideLocalRect(slide, el);
+      start = {
+        x: (elRect.left - cbRect.left - bl) / k,
+        y: (elRect.top - cbRect.top - bt) / k,
+        w: lr.w, h: lr.h,
+      };
+    } else {
+      var r = slideLocalRect(slide, el);
+      start = { x: r.x, y: r.y, w: r.w, h: r.h };
+    }
     drag = {
       kind: 'drag', el: el, slide: slide, k: k,
-      start: { x: r.x, y: r.y, w: r.w, h: r.h },
+      start: start,
       px: e.clientX, py: e.clientY,
       moved: false, refs: snapRects(slide, el),
+      cb: cb,
     };
   }
 
   function beginResize(e, dir, el, slide) {
+    // 与拖动同一条纪律：先转绝对定位再改尺寸。流式元素上直接写 width/height
+    // 会引发居中布局（.slide 是 justify-content:center）整页回流——元素带着
+    // 选中框一起"跳走"；且 left/top 对流式元素不生效，w/n 手柄的数学全落空。
+    var conv = transformToAbsolute(el, slide);
+    var cb = (conv && conv.cb) || containingBlockOf(el, slide);
     var k = slideScale(slide);
-    var r = slideLocalRect(slide, el);
+    var elRect = el.getBoundingClientRect();
+    var cbRect = cb.getBoundingClientRect();
+    var bl = parseFloat(getComputedStyle(cb).borderLeftWidth) || 0;
+    var bt = parseFloat(getComputedStyle(cb).borderTopWidth) || 0;
+    var lr = slideLocalRect(slide, el);
+    // 解除 max 钳制：模板常给文本/媒体设上限（.lede{max-width:62ch}、
+    // img,svg,video{max-width:100%}）。行内 width 写得再大，计算宽度仍被样式表
+    // max-* 钳住——手柄拉了、盒子纹丝不动（0079 s4 lede 实测：行内 width 已写
+    // 到 1162px，渲染仍停在 796px）。按方向先钉现尺寸（width/height:auto 的
+    // 盒子在解锁瞬间会被内容撑开，先钉住防跳），再解同轴 max；解锁随
+    // serialize 落盘——"能扩到多宽"是用户 resize 的意图，持久生效。
+    if (dir.indexOf('e') >= 0 || dir.indexOf('w') >= 0) {
+      if (!el.style.width) el.style.width = lr.w + 'px';
+      el.style.maxWidth = 'none';
+    }
+    if (dir.indexOf('n') >= 0 || dir.indexOf('s') >= 0) {
+      if (!el.style.height) el.style.height = lr.h + 'px';
+      el.style.maxHeight = 'none';
+    }
     drag = {
       kind: 'resize', dir: dir, el: el, slide: slide, k: k,
-      start: { x: r.x, y: r.y, w: r.w, h: r.h },
+      // 坐标系与 left/top 一致：包含块相对
+      start: {
+        x: (elRect.left - cbRect.left - bl) / k,
+        y: (elRect.top - cbRect.top - bt) / k,
+        w: lr.w, h: lr.h,
+      },
       px: e.clientX, py: e.clientY,
       moved: false, refs: null,
+      cb: cb,
+      // 角手柄 = 内容等比缩放（像缩放图片）：以起始字号为基准、按宽度比例实时换算
+      fontBases: dir.length === 2 ? fontBasesOf(el) : null,
     };
   }
 
@@ -352,21 +559,32 @@
         drag.moved = true;
         pushUndo(drag.slide);
         document.body.classList.add('ed-busy');
-        if (drag.kind === 'drag') transformToAbsolute(drag.el, drag.slide);
+        if (drag.kind === 'drag') {
+          var conv = transformToAbsolute(drag.el, drag.slide);
+          if (!drag.cb) {
+            drag.cb = conv.cb;
+            drag.start.x = conv.x; // start 换算到包含块坐标系
+            drag.start.y = conv.y;
+          }
+        }
       }
 
       var s = drag.start;
       if (drag.kind === 'drag') {
         var nx = s.x + dx, ny = s.y + dy;
-        var sw = drag.slide.clientWidth, sh = drag.slide.clientHeight;
-        // 智能参考线：仅拖动时，先吸附后钳位（贴边优先）
-        clearGuides();
-        var sx = snapAxis([nx, nx + s.w / 2, nx + s.w], drag.refs.xs);
-        var sy = snapAxis([ny, ny + s.h / 2, ny + s.h], drag.refs.ys);
-        if (sx) { nx += sx.value - sx.at; drawGuide(drag.slide, 'v', sx.value); }
-        if (sy) { ny += sy.value - sy.at; drawGuide(drag.slide, 'h', sy.value); }
-        nx = Math.min(Math.max(nx, 0), Math.max(0, sw - s.w));
-        ny = Math.min(Math.max(ny, 0), Math.max(0, sh - s.h));
+        // 钳位与参考线都按包含块坐标系（嵌套容器里 slide 坐标系无意义）
+        var cbw = drag.cb ? drag.cb.clientWidth : drag.slide.clientWidth;
+        var cbh = drag.cb ? drag.cb.clientHeight : drag.slide.clientHeight;
+        if (drag.cb === drag.slide || !drag.cb) {
+          // 智能参考线：仅顶层拖动时，先吸附后钳位（贴边优先）
+          clearGuides();
+          var sx = snapAxis([nx, nx + s.w / 2, nx + s.w], drag.refs.xs);
+          var sy = snapAxis([ny, ny + s.h / 2, ny + s.h], drag.refs.ys);
+          if (sx) { nx += sx.value - sx.at; drawGuide(drag.slide, 'v', sx.value); }
+          if (sy) { ny += sy.value - sy.at; drawGuide(drag.slide, 'h', sy.value); }
+        }
+        nx = Math.min(Math.max(nx, 0), Math.max(0, cbw - s.w));
+        ny = Math.min(Math.max(ny, 0), Math.max(0, cbh - s.h));
         drag.el.style.left = nx + 'px';
         drag.el.style.top = ny + 'px';
       } else {
@@ -385,6 +603,19 @@
         drag.el.style.top = r.y + 'px';
         drag.el.style.width = r.w + 'px';
         drag.el.style.height = r.h + 'px';
+        // 角手柄：文字随盒子等比缩放（基准是拖动开始时的现值，避免连乘漂移）
+        if (drag.fontBases && s.w > 0) {
+          var ff = r.w / s.w;
+          if (isFinite(ff) && ff > 0) {
+            for (var bi = 0; bi < drag.fontBases.length; bi++) {
+              var fb = drag.fontBases[bi];
+              fb.el.style.fontSize =
+                Math.min(FONT_MAX, Math.max(FONT_MIN, Math.round(fb.size * ff * 10) / 10)) + 'px';
+              if (!isNaN(fb.lh)) fb.el.style.lineHeight = Math.round(fb.lh * ff * 10) / 10 + 'px';
+            }
+            postSelection();
+          }
+        }
       }
       updateFrame();
       return;
@@ -407,6 +638,13 @@
     document.body.classList.remove('ed-busy');
     if (drag.moved) {
       clearGuides();
+      // 宽度变了的缩放（含角手柄）改变了换行：松手后把盒子高度贴回内容。
+      // 纵向手柄（n/s）是用户在控高，不治——拖小弹回会跟人打架。
+      if (drag.kind === 'resize' && (drag.dir.indexOf('e') >= 0 || drag.dir.indexOf('w') >= 0)) {
+        healHeight(drag.el);
+        updateFrame();
+      }
+      invalidateCandidates();
       setDirty(true);
     }
     drag = null;
@@ -449,13 +687,46 @@
     editingEl = el;
     el.classList.remove('ed-hoverable');
     el.classList.add('ed-editing');
-    try {
-      el.contentEditable = 'plaintext-only';
-    } catch (err) {
-      el.contentEditable = 'true'; // Firefox 不支持 plaintext-only
-    }
+    // contentEditable='true'（而非 plaintext-only）：后者会把 Enter/脚本插的
+    // <br> 都吞成纯文本 \n。富文本风险由 paste 拦截 + Ctrl+B/I/U 拦截兜住。
+    el.contentEditable = 'true';
+    // 行内 normal 压过 UA 给编辑态的 pre-wrap：源码结构性换行在编辑态也不可见，
+    // 编辑态渲染 = 最终渲染（行内样式必赢 UA 表，class 选择器压不住它）
+    el.style.whiteSpace = 'normal';
     el.setAttribute('spellcheck', 'false');
     el.focus();
+  }
+
+  // plaintext-only 编辑态默认 pre-wrap：源码里标签之间的结构性换行会显示成
+  // 空行，退出时再被归一化成 <br> 就成了凭空多出的空行（实测事故）。
+  // 正解是让编辑态渲染 = 最终渲染：white-space:normal 让结构性 \n 从头到尾
+  // 不可见；用户的 Enter 由 Enter 处理器手动插真 <br>，粘贴多行拆行插 <br>。
+  function insertBrAtCaret() {
+    var s = window.getSelection();
+    if (!s || !s.rangeCount) return;
+    var r = s.getRangeAt(0);
+    r.deleteContents();
+    var br = document.createElement('br');
+    r.insertNode(br);
+    r.setStartAfter(br);
+    r.collapse(true);
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+
+  // 粘贴多行纯文本：拆行插真 <br>（编辑态 normal 折叠 \n，必须转成 br 才可见）
+  function onPaste(e) {
+    if (!editingEl) return;
+    var clip = e.clipboardData || window.clipboardData;
+    if (!clip) return;
+    var txt = clip.getData('text/plain');
+    if (txt == null) return;
+    e.preventDefault();
+    var lines = txt.replace(/\r/g, '').split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) insertBrAtCaret();
+      if (lines[i]) document.execCommand('insertText', false, lines[i]);
+    }
   }
 
   function exitTextEdit(silent) {
@@ -465,7 +736,11 @@
     el.removeAttribute('contenteditable');
     el.removeAttribute('spellcheck');
     el.classList.remove('ed-editing');
+    el.style.removeProperty('white-space'); // 还原模板自己的 white-space 规则
     try { el.blur(); } catch (e) { /* 已失焦 */ }
+    healHeight(el); // 打字换行后盒子高度贴回内容（所见即所得）
+    updateFrame();
+    invalidateCandidates(); // 编辑可能插了 <br>、heal 改了尺寸
     if (silent !== true) {
       setDirty(true);
     }
@@ -518,6 +793,18 @@
       post({ type: 'editor-serialize', html: serialize() });
       return;
     }
+    if (meta && (e.key === '=' || e.key === '+')) {
+      if (!sel || editingEl) return;
+      e.preventDefault();
+      applyFontFactor(1.1);
+      return;
+    }
+    if (meta && e.key === '-') {
+      if (!sel || editingEl) return;
+      e.preventDefault();
+      applyFontFactor(0.9);
+      return;
+    }
     if (e.key === 'Escape') {
       if (editingEl) { exitTextEdit(); return; }
       if (sel && sel.el && collectCandidates(sel.slide).has(sel.el)) {
@@ -534,9 +821,12 @@
     }
     if (editingEl) {
       if (e.key === 'Enter') {
-        // 防止 h1/p 里长出嵌套 <div>：统一换行符
+        // 'true' 模式下 execCommand 产真 <br>；'plaintext-only' 会吞成 \n（已弃用）
         e.preventDefault();
         document.execCommand('insertLineBreak');
+      } else if (meta && (e.key === 'b' || e.key === 'i' || e.key === 'u' || e.key === 'B' || e.key === 'I' || e.key === 'U')) {
+        // 防富文本混入：加粗/斜体/下划线一律不放行
+        e.preventDefault();
       }
       return;
     }
@@ -553,6 +843,9 @@
   /* ===================== serialize（在克隆上清理，活动 DOM 不动） ===================== */
 
   function serialize() {
+    // 先退出编辑态：plaintext-only 的 \n 换行必须归一化成 <br> 才能进文件，
+    // 否则"敲着换行直接点保存"会把换行丢掉。healHeight 同理顺带生效。
+    exitTextEdit(true);
     var root = document.documentElement.cloneNode(true);
 
     // 1. 编辑器自身痕迹
@@ -604,7 +897,7 @@
 
   /* ===================== 消息协议（§4.5） ===================== */
 
-  var MSG_FROM_PARENT = { 'editor-save': 1, 'editor-saved': 1, 'editor-undo': 1, 'editor-redo': 1 };
+  var MSG_FROM_PARENT = { 'editor-save': 1, 'editor-saved': 1, 'editor-undo': 1, 'editor-redo': 1, 'editor-font': 1 };
 
   function onMessage(e) {
     if (e.source !== window.parent) return;
@@ -619,6 +912,9 @@
         break;
       case 'editor-undo': undo(); break;
       case 'editor-redo': redo(); break;
+      case 'editor-font':
+        if (typeof d.factor === 'number' && d.factor > 0) applyFontFactor(d.factor);
+        break;
     }
   }
 
@@ -635,8 +931,9 @@
     style.textContent =
       '.ed-selected{outline:2px solid #6366f1;outline-offset:2px}' +
       '.ed-hoverable{outline:1px dashed rgba(99,102,241,.5)}' +
-      '.ed-editing{outline:2px dashed #6366f1;cursor:text}' +
-      'body.ed-busy,body.ed-busy *{cursor:move!important;user-select:none!important;-webkit-user-select:none!important}';
+      '.ed-editing{outline:2px dashed #6366f1;cursor:text;white-space:normal}' +
+      'body.ed-busy,body.ed-busy *{cursor:move!important;user-select:none!important;-webkit-user-select:none!important}' +
+      '[data-ed-placeholder]::before,[data-ed-placeholder]::after{content:none!important}';
     document.head.appendChild(style);
   }
 
@@ -653,6 +950,7 @@
     document.addEventListener('pointerup', onPointerUp);
     document.addEventListener('dblclick', onDblClick);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('paste', onPaste, true);
     window.addEventListener('message', onMessage);
     window.addEventListener('beforeunload', function () {
       exitTextEdit(true);

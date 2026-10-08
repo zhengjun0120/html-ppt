@@ -89,9 +89,10 @@ async function submit() {
         <div class="flex flex-col gap-4">
           <InputField v-model="email" label="邮箱" type="email" placeholder="you@example.com" :error="emailError" autocomplete="email" />
           <div>
-            <span class="mb-1.5 block text-[13px] font-medium text-ink-2">验证码</span>
+            <label for="reg-code" class="mb-1.5 block text-[13px] font-medium text-ink-2">验证码</label>
             <div class="flex gap-2">
               <input
+                id="reg-code"
                 v-model="code"
                 inputmode="numeric"
                 maxlength="6"

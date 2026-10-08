@@ -1,0 +1,88 @@
+{
+  "id": "terminal-green",
+  "name": "终端绿",
+  "description": "深绿黑底上闪烁的磷光绿等宽字：扫描线与辉光是全部装饰，文字本身就是界面，为 CLI 发布与技术分享而生的黑客美学",
+  "tags": ["深色", "科技", "开发者"],
+  "scenario": ["技术分享", "CLI 工具发布", "黑客马拉松", "教学科普", "安全演讲"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "终端封面",
+      "use": "开场：$ 提示符题签 + 磷光大标题 + 一行命令与闪烁光标 + 一句定位，可配描边标签",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-48 字；命令 ≤40 字符；标签各 ≤8 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录页",
+      "use": "议程：终端卡内 4 行篇目（等宽编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：终端窗卡 + 磷光标签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 标签），右边终端卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个标签；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "磷光数字",
+      "use": "三个关键数据：磷光绿大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "终端引言",
+      "use": "整页一句引文：等宽大字 + 出处 + 两个支撑标签，像一条被钉住的 commit message",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：$ 进度题签 + 磷光大字章节名 + 一个过渡问题 + 两个看点标签",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "版本时间线",
+      "use": "3-4 个节点的横向时间线：发光圆点 + 版本/时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾页",
+      "use": "收尾：磷光大字 + 一句行动提醒 + 描边按钮 + 标签，像一条欢迎加入的 README",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；标签 ≤12 字"
+    },
+    {
+      "id": "code",
+      "name": "代码示例",
+      "use": "一段真实代码或命令：终端窗口（标题栏三圆点 + 文件名 + 语言标签）承载等宽代码块",
+      "roles": ["code"],
+      "constraints": "代码 6-10 行、每行 ≤56 字符（< > & 需转义）；文件名 ≤16 字符；配一句说明 18-40 字"
+    }
+  ],
+  "fonts": ["JetBrains Mono", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/terminal-green",
+    "license": "Apache-2.0"
+  }
+}

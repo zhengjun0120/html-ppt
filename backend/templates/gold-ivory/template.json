@@ -1,0 +1,81 @@
+{
+  "id": "gold-ivory",
+  "name": "鎏金象牙 · 高级质感",
+  "description": "鎏金棕与象牙白的古典奢华：双线金框与细密斜纹铺底，衬线大字、香槟金细线与菱形花饰点睛，如把一座私人博物馆装进一页书",
+  "tags": ["奢华"],
+  "scenario": ["高级珠宝发布", "奢侈品品牌发布", "高端酒店企划", "艺术收藏讲座", "米其林餐厅企划"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "典藏封面",
+      "use": "开场：菱形花饰 + 衬线大字标题 + 金线 + 一句定位，双线金框衬底，可立一枚鎏金印记",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；印记 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "鉴赏目录",
+      "use": "议程：象牙卡内 4 行篇目（方框衬线编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：象牙细框卡 + 棕底编号签 + 衬线小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边象牙卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "鎏金数字",
+      "use": "三个关键数据：衬线大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "题铭引言",
+      "use": "整页一句引文：衬线大字 + 出处 + 两个支撑药丸，右侧留白立一枚花饰",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 衬线大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "展期时间线",
+      "use": "3-4 个节点的横向时间线：菱形节点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾柬帖",
+      "use": "收尾：衬线大字 + 一句行动提醒 + 棕底按钮 + 药丸，如一张柬帖落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Georgia", "Songti SC", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/gold-ivory",
+    "license": "Apache-2.0"
+  }
+}

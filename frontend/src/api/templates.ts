@@ -1,4 +1,4 @@
-import { request } from './client'
+import { authedUrl, request } from './client'
 
 /** 模板变体：class 为 style.css 里预定义的 token 覆盖 class（空串 = 默认观感） */
 export interface TemplateVariant {
@@ -23,7 +23,10 @@ export interface TemplateMeta {
   scenario?: string[]
   canvas: { w: number; h: number }
   variants: TemplateVariant[]
-  layouts: TemplateLayoutMeta[]
+  /** 缩略图内容版本（8 位）：卡片 <img> 地址 /api/templates/:id/thumb?v= 的 cache-bust 键 */
+  thumb?: string
+  /** 清单接口（/api/templates）已瘦身不下发；单模板详情（GET /api/templates/:id）仍有 */
+  layouts?: TemplateLayoutMeta[]
   fonts?: string[]
   source?: { derived_from: string; license: string }
   /** demo 页数（服务端统计顶层 section）；0/缺省 = 未知 */
@@ -40,6 +43,12 @@ export const templateApi = {
    * slide > 0 时服务端只返回该页（缩略模式）——画廊一屏十几张卡，每张没必要
    * 为整本 demo 付解析+布局的 CPU 账。翻页用的完整预览不要传 slide。
    */
+  /** 卡片缩略图地址（<img> 用；?token= 兼容图片标签带不了鉴权头）。
+   *  首次访问触发后端 Chrome 渲染（1-3s），之后浏览器 immutable 长缓存；
+   *  渲染失败 404 → 调用方回退活 iframe（onerror）。 */
+  thumbUrl: (id: string, version: string) =>
+    authedUrl(`/api/templates/${id}/thumb?v=${encodeURIComponent(version)}`),
+
   previewUrl: (id: string, variant = '', page = 0, slide = 0) => {
     const params = new URLSearchParams()
     if (variant) params.set('variant', variant)

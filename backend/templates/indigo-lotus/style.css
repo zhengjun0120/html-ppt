@@ -1,0 +1,96 @@
+/* indigo-lotus — 青莲碧蓝 · 梦幻国风。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/indigo-lotus（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 全模板唯一的深色渐变底：青莲 #5F469A 到碧蓝 #6BC4CA 垂直渐变画在 .slide 背景上
+ * （上游身份色，中段略微压暗保文字对比），云雾星光与月光是每页自动衬底的 ambient
+ * 层（z-index:-1，骨架零成本）。文字一律白/浅灰；标题细无衬线大字距，
+ * 不用衬线粗体（上游禁忌）；强调用白，不用朱砂。 */
+.tpl-indigo-lotus{
+  --bg:#61779F;              /* letterbox 融合色（渐变中段），翻页时页面外底色跟手 */
+  --ink:#FFFFFF;             /* 主文字：白 */
+  --ink-2:#E0E0E0;           /* 浅灰正文 */
+  --ink-3:#C3D2D8;           /* 月雾灰小字 */
+  --border:rgba(255,255,255,.30);
+  --border-soft:rgba(255,255,255,.16);
+  --glass:rgba(255,255,255,.12);
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：细无衬线大字距，白色为主，柔和不抢渐变的戏 ---- */
+.tpl-indigo-lotus .h1{font-size:84px;line-height:1.2;font-weight:300;letter-spacing:.18em;color:var(--ink);margin-bottom:12px;text-shadow:0 4px 30px rgba(18,20,52,.35)}
+.tpl-indigo-lotus .h2{font-size:50px;line-height:1.25;font-weight:300;letter-spacing:.14em;color:var(--ink);margin-bottom:8px;text-shadow:0 3px 24px rgba(18,20,52,.3)}
+.tpl-indigo-lotus h4{font-family:inherit;color:var(--ink);font-weight:500;font-size:24px;letter-spacing:.08em}
+.tpl-indigo-lotus .lede{font-size:23px;line-height:1.95;color:var(--ink-2);font-weight:300;letter-spacing:.04em}
+.tpl-indigo-lotus .deck-footer{font-size:14px;font-weight:300;color:rgba(230,242,245,.82);letter-spacing:.2em}
+
+/* ---- 深色渐变底：上游身份色（中段压暗一档保对比）+ 页底水面波纹 ---- */
+.tpl-indigo-lotus .slide{
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 170' preserveAspectRatio='none'%3E%3Cpath d='M0,40 Q480,28 960,40 T1920,36' stroke='%23FFFFFF' stroke-width='1.5' fill='none' opacity='0.30'/%3E%3Cpath d='M320,84 Q800,70 1280,84 T1920,78' stroke='%23FFFFFF' stroke-width='1.5' fill='none' opacity='0.22'/%3E%3Cpath d='M0,120 Q560,132 1120,118 T1920,126' stroke='%23FFFFFF' stroke-width='1' fill='none' opacity='0.16'/%3E%3Cpath d='M480,152 Q960,142 1440,152' stroke='%23FFFFFF' stroke-width='1' fill='none' opacity='0.12'/%3E%3C/svg%3E") center bottom/100% 170px no-repeat,
+    linear-gradient(180deg,#5F469A 0%,#5C4F9E 30%,#4F86A2 68%,#6BC4CA 100%);
+}
+
+/* ---- ambient：云雾白晕 + 星光白点（上半区） ---- */
+.tpl-indigo-lotus .slide::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:430px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 430' preserveAspectRatio='none'%3E%3Cellipse cx='380' cy='150' rx='270' ry='55' fill='%23FFFFFF' opacity='0.12'/%3E%3Cellipse cx='1150' cy='210' rx='230' ry='48' fill='%23FFFFFF' opacity='0.10'/%3E%3Cellipse cx='820' cy='95' rx='200' ry='42' fill='%23FFFFFF' opacity='0.09'/%3E%3Ccircle cx='600' cy='60' r='7' fill='%23FFFFFF' opacity='0.18'/%3E%3Ccircle cx='600' cy='60' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='760' cy='120' r='2.5' fill='%23FFFFFF' opacity='0.7'/%3E%3Ccircle cx='1100' cy='70' r='7' fill='%23FFFFFF' opacity='0.16'/%3E%3Ccircle cx='1100' cy='70' r='3' fill='%23FFFFFF' opacity='0.85'/%3E%3Ccircle cx='1340' cy='140' r='6' fill='%23FFFFFF' opacity='0.14'/%3E%3Ccircle cx='1340' cy='140' r='2.5' fill='%23FFFFFF' opacity='0.7'/%3E%3Ccircle cx='980' cy='180' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='240' cy='190' r='2.5' fill='%23FFFFFF' opacity='0.65'/%3E%3Ccircle cx='1500' cy='90' r='3' fill='%23FFFFFF' opacity='0.8'/%3E%3Ccircle cx='1620' cy='220' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='480' cy='260' r='2' fill='%23FFFFFF' opacity='0.5'/%3E%3Ccircle cx='1720' cy='160' r='2.5' fill='%23FFFFFF' opacity='0.7'/%3E%3C/svg%3E") no-repeat top center;
+  background-size:100% 100%;
+}
+
+/* ---- ambient：月光圆（右上，柔光晕开） ---- */
+.tpl-indigo-lotus .slide::after{
+  content:"";position:absolute;top:88px;right:280px;width:104px;height:104px;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle at 36% 34%,#FFFFFF 0%,#F2E8FB 55%,#DFD0F2 100%);
+  box-shadow:0 0 60px rgba(255,255,255,.45),0 0 140px rgba(255,255,255,.2);
+}
+
+/* ---- 题签：两侧细月光线的宽字距小字 ---- */
+.tpl-indigo-lotus .il-kicker{display:flex;align-items:center;gap:18px;font-size:16px;font-weight:300;letter-spacing:.5em;color:var(--ink-2)}
+.tpl-indigo-lotus .il-kicker::before,.tpl-indigo-lotus .il-kicker::after{content:"";width:36px;height:1px;background:rgba(255,255,255,.5)}
+
+/* ---- 月光线：标题下的一笔，从月白淡出 ---- */
+.tpl-indigo-lotus .il-line{width:210px;height:2px;background:linear-gradient(90deg,rgba(255,255,255,.85) 0%,rgba(255,255,255,.35) 55%,transparent 100%)}
+
+/* ---- 玻璃卡：半透明白 + 细白描边，毛玻璃克制（目录容器 / 卡 / split 右列） ---- */
+.tpl-indigo-lotus .il-card{background:var(--glass);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:34px 30px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;flex-direction:column}
+.tpl-indigo-lotus .il-card p{margin:0;font-size:18px;line-height:1.85;letter-spacing:.02em;color:var(--ink-2);font-weight:300}
+
+/* ---- 目录行：描边圆点编号 + 篇名 + 说明 ---- */
+.tpl-indigo-lotus .il-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-indigo-lotus .il-item:last-child{border-bottom:none}
+.tpl-indigo-lotus .il-n{flex:none;width:50px;height:50px;border:1px solid rgba(255,255,255,.55);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Inter','Noto Sans SC',sans-serif;font-size:17px;font-weight:500;color:#FFFFFF;align-self:center;background:rgba(255,255,255,.08)}
+.tpl-indigo-lotus .il-t{flex:none;width:240px;font-size:27px;font-weight:500;letter-spacing:.08em;color:#FFFFFF}
+.tpl-indigo-lotus .il-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);font-weight:300}
+
+/* ---- 月光数据：白色细体大数字 + 细白顶线 ---- */
+.tpl-indigo-lotus .il-stat{border-top:1px solid rgba(255,255,255,.38);padding-top:28px}
+.tpl-indigo-lotus .il-stat-v{font-family:'Inter','Noto Sans SC',sans-serif;font-size:100px;line-height:1;font-weight:300;letter-spacing:.02em;color:#FFFFFF;text-shadow:0 0 26px rgba(255,255,255,.35)}
+.tpl-indigo-lotus .il-stat-u{font-size:24px;font-weight:300;color:var(--ink-3);margin-left:8px}
+.tpl-indigo-lotus .il-stat-l{margin-top:18px;font-size:25px;font-weight:500;letter-spacing:.1em;color:#FFFFFF}
+.tpl-indigo-lotus .il-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2);font-weight:300}
+
+/* ---- 诗句引文：白色细体大字 ---- */
+.tpl-indigo-lotus .il-quote{font-size:58px;line-height:1.6;font-weight:300;letter-spacing:.1em;color:#FFFFFF;max-width:24em;margin:0;text-shadow:0 4px 26px rgba(18,20,52,.35)}
+.tpl-indigo-lotus .il-src{margin:0;font-size:20px;font-weight:300;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排诗句：只放留白处，一页至多一条 ---- */
+.tpl-indigo-lotus .il-vert{writing-mode:vertical-rl;font-size:24px;font-weight:300;letter-spacing:.5em;line-height:2;color:var(--ink-2)}
+.tpl-indigo-lotus .il-vert-accent{color:#FFFFFF;text-shadow:0 0 14px rgba(255,255,255,.8)}
+
+/* ---- 药丸：细白描边；强调版是白底（白是全模板唯一的强调色） ---- */
+.tpl-indigo-lotus .il-pill{display:inline-flex;align-items:center;padding:9px 26px;border:1px solid rgba(255,255,255,.5);border-radius:999px;font-size:16px;font-weight:300;letter-spacing:.14em;color:#FFFFFF;white-space:nowrap}
+.tpl-indigo-lotus .il-pill-accent{background:#FFFFFF;border-color:#FFFFFF;color:#33475E;font-weight:500}
+
+/* ---- 行动钮：白底深字，收尾页 ---- */
+.tpl-indigo-lotus .il-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 44px;background:#FFFFFF;color:#2F4256;border-radius:4px;font-size:21px;font-weight:500;letter-spacing:.18em}
+
+/* ---- 时间线：描边圆点 + 细白连接线 ---- */
+.tpl-indigo-lotus .il-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-indigo-lotus .il-tl-item{flex:1;position:relative}
+.tpl-indigo-lotus .il-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:51px;right:-40px;height:1px;background:rgba(255,255,255,.32)}
+.tpl-indigo-lotus .il-tl-dot{position:relative;z-index:1;width:51px;height:51px;border:1px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(255,255,255,.1);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Inter','Noto Sans SC',sans-serif;font-size:17px;font-weight:500}
+.tpl-indigo-lotus .il-tl-t{margin-top:18px;font-family:'Inter','Noto Sans SC',sans-serif;font-size:21px;font-weight:500;color:#FFFFFF;letter-spacing:.06em}
+.tpl-indigo-lotus .il-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2);font-weight:300}
+
+/* ---- 页面切换（翻页动画）：舒缓有呼吸感，横移最小 ---- */
+.tpl-indigo-lotus{--page-shift:8px;--page-dur:.62s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

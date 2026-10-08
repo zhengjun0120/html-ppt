@@ -1,0 +1,100 @@
+/* cobalt-sunshine — 明黄钴蓝 · 活力专业。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/cobalt-sunshine（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 明黄 #FFD338 大底 + 钴蓝 #0047AB 超粗大字与实底块：高饱和互补撞色，
+ * 重对比、轻装饰——硬偏移阴影、斜纹条、圆点阵，禁柔光与毛玻璃；
+ * 右上圆点阵与左下斜纹半圆是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-cobalt-sunshine{
+  --bg:#FFD338;              /* 明黄主底（原 #FFE470 收一档，投屏不刺眼） */
+  --bg-soft:#FFE77A;         /* 淡黄（次级背景） */
+  --paper:#FFFFFF;           /* 白卡底 */
+  --ink:#10142B;             /* 近黑正文 */
+  --ink-2:#3C425C;           /* 蓝灰次级正文 */
+  --ink-3:#6B7089;           /* 蓝灰小字 */
+  --border:rgba(16,20,43,.22);
+  --border-soft:rgba(16,20,43,.12);
+  --cobalt:#0047AB;          /* 钴蓝（原 #0B2299 收正一档，撞色更稳） */
+  --cobalt-deep:#00358A;
+  --sun:#FFD338;             /* 明黄（蓝底上的高亮字） */
+  --sun-soft:#FFE77A;
+  --accent:#0047AB;
+  --accent-ink:#FFD338;
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',Arial,sans-serif;
+}
+
+/* ---- 字阶：无衬线超粗大字 + 行紧字密，对比度是这套风格的一半 ---- */
+.tpl-cobalt-sunshine .h1{font-size:96px;line-height:1.06;font-weight:900;letter-spacing:-.02em;color:var(--cobalt);margin-bottom:10px}
+.tpl-cobalt-sunshine .h2{font-size:58px;line-height:1.12;font-weight:900;letter-spacing:-.01em;color:var(--cobalt);margin-bottom:8px}
+.tpl-cobalt-sunshine h4{font-family:inherit;color:var(--ink);font-weight:800;font-size:26px;letter-spacing:.02em}
+.tpl-cobalt-sunshine .lede{font-size:24px;line-height:1.85;color:var(--ink-2);font-weight:400;letter-spacing:.01em}
+.tpl-cobalt-sunshine .deck-footer{font-size:14px;font-weight:600;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：圆点阵（右上）+ 斜纹半圆（左下），z-index:-1 画在内容之下 ---- */
+.tpl-cobalt-sunshine .slide::before{
+  content:"";position:absolute;top:64px;right:72px;width:160px;height:72px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 72'%3E%3Ccircle cx='14' cy='14' r='14' fill='%230047AB' opacity='0.85'/%3E%3Ccircle cx='58' cy='14' r='14' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='102' cy='14' r='14' fill='%230047AB' opacity='0.85'/%3E%3Ccircle cx='146' cy='14' r='14' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='14' cy='58' r='14' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='58' cy='58' r='14' fill='%230047AB' opacity='0.85'/%3E%3Ccircle cx='102' cy='58' r='14' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='146' cy='58' r='14' fill='%230047AB' opacity='0.85'/%3E%3C/svg%3E") no-repeat top right;
+}
+.tpl-cobalt-sunshine .slide::after{
+  content:"";position:absolute;left:0;bottom:0;width:380px;height:120px;z-index:-1;
+  background:
+    repeating-linear-gradient(45deg,rgba(0,71,171,.15) 0 10px,transparent 10px 22px),
+    radial-gradient(72px 72px at 46px 122px,#FFFFFF 98%,transparent 100%);
+}
+
+/* ---- 题签块：钴蓝实底 + 明黄字，页首身份标签 ---- */
+.tpl-cobalt-sunshine .cs-kicker{display:inline-flex;align-items:center;gap:12px;align-self:flex-start;background:var(--cobalt);color:var(--sun);font-size:16px;font-weight:800;letter-spacing:.30em;padding:10px 22px;border-radius:6px}
+.tpl-cobalt-sunshine .cs-kicker::before{content:"◆";font-size:14px;letter-spacing:0}
+
+/* ---- 斜纹撞色条：标题下的一笔，棋盘斜纹 ---- */
+.tpl-cobalt-sunshine .cs-stripe{width:240px;height:14px;background:repeating-linear-gradient(45deg,var(--cobalt) 0 10px,transparent 10px 20px)}
+
+/* ---- 钴蓝徽章：实底方印，蓝底黄字，全模板的盖章位 ---- */
+.tpl-cobalt-sunshine .cs-badge{flex:none;width:84px;height:84px;background:var(--cobalt);color:var(--sun);display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:900;line-height:1.3;letter-spacing:.08em;border-radius:8px}
+
+/* ---- 旋转贴纸：白底蓝描边，歪 4 度，一页至多一个 ---- */
+.tpl-cobalt-sunshine .cs-tag{display:inline-flex;align-items:center;background:var(--paper);border:2px solid var(--cobalt);color:var(--cobalt);font-size:16px;font-weight:800;letter-spacing:.14em;padding:8px 18px;border-radius:6px;transform:rotate(-4deg);box-shadow:4px 4px 0 rgba(0,71,171,.18);white-space:nowrap}
+
+/* ---- 白卡：白底 + 钴蓝硬描边 + 硬偏移阴影，无柔光 ---- */
+.tpl-cobalt-sunshine .cs-card{background:var(--paper);border:2px solid var(--cobalt);border-radius:10px;padding:34px 36px;display:flex;flex-direction:column;min-height:280px;box-shadow:8px 8px 0 rgba(0,71,171,.14)}
+
+/* ---- 药丸：蓝描边胶囊为主，实心钴蓝做强调 ---- */
+.tpl-cobalt-sunshine .cs-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 20px;border:2px solid var(--cobalt);border-radius:999px;background:var(--paper);font-size:16px;font-weight:700;letter-spacing:.10em;color:var(--cobalt);white-space:nowrap}
+.tpl-cobalt-sunshine .cs-pill-accent{background:var(--cobalt);color:#FFFFFF}
+
+/* ---- 目录行：钴蓝编号块 + 篇名 + 说明 ---- */
+.tpl-cobalt-sunshine .cs-item{display:flex;align-items:center;gap:26px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-cobalt-sunshine .cs-item:last-child{border-bottom:none}
+.tpl-cobalt-sunshine .cs-n{flex:none;width:52px;height:52px;background:var(--cobalt);color:var(--sun);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900}
+.tpl-cobalt-sunshine .cs-t{flex:none;width:260px;font-size:28px;font-weight:900;letter-spacing:.02em;color:var(--cobalt)}
+.tpl-cobalt-sunshine .cs-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- 钴蓝数据块：蓝底黄字大数字，数据页主视觉 ---- */
+.tpl-cobalt-sunshine .cs-cell{background:var(--cobalt);border-radius:12px;padding:32px 30px;display:flex;flex-direction:column}
+.tpl-cobalt-sunshine .cs-cell-v{font-size:96px;line-height:1;font-weight:900;letter-spacing:-.02em;color:var(--sun)}
+.tpl-cobalt-sunshine .cs-cell-u{font-size:26px;font-weight:700;color:rgba(255,255,255,.85);margin-left:8px}
+.tpl-cobalt-sunshine .cs-cell-l{margin-top:16px;font-size:24px;font-weight:800;letter-spacing:.06em;color:#FFFFFF}
+.tpl-cobalt-sunshine .cs-cell-d{margin:10px 0 0;font-size:16px;line-height:1.7;color:rgba(255,255,255,.82)}
+
+/* ---- 整页引文：钴蓝超粗大字 ---- */
+.tpl-cobalt-sunshine .cs-quote{font-size:64px;line-height:1.5;font-weight:900;letter-spacing:.01em;color:var(--cobalt);max-width:26em;margin:0}
+.tpl-cobalt-sunshine .cs-src{margin:0;font-size:20px;font-weight:600;letter-spacing:.10em;color:var(--ink-3)}
+
+/* ---- 时间线：钴蓝圆点 + 虚线连接 ---- */
+.tpl-cobalt-sunshine .cs-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-cobalt-sunshine .cs-tl-item{flex:1;position:relative}
+.tpl-cobalt-sunshine .cs-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:53px;right:-44px;height:3px;background:repeating-linear-gradient(90deg,var(--cobalt) 0 8px,transparent 8px 16px)}
+.tpl-cobalt-sunshine .cs-tl-dot{position:relative;z-index:1;width:53px;height:53px;background:var(--cobalt);color:var(--sun);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900}
+.tpl-cobalt-sunshine .cs-tl-t{margin-top:20px;font-size:21px;font-weight:900;color:var(--cobalt);letter-spacing:.04em}
+.tpl-cobalt-sunshine .cs-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-cobalt-sunshine .cs-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-cobalt-sunshine .cs-step:last-child{border-bottom:none}
+.tpl-cobalt-sunshine .cs-mini-t{margin:0;font-size:20px;line-height:1.6;font-weight:500;color:var(--ink);letter-spacing:.01em}
+
+/* ---- 行动钮：实底钴蓝 + 明黄字，收尾页唯一按钮 ---- */
+.tpl-cobalt-sunshine .cs-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;background:var(--cobalt);color:var(--sun);font-size:22px;font-weight:900;letter-spacing:.16em;border-radius:8px;box-shadow:6px 6px 0 rgba(16,20,43,.18)}
+
+/* ---- 页面切换（翻页动画）：上游缓动，色块快速滑入 ---- */
+.tpl-cobalt-sunshine{--page-shift:38px;--page-dur:.5s;--page-ease:cubic-bezier(.2,.8,.2,1)}

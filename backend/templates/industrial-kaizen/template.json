@@ -1,0 +1,81 @@
+{
+  "id": "industrial-kaizen",
+  "name": "表格 · 现代周报",
+  "description": "表格即视觉的改善周报：暖白画布、账本封边强分隔线、发丝行线、等宽数字右对齐，状态用灰阶徽章——零彩色的编辑级报表气质",
+  "tags": ["浅色", "商务", "数据"],
+  "scenario": ["经营周报", "季度复盘", "KPI 看板", "商业汇报", "技术分享"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "周报封面",
+      "use": "开场：大写眉题 + 粗壮标题 + 账本封边强线 + 一句导语，周期与编制用实底/浅底徽章",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤14 字可两行；lede 30-60 字；眉题 ≤24 字符；徽章各 ≤12 字"
+    },
+    {
+      "id": "contents",
+      "name": "本期目录",
+      "use": "议程：4 行条目（两位数编号 + 条目名 + 一句说明），发丝线分行如报表行",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；条目名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：细边卡 + 状态徽章题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 徽章），右边细边卡装三行日程或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个徽章；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "KPI 横栏",
+      "use": "三个关键数据：细线封边的 KPI 横栏（竖细线分列），▲▼ 趋势符 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "摘录引文",
+      "use": "整页一句引文：粗壮标语体 + 出处 + 两个徽章，像报表卷首的扉页语",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；徽章各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节页",
+      "use": "章节过渡：大写眉题 + 粗壮章节名 + 封边强线 + 一个过渡问题 + 两个徽章",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-52 字；徽章各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "周历时间线",
+      "use": "3-4 个节点的横向时间线：方点 + 时间点 + 一句事件，细线串联如排程表",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾行",
+      "use": "收尾：粗壮大字 + 一句行动提醒 + 深墨实底按钮 + 徽章，如报表末行的呈报栏",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤6 字；徽章 ≤12 字"
+    }
+  ],
+  "fonts": ["Inter", "PingFang SC", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/industrial-kaizen",
+    "license": "Apache-2.0"
+  }
+}

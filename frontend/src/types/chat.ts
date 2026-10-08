@@ -34,6 +34,8 @@ export interface ViewUserMsg {
   kind: 'user'
   id: number
   text: string
+  /** 用户附图（压缩后的 data URL）；回放与直播同源 */
+  images?: string[]
 }
 export interface ViewAgentMsg {
   kind: 'agent'
@@ -120,6 +122,8 @@ export interface TranscriptMessage {
   seq: number
   role: 'user' | 'assistant' | 'tool'
   content: string
+  /** user 消息的附图（data URL）；刷新恢复缩略图靠它 */
+  images?: string[]
   tool_calls?: ViewToolCall[]
   tool_call_id?: string
   tool_name?: string

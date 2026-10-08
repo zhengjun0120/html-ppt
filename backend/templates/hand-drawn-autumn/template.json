@@ -1,0 +1,81 @@
+{
+  "id": "hand-drawn-autumn",
+  "name": "手绘秋日旅行手账",
+  "description": "南瓜橙与暖棕勾线的童趣旅行手账：牛皮纸米黄底、半透明贴纸卡、胶带标签与虚线路径，圆润笔触把一段旅程随手贴进本子里",
+  "tags": ["插画", "手绘"],
+  "scenario": ["旅行手账分享", "城市漫游笔记", "亲子活动企划", "校园社团招新", "秋日主题沙龙"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "手账封面",
+      "use": "开场：虚线胶囊题签 + 圆体大标题 + 胶带 + 一句定位，右下可贴一枚异形贴纸",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；贴纸 2-4 字"
+    },
+    {
+      "id": "contents",
+      "name": "行程目录",
+      "use": "议程：便签大卡上 4 行行程（手绘圈编号 + 站名 + 一句说明），卡顶压一条胶带",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；站名 ≤8 字；说明 12-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三张贴纸",
+      "use": "三个并列要点：贴纸卡 + 彩色标签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 虚线药丸），右边便签卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "南瓜大数字",
+      "use": "三个关键数据：贴纸卡 + 橙色大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "扉页引文",
+      "use": "整页一句引文：圆体大字 + 出处 + 两个支撑药丸，右侧贴一张竖排便利贴",
+      "roles": ["quote"],
+      "constraints": "引文 10-24 字；出处 ≤22 字且真实；药丸各 ≤10 字；便利贴 5-7 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节站牌",
+      "use": "章节过渡：进度题签 + 圆体大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤10 字"
+    },
+    {
+      "id": "moments",
+      "name": "时刻路线",
+      "use": "3-4 个节点的横向时间线：手绘圈圆点 + 时间点 + 一句事件，虚线相连",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾待续",
+      "use": "收尾：圆体大字 + 一句行动提醒 + 色块按钮 + 药丸 + 一枚「待续」贴纸",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤12 字"
+    }
+  ],
+  "fonts": ["Yuanti SC", "YouYuan", "PingFang SC", "Microsoft YaHei"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/hand-drawn-autumn",
+    "license": "Apache-2.0"
+  }
+}

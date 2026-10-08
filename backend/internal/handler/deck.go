@@ -2,6 +2,8 @@ package handler
 
 import (
 	"bytes"
+	"errors"
+	"html-ppt/backend/internal/service/deck"
 	"io"
 	"net/http"
 
@@ -38,6 +40,14 @@ func (h *Handler) GetDeckFile(c *gin.Context) {
 	}
 	html, err := h.decks.PreviewHTML(uid, c.Param("id"))
 	if err != nil {
+		// 未选模板的 v2 deck：出友好占位页而不是 404 JSON——这个端点的消费者
+		// 是 <iframe>，裸 JSON 会原样糊进页面（2026-09-30 用户实测反馈）。
+		// 200 而非 404：语义是"还没到能预览的状态"，不是"找不到"。
+		if errors.Is(err, deck.ErrNotInstantiated) {
+			deckPageHeaders(c)
+			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(notInstantiatedHTML))
+			return
+		}
 		response.Err(c, http.StatusNotFound, "deck 不存在")
 		return
 	}
@@ -51,6 +61,14 @@ func (h *Handler) GetDeckFile(c *gin.Context) {
 	deckPageHeaders(c)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
+
+// notInstantiatedHTML 未实例化 deck 的预览占位页（配色贴近暗色主题的中性灰，
+// 亮色主题下也不刺眼）。
+const notInstantiatedHTML = `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>尚未生成</title></head>
+<body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#15181d;color:#8a929e;font:13px/1.7 system-ui,-apple-system,'Segoe UI',sans-serif;text-align:center;">
+<div>这份文稿还没有生成页面<br><span style="font-size:12px;opacity:.7">在向导里选好模板就会开始生成</span></div>
+</body></html>`
 
 // maxEditBodyBytes 手动编辑保存的 body 上限。index.html 实测量级是几十 KB，
 // 2MB 已经放宽了一个数量级还多；再大基本可以断定不是编辑器序列化产物。
@@ -114,100 +132,100 @@ func deckPageHeaders(c *gin.Context) {
 }
 
 func (h *Handler) DeleteDeckVersion(c *gin.Context) {
-	uid,ok := authctx.UserID(c.Request.Context())
+	uid, ok := authctx.UserID(c.Request.Context())
 	if !ok {
-		response.Err(c,http.StatusUnauthorized,"未登录")
+		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
 
 	deckID := c.Param("id")
 	version := c.Param("version")
-	if deckID == "" || version == ""{
+	if deckID == "" || version == "" {
 		response.ParameterErr(c)
 		return
 	}
 
-	if err := h.decks.EnsureOwner(uid,deckID);err !=nil{
-		response.Err(c,http.StatusNotFound,"deck 不存在")
+	if err := h.decks.EnsureOwner(uid, deckID); err != nil {
+		response.Err(c, http.StatusNotFound, "deck 不存在")
 		return
 	}
-	if err := h.decks.DeleteVersion(uid,deckID,version); err !=nil{
-		response.Err(c,http.StatusBadRequest,err.Error())
+	if err := h.decks.DeleteVersion(uid, deckID, version); err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	response.OK(c,nil)
+	response.OK(c, nil)
 }
 
 func (h *Handler) ClearDeckHistory(c *gin.Context) {
-	uid,ok := authctx.UserID(c.Request.Context())
+	uid, ok := authctx.UserID(c.Request.Context())
 	if !ok {
-		response.Err(c,http.StatusUnauthorized,"未登录")
+		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
 	deckID := c.Param("id")
-	if deckID == ""{
+	if deckID == "" {
 		response.ParameterErr(c)
 		return
 	}
 
-	if err := h.decks.EnsureOwner(uid,deckID); err !=nil{
-		response.Err(c,http.StatusNotFound,"deck 不存在 err:"+err.Error())
+	if err := h.decks.EnsureOwner(uid, deckID); err != nil {
+		response.Err(c, http.StatusNotFound, "deck 不存在 err:"+err.Error())
 		return
 	}
-	n,err := h.decks.ClearHistory(uid,deckID)
-	if err !=nil {
-		response.Err(c,http.StatusInternalServerError,err.Error())
+	n, err := h.decks.ClearHistory(uid, deckID)
+	if err != nil {
+		response.Err(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	response.OK(c,gin.H{"deleted":n})
+	response.OK(c, gin.H{"deleted": n})
 }
 
-func (h *Handler) ListDeckHistory(c *gin.Context){
-	uid,ok := authctx.UserID(c.Request.Context())
+func (h *Handler) ListDeckHistory(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
 	if !ok {
-		response.Err(c,http.StatusUnauthorized,"未登录")
+		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
 
 	deckID := c.Param("id")
-	if deckID == ""{
+	if deckID == "" {
 		response.ParameterErr(c)
 		return
 	}
 
-	if err := h.decks.EnsureOwner(uid,deckID);err !=nil{
-		response.Err(c,http.StatusNotFound,"deck 不存在 err:"+err.Error())
+	if err := h.decks.EnsureOwner(uid, deckID); err != nil {
+		response.Err(c, http.StatusNotFound, "deck 不存在 err:"+err.Error())
 		return
 	}
 
-	versions,err := h.decks.ListVersions(uid,deckID)
-	if err !=nil{
-		response.Err(c,http.StatusInternalServerError,err.Error())
+	versions, err := h.decks.ListVersions(uid, deckID)
+	if err != nil {
+		response.Err(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	response.OK(c,versions)
+	response.OK(c, versions)
 }
 
-func (h *Handler) RestoreDeckVersion(c *gin.Context){
-	uid,ok := authctx.UserID(c.Request.Context())
+func (h *Handler) RestoreDeckVersion(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
 	if !ok {
-		response.Err(c,http.StatusUnauthorized,"未登录")
+		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
-	deckID:= c.Param("id")
+	deckID := c.Param("id")
 	version := c.Param("version")
-	if deckID == "" || version == ""{
+	if deckID == "" || version == "" {
 		response.ParameterErr(c)
 		return
 	}
 
-	if err := h.decks.EnsureOwner(uid,deckID); err !=nil{
-		response.Err(c,http.StatusNotFound,"deck 不存在 err:" +err.Error())
+	if err := h.decks.EnsureOwner(uid, deckID); err != nil {
+		response.Err(c, http.StatusNotFound, "deck 不存在 err:"+err.Error())
 		return
 	}
-	if err := h.decks.RestoreVersionV2(uid,deckID,version);err !=nil{
-		response.Err(c,http.StatusBadRequest,err.Error())
+	if err := h.decks.RestoreVersionV2(uid, deckID, version); err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	response.OK(c,gin.H{"restored":version})
+	response.OK(c, gin.H{"restored": version})
 }

@@ -27,18 +27,44 @@ import (
 // 读接口**不受 features.trace 开关影响**：关掉的是"继续记录"，
 // 已经落盘的记录应该照样能看——否则调完开关，之前跑出来的东西就再也读不到了。
 
-// maxRunsPerQuery 单次列表的硬上限。
-// 会话汇总必须建立在**完整**的 run 列表上（否则"这次对话花了多少 token"会因为
-// 分页而少算），所以这里先取一个够大的窗口，再在内存里分页。
-// 500 个 run 的元信息读取是几百次"只读首尾行"，可以接受。
-const maxRunsPerQuery = 500
+// 列表分页参数：默认每页 50，客户端最多要 200——窗口够一屏翻几页，
+// 又不会把几百条元信息一次塞进响应。
+const (
+	defaultTraceListLimit = 50
+	maxTraceListLimit     = 200
+)
+
+// kind/status 筛选的白名单：枚举外的值直接 400，让前端拼错参数立刻暴露，
+// 而不是悄悄得到一个空列表以为"没有记录"。
+var (
+	traceKinds    = map[string]bool{"deck": true, "customize": true, "tplsugg": true}
+	traceStatuses = map[string]bool{
+		trace.StatusOK: true, trace.StatusPaused: true,
+		trace.StatusError: true, trace.StatusRunning: true,
+	}
+)
+
+// listPreviewRunes 列表口径 user_content 的预览长度（rune）。全文仍留在
+// store 索引里参与 q 搜索；列表卡与详情头都是 line-clamp 的展示行，
+// 160 字足够认出"这是哪次对话"，却不用把几百条全文塞进响应。
+const listPreviewRunes = 160
+
+// clipRunes 按 rune 截断，超出补省略号。
+func clipRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
+}
 
 // ListTraces GET /api/traces
 //
-// 查询参数：session_id（可选，只看某个会话）、limit / offset（可选，给 runs 分页）
-// 返回：{ sessions: [...], runs: [...] }
-//   - sessions 是按会话累加的汇总（跨 run），回答"这次对话花了多少 token"
-//   - runs 是扁平的 run 列表，新→旧，页面左栏用它
+// 查询参数：session_id（可选，只看某个会话）、limit（默认 50，至多 200）、
+// offset、kind（deck/customize/tplsugg）、status（ok/paused/error/running）、
+// q（对 run_id / 用户输入 / deck 的子串搜索，服务端匹配全文）
+// 返回：{ runs: [...], total: N } —— runs 为窗口内新→旧的 run 元信息，
+// total 为过滤后总数。
 func (h *Handler) ListTraces(c *gin.Context) {
 	uid, ok := authctx.UserID(c.Request.Context())
 	if !ok {
@@ -56,33 +82,48 @@ func (h *Handler) ListTraces(c *gin.Context) {
 		response.Err(c, http.StatusBadRequest, "limit 必须是非负整数")
 		return
 	}
+	if limit == 0 {
+		limit = defaultTraceListLimit
+	}
+	if limit > maxTraceListLimit {
+		limit = maxTraceListLimit
+	}
 	offset, err := queryInt(c, "offset")
 	if err != nil || offset < 0 {
 		response.Err(c, http.StatusBadRequest, "offset 必须是非负整数")
 		return
 	}
+	kind := c.Query("kind")
+	if kind != "" && !traceKinds[kind] {
+		response.Err(c, http.StatusBadRequest, "kind 只支持 deck/customize/tplsugg")
+		return
+	}
+	status := c.Query("status")
+	if status != "" && !traceStatuses[status] {
+		response.Err(c, http.StatusBadRequest, "status 只支持 ok/paused/error/running")
+		return
+	}
 
-	metas, err := h.traces.ListRuns(uid, sessionID, maxRunsPerQuery, 0)
+	metas, total, err := h.traces.ListRuns(uid, trace.ListFilter{
+		SessionID: sessionID,
+		Kind:      kind,
+		Status:    status,
+		Query:     c.Query("q"),
+	}, limit, offset)
 	if err != nil {
 		// 具体原因（哪个目录读不了）进日志，响应里只给人看的话
 		response.Err(c, http.StatusInternalServerError, "读取观测记录失败")
 		return
 	}
 
-	// 会话汇总建立在完整列表上；runs 才按 offset/limit 截
-	sessions := trace.SumBySession(metas)
-	if offset > 0 {
-		if offset >= len(metas) {
-			metas = []trace.RunMeta{}
-		} else {
-			metas = metas[offset:]
-		}
-	}
-	if limit > 0 && limit < len(metas) {
-		metas = metas[:limit]
+	// 列表只发 user_content 预览；值拷贝后再截，store 索引里的全文不能被污染
+	out := make([]trace.RunMeta, len(metas))
+	for i, m := range metas {
+		m.UserContent = clipRunes(m.UserContent, listPreviewRunes)
+		out[i] = m
 	}
 
-	response.OK(c, gin.H{"sessions": sessions, "runs": metas})
+	response.OK(c, gin.H{"runs": out, "total": total})
 }
 
 // GetTraceRun GET /api/traces/:sessionID/:runID

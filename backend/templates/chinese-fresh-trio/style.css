@@ -1,0 +1,115 @@
+/* chinese-fresh-trio — 中国传统色·青绿湖蓝。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/chinese-fresh-trio（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 翠竹绿 + 湖蓝 + 淡米三色协奏：顶部三色条是骨架里的 flex 色带（ft-band），
+ * 右下几何山峦是每页自动衬底的 ambient 层（z-index:-1，画在内容之下，骨架零成本）。
+ * 标题宋体加粗、正文黑体、数字英文无衬线——是清朗的现代国风，不是水墨。 */
+.tpl-chinese-fresh-trio{
+  --bg:#E6F5F2;              /* 米白（上游背景色） */
+  --bg-soft:#F0F8F6;         /* 淡青白（渐变亮端、印字） */
+  --ink:#333333;             /* 墨黑标题 */
+  --ink-2:#4A4A4A;           /* 深炭灰正文 */
+  --ink-3:#77857F;           /* 灰绿小字（页脚/来源行） */
+  --border:rgba(51,51,51,.18);
+  --border-soft:rgba(51,51,51,.10);
+  --ft-green:#7BCFA6;        /* 翠竹绿 */
+  --ft-blue:#66A9C9;         /* 湖蓝 */
+  --ft-sand:#D9D2C5;         /* 淡米（三色条第三段） */
+  --cinnabar:#C0392B;        /* 朱红：印章/题签短线/关键数据/强调药丸 */
+  --cinnabar-ink:#F0F8F6;
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：宋体粗标题 + 黑体正文 + 无衬线数字，是三色配色的现代感 ---- */
+.tpl-chinese-fresh-trio .h1{font-family:'Songti SC','STSong','SimSun','Noto Serif SC',serif;font-size:88px;line-height:1.14;font-weight:800;letter-spacing:.06em;color:var(--ink);margin-bottom:10px}
+.tpl-chinese-fresh-trio .h2{font-family:'Songti SC','STSong','SimSun','Noto Serif SC',serif;font-size:52px;line-height:1.2;font-weight:800;letter-spacing:.05em;color:var(--ink);margin-bottom:8px}
+.tpl-chinese-fresh-trio h4{font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.04em}
+.tpl-chinese-fresh-trio .lede{font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-chinese-fresh-trio .deck-footer{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- 淡青白底：135 度轻渐变，米白收底 ---- */
+.tpl-chinese-fresh-trio .slide{background:linear-gradient(135deg,var(--bg-soft) 0%,var(--bg) 100%)}
+
+/* ---- ambient：右下几何山峦折线（三色各一层，半透明） ---- */
+.tpl-chinese-fresh-trio .slide::after{
+  content:"";position:absolute;right:0;bottom:0;width:56%;height:470px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 470' preserveAspectRatio='none'%3E%3Cpath d='M900,470 L900,150 L770,300 L640,140 L500,310 L360,180 L230,330 L110,240 L0,330 L0,470 Z' fill='%237BCFA6' opacity='0.30'/%3E%3Cpath d='M900,470 L900,270 L780,380 L650,280 L520,400 L390,310 L260,420 L130,350 L0,420 L0,470 Z' fill='%2366A9C9' opacity='0.26'/%3E%3Cpath d='M900,470 L900,400 L760,440 L610,395 L430,450 L250,410 L0,455 L0,470 Z' fill='%23D9D2C5' opacity='0.45'/%3E%3C/svg%3E") no-repeat right bottom;
+  background-size:100% 100%;
+}
+
+/* ---- 三色条：骨架里的 flex 三段色带，每页第一行照抄 ---- */
+.tpl-chinese-fresh-trio .ft-band{position:absolute;top:0;left:0;right:0;height:12px;display:flex}
+.tpl-chinese-fresh-trio .ft-band i{flex:1}
+.tpl-chinese-fresh-trio .ft-band i:nth-child(1){background:var(--ft-green)}
+.tpl-chinese-fresh-trio .ft-band i:nth-child(2){background:var(--ft-blue)}
+.tpl-chinese-fresh-trio .ft-band i:nth-child(3){background:var(--ft-sand)}
+
+/* ---- 题签：朱红短线引导的小字标签 ---- */
+.tpl-chinese-fresh-trio .ft-kicker{display:flex;align-items:center;gap:14px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.32em;color:var(--ink-2)}
+.tpl-chinese-fresh-trio .ft-kicker::before{content:"";width:30px;height:2px;background:var(--cinnabar)}
+
+/* ---- 三色短线：标题下的一笔三段 ---- */
+.tpl-chinese-fresh-trio .ft-line{width:210px;height:4px;background:linear-gradient(90deg,var(--ft-green) 0 33.4%,var(--ft-blue) 33.4% 66.7%,var(--ft-sand) 66.7% 100%)}
+
+/* ---- 朱砂印：正方块小印，全模板唯一的红底元素之一 ---- */
+.tpl-chinese-fresh-trio .ft-seal{flex:none;width:72px;height:72px;background:var(--cinnabar);color:var(--cinnabar-ink);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 细线卡：淡色底 + 细线框（目录容器 / split 右列），几何直角 ---- */
+.tpl-chinese-fresh-trio .ft-panel{background:rgba(240,248,246,.82);border:1px solid var(--border-soft);padding:34px 40px}
+
+/* ---- 目录行：三色圆点编号 + 篇名 + 说明 ---- */
+.tpl-chinese-fresh-trio .ft-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-chinese-fresh-trio .ft-item:last-child{border-bottom:none}
+.tpl-chinese-fresh-trio .ft-n{flex:none;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:#FFFFFF;align-self:center;background:var(--ft-green)}
+.tpl-chinese-fresh-trio .ft-item:nth-of-type(2) .ft-n,.tpl-chinese-fresh-trio .ft-step:nth-of-type(2) .ft-n{background:var(--ft-blue)}
+.tpl-chinese-fresh-trio .ft-item:nth-of-type(3) .ft-n,.tpl-chinese-fresh-trio .ft-step:nth-of-type(3) .ft-n{background:var(--ft-sand);color:var(--ink)}
+.tpl-chinese-fresh-trio .ft-item:nth-of-type(4) .ft-n{background:var(--ink)}
+.tpl-chinese-fresh-trio .ft-t{flex:none;width:240px;font-family:'Songti SC','STSong','SimSun',serif;font-size:28px;font-weight:800;letter-spacing:.06em;color:var(--ink)}
+.tpl-chinese-fresh-trio .ft-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列，编号沿用三色圆点） ---- */
+.tpl-chinese-fresh-trio .ft-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-chinese-fresh-trio .ft-step:last-child{border-bottom:none}
+
+/* ---- 实色三联卡：翠竹绿 / 湖蓝 / 墨黑各一，白字，keynotes 专用 ---- */
+.tpl-chinese-fresh-trio .ft-card{padding:34px 30px;display:flex;flex-direction:column;min-height:300px;color:#FFFFFF}
+.tpl-chinese-fresh-trio .ft-card h4{color:#FFFFFF}
+.tpl-chinese-fresh-trio .ft-card p{margin:0;font-size:18px;line-height:1.8;letter-spacing:.02em}
+.tpl-chinese-fresh-trio .ft-card-green{background:var(--ft-green)}
+.tpl-chinese-fresh-trio .ft-card-blue{background:var(--ft-blue)}
+.tpl-chinese-fresh-trio .ft-card-ink{background:var(--ink)}
+.tpl-chinese-fresh-trio .ft-card-num{font-family:'Inter','Noto Sans SC',sans-serif;font-size:54px;font-weight:800;line-height:1;letter-spacing:.02em}
+
+/* ---- 三色数据：朱红大数字 + 三色顶线 ---- */
+.tpl-chinese-fresh-trio .ft-stat{border-top:3px solid var(--ft-green);padding-top:28px}
+.tpl-chinese-fresh-trio .ft-stat:nth-of-type(2){border-top-color:var(--ft-blue)}
+.tpl-chinese-fresh-trio .ft-stat:nth-of-type(3){border-top-color:var(--ft-sand)}
+.tpl-chinese-fresh-trio .ft-stat-v{font-family:'Inter','Noto Sans SC',sans-serif;font-size:100px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--cinnabar)}
+.tpl-chinese-fresh-trio .ft-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-chinese-fresh-trio .ft-stat-l{margin-top:18px;font-family:'Songti SC','STSong','SimSun',serif;font-size:26px;font-weight:800;letter-spacing:.05em;color:var(--ink)}
+.tpl-chinese-fresh-trio .ft-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：宋体大字 ---- */
+.tpl-chinese-fresh-trio .ft-quote{font-family:'Songti SC','STSong','SimSun',serif;font-size:60px;line-height:1.6;font-weight:800;letter-spacing:.05em;color:var(--ink);max-width:24em;margin:0}
+.tpl-chinese-fresh-trio .ft-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 描边药丸：细描边胶囊 ---- */
+.tpl-chinese-fresh-trio .ft-pill{display:inline-flex;align-items:center;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-chinese-fresh-trio .ft-pill-accent{border-color:var(--cinnabar);color:var(--cinnabar)}
+
+/* ---- 行动钮：墨底白字，收尾页 ---- */
+.tpl-chinese-fresh-trio .ft-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 42px;background:var(--ink);color:var(--bg-soft);font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:21px;font-weight:700;letter-spacing:.16em}
+
+/* ---- 时间线：三色圆点 + 细连接线 ---- */
+.tpl-chinese-fresh-trio .ft-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-chinese-fresh-trio .ft-tl-item{flex:1;position:relative}
+.tpl-chinese-fresh-trio .ft-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:51px;right:-40px;height:2px;background:var(--border-soft)}
+.tpl-chinese-fresh-trio .ft-tl-dot{position:relative;z-index:1;width:51px;height:51px;border-radius:50%;background:var(--ft-green);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700}
+.tpl-chinese-fresh-trio .ft-tl-item:nth-of-type(2) .ft-tl-dot{background:var(--ft-blue)}
+.tpl-chinese-fresh-trio .ft-tl-item:nth-of-type(3) .ft-tl-dot{background:var(--ft-sand);color:var(--ink)}
+.tpl-chinese-fresh-trio .ft-tl-item:nth-of-type(4) .ft-tl-dot{background:var(--ink)}
+.tpl-chinese-fresh-trio .ft-tl-t{margin-top:18px;font-family:'Inter','Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--cinnabar);letter-spacing:.02em}
+.tpl-chinese-fresh-trio .ft-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 页面切换（翻页动画）：干脆不拖沓，符合上游"明快转场" ---- */
+.tpl-chinese-fresh-trio{--page-shift:18px;--page-dur:.55s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

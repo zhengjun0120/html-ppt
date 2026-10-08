@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/authctx"
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/response"
 	"io"
 	"log"
@@ -22,11 +23,17 @@ import (
 //   ask_user      结构化提问卡片（问题 + 推荐答案 + 选项），循环暂停等用户作答
 //   done          本轮结束
 type ChatRequest struct {
-	SessionID uint `json:"session_id"`
-	UserContent string 	`json:"user_content"`
-	EnableWebSearch bool `json:"enable_web_search,omitempty"` //预留是否开启联网搜索
-	DeckID string `json:"deck_id,omitempty"`
+	SessionID       uint   `json:"session_id"`
+	UserContent     string `json:"user_content"`
+	EnableWebSearch bool   `json:"enable_web_search,omitempty"` //预留是否开启联网搜索
+	DeckID          string `json:"deck_id,omitempty"`
+	Images          []string `json:"images,omitempty"` // 用户附图（data URL；校验在 chatimg.Normalize）
 }
+
+// maxChatBodyBytes 带图对话的请求体上限（/api/chat 与定制对话两端点共用）。
+// 文本很小，大头是附图：base64 比原始字节膨胀 ~4/3，3 张 × 4MB 原图的极限在
+// 16MB，20MB 留了余量。
+const maxChatBodyBytes = 20 << 20
 
 func (h *Handler) Chat(c *gin.Context) {
 
@@ -36,20 +43,26 @@ func (h *Handler) Chat(c *gin.Context) {
 		return
 	}
 
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxChatBodyBytes)
 	var req ChatRequest
-	if err:= c.ShouldBindJSON(&req);err !=nil{
-		response.ParameterErr(c)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Err(c, http.StatusRequestEntityTooLarge, "请求超限或格式错误（含图片时整体不超过 20MB）")
 		return
 	}
 
-	if req.UserContent == ""{
-		response.Err(c,400,"用户消息不可为空")
+	imgs, err := chatimg.Normalize(req.Images)
+	if err != nil {
+		response.Err(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if req.UserContent == "" && len(imgs) == 0 {
+		response.Err(c, 400, "用户消息不可为空（文本与图片至少一个）")
 		return
 	}
 
-	if req.SessionID > 0{
-		if err := h.agent.EnsureSessionOwner(uid,req.SessionID);err!=nil{
-			response.Err(c,http.StatusNotFound,"会话不存在")
+	if req.SessionID > 0 {
+		if err := h.agent.EnsureSessionOwner(uid, req.SessionID); err != nil {
+			response.Err(c, http.StatusNotFound, "会话不存在")
 			return
 		}
 	}
@@ -63,8 +76,8 @@ func (h *Handler) Chat(c *gin.Context) {
 		}
 	}
 
-	serveAgentSSE(c,func(emit func(agent.StreamEvent)error)(uint,error){
-		return h.agent.NewStreamChat(c.Request.Context(),uid,req.SessionID,req.UserContent,req.DeckID,emit)
+	serveAgentSSE(c, func(emit func(agent.StreamEvent) error) (uint, error) {
+		return h.agent.NewStreamChat(c.Request.Context(), uid, req.SessionID, req.UserContent, req.DeckID, imgs, emit)
 	})
 
 	//设置sse响应头
@@ -117,37 +130,36 @@ func (h *Handler) Chat(c *gin.Context) {
 	// })
 }
 
-
-func serveAgentSSE(c *gin.Context,run func(emit func(agent.StreamEvent) error) (uint,error)){
+func serveAgentSSE(c *gin.Context, run func(emit func(agent.StreamEvent) error) (uint, error)) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
 
-	ch := make(chan agent.StreamEvent,16)
+	ch := make(chan agent.StreamEvent, 16)
 
-	go func(){
+	go func() {
 		defer close(ch)
-		defer func(){
-			if r := recover();r !=nil{
+		defer func() {
+			if r := recover(); r != nil {
 				log.Printf("agent 流程触发panic")
 				select {
-				case ch <- agent.StreamEvent{Type:agent.EventTypeError,Content: "服务器内部错误，请稍后重试"}:
+				case ch <- agent.StreamEvent{Type: agent.EventTypeError, Content: "服务器内部错误，请稍后重试"}:
 				case <-c.Request.Context().Done():
 				}
 			}
 		}()
 
-		_,err := run(func(ev agent.StreamEvent) error{
-			select{
+		_, err := run(func(ev agent.StreamEvent) error {
+			select {
 			case ch <- ev:
 				return nil
-			case <- c.Request.Context().Done():
+			case <-c.Request.Context().Done():
 				return c.Request.Context().Err()
 			}
 		})
 
-		if err != nil && !errors.Is(err,agent.ErrPaused){
-			log.Printf("agent 流式流程失败 err:%v",err)
+		if err != nil && !errors.Is(err, agent.ErrPaused) {
+			log.Printf("agent 流式流程失败 err:%v", err)
 			// 错误文案要分清"用户的待办"和"服务故障"：上一条提问没回答不是故障，
 			// 说成"服务不可用"会让用户一直重试一个永远不会成功的请求
 			//（每次都会被 agent 那道闸门拦住）。阶段闸门同理——"正在生成中"的
@@ -160,19 +172,19 @@ func serveAgentSSE(c *gin.Context,run func(emit func(agent.StreamEvent) error) (
 			case errors.As(err, &stageLocked):
 				msg = stageLocked.Msg
 			}
-			select{
-			case ch<- agent.StreamEvent{Type: agent.EventTypeError,Content: msg}:
-			case <- c.Request.Context().Done():
+			select {
+			case ch <- agent.StreamEvent{Type: agent.EventTypeError, Content: msg}:
+			case <-c.Request.Context().Done():
 			}
 		}
 	}()
 
-	c.Stream(func(w io.Writer) bool{
-		ev , ok := <- ch
-		if !ok{
+	c.Stream(func(w io.Writer) bool {
+		ev, ok := <-ch
+		if !ok {
 			return false
 		}
-		data,_ := json.Marshal(ev)
+		data, _ := json.Marshal(ev)
 		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", ev.Type, data)
 		return true
 	})

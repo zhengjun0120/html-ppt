@@ -95,6 +95,10 @@ type Event struct {
 	UserContent string   `json:"user_content,omitempty"`
 	Model       string   `json:"model,omitempty"`
 	Tools       []string `json:"tools,omitempty"` // 本次挂载了哪些工具（features 开关的效果一眼可见）
+	// RunKind 区分 run 的来源管线：deck（文稿对话，缺省——旧数据没这个字段，
+	// 读侧按 deck 展示）/ customize（模板定制对话）。定制没有会话表，走的是
+	// usertpl 侧的伪会话号，没有这个字段观测页就无法把两类 run 区分开。
+	RunKind string `json:"run_kind,omitempty"`
 
 	// —— agent 循环归属（由 ctx 自动补齐，见 recorder.go）——
 	// Turn 是指针是因为"第 0 轮"（第一次请求）与"不适用"（run_start / run_end）
@@ -178,6 +182,7 @@ type RunMeta struct {
 	SessionID   uint      `json:"session_id"`
 	UserID      uint      `json:"-"` // 只用于按属主过滤，不下发（列表里全是自己的）
 	DeckID      string    `json:"deck_id,omitempty"`
+	RunKind     string    `json:"run_kind,omitempty"` // 缺省 = 旧数据 = 文稿 run
 	UserContent string    `json:"user_content,omitempty"`
 	Model       string    `json:"model,omitempty"`
 	StartedAt   time.Time `json:"started_at"`
@@ -187,19 +192,6 @@ type RunMeta struct {
 	ToolCalls   int       `json:"tool_calls,omitempty"`
 	Usage       *Summary  `json:"usage,omitempty"` // 只有已结束的 run 才有
 	Bytes       int64     `json:"bytes,omitempty"` // jsonl 文件大小，用来判断"这个 run 很重"
-}
-
-// SessionMeta 一个会话（= 用户眼里的"一次对话"）的汇总。
-// 一次对话可能因 ask_user 暂停而分成多个 run，所以"这次对话花了多少 token"
-// 必须跨 run 累加——单个 run 的 total 只是半场。
-type SessionMeta struct {
-	SessionID   uint      `json:"session_id"`
-	DeckID      string    `json:"deck_id,omitempty"`
-	Runs        int       `json:"runs"`
-	LastAt      time.Time `json:"last_at"`
-	Latest      string    `json:"latest_run_id"` // 最近一个 run，页面默认展开它
-	Usage       Summary   `json:"usage"`         // 跨 run 累加
-	RunningRuns int       `json:"running_runs"`  // 还在跑的 run 数（页面据此决定要不要继续轮询）
 }
 
 // Truncate 按字节上限截断字符串。0 表示不截断（默认：你选了"全量存"）。

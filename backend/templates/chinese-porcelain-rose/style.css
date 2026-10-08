@@ -1,0 +1,106 @@
+/* chinese-porcelain-rose — 中国传统色·凝脂杨妃。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/chinese-porcelain-rose（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 凝脂 #F5F2E9 米白与杨妃 #F091A0 玫瑰粉双主色，胭脂 #B23A48 做强调：
+ * 顶部釉色渐变细带与右下缠枝柔线是每页自动衬底的 ambient 层（z-index:-1），
+ * 卡如釉面温润、无硬阴影；色名楷体大字，标题宋体加粗。 */
+.tpl-chinese-porcelain-rose{
+  --bg:#F5F2E9;              /* 凝脂（暖米白底） */
+  --ivory:#FAF7F0;           /* 暖象牙（卡底） */
+  --rose:#F091A0;            /* 杨妃（玫瑰粉） */
+  --rose-soft:#F5BFC8;       /* 淡杨妃 */
+  --rouge:#B23A48;           /* 胭脂深红（强调） */
+  --gold:#D4A574;            /* 淡金（极少量点缀） */
+  --paperline:#E8DCC8;       /* 宣纸米描边 */
+  --ink:#333333;             /* 墨黛 */
+  --ink-2:#666666;           /* 暖灰正文 */
+  --ink-3:#8F887E;           /* 暖灰小字 */
+  --border:rgba(178,58,72,.22);
+  --border-soft:rgba(102,102,102,.20);
+  --accent:#F091A0;          /* 身份色：杨妃粉（釉面的一层） */
+  --accent-ink:#FAF7F0;
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：宋体大字加粗，宽行距温润可读；数字与拼音小字无衬线 ---- */
+.tpl-chinese-porcelain-rose .h1{font-family:'Songti SC','STSong','SimSun',serif;font-size:92px;line-height:1.14;font-weight:700;letter-spacing:.12em;color:var(--ink);margin-bottom:12px}
+.tpl-chinese-porcelain-rose .h2{font-family:'Songti SC','STSong','SimSun',serif;font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:8px}
+.tpl-chinese-porcelain-rose h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.03em}
+.tpl-chinese-porcelain-rose .lede{font-size:24px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-chinese-porcelain-rose .deck-footer{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：顶部釉色渐变细带 + 右下缠枝柔线，z-index:-1 画在内容之下 ---- */
+.tpl-chinese-porcelain-rose .slide::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:8px;z-index:-1;
+  background:linear-gradient(90deg,#E9DFCB 0%,var(--rose-soft) 50%,var(--rose) 100%);
+}
+.tpl-chinese-porcelain-rose .slide::after{
+  content:"";position:absolute;right:0;bottom:0;width:560px;height:240px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 560 240'%3E%3Cpath d='M0,220 Q120,120 230,170 Q340,220 440,130 Q500,80 560,95' stroke='%23F091A0' stroke-width='2.5' fill='none' opacity='0.32'/%3E%3Cpath d='M20,240 Q150,160 265,195 Q380,230 540,150' stroke='%23F5BFC8' stroke-width='2' fill='none' opacity='0.42'/%3E%3Ccircle cx='230' cy='170' r='6' fill='%23F091A0' opacity='0.32'/%3E%3Ccircle cx='440' cy='130' r='5' fill='%23F5BFC8' opacity='0.45'/%3E%3Cellipse cx='340' cy='196' rx='10' ry='5' fill='%23F5BFC8' opacity='0.4' transform='rotate(-14 340 196)'/%3E%3C/svg%3E") no-repeat bottom right;
+}
+
+/* ---- 题签：胭脂细线引导的小字标签（页首） ---- */
+.tpl-chinese-porcelain-rose .pr-kicker{display:flex;align-items:center;gap:16px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.4em;color:var(--ink-2)}
+.tpl-chinese-porcelain-rose .pr-kicker::before{content:"";width:40px;height:2px;background:var(--rouge)}
+
+/* ---- 釉线：标题下的一道釉，从淡杨妃晕到杨妃 ---- */
+.tpl-chinese-porcelain-rose .pr-line{width:230px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--rose-soft) 0%,var(--rose) 60%,transparent 100%)}
+
+/* ---- 胭脂小印：方寸小印，全模板唯一的胭脂底文字元素 ---- */
+.tpl-chinese-porcelain-rose .pr-seal{flex:none;width:72px;height:72px;background:var(--rouge);color:var(--ivory);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 描边胶囊：细描边如釉上勾线；强调态描边转胭脂 ---- */
+.tpl-chinese-porcelain-rose .pr-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid rgba(240,145,160,.55);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-chinese-porcelain-rose .pr-pill-red{border-color:var(--rouge);color:var(--rouge)}
+
+/* ---- 象牙卡：暖象牙底 + 宣纸米细描边，釉面温润无阴影 ---- */
+.tpl-chinese-porcelain-rose .pr-card{background:rgba(250,247,240,.8);border:1px solid var(--paperline);border-radius:20px;padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 釉色色卡（keynotes 专属）：色名楷体大字 + 拼音 + 释义 + hex ---- */
+.tpl-chinese-porcelain-rose .pr-swatch{background:var(--ivory);border:1px solid var(--paperline);border-radius:20px;padding:34px 30px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.tpl-chinese-porcelain-rose .pr-sw-name{font-family:'STKaiti','KaiTi',serif;font-size:46px;line-height:1.15;font-weight:700;letter-spacing:.2em;color:var(--ink)}
+.tpl-chinese-porcelain-rose .pr-sw-py{margin-top:10px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:15px;letter-spacing:.3em;color:var(--ink-3)}
+.tpl-chinese-porcelain-rose .pr-sw-mean{margin:16px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+.tpl-chinese-porcelain-rose .pr-sw-hex{margin-top:20px;padding-top:14px;border-top:1px solid var(--paperline);width:100%;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.14em;color:var(--rose)}
+.tpl-chinese-porcelain-rose .pr-sw-hex::before{content:"";display:inline-block;width:15px;height:15px;border-radius:50%;background:currentColor;margin-right:10px;vertical-align:-2px}
+
+/* ---- 展目行：瓷圈编号 + 展区名 + 说明 ---- */
+.tpl-chinese-porcelain-rose .pr-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-porcelain-rose .pr-item:last-child{border-bottom:none}
+.tpl-chinese-porcelain-rose .pr-n{flex:none;width:50px;height:50px;border:1.5px solid var(--rose);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--rouge);align-self:center}
+.tpl-chinese-porcelain-rose .pr-t{flex:none;width:240px;font-family:'STKaiti','KaiTi',serif;font-size:29px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-porcelain-rose .pr-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 体验步骤（split 右列） ---- */
+.tpl-chinese-porcelain-rose .pr-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-porcelain-rose .pr-step:last-child{border-bottom:none}
+.tpl-chinese-porcelain-rose .pr-step-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 胭脂数字：数据页主视觉 ---- */
+.tpl-chinese-porcelain-rose .pr-stat{border-top:3px solid var(--rose);padding-top:28px}
+.tpl-chinese-porcelain-rose .pr-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--rouge)}
+.tpl-chinese-porcelain-rose .pr-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-chinese-porcelain-rose .pr-stat-l{margin-top:18px;font-family:'STKaiti','KaiTi',serif;font-size:26px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-porcelain-rose .pr-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 瓷语引文：宋体大字 ---- */
+.tpl-chinese-porcelain-rose .pr-quote{font-family:'Songti SC','STSong','SimSun',serif;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:26em;margin:0}
+.tpl-chinese-porcelain-rose .pr-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排题款：短句点缀，只放留白处 ---- */
+.tpl-chinese-porcelain-rose .pr-vert{writing-mode:vertical-rl;font-family:'STKaiti','KaiTi',serif;font-size:25px;letter-spacing:.5em;line-height:2.1;color:var(--ink-2)}
+.tpl-chinese-porcelain-rose .pr-vert-accent{color:var(--rouge)}
+
+/* ---- 导览时间线：瓷圈站点 + 杨妃细连接线 ---- */
+.tpl-chinese-porcelain-rose .pr-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-chinese-porcelain-rose .pr-tl-item{flex:1;position:relative}
+.tpl-chinese-porcelain-rose .pr-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:52px;right:-44px;height:1px;background:rgba(240,145,160,.6)}
+.tpl-chinese-porcelain-rose .pr-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--rose);border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--rouge)}
+.tpl-chinese-porcelain-rose .pr-tl-t{margin-top:18px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;letter-spacing:.04em;color:var(--rouge)}
+.tpl-chinese-porcelain-rose .pr-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：胭脂实底圆润按钮，收尾页 ---- */
+.tpl-chinese-porcelain-rose .pr-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;background:var(--rouge);color:var(--ivory);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:22px;font-weight:500;letter-spacing:.18em}
+
+/* ---- 页面切换（翻页动画）：釉色如水墨慢慢晕开 ---- */
+.tpl-chinese-porcelain-rose{--page-shift:10px;--page-dur:.62s;--page-ease:cubic-bezier(.33,.66,.4,1)}

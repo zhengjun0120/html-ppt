@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhPlus } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhPlus } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -8,9 +8,11 @@ import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessages from '@/components/chat/ChatMessages.vue'
 import HistoryDrawer from '@/components/preview/HistoryDrawer.vue'
 import DeckPreview from '@/components/preview/DeckPreview.vue'
+import DeckEditModal from '@/components/editor/DeckEditModal.vue'
 import WizardStepper from '@/components/wizard/WizardStepper.vue'
 import { usePreviewAutoRefresh } from '@/lib/previewRefresh'
 import { useWorkspaceBoot } from '@/lib/workspaceBoot'
+import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 import { useWizardStore, STEP_ROUTES } from '@/stores/wizard'
 
@@ -28,6 +30,9 @@ const isNew = String(route.params.id) === 'new'
 const routeDeckId = isNew ? '' : String(route.params.id)
 const { chat, sessions, previewKey, loadSessions, boot, switchSession } = useWorkspaceBoot()
 const historyOpen = ref(false)
+const editOpen = ref(false)
+const deckStore = useDeckStore()
+const deckStoreTitle = computed(() => deckStore.titleOf(deckId.value) || '编辑文稿')
 
 const deckId = computed(() => chat.deckId || routeDeckId)
 const stopPreviewRefresh = usePreviewAutoRefresh(chat, () => {
@@ -41,15 +46,25 @@ function onRestored() {
 
 async function wizardSync(id: string) {
   await wizard.syncFromChat(id)
+  allowPreviewIfIterate()
   const step = wizard.step
   if (step && step !== 'iterate' && id) {
     void router.replace(STEP_ROUTES[step](id))
   }
 }
 
+// 预览门控：meta 确认 deck 已到迭代阶段（有 index.html）才挂 iframe。
+// 不设防的话，点"未生成的文稿"时 iframe 抢在 meta 回来前去取文件端点，
+// 把 404 的 {"error":...} 原文糊一屏，下一秒才被重定向替换掉。
+const previewAllowed = ref(false)
+function allowPreviewIfIterate() {
+  if (wizard.isV2 && wizard.stage === 'iterating') previewAllowed.value = true
+}
+
 onMounted(async () => {
   await boot(routeDeckId, (id) => wizardSync(id))
   // v2 deck 尚未到迭代阶段：回向导对应步骤
+  allowPreviewIfIterate()
   const step = wizard.step
   if (step && step !== 'iterate' && deckId.value) {
     void router.replace(STEP_ROUTES[step](deckId.value))
@@ -77,17 +92,46 @@ function newConversation() {
   chat.reset(deckId.value)
   toast.info('已开启新对话')
 }
+
+/** 返回文稿列表：从列表进来走浏览器历史（页码在 ?page、滚动由 router.scrollBehavior 原生落回）；
+ *  直链/刷新进来没有可退的历史，就带上离开时记下的页码直达（滚动由列表页 restoreScroll 兜底）。 */
+function backToDecks() {
+  const back = window.history.state?.back as string | undefined
+  if (back && back.startsWith('/decks')) {
+    router.back()
+    return
+  }
+  const savedPage = Number(sessionStorage.getItem('decks-return-page') || 0)
+  void router.push({ path: '/decks', query: savedPage > 1 ? { page: String(savedPage) } : undefined })
+}
 </script>
 
 <template>
   <div class="flex h-full overflow-hidden">
     <DeckPreview
-      v-if="deckId"
+      v-if="deckId && previewAllowed"
       :key="previewKey + ':' + deckId"
       :deck-id="deckId"
       class="h-full"
       @history="historyOpen = true"
-    />
+      @edit="editOpen = true"
+    >
+      <template #toolbar-start>
+        <button
+          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-ink"
+          @click="backToDecks"
+        >
+          <PhArrowLeft :size="12" /> 返回文稿
+        </button>
+      </template>
+    </DeckPreview>
+    <div
+      v-else-if="deckId"
+      class="flex min-w-0 flex-1 items-center justify-center p-6 text-[13px] text-ink-3"
+      role="status"
+    >
+      <span class="animate-pulse">加载预览…</span>
+    </div>
     <div v-else class="flex min-w-0 flex-1 items-center justify-center p-6 text-[13px] text-ink-3">
       文稿不存在或尚未创建。
     </div>
@@ -129,6 +173,18 @@ function newConversation() {
       :deck-id="deckId"
       @close="historyOpen = false"
       @restored="onRestored"
+    />
+
+    <!-- 手动编辑弹窗：保存后刷新预览（deck 文件是 no-store，重挂 iframe 即拿到新版） -->
+    <DeckEditModal
+      v-if="deckId"
+      :open="editOpen"
+      kind="deck"
+      :id="deckId"
+      :title="deckStoreTitle"
+      :canvas="{ w: 1920, h: 1080 }"
+      @close="editOpen = false"
+      @saved="previewKey += 1"
     />
   </div>
 </template>

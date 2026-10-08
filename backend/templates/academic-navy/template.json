@@ -1,0 +1,81 @@
+{
+  "id": "academic-navy",
+  "name": "藏青学衡",
+  "description": "藏青与低调金棕构成的严谨学术答辩风：白底证据卡、编号环形列表与规整几何装饰，答辩台上的每一页都只讲证据、论证与层级",
+  "tags": ["学术", "深色"],
+  "scenario": ["毕业论文答辩", "开题报告", "科研课题汇报", "学术项目结题", "论文汇报"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "答辩封面",
+      "use": "开场：英文题签 + 藏青大标题 + 一句研究定位，右侧金棕研究索引数点缀，可配答辩人与导师药丸",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤14 字；lede 24-56 字；题签 ≤26 字符；索引数 ≤4 字符"
+    },
+    {
+      "id": "contents",
+      "name": "答辩提纲",
+      "use": "提纲：白卡内 4 行目录（环形编号 + 板块名 + 一句说明），对应答辩的推进顺序",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；板块名 ≤8 字；说明 12-24 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：藏青顶线白卡 + 金棕编号 + 小标题 + 两句说明，论文式证据链",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；编号 2 字符；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左证右列",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边白卡装三行步骤或规程",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "关键数据",
+      "use": "三个关键数据：金棕大数字 + 指标名 + 口径，页尾标来源，答辩的证据页",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 12-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "治学题记",
+      "use": "整页一句引文：衬线大字 + 出处 + 两个支撑药丸，呼应学术传统",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：英文进度题签 + 藏青大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "历程时间线",
+      "use": "3-4 个节点的横向时间线：藏青圆点编号 + 时间点 + 一句事件，讲研究历程",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "致谢收尾",
+      "use": "收尾：藏青大字致谢 + 一句说明 + 藏青按钮 + 药丸，答辩落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤14 字"
+    }
+  ],
+  "fonts": ["SF Pro Text", "PingFang SC", "Menlo"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/academic-navy",
+    "license": "Apache-2.0"
+  }
+}

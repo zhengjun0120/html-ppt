@@ -61,6 +61,9 @@ func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID
 
 	// 没有就是首轮 首轮需要入库
 	title := strings.TrimSpace(userContent)
+	if title == "" {
+		title = "（图片消息）" // 纯图开场：列表里不能是空白条
+	}
 	if r := []rune(title);len(r) >30{
 		title = string(r[:30])
 	}

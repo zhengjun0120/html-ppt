@@ -2,7 +2,7 @@
   "id": "dir-nav-minimal",
   "name": "方向键极简",
   "description": "一页一块整幅 mono 底色 + 巨大标题 + 单一 accent，keynote 式极简讲稿，一页只讲一件事",
-  "tags": ["极简", "keynote", "演讲", "深色"],
+  "tags": ["极简", "演讲", "深色"],
   "scenario": ["公开演讲", "keynote", "观点分享", "产品发布"],
   "canvas": {
     "w": 1920,

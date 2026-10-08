@@ -71,7 +71,10 @@ async function saveOnly(): Promise<boolean> {
     return true
   } catch (e) {
     if (e instanceof OutlineConflictError) {
-      toast.error('大纲刚被另一通道更新，已加载最新版，请重新编辑')
+      // 丢掉本地草稿回落到只读态（显示的就是刚刷新过的 wizard.outline 最新版），
+      // 用户点任意标题重新进入编辑——别让"已加载最新版"的提示变成谎言
+      draft.value = null
+      toast.error('大纲刚被另一通道更新，已展示最新版，点标题可重新编辑')
     } else {
       toast.error(e instanceof Error ? e.message : '保存失败')
     }
@@ -88,12 +91,17 @@ async function confirm() {
   }
 }
 
-// agent 通道更新了大纲（wizard.outline 变化）且本地不在编辑态 → 跟随
-// （本地编辑态时以用户未保存的草稿为先，由 version 冲突提示兜底）
+// agent 通道更新了大纲（wizard.refresh 在 run 结束时拉回新版）→ 跟随。
+// 面板挂载即进编辑态，dirty 恒真，"不在编辑态才跟随"是死条件——改为按内容判：
+// 草稿和旧版大纲一模一样 = 用户没动过 → 无痕换成新版；用户真改过 → 保留草稿
+// （保存时吃 version 冲突提示，见 saveOnly）。
 watch(
-  () => wizard.outline?.version,
-  () => {
-    if (!dirty.value) draft.value = null
+  () => wizard.outline,
+  (o, old) => {
+    if (!o || !old || o.version === old.version) return
+    if (draft.value && JSON.stringify(draft.value) === JSON.stringify(old)) {
+      draft.value = JSON.parse(JSON.stringify(o)) as Outline
+    }
   },
 )
 

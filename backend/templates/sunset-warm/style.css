@@ -1,0 +1,96 @@
+/* sunset-warm — 日落暖。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/sunset-warm（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 黄昏天际的视觉化：橘、珊瑚、琥珀三色渐变铺满整页（ambient 层 ::after），
+ * 太阳与光环画在 ::before；白卡 rgba(255,255,255,.88) 浮在暖色上，橘色柔和描边。
+ * 深焦糖 #7C2D12 做标题、焦橙 #9A3412 做正文；亮橙 #F97316 与金黄 #FBBF24 是
+ * 日落的两种光泽，只做光泽不做铺色——暖要保持轻盈，不许变成压迫感。 */
+.tpl-sunset-warm{
+  --bg:#FDC98F;              /* letterbox：渐变中段值（翻页不跳） */
+  --bg-soft:#FEE7CC;
+  --ink:#7C2D12;             /* 深焦糖（标题） */
+  --ink-2:#9A3412;           /* 焦橙正文 */
+  --ink-3:#9C4A12;           /* 浅焦糖小字 */
+  --border:rgba(124,45,18,.18);
+  --border-soft:rgba(124,45,18,.10);
+  --flame:#F97316;           /* 亮橙（日落第一光泽） */
+  --gold:#FBBF24;            /* 金黄（日落第二光泽） */
+  --ember:#EA580C;           /* 关键数字（白卡上的亮橙收暗档） */
+  --accent:#C2410C;          /* 暖底上的强调字（时间点） */
+  --card-line:rgba(251,146,60,.30);
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：友好无衬线，温暖但不沉重 ---- */
+.tpl-sunset-warm .h1{font-size:84px;line-height:1.12;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:12px}
+.tpl-sunset-warm .h2{font-size:52px;line-height:1.18;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-sunset-warm h4{color:var(--ink);font-weight:700;font-size:24px}
+.tpl-sunset-warm .lede{font-size:24px;line-height:1.85;color:var(--ink-2);font-weight:400}
+.tpl-sunset-warm .deck-footer{font-size:15px;color:#7C2D12;letter-spacing:.16em}
+
+/* ---- ambient：太阳+光环+云条（::before 右上）；天际渐变+云条（::after 整页） ---- */
+.tpl-sunset-warm .slide::before{
+  content:"";position:absolute;top:70px;right:110px;width:320px;height:320px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320'%3E%3Ccircle cx='160' cy='160' r='138' fill='none' stroke='%23FBBF24' stroke-opacity='0.35' stroke-width='2.5'/%3E%3Ccircle cx='160' cy='160' r='96' fill='%23FBBF24' opacity='0.5'/%3E%3Ccircle cx='160' cy='160' r='96' fill='%23F97316' opacity='0.35'/%3E%3Ccircle cx='132' cy='132' r='40' fill='%23FDE68A' opacity='0.75'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+.tpl-sunset-warm .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 430'%3E%3Cg fill='%23FFF3E2' opacity='0.38'%3E%3Crect x='150' y='150' width='260' height='52' rx='26'/%3E%3Crect x='480' y='240' width='170' height='40' rx='20' opacity='0.8'/%3E%3Crect x='620' y='120' width='210' height='46' rx='23' opacity='0.65'/%3E%3Crect x='1240' y='200' width='150' height='36' rx='18' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") no-repeat top center / 100% auto,
+    linear-gradient(135deg,#FED7AA 0%,#FDBA74 45%,#FA9C55 100%);
+}
+
+/* ---- 题签：等宽字大写小签 + 金黄圆点（上游预览的 mono tag 母题） ---- */
+.tpl-sunset-warm .su-kicker{display:inline-flex;align-items:center;gap:12px;align-self:flex-start;font-family:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Consolas,monospace;font-size:15px;letter-spacing:.3em;text-transform:uppercase;color:#8A3A10}
+.tpl-sunset-warm .su-kicker::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--gold)}
+
+/* ---- 太阳印：正圆落日，封面与收尾的落款 ---- */
+.tpl-sunset-warm .su-badge{flex:none;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 42% 38%,#FDE68A 0%,#FBBF24 52%,#F97316 100%);border:3px solid rgba(255,255,255,.75);box-shadow:0 0 34px rgba(251,191,36,.5);display:flex;align-items:center;justify-content:center;text-align:center;font-size:19px;font-weight:700;color:var(--ink);line-height:1.25;letter-spacing:.08em}
+
+/* ---- 白卡：唯一卡型，白底浮在暖色上 + 橘色柔和描边 ---- */
+.tpl-sunset-warm .su-card{background:rgba(255,255,255,.88);border:1px solid var(--card-line);border-radius:22px;padding:34px 38px;display:flex;flex-direction:column;min-height:268px;box-shadow:0 18px 44px rgba(154,52,18,.1)}
+
+/* ---- 药丸：暖白描边胶囊；accent 版金黄软底 ---- */
+.tpl-sunset-warm .su-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.6);font-size:16px;letter-spacing:.1em;color:#8A3A10;white-space:nowrap}
+.tpl-sunset-warm .su-pill-accent{border-color:rgba(234,88,12,.4);background:rgba(251,191,36,.35);color:var(--ink);font-weight:600}
+
+/* ---- 目录行：金环圆号 + 篇名 + 说明 ---- */
+.tpl-sunset-warm .su-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-sunset-warm .su-item:last-child{border-bottom:none}
+.tpl-sunset-warm .su-n{flex:none;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.7);border:2px solid var(--flame);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--ember);align-self:center}
+.tpl-sunset-warm .su-t{flex:none;width:250px;font-size:27px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.tpl-sunset-warm .su-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 鎏金数字：白卡数字块 + 金黄上边线，亮橙大数字 ---- */
+.tpl-sunset-warm .su-stat{background:rgba(255,255,255,.82);border:1px solid var(--card-line);border-top:3px solid var(--gold);border-radius:20px;padding:30px 32px}
+.tpl-sunset-warm .su-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--ember)}
+.tpl-sunset-warm .su-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-sunset-warm .su-stat-l{margin-top:18px;font-size:26px;font-weight:700;color:var(--ink)}
+.tpl-sunset-warm .su-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 光环引文：衬线大字（Georgia/宋体，呼应上游预览的 serif 标题） ---- */
+.tpl-sunset-warm .su-quote{font-family:Georgia,'Songti SC','STSong',serif;font-size:60px;line-height:1.6;font-weight:700;letter-spacing:.02em;color:var(--ink);max-width:24em;margin:0}
+.tpl-sunset-warm .su-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 太阳光环：quote 页右侧留白的一轮，装饰不写字 ---- */
+.tpl-sunset-warm .su-halo{position:absolute;right:150px;top:44%;width:160px;height:160px;z-index:-1;border:2.5px solid rgba(251,191,36,.55);border-radius:50%}
+.tpl-sunset-warm .su-halo::before{content:"";position:absolute;inset:34px;border-radius:50%;background:radial-gradient(circle,#FDE68A 0%,#FBBF24 55%,rgba(249,115,22,.6) 100%);opacity:.8}
+
+/* ---- 时间线：白圈金环 + 焦橙时间点 ---- */
+.tpl-sunset-warm .su-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-sunset-warm .su-tl-item{flex:1;position:relative}
+.tpl-sunset-warm .su-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:54px;right:-44px;height:1px;background:var(--border)}
+.tpl-sunset-warm .su-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:rgba(255,255,255,.85);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-sunset-warm .su-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.tpl-sunset-warm .su-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-sunset-warm .su-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-sunset-warm .su-step:last-child{border-bottom:none}
+.tpl-sunset-warm .su-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：焦橙渐变胶囊，收尾页唯一实底按钮 ---- */
+.tpl-sunset-warm .su-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 40px;border-radius:999px;background:linear-gradient(135deg,#C2410C 0%,#EA580C 100%);color:#FFF7ED;font-size:20px;font-weight:600;letter-spacing:.14em;box-shadow:0 12px 28px rgba(194,65,12,.28)}
+
+/* ---- 页面切换（翻页动画）：像日落一样慢而稳 ---- */
+.tpl-sunset-warm{--page-shift:16px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

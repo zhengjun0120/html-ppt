@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { PhCheck, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { PhArrowClockwise, PhCheck, PhCaretLeft, PhCaretRight, PhSparkle, PhSpinner } from '@phosphor-icons/vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
+import TemplateFilterBar from '@/components/templates/TemplateFilterBar.vue'
+import { deckV2Api, type TplSuggestion } from '@/api/deckV2'
 import { templateApi, type TemplateVariant } from '@/api/templates'
 import { userTemplateApi, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
+import { useTemplateFilter } from '@/lib/templateFilter'
+import { resolveSuggestion, variantFor } from '@/lib/templateSuggest'
 import { useChatStore } from '@/stores/chat'
 import { useWizardStore } from '@/stores/wizard'
 import { useToast } from '@/stores/toast'
@@ -39,12 +43,17 @@ interface GalleryCard {
   id: string
   name: string
   description: string
+  tags?: string[]
   scenario?: string[]
   canvas: { w: number; h: number }
   variants: TemplateVariant[]
+  thumb?: string
   mine?: boolean
   published?: boolean
 }
+
+// 缩略图加载失败（Chrome 未装配/版本过期/渲染失败）→ 该卡回退活 iframe
+const thumbFailed = ref<Record<string, boolean>>({})
 
 const mineInfo = computed(() => new Map(userTemplates.value.map((u) => [u.id, u])))
 const cards = computed<GalleryCard[]>(() => {
@@ -54,9 +63,12 @@ const cards = computed<GalleryCard[]>(() => {
       id: t.id,
       name: ut ? ut.name : t.name,
       description: ut ? ut.description : t.description,
+      // 用户模板没有 tags 数据：标签筛选只覆盖内置模板（方案已拍板接受）
+      tags: ut ? undefined : t.tags,
       scenario: ut ? undefined : t.scenario,
       canvas: t.canvas,
       variants: t.variants,
+      thumb: t.thumb,
       mine: !!ut,
       published: ut?.status === 'published',
     }
@@ -64,6 +76,10 @@ const cards = computed<GalleryCard[]>(() => {
   // 我的模板置顶，其余按 id 稳定排序
   return [...all.filter((c) => c.mine), ...all.filter((c) => !c.mine)]
 })
+
+// —— 标签筛选 + 名字搜索：词表从数据算出；过滤作用在喂瀑布流的数组上，
+// 被筛掉的卡片 iframe 直接卸载，选中/变体/翻页逻辑零改动。——//
+const { query, activeTag, vocab, filtered, toggleTag, reset } = useTemplateFilter(cards)
 
 const selectedCard = computed(() => cards.value.find((c) => c.id === selected.value))
 const canStart = computed(
@@ -75,6 +91,78 @@ function pick(id: string) {
   selected.value = id
   demoPage.value = 1
   selectedVariant.value = selectedCard.value?.variants[0]?.id ?? 'default'
+}
+
+// —— AI 推荐（tplsuggest）：进页自动算一次（LLM 秒级，异步不阻塞选模板），
+// 结果后端按 deck 缓存，重进页面/刷新都命中缓存；「重新推荐」才带 refresh 重算。
+// 点击小卡 = 预选 + 滚动定位到主网格，大预览/变体/开始生成全走既有链路——
+// 推荐只做引导，确认权仍在用户手里。失败/空结果收成一行弱化重试，不占版面。——//
+const rootEl = ref<HTMLElement | null>(null)
+const suggests = ref<TplSuggestion[]>([])
+const suggestState = ref<'idle' | 'loading' | 'ready' | 'empty' | 'failed'>('idle')
+let suggestAbort: AbortController | null = null
+
+// 推荐条目 → 画廊卡片（候选外 id / 已删模板静默丢弃，不渲染空壳）
+const suggestCards = computed(() =>
+  suggests.value
+    .map((s) => ({ s, card: resolveSuggestion(cards.value, s) }))
+    .filter((x): x is { s: TplSuggestion; card: GalleryCard } => !!x.card),
+)
+
+async function loadSuggestions(refresh = false) {
+  if (!wizard.deckId) return
+  // 在飞去重：刷新要 10-20s（一次真 LLM 调用），loading 期间的重复点击
+  // 一律忽略——按钮已禁用+转圈，这里兜底组件态调用（watch/重试行）。
+  if (suggestState.value === 'loading') return
+  suggestAbort?.abort()
+  const ac = new AbortController()
+  suggestAbort = ac
+  // 无条件进 loading：首次加载给骨架，刷新时旧卡保留展示、按钮转圈、卡片
+  // 压暗（见模板），点击反馈不能只在「没有旧结果」时存在。
+  suggestState.value = 'loading'
+  try {
+    const r = await deckV2Api.suggestTemplates(wizard.deckId, refresh)
+    if (ac.signal.aborted) return
+    suggests.value = r.suggestions ?? []
+    suggestState.value = suggests.value.length ? 'ready' : 'empty'
+  } catch {
+    if (ac.signal.aborted) return
+    // 已有推荐在展示时刷新失败：保住旧结果，只用 toast 提示；首次失败才收成重试行
+    if (!suggests.value.length) suggestState.value = 'failed'
+    else {
+      suggestState.value = 'ready'
+      toast.error('重新推荐失败')
+    }
+  }
+}
+
+watch(
+  () => wizard.deckId,
+  (id, old) => {
+    if (id === old) return
+    // 换 deck：在飞的旧请求作废、状态归零——否则 loading 卡住会让新 deck
+    // 的推荐被在飞守卫挡掉，骨架永远转下去。
+    suggestAbort?.abort()
+    suggestState.value = 'idle'
+    suggests.value = []
+    if (id) void loadSuggestions()
+  },
+  { immediate: true },
+)
+
+function pickSuggestion(s: TplSuggestion) {
+  const card = resolveSuggestion(cards.value, s)
+  if (!card) return
+  // 目标卡片可能正被筛掉：先清筛选回到全量，再预选、再定位
+  if (query.value || activeTag.value) reset()
+  pick(card.id)
+  const v = variantFor(card, s)
+  if (v) selectedVariant.value = v
+  void nextTick(() => {
+    rootEl.value
+      ?.querySelector(`[data-card-id="${CSS.escape(card.id)}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
 }
 
 // —— 瀑布流布局：卡片按"最短列"分配到 N 个纵向列（N 跟随视口宽度）。——//
@@ -89,7 +177,7 @@ function updateColumns() {
 const columns = computed<GalleryCard[][]>(() => {
   const cols: GalleryCard[][] = Array.from({ length: columnCount.value }, () => [])
   const heights = new Array<number>(columnCount.value).fill(0)
-  for (const c of cards.value) {
+  for (const c of filtered.value) {
     let i = 0
     for (let k = 1; k < heights.length; k++) {
       if (heights[k] < heights[i]) i = k
@@ -129,6 +217,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateColumns)
   ro.disconnect()
+  suggestAbort?.abort()
 })
 
 function scaleFor(c: GalleryCard): number {
@@ -157,7 +246,7 @@ async function start() {
 </script>
 
 <template>
-  <div class="mx-auto flex h-full w-full max-w-[1200px] flex-col gap-3 overflow-y-auto p-5">
+  <div ref="rootEl" class="mx-auto flex h-full w-full max-w-[1200px] flex-col gap-3 overflow-y-auto p-5">
     <div>
       <h2 class="text-[16px] font-semibold text-ink">选择模板</h2>
       <p class="mt-0.5 text-[12px] text-ink-3">
@@ -165,7 +254,104 @@ async function start() {
       </p>
     </div>
 
-    <div class="mt-3 flex items-start gap-3">
+    <TemplateFilterBar
+      v-model:query="query"
+      :active-tag="activeTag"
+      :vocab="vocab"
+      :total="cards.length"
+      :shown="filtered.length"
+      class="mt-3"
+      @update:active-tag="toggleTag"
+    />
+
+    <!-- AI 推荐：首算时的骨架 / 有结果的小卡横排 / 失败或空结果的一行弱化重试。
+         小卡点击=预选+定位主网格，不用小卡发起生成——确认仍在底部主链路。 -->
+    <div v-if="suggestState === 'loading' && !suggests.length" class="flex gap-3" aria-hidden="true">
+      <div v-for="i in 4" :key="i" class="h-[168px] flex-1 animate-pulse rounded-control bg-surface-2" />
+    </div>
+    <div v-else-if="suggests.length" class="rounded-card border border-line bg-surface p-3">
+      <div class="flex items-center gap-1.5">
+        <PhSparkle :size="14" class="shrink-0 text-accent" />
+        <span class="text-[13px] font-semibold text-ink">AI 推荐</span>
+        <span v-if="suggestState === 'loading'" class="inline-flex items-center gap-1.5 text-[11.5px] text-accent">
+          <PhSpinner :size="11" class="animate-spin" />
+          AI 正在按大纲重新挑选…
+        </span>
+        <span v-else class="hidden truncate text-[11.5px] text-ink-3 sm:inline">按大纲和你的对话挑的，点一张直接预选</span>
+        <Button
+          class="ml-auto shrink-0"
+          size="sm"
+          variant="ghost"
+          :loading="suggestState === 'loading'"
+          @click="loadSuggestions(true)"
+        >
+          <PhArrowClockwise :size="12" />
+          重新推荐
+        </Button>
+      </div>
+      <div
+        class="mt-2 flex gap-3 overflow-x-auto pb-1 transition-opacity duration-300"
+        :class="suggestState === 'loading' ? 'pointer-events-none opacity-45' : ''"
+      >
+        <button
+          v-for="sc in suggestCards"
+          :key="sc.s.template_id"
+          type="button"
+          class="w-[184px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-control border bg-surface text-left transition-all hover:border-accent"
+          :class="selected === sc.s.template_id ? 'border-accent shadow-[0_0_0_3px_var(--ring)]' : 'border-line'"
+          :title="'选用 ' + sc.card.name"
+          @click="pickSuggestion(sc.s)"
+        >
+          <div
+            class="relative w-full overflow-hidden bg-surface-2"
+            :style="{ aspectRatio: `${sc.card.canvas.w} / ${sc.card.canvas.h}` }"
+          >
+            <img
+              v-if="sc.card.thumb && !thumbFailed[sc.s.template_id]"
+              :src="templateApi.thumbUrl(sc.s.template_id, sc.card.thumb)"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              :alt="sc.card.name + ' 缩略图'"
+              @error="thumbFailed[sc.s.template_id] = true"
+            />
+            <iframe
+              v-else
+              :src="templateApi.previewUrl(sc.s.template_id, '', 1, 1)"
+              loading="lazy"
+              class="pointer-events-none absolute left-0 top-0 border-0"
+              :style="{
+                width: `${sc.card.canvas.w}px`,
+                height: `${sc.card.canvas.h}px`,
+                transform: `scale(${184 / sc.card.canvas.w})`,
+                transformOrigin: 'top left',
+              }"
+              sandbox="allow-scripts allow-same-origin"
+              :title="sc.card.name + ' 缩略预览'"
+              aria-hidden="true"
+            />
+            <span
+              v-if="selected === sc.s.template_id"
+              class="absolute right-1.5 top-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-contrast"
+            >
+              已选
+            </span>
+          </div>
+          <div class="p-2">
+            <p class="truncate text-[12px] font-semibold text-ink">{{ sc.card.name }}</p>
+            <p class="mt-0.5 line-clamp-2 text-[11px] leading-snug text-ink-2">{{ sc.s.reason }}</p>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div v-else-if="suggestState === 'failed' || suggestState === 'empty'" class="flex items-center gap-2 text-[12px] text-ink-3">
+      <span>{{ suggestState === 'failed' ? '推荐生成失败' : '这次没给出合适的推荐' }}</span>
+      <button class="cursor-pointer font-semibold text-accent hover:underline" @click="loadSuggestions(true)">
+        重试
+      </button>
+    </div>
+
+    <div v-if="filtered.length" class="mt-3 flex items-start gap-3">
       <div v-for="(col, ci) in columns" :key="ci" class="flex min-w-0 flex-1 flex-col gap-3">
         <button
           v-for="c in col"
@@ -181,8 +367,10 @@ async function start() {
             class="relative w-full overflow-hidden rounded-t-control bg-surface-2"
             :style="{ aspectRatio: `${c.canvas.w} / ${c.canvas.h}` }"
           >
-            <!-- 未选中：demo 第 1 页缩略；选中后：换肤 + 翻页的实时预览 -->
+            <!-- 选中=活预览（换肤+翻页都在这张卡上）；其余卡是截图 <img>（点击预览才拉活资源）。
+                 缩略图渲染失败/无版本 → 回退活 iframe（Chrome 不可用的环境画廊照常可用） -->
             <iframe
+              v-if="selected === c.id || thumbFailed[c.id] || !c.thumb"
               :src="selected === c.id ? previewSrc : templateApi.previewUrl(c.id, '', 1, 1)"
               :key="selected === c.id ? previewSrc : `thumb-${c.id}`"
               loading="lazy"
@@ -197,9 +385,18 @@ async function start() {
               :title="c.name + ' 预览'"
               aria-hidden="true"
             />
+            <img
+              v-else
+              :src="templateApi.thumbUrl(c.id, c.thumb)"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              :alt="c.name + ' 缩略图'"
+              @error="thumbFailed[c.id] = true"
+            />
             <span
               v-if="selected === c.id"
-              class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-on-accent"
+              class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-accent-contrast"
             >
               <PhCheck :size="10" /> 已选
             </span>
@@ -212,6 +409,11 @@ async function start() {
               <span v-if="!c.mine" class="font-mono text-[10.5px] text-ink-3">{{ c.id }}</span>
             </div>
             <p class="line-clamp-2 text-[11.5px] text-ink-2">{{ c.description }}</p>
+            <div v-if="c.tags?.length" class="flex flex-wrap gap-1">
+              <span v-for="s in c.tags.slice(0, 3)" :key="s" class="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] text-ink-2">
+                {{ s }}
+              </span>
+            </div>
             <div v-if="c.scenario?.length" class="flex flex-wrap gap-1">
               <span v-for="s in c.scenario.slice(0, 3)" :key="s" class="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-3">
                 {{ s }}
@@ -220,6 +422,16 @@ async function start() {
           </div>
         </button>
       </div>
+    </div>
+
+    <div
+      v-else
+      class="mt-3 flex flex-col items-center gap-2 rounded-card border border-dashed border-line px-6 py-12 text-center"
+    >
+      <p class="text-[13px] text-ink-2">没有匹配的模板</p>
+      <button class="cursor-pointer text-[12.5px] font-semibold text-accent hover:underline" @click="reset">
+        清空筛选条件
+      </button>
     </div>
 
     <div class="sticky bottom-0 mt-auto flex flex-wrap items-center gap-3 rounded-control border border-line bg-surface px-4 py-3">
@@ -242,6 +454,7 @@ async function start() {
             class="cursor-pointer rounded border border-line px-1.5 py-0.5 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40"
             :disabled="demoPage <= 1"
             title="上一页"
+            aria-label="上一页"
             @click="demoPage = Math.max(1, demoPage - 1)"
           >
             <PhCaretLeft :size="11" />
@@ -250,6 +463,7 @@ async function start() {
           <button
             class="cursor-pointer rounded border border-line px-1.5 py-0.5 transition-colors hover:border-line-strong"
             title="下一页"
+            aria-label="下一页"
             @click="demoPage = demoPage + 1"
           >
             <PhCaretRight :size="11" />

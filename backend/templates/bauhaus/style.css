@@ -1,0 +1,99 @@
+/* bauhaus — 包豪斯（大胆 · 宣言）。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/bauhaus（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 红黄蓝三原色在泛黄画布上碰撞：几何（圆 / 三角 / 方）是画面的骨架，
+ * 900 黑体标题与藏青描边白卡各就各位；文字本身就是几何的一部分。
+ * 禁柔和曲线、禁有机形状、禁复杂渐变与照片级图像。 */
+.tpl-bauhaus{
+  --bg:#FBF5CE;              /* 暖黄画布的渐变中段（letterbox 翻页不跳） */
+  --ink:#1E3A5F;             /* 藏青：标题与结构描边 */
+  --ink-2:#43536F;           /* 藏青灰正文 */
+  --ink-3:#7C86A0;           /* 弱藏青小字 */
+  --border:#1E3A5F;
+  --red:#DC2626;             /* 正红 */
+  --deep-red:#991B1B;        /* 深红 */
+  --blue:#2563EB;            /* 皇家蓝 */
+  --gold:#E8A400;            /* 包豪斯黄（画布上压得住的一档） */
+  --cream:#FEF3C7;           /* 奶油画布色（色块上的字） */
+  font-family:'Inter','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：粗壮几何黑体，字距略宽，工业设计的精确感 ---- */
+.tpl-bauhaus .h1{font-size:92px;line-height:1.06;font-weight:900;letter-spacing:.01em;color:var(--ink);margin-bottom:12px}
+.tpl-bauhaus .h2{font-size:60px;line-height:1.1;font-weight:900;letter-spacing:.01em;color:var(--ink);margin-bottom:10px}
+.tpl-bauhaus h4{font-family:inherit;font-size:24px;font-weight:800;color:var(--ink);letter-spacing:.02em}
+.tpl-bauhaus .lede{font-size:23px;line-height:1.75;color:var(--ink-2);font-weight:400;max-width:54ch}
+.tpl-bauhaus .deck-footer{font-size:15px;font-weight:500;letter-spacing:.14em;color:var(--ink-2)}
+
+/* ---- ambient：暖色渐变画布 + 角落几何静物（低透明度，不抢主角） ---- */
+.tpl-bauhaus .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(160deg,#FEF3C7 0%,#FEF9C3 50%,#F0F9FF 100%);
+}
+.tpl-bauhaus .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' preserveAspectRatio='none'%3E%3Ccircle cx='1690' cy='170' r='200' fill='none' stroke='%231E3A5F' stroke-width='3' opacity='.28'/%3E%3Cpath d='M1690,-30 L1690,170 M1490,170 L1890,170' stroke='%231E3A5F' stroke-width='3' opacity='.22'/%3E%3Cpath d='M70,1010 L205,790 L340,1010 Z' fill='none' stroke='%232563EB' stroke-width='3' opacity='.4'/%3E%3Crect x='1655' y='840' width='210' height='16' fill='%23E8A400' opacity='.55'/%3E%3Ccircle cx='235' cy='130' r='24' fill='%23DC2626' opacity='.4'/%3E%3C/svg%3E") no-repeat center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：红方块引导的宽字距标签（页首） ---- */
+.tpl-bauhaus .bh-kicker{display:flex;align-items:center;gap:14px;font-size:16px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+.tpl-bauhaus .bh-kicker::before{content:"";flex:none;width:14px;height:14px;background:var(--red)}
+
+/* ---- 几何静物台：圆、三角、方，尺寸由骨架内联给出 ---- */
+.tpl-bauhaus .bh-stage{display:flex;align-items:flex-end;gap:28px}
+.tpl-bauhaus .bh-circ{background:var(--red);border:3px solid var(--border);border-radius:50%}
+.tpl-bauhaus .bh-tri{background:var(--blue);clip-path:polygon(50% 0,0 100%,100% 100%)}
+.tpl-bauhaus .bh-rect{background:var(--gold);border:3px solid #1E3A5F}
+
+/* ---- 藏青描边白卡：唯一卡形，无圆角无阴影 ---- */
+.tpl-bauhaus .bh-card{background:rgba(255,255,255,.94);border:2px solid #1E3A5F;padding:32px 34px;display:flex;flex-direction:column}
+
+/* ---- 目录行 / 步骤行：编号色块轮换红蓝金藏青 ---- */
+.tpl-bauhaus .bh-item{display:flex;align-items:baseline;gap:24px;padding:22px 4px;border-bottom:2px solid rgba(30,58,95,.16)}
+.tpl-bauhaus .bh-item:last-child{border-bottom:none}
+.tpl-bauhaus .bh-step{display:flex;align-items:center;gap:20px;padding:22px 4px;border-bottom:2px solid rgba(30,58,95,.16)}
+.tpl-bauhaus .bh-step:last-child{border-bottom:none}
+.tpl-bauhaus .bh-n,.tpl-bauhaus .bh-step-i{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:var(--cream);align-self:center;background:#1E3A5F}
+.tpl-bauhaus .bh-item:nth-child(1) .bh-n{background:#DC2626}
+.tpl-bauhaus .bh-item:nth-child(2) .bh-n{background:#2563EB}
+.tpl-bauhaus .bh-item:nth-child(3) .bh-n{background:#E8A400;color:#1E3A5F}
+.tpl-bauhaus .bh-t{flex:none;width:280px;font-size:25px;font-weight:900;letter-spacing:.02em;color:var(--ink)}
+.tpl-bauhaus .bh-d{flex:1;font-size:17px;line-height:1.7;color:var(--ink-2)}
+.tpl-bauhaus .bh-mini-t{margin:0;font-size:19px;line-height:1.6;color:var(--ink)}
+
+/* ---- 描边标签：currentColor 双线框；卡内按红蓝藏青轮换 ---- */
+.tpl-bauhaus .bh-tag{display:inline-flex;align-items:center;padding:8px 18px;border:2px solid currentColor;font-size:15px;font-weight:800;letter-spacing:.06em;color:#991B1B;white-space:nowrap}
+.tpl-bauhaus .bh-card:nth-child(1) .bh-tag{color:#DC2626}
+.tpl-bauhaus .bh-card:nth-child(2) .bh-tag{color:#2563EB}
+.tpl-bauhaus .bh-card:nth-child(3) .bh-tag{color:#1E3A5F}
+
+/* ---- 原色数据：藏青顶线 + 900 巨号，三值按红蓝藏青轮换 ---- */
+.tpl-bauhaus .bh-stat{border-top:4px solid #1E3A5F;padding-top:26px}
+.tpl-bauhaus .bh-stat-v{font-size:96px;line-height:1;font-weight:900;letter-spacing:-.01em;color:#DC2626}
+.tpl-bauhaus .grid .bh-stat:nth-child(1) .bh-stat-v{color:#DC2626}
+.tpl-bauhaus .grid .bh-stat:nth-child(2) .bh-stat-v{color:#2563EB}
+.tpl-bauhaus .grid .bh-stat:nth-child(3) .bh-stat-v{color:#1E3A5F}
+.tpl-bauhaus .bh-stat-l{margin-top:14px;font-size:19px;font-weight:800;letter-spacing:.02em;color:var(--ink)}
+.tpl-bauhaus .bh-stat-note{margin:10px 0 0;font-size:16px;line-height:1.7;color:var(--ink-2)}
+.tpl-bauhaus .bh-src{font-size:15px;letter-spacing:.06em;color:var(--ink-2)}
+
+/* ---- 大师之言：900 大字引文 ---- */
+.tpl-bauhaus .bh-quote{font-size:62px;line-height:1.3;font-weight:900;letter-spacing:.01em;color:var(--ink);max-width:22em;margin:0}
+
+/* ---- 时间线：几何圆点轮换（圆 / 方 / 菱 / 环） ---- */
+.tpl-bauhaus .bh-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-bauhaus .bh-tl-item{flex:1;position:relative}
+.tpl-bauhaus .bh-tl-item:not(:last-child)::before{content:"";position:absolute;top:23px;left:54px;right:-40px;height:3px;background:#1E3A5F;opacity:.22}
+.tpl-bauhaus .bh-tl-dot{position:relative;z-index:1;width:46px;height:46px;background:#DC2626;border-radius:50%;border:3px solid #1E3A5F}
+.tpl-bauhaus .bh-tl-item:nth-child(2) .bh-tl-dot{background:#2563EB;border-radius:0}
+.tpl-bauhaus .bh-tl-item:nth-child(3) .bh-tl-dot{background:#E8A400;transform:rotate(45deg)}
+.tpl-bauhaus .bh-tl-item:nth-child(4) .bh-tl-dot{background:transparent}
+.tpl-bauhaus .bh-tl-t{margin-top:18px;font-size:20px;font-weight:900;letter-spacing:.04em;color:#991B1B}
+.tpl-bauhaus .bh-tl-d{margin-top:8px;font-size:17px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：红底 + 藏青描边，平面无阴影 ---- */
+.tpl-bauhaus .bh-btn{display:inline-flex;align-items:center;padding:16px 44px;background:#DC2626;color:#FEF3C7;border:3px solid #1E3A5F;font-size:20px;font-weight:900;letter-spacing:.1em}
+
+/* ---- 页面切换（翻页动画）：构成主义的顿挫 ---- */
+.tpl-bauhaus{--page-shift:36px;--page-dur:.45s}

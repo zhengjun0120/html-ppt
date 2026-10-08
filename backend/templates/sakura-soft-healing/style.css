@@ -1,0 +1,93 @@
+/* sakura-soft-healing — 樱花治愈。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/sakura-soft-healing（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 米粉底上的莫兰迪樱色：顶部圆瓣花影与飘落花瓣、页底湖岸与草色缓坡是每页
+ * 自动衬底的 ambient 层（z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。
+ * 走现代柔和日系而非国风：无印章、无楷体、无竖排；玫粉是唯一身份强调色，
+ * 只落在题签圆点、关键数字、时间点与行动钮；湖水蓝与草绿只做极小的点缀。 */
+.tpl-sakura-soft-healing{
+  --bg:#F7E7DD;              /* 浅米粉（上游底色原样保留） */
+  --bg-soft:#FCF4EE;         /* 柔白（卡底） */
+  --sakura:#F4BCC7;          /* 淡樱（花瓣浅层） */
+  --rose:#C06B84;            /* 玫粉收稳一档（原 #CC6F88）：唯一身份强调色 */
+  --lake:#5BA0AD;            /* 湖水蓝（只做极小点缀） */
+  --leaf:#7FA968;            /* 草绿（只画草地） */
+  --ink:#3A2A22;             /* 深棕 */
+  --ink-2:#6E5A4E;           /* 暖棕正文 */
+  --ink-3:#9C8578;           /* 暖棕小字 */
+  --border:rgba(110,87,76,.24);
+  --border-soft:rgba(110,87,76,.13);
+  --on-rose:#FCF4EE;         /* 玫粉底上的字色 */
+  font-family:'Hiragino Maru Gothic ProN','Yuanti SC','YouYuan','Varela Round','PingFang SC','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：圆润黑体轻声细语，行高放宽是慢节奏的一半 ---- */
+.tpl-sakura-soft-healing .h1{font-size:86px;line-height:1.2;font-weight:700;letter-spacing:.06em;color:var(--ink);margin-bottom:12px}
+.tpl-sakura-soft-healing .h2{font-size:48px;line-height:1.26;font-weight:700;letter-spacing:.05em;color:var(--ink);margin-bottom:10px}
+.tpl-sakura-soft-healing h4{color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.03em}
+.tpl-sakura-soft-healing .lede{font-size:24px;line-height:2.05;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-sakura-soft-healing .deck-footer{font-size:14px;color:var(--ink-2);letter-spacing:.18em}
+
+/* ---- ambient：顶部花影 + 飘落花瓣（z-index:-1） ---- */
+.tpl-sakura-soft-healing .slide::before{
+  content:"";position:absolute;left:0;top:0;width:100%;height:330px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 330'%3E%3Ccircle cx='210' cy='-40' r='150' fill='%23F4BCC7' opacity='.48'/%3E%3Ccircle cx='520' cy='-70' r='180' fill='%23F0AEBE' opacity='.4'/%3E%3Ccircle cx='850' cy='-50' r='150' fill='%23F4BCC7' opacity='.38'/%3E%3Ccircle cx='1180' cy='-80' r='190' fill='%23F0AEBE' opacity='.42'/%3E%3Ccircle cx='1520' cy='-40' r='150' fill='%23F4BCC7' opacity='.42'/%3E%3Ccircle cx='1800' cy='-70' r='170' fill='%23F0AEBE' opacity='.38'/%3E%3Cellipse cx='360' cy='190' rx='10' ry='6' fill='%23F4BCC7' opacity='.75' transform='rotate(35 360 190)'/%3E%3Cellipse cx='760' cy='120' rx='9' ry='5' fill='%23E8A0B0' opacity='.55' transform='rotate(-20 760 120)'/%3E%3Cellipse cx='1290' cy='200' rx='10' ry='6' fill='%23F4BCC7' opacity='.6' transform='rotate(50 1290 200)'/%3E%3Cellipse cx='1660' cy='120' rx='8' ry='5' fill='%23E8A0B0' opacity='.5' transform='rotate(15 1660 120)'/%3E%3C/svg%3E") no-repeat top center;
+  background-size:100% 100%;
+}
+/* ---- ambient：页底湖岸 + 草色缓坡 + 小花（z-index:-1） ---- */
+.tpl-sakura-soft-healing .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:250px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 250' preserveAspectRatio='none'%3E%3Cpath d='M0,250 L0,150 Q190,112 420,150 Q560,176 640,250 Z' fill='%235BA0AD' opacity='.26'/%3E%3Cpath d='M0,250 L0,206 Q480,150 960,194 Q1440,238 1920,178 L1920,250 Z' fill='%2372AB60' opacity='.24'/%3E%3Ccircle cx='330' cy='216' r='5' fill='%23C06B84' opacity='.45'/%3E%3Ccircle cx='760' cy='228' r='5' fill='%23F4BCC7' opacity='.6'/%3E%3Ccircle cx='1180' cy='222' r='5' fill='%23C06B84' opacity='.4'/%3E%3Ccircle cx='1620' cy='214' r='5' fill='%23F4BCC7' opacity='.55'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：淡樱圆点引导的小字标签（页首） ---- */
+.tpl-sakura-soft-healing .ss-kicker{display:flex;align-items:center;gap:14px;font-size:16px;letter-spacing:.34em;color:var(--ink-2)}
+.tpl-sakura-soft-healing .ss-kicker::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;background:var(--sakura)}
+
+/* ---- 樱线：标题下的一道玫粉，从粉晕到透明 ---- */
+.tpl-sakura-soft-healing .ss-line{width:220px;height:5px;border-radius:3px;background:linear-gradient(90deg,var(--sakura) 0%,var(--rose) 55%,transparent 100%)}
+
+/* ---- 柔白卡：半透柔白 + 暖棕细描边 + 玫粉柔光投影 ---- */
+.tpl-sakura-soft-healing .ss-card{background:rgba(252,244,238,.82);border:1px solid rgba(196,150,138,.4);border-radius:20px;padding:36px 40px;display:flex;flex-direction:column;min-height:280px;box-shadow:0 16px 40px rgba(192,107,132,.10)}
+
+/* ---- 描边药丸：暖棕细描边胶囊；强调态描边转玫粉 ---- */
+.tpl-sakura-soft-healing .ss-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-sakura-soft-healing .ss-pill-rose{border-color:var(--rose);color:var(--rose)}
+
+/* ---- 目录行：樱粉圆号 + 篇名 + 说明 ---- */
+.tpl-sakura-soft-healing .ss-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-sakura-soft-healing .ss-item:last-child{border-bottom:none}
+.tpl-sakura-soft-healing .ss-n{flex:none;width:50px;height:50px;background:var(--sakura);opacity:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--rose);align-self:center}
+.tpl-sakura-soft-healing .ss-t{flex:none;width:250px;font-size:28px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-sakura-soft-healing .ss-d{flex:1;font-size:19px;line-height:1.75;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 玫粉数字：数据页主视觉 ---- */
+.tpl-sakura-soft-healing .ss-stat{border-top:3px solid var(--sakura);padding-top:28px}
+.tpl-sakura-soft-healing .ss-stat-v{font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--rose)}
+.tpl-sakura-soft-healing .ss-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-sakura-soft-healing .ss-stat-l{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-sakura-soft-healing .ss-stat-note{margin:12px 0 0;font-size:19px;line-height:1.8;color:var(--ink-2)}
+
+/* ---- 手记引文：圆润大字，慢一拍的行高 ---- */
+.tpl-sakura-soft-healing .ss-quote{font-size:56px;line-height:1.7;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:24em;margin:0}
+.tpl-sakura-soft-healing .ss-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 时间线：樱粉圆点 + 细连接线 ---- */
+.tpl-sakura-soft-healing .ss-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-sakura-soft-healing .ss-tl-item{flex:1;position:relative}
+.tpl-sakura-soft-healing .ss-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:52px;right:-44px;height:1px;background:rgba(192,107,132,.4)}
+.tpl-sakura-soft-healing .ss-tl-dot{position:relative;z-index:1;width:52px;height:52px;background:var(--bg-soft);border:2px solid var(--sakura);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--rose)}
+.tpl-sakura-soft-healing .ss-tl-t{margin-top:20px;font-size:21px;font-weight:700;letter-spacing:.04em;color:var(--rose)}
+.tpl-sakura-soft-healing .ss-tl-d{margin-top:8px;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-sakura-soft-healing .ss-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-sakura-soft-healing .ss-step:last-child{border-bottom:none}
+.tpl-sakura-soft-healing .ss-mini-t{margin:0;font-size:20px;line-height:1.7;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：玫粉实底圆钮，收尾页 ---- */
+.tpl-sakura-soft-healing .ss-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 44px;background:var(--rose);color:var(--on-rose);border-radius:999px;font-size:21px;font-weight:700;letter-spacing:.2em;box-shadow:0 10px 26px rgba(192,107,132,.28);white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：慢到让人想深呼吸 ---- */
+.tpl-sakura-soft-healing{--page-shift:8px;--page-dur:.65s;--page-ease:cubic-bezier(0,0,.2,1)}

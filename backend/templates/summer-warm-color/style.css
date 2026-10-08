@@ -1,0 +1,105 @@
+/* summer-warm-color — 夏日暖色（治愈绘本风）。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/summer-warm-color（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 蓝是主调、黄是温度、绿是生机：整页「天空→草地」渐变由 ambient 层衬底
+ * （.slide::after inset:0，z-index:-1），太阳与云朵纸飞机画在 ::before/背景栈里，
+ * 骨架零成本。渐变整体调浅一档，保证深海蓝标题与正文在全页可读；
+ * 阳光黄只做温度点缀（题签点/编号圆/上边线），不做大面积铺色。 */
+.tpl-summer-warm-color{
+  --bg:#C8EBF4;              /* letterbox：渐变中段值（翻页不跳） */
+  --bg-soft:#EAF7FD;
+  --ink:#16608F;             /* 深海晴蓝（标题） */
+  --ink-2:#3F6478;           /* 蓝灰正文 */
+  --ink-3:#7FA3B5;           /* 浅蓝灰小字（只做页内点缀） */
+  --border:rgba(22,96,143,.16);
+  --border-soft:rgba(22,96,143,.09);
+  --sky:#58C3F6;             /* 层次蓝 */
+  --grass:#9DDF67;           /* 草绿 */
+  --sun:#FFDF5E;             /* 阳光黄（温度） */
+  --sun-deep:#F5C21B;
+  --sun-ink:#6B4A00;         /* 黄底上的字 */
+  --accent:#C65508;          /* 暖橙（时间点与小面积点睛，收暗保对比） */
+  --pink:#FFADDD;            /* 淡粉呼吸点 */
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：软笔气质标题（楷体栈代替手写体，不新增 webfont）+ 圆润正文 ---- */
+.tpl-summer-warm-color .h1{font-family:'STKaiti','KaiTi','Noto Sans SC',serif;font-size:88px;line-height:1.12;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:12px}
+.tpl-summer-warm-color .h2{font-family:'STKaiti','KaiTi','Noto Sans SC',serif;font-size:52px;line-height:1.18;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-summer-warm-color h4{color:var(--ink);font-weight:700;font-size:24px}
+.tpl-summer-warm-color .lede{font-size:24px;line-height:1.85;color:var(--ink-2);font-weight:400}
+.tpl-summer-warm-color .deck-footer{font-size:15px;color:#3F6478;letter-spacing:.14em}
+
+/* ---- ambient：整页天空→草地渐变 + 云朵纸飞机（::after）；太阳（::before） ---- */
+.tpl-summer-warm-color .slide::before{
+  content:"";position:absolute;top:56px;right:92px;width:290px;height:290px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cg stroke='%23F5C21B' stroke-width='7' stroke-linecap='round' opacity='0.6'%3E%3Cline x1='150' y1='6' x2='150' y2='44'/%3E%3Cline x1='150' y1='256' x2='150' y2='294'/%3E%3Cline x1='6' y1='150' x2='44' y2='150'/%3E%3Cline x1='256' y1='150' x2='294' y2='150'/%3E%3Cline x1='48' y1='48' x2='74' y2='74'/%3E%3Cline x1='226' y1='226' x2='252' y2='252'/%3E%3Cline x1='48' y1='252' x2='74' y2='226'/%3E%3Cline x1='226' y1='74' x2='252' y2='48'/%3E%3C/g%3E%3Ccircle cx='150' cy='150' r='82' fill='%23FFDF5E'/%3E%3Ccircle cx='150' cy='150' r='82' fill='none' stroke='%23FFFFFF' stroke-opacity='0.55' stroke-width='6'/%3E%3Ccircle cx='130' cy='132' r='26' fill='%23FFF3AC' opacity='0.85'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+.tpl-summer-warm-color .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 520'%3E%3Cg fill='%23FFFFFF'%3E%3Cellipse cx='260' cy='150' rx='110' ry='34' opacity='0.95'/%3E%3Ccircle cx='225' cy='120' r='40' opacity='0.95'/%3E%3Ccircle cx='288' cy='110' r='50' opacity='0.95'/%3E%3Cellipse cx='820' cy='232' rx='85' ry='26' opacity='0.8'/%3E%3Ccircle cx='794' cy='210' r='30' opacity='0.8'/%3E%3Ccircle cx='844' cy='202' r='37' opacity='0.8'/%3E%3Cellipse cx='1500' cy='118' rx='95' ry='28' opacity='0.85'/%3E%3Ccircle cx='1470' cy='94' r='33' opacity='0.85'/%3E%3Ccircle cx='1524' cy='88' r='40' opacity='0.85'/%3E%3C/g%3E%3Cpath d='M330 402 L372 416 L330 430 L342 416 Z' fill='%23FFFFFF' opacity='0.9'/%3E%3Cpath d='M1560 300 L1592 312 L1560 324 L1570 312 Z' fill='%23FFFFFF' opacity='0.72'/%3E%3C/svg%3E") no-repeat top center / 100% auto,
+    radial-gradient(ellipse 55% 90% at 12% 102%,rgba(124,200,70,0) 42%,rgba(110,184,66,.22) 100%),
+    radial-gradient(ellipse 65% 90% at 88% 102%,rgba(124,200,70,0) 42%,rgba(110,184,66,.17) 100%),
+    linear-gradient(180deg,#A9DEF6 0%,#D9F1FB 36%,#F7FCF1 54%,#DFF3BD 76%,#C6EB97 100%);
+}
+
+/* ---- 题签：云朵白胶囊 + 淡粉圆点（上游色卡的呼吸点） ---- */
+.tpl-summer-warm-color .sw-kicker{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;background:rgba(255,255,255,.78);border:1px solid var(--border-soft);color:var(--ink);font-size:16px;font-weight:600;letter-spacing:.18em;padding:9px 24px;border-radius:999px}
+.tpl-summer-warm-color .sw-kicker::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--pink)}
+
+/* ---- 五圆色卡：上游「夏日碎片」色卡的圆形阵列，封面身份元素 ---- */
+.tpl-summer-warm-color .sw-swatches{display:flex;gap:16px;align-items:center}
+.tpl-summer-warm-color .sw-swatch{width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.92);box-shadow:0 6px 14px rgba(22,96,143,.14)}
+
+/* ---- 小太阳印：正圆太阳，封面与收尾的落款 ---- */
+.tpl-summer-warm-color .sw-sun{flex:none;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 42% 38%,#FFF3AC 0%,#FFDF5E 55%,#F5C21B 100%);box-shadow:0 0 36px rgba(255,223,94,.6);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;color:var(--sun-ink);line-height:1.25;letter-spacing:.06em}
+
+/* ---- 白色圆角卡：唯一卡型，圆润 + 柔投影（不用硬阴影） ---- */
+.tpl-summer-warm-color .sw-card{background:rgba(255,255,255,.78);border:1px solid var(--border-soft);border-radius:22px;padding:34px 38px;display:flex;flex-direction:column;min-height:268px;box-shadow:0 14px 34px rgba(22,96,143,.1)}
+
+/* ---- 药丸：白胶囊；accent 版阳光黄底 ---- */
+.tpl-summer-warm-color .sw-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.72);font-size:16px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-summer-warm-color .sw-pill-accent{border-color:rgba(214,158,20,.5);background:var(--sun);color:var(--sun-ink);font-weight:600}
+
+/* ---- 目录行：阳光圆号 + 篇名 + 说明 ---- */
+.tpl-summer-warm-color .sw-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-summer-warm-color .sw-item:last-child{border-bottom:none}
+.tpl-summer-warm-color .sw-n{flex:none;width:52px;height:52px;border-radius:50%;background:var(--sun);border:2px solid #FFFFFF;box-shadow:0 4px 10px rgba(22,96,143,.12);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--sun-ink);align-self:center}
+.tpl-summer-warm-color .sw-t{flex:none;width:250px;font-size:27px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.tpl-summer-warm-color .sw-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 阳光数字：数据页主视觉（深蓝大数字 + 黄上边线） ---- */
+.tpl-summer-warm-color .sw-stat{border-top:3px solid var(--sun);padding-top:28px}
+.tpl-summer-warm-color .sw-stat-v{font-size:100px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.tpl-summer-warm-color .sw-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-summer-warm-color .sw-stat-l{margin-top:18px;font-size:26px;font-weight:700;color:var(--ink)}
+.tpl-summer-warm-color .sw-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 云朵引文：楷书大字 ---- */
+.tpl-summer-warm-color .sw-quote{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:60px;line-height:1.6;font-weight:700;letter-spacing:.02em;color:var(--ink);max-width:24em;margin:0}
+.tpl-summer-warm-color .sw-src{margin:0;font-size:20px;letter-spacing:.12em;color:#4E7E96}
+
+/* ---- 会写字的云：quote 页右侧留白的浮云标签 ---- */
+.tpl-summer-warm-color .sw-cloud{position:absolute;right:120px;top:42%;background:rgba(255,255,255,.88);border-radius:999px;padding:22px 36px;font-family:'STKaiti','KaiTi',serif;font-size:22px;font-weight:700;color:var(--ink);box-shadow:0 12px 28px rgba(22,96,143,.12)}
+.tpl-summer-warm-color .sw-cloud::before{content:"";position:absolute;left:28px;top:-15px;width:34px;height:34px;border-radius:50%;background:inherit}
+.tpl-summer-warm-color .sw-cloud::after{content:"";position:absolute;right:44px;top:-10px;width:24px;height:24px;border-radius:50%;background:inherit}
+
+/* ---- 时间线：白圈圆点 + 暖橙时间点 ---- */
+.tpl-summer-warm-color .sw-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-summer-warm-color .sw-tl-item{flex:1;position:relative}
+.tpl-summer-warm-color .sw-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:54px;right:-44px;height:1px;background:var(--border)}
+.tpl-summer-warm-color .sw-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:#FFFFFF;border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-summer-warm-color .sw-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.tpl-summer-warm-color .sw-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-summer-warm-color .sw-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-summer-warm-color .sw-step:last-child{border-bottom:none}
+.tpl-summer-warm-color .sw-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：深海蓝胶囊，收尾页唯一实底按钮 ---- */
+.tpl-summer-warm-color .sw-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 40px;border-radius:999px;background:var(--ink);color:#F2FAFE;font-size:20px;font-weight:600;letter-spacing:.14em;box-shadow:0 10px 24px rgba(22,96,143,.22)}
+
+/* ---- 页面切换（翻页动画）：像夏天的风，慢慢来 ---- */
+.tpl-summer-warm-color{--page-shift:12px;--page-dur:.58s;--page-ease:cubic-bezier(.33,.66,.4,1)}

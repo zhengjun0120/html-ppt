@@ -2,12 +2,7 @@
   "id": "hermes-terminal",
   "name": "终端实测",
   "description": "暗底终端 + 扫描线 + 霓虹 glow 大字，开发者工具/CLI/agent 评测与 trace 复盘首选",
-  "tags": [
-    "终端",
-    "评测",
-    "开发者",
-    "暗色"
-  ],
+  "tags": ["开发者", "深色"],
   "scenario": [
     "工具评测",
     "技术复盘",

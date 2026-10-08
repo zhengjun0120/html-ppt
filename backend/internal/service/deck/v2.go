@@ -127,6 +127,14 @@ type PlanAssignment struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// TplSuggestion 一条模板推荐：选模板阶段的 LLM 产物，缓存进 deck.json。
+// Reason 是给用户看的一句话推荐理由。
+type TplSuggestion struct {
+	TemplateID string `json:"template_id"`
+	VariantID  string `json:"variant_id,omitempty"`
+	Reason     string `json:"reason"`
+}
+
 // DeckFile deck.json 的结构：deck 的自描述元数据。
 type DeckFile struct {
 	ID         string           `json:"id"`
@@ -137,8 +145,11 @@ type DeckFile struct {
 	Variant    string           `json:"variant,omitempty"`
 	Canvas     template.Canvas  `json:"canvas"`
 	PagePlan   []PlanAssignment `json:"page_plan,omitempty"`
-	CreatedAt  int64            `json:"created_at"`
-	UpdatedAt  int64            `json:"updated_at"`
+	// TemplateSuggestions 模板推荐缓存（selecting_template 阶段生成）。
+	// 大纲在 gate 1 确认后冻结，推荐依据不会变，缓存天然不会失效。
+	TemplateSuggestions []TplSuggestion `json:"template_suggestions,omitempty"`
+	CreatedAt           int64           `json:"created_at"`
+	UpdatedAt           int64           `json:"updated_at"`
 }
 
 // ---------- Service 上的 v2 方法 ----------
@@ -346,6 +357,18 @@ func (s *Service) SaveOutline(userID uint, id string, o *Outline, expectVersion 
 	return nil
 }
 
+// StageMismatch 阶段守卫拒绝：当前阶段不满足操作要求。典型场景是重复提交/重复
+// 确认（第一次已把阶段推进，重试撞上守卫）。handler 把它映射成 409——语义是
+// "冲突但用户可行动"：页面状态多半已前进，刷新即可，而不是 4xx 的"请求本身错了"。
+type StageMismatch struct {
+	Current string // deck 实际所处阶段
+	Require string // 此操作要求的阶段
+}
+
+func (e StageMismatch) Error() string {
+	return fmt.Sprintf("阶段不对：当前 %s，此操作要求 %s", e.Current, e.Require)
+}
+
 // transitionStage 阶段迁移的唯一入口：校验 from（期望的当前阶段）后写 DB 与 deck.json。
 // from 传空 = 不检查当前阶段（仅限初始化路径使用）。
 // 返回冲突时的实际阶段，调用方据此给用户可执行的提示。
@@ -361,7 +384,7 @@ func (s *Service) transitionStage(userID uint, id, from, to string) (string, err
 		return "", fmt.Errorf("deck %q 不存在", id)
 	}
 	if from != "" && row.Stage != from {
-		return row.Stage, fmt.Errorf("阶段不对：当前 %s，此操作要求 %s", row.Stage, from)
+		return row.Stage, StageMismatch{Current: row.Stage, Require: from}
 	}
 	if err := s.st.DB.Model(&store.Deck{}).Where("id = ?", id).Update("stage", to).Error; err != nil {
 		return row.Stage, fmt.Errorf("更新阶段失败: %w", err)
@@ -477,6 +500,33 @@ func variantNames(tpl *template.Template) string {
 		names = append(names, v.ID)
 	}
 	return strings.Join(names, " / ")
+}
+
+// TemplateSuggestions 读缓存的模板推荐（归属校验）。无缓存返回 (nil, nil)——
+// "还没推荐过"不是错误，调用方据此决定要不要发起 LLM 调用。
+func (s *Service) TemplateSuggestions(userID uint, id string) ([]TplSuggestion, error) {
+	df, err := s.GetDeckV2(userID, id)
+	if err != nil {
+		return nil, err
+	}
+	return df.TemplateSuggestions, nil
+}
+
+// SaveTemplateSuggestions 覆盖写模板推荐缓存（归属校验 + deck 级锁）。
+// 空切片 = 清空缓存；调用方约定只在拿到合法推荐时才写，避免把失败固化下来。
+func (s *Service) SaveTemplateSuggestions(userID uint, id string, sugs []TplSuggestion) error {
+	if err := s.authorize(userID, id); err != nil {
+		return err
+	}
+	unlock := s.lockDeck(id)
+	defer unlock()
+
+	df, err := s.readDeckFile(id)
+	if err != nil {
+		return err
+	}
+	df.TemplateSuggestions = sugs
+	return s.writeDeckFile(id, df)
 }
 
 // FinishGeneration 生成 run 正常结束的落点：generating → iterating。

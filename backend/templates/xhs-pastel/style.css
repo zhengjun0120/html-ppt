@@ -79,3 +79,6 @@
  * 换变体 = body 挂 class，agent 不参与。深色墨 --xp-ink 不变，对比度不受影响。 ---- */
 .tpl-xhs-pastel-card.v-minty{--xp-bg:#f2faf3;--xp-peach:#cdeedd;--xp-peach-d:#2e9d70;--xp-rose:#cfe7f2;--xp-rose-d:#2e7d9d}
 .tpl-xhs-pastel-card.v-lilac{--xp-bg:#f8f5fd;--xp-peach:#e4daf7;--xp-peach-d:#7b5dc4;--xp-rose:#fcd0dd;--xp-rose-d:#c94673}
+
+/* ---- 页面切换（翻页动画）：卡片回弹，小红书的活泼 ---- */
+.tpl-xhs-pastel-card{--page-shift:24px;--page-dur:.5s;--page-ease:cubic-bezier(.22,1.3,.36,1)}

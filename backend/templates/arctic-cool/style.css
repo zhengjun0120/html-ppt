@@ -1,0 +1,103 @@
+/* arctic-cool — 北极冷。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/arctic-cool（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深色取向下版：冰蓝灰极地色板 #1B2B3A 底 + 冰川青 #7FB3D5（上游 style.json
+ * 分类即「深色·沉稳」，preview.html 亦为深海渐变；SKILL.md 的浅冰蓝变体未采用）。
+ * 冷静科研气质：装饰只有极光余晖与冰面等高线（ambient 层，z-index:-1），
+ * 数据用等宽字体，正文冰白/雾蓝灰，无发光、无玻璃拟态，克制即身份。 */
+.tpl-arctic-cool{
+  --bg:#1b2f3d;               /* 冰蓝灰渐变中段值（letterbox 翻页不跳色） */
+  --bg-deep:#16242f;          /* 极夜深端 */
+  --bg-ice:#22394a;           /* 冰面亮端 */
+  --ink:#eaf4fb;              /* 冰白主文字 */
+  --ink-2:#9db8cc;            /* 雾蓝灰正文 */
+  --ink-3:#8fa9bf;            /* 更浅一档小字（页脚/来源，≥4.5:1） */
+  --border:rgba(127,179,213,.22);
+  --border-soft:rgba(127,179,213,.14);
+  --glacier:#7fb3d5;          /* 冰川青（身份色，深底 6.4:1） */
+  --glacier-strong:#a5cdea;   /* 提亮冰川青（小字号文本用） */
+  --sea:#4fc3e8;              /* 冰海青（数据点缀） */
+  color:var(--ink);
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：克制字重的大字 + 宽行距正文，数字与标签等宽 ---- */
+.tpl-arctic-cool .h1{font-size:84px;line-height:1.1;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-arctic-cool .h2{font-size:48px;line-height:1.18;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:8px}
+.tpl-arctic-cool h4{font-family:inherit;color:var(--ink);font-weight:600;font-size:23px;letter-spacing:.05em}
+.tpl-arctic-cool .lede{font-size:22px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-arctic-cool .deck-footer{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.2em}
+
+/* ---- ambient：极光余晖（上）+ 冰面等高线（下），z-index:-1 画在内容之下 ---- */
+.tpl-arctic-cool .slide{
+  background:linear-gradient(168deg,var(--bg-deep) 0%,#1b2b3a 48%,var(--bg-ice) 100%);
+}
+.tpl-arctic-cool .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(920px 460px at 80% -12%,rgba(127,179,213,.13),transparent 65%),
+    radial-gradient(680px 420px at -6% 112%,rgba(79,195,232,.07),transparent 62%);
+}
+.tpl-arctic-cool .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:280px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 300' preserveAspectRatio='none'%3E%3Cpath d='M0,70 Q240,40 480,66 T960,58 T1440,70 T1920,52' stroke='%237fb3d5' stroke-opacity='.14' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0,140 Q300,108 600,136 T1200,124 T1920,138' stroke='%237fb3d5' stroke-opacity='.11' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0,210 Q260,180 520,206 T1040,196 T1560,210 T1920,192' stroke='%237fb3d5' stroke-opacity='.09' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0,272 Q320,246 640,268 T1280,258 T1920,266' stroke='%237fb3d5' stroke-opacity='.07' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：等宽 + 冰川青细线，公报编号感 ---- */
+.tpl-arctic-cool .ac-kicker{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:15px;font-weight:600;letter-spacing:.30em;color:var(--glacier);text-transform:uppercase}
+.tpl-arctic-cool .ac-kicker::before{content:"";width:38px;height:1px;background:var(--glacier)}
+
+/* ---- 关键词提亮：大字里的冰川青一词 ---- */
+.tpl-arctic-cool .ac-hl{color:var(--glacier)}
+
+/* ---- 细光线：标题下的一段冰川青渐隐 ---- */
+.tpl-arctic-cool .ac-line{width:210px;height:2px;background:linear-gradient(90deg,var(--glacier),transparent)}
+
+/* ---- 冰面卡：半透明冰蓝底 + 细描边 + 卡顶一条冰川青细线 ---- */
+.tpl-arctic-cool .ac-card{position:relative;overflow:hidden;background:rgba(127,179,213,.06);border:1px solid var(--border-soft);border-radius:12px;padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+.tpl-arctic-cool .ac-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--glacier),rgba(127,179,213,0))}
+
+/* ---- 药丸：冰面描边小方块（冷静，不用胶囊） ---- */
+.tpl-arctic-cool .ac-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid var(--border);border-radius:8px;background:rgba(127,179,213,.05);font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:15px;letter-spacing:.14em;color:var(--ink-2);white-space:nowrap}
+.tpl-arctic-cool .ac-pill-accent{border-color:rgba(127,179,213,.55);background:rgba(127,179,213,.12);color:var(--glacier-strong)}
+
+/* ---- 目录行：等宽编号 + 篇名 + 说明 ---- */
+.tpl-arctic-cool .ac-item{display:flex;align-items:center;gap:24px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-arctic-cool .ac-item:last-child{border-bottom:none}
+.tpl-arctic-cool .ac-n{flex:none;width:50px;height:50px;border-radius:10px;border:1px solid rgba(127,179,213,.38);background:rgba(127,179,213,.07);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--glacier)}
+.tpl-arctic-cool .ac-t{flex:none;width:250px;font-size:27px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.tpl-arctic-cool .ac-d{flex:1;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 等宽数字：数据页主视觉，冰川青指标名 ---- */
+.tpl-arctic-cool .ac-stat{border-top:2px solid rgba(127,179,213,.45);padding-top:30px}
+.tpl-arctic-cool .ac-stat-v{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:96px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.tpl-arctic-cool .ac-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-arctic-cool .ac-stat-l{margin-top:20px;font-size:24px;font-weight:600;letter-spacing:.05em;color:var(--glacier)}
+.tpl-arctic-cool .ac-stat-note{margin:12px 0 0;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 引文：克制大字 + 等宽出处 ---- */
+.tpl-arctic-cool .ac-quote{font-size:54px;line-height:1.62;font-weight:600;letter-spacing:.03em;color:var(--ink);max-width:26em;margin:0}
+.tpl-arctic-cool .ac-src{margin:0;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:17px;letter-spacing:.16em;color:var(--glacier)}
+
+/* ---- 坐标标签：等宽描边小牌，只放留白处 ---- */
+.tpl-arctic-cool .ac-tag{display:inline-flex;align-items:center;padding:10px 18px;border:1px solid var(--border-soft);border-radius:8px;background:rgba(13,26,36,.55);font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:15px;letter-spacing:.18em;color:var(--ink-2)}
+
+/* ---- 时间线：冰川青圆点 + 细连接线 ---- */
+.tpl-arctic-cool .ac-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-arctic-cool .ac-tl-item{flex:1;position:relative}
+.tpl-arctic-cool .ac-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:50px;right:-44px;height:1px;background:rgba(127,179,213,.30)}
+.tpl-arctic-cool .ac-tl-dot{position:relative;z-index:1;width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(127,179,213,.55);background:var(--bg-deep);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--glacier)}
+.tpl-arctic-cool .ac-tl-t{margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--glacier);letter-spacing:.05em}
+.tpl-arctic-cool .ac-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-arctic-cool .ac-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-arctic-cool .ac-step:last-child{border-bottom:none}
+.tpl-arctic-cool .ac-mini-t{margin:0;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：冰川青描边，收尾页唯一强调元素 ---- */
+.tpl-arctic-cool .ac-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 42px;border:1.5px solid var(--glacier);border-radius:10px;background:rgba(127,179,213,.08);color:var(--ink);font-size:19px;font-weight:600;letter-spacing:.22em}
+
+/* ---- 页面切换（翻页动画）：沉稳的缓速淡入（≤650ms 截图上限） ---- */
+.tpl-arctic-cool{--page-shift:12px;--page-dur:.58s}

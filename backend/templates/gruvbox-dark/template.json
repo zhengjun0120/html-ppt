@@ -1,0 +1,88 @@
+{
+  "id": "gruvbox-dark",
+  "name": "Gruvbox 暗",
+  "description": "琥珀与苔绿在暖灰中燃烧：复古终端的暖褐底、等宽字型与 vim 状态栏母题，终端美学从未如此温暖",
+  "tags": ["深色", "科技", "开发者", "复古"],
+  "scenario": ["Terminal/vim 社群分享", "DevOps 技术演讲", "命令行工具展示", "复古计算文化", "技术教学"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "开机封面",
+      "use": "开场：题签 + 等宽大字标题 + 琥珀渐隐线 + 一句定位，提示符块与药丸收底，琥珀辉光衬景",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 30-52 字；题签 ≤16 字；提示符块 ≤16 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录终端",
+      "use": "议程：终端卡里 4 行篇目（方括号编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 12-24 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：终端卡 + 琥珀药丸题签 + 等宽小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边终端卡装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 40-80 字 + 补充 16-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "琥珀数字",
+      "use": "三个关键数据：琥珀大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-32 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "终端引文",
+      "use": "整页一句引文：等宽大字 + 出处 + 两个支撑药丸，如一行被反复引用的注释",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 等宽大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "演进时间线",
+      "use": "4 个节点的横向时间线：琥珀方框序号 + 时间点 + 一句事件，讲演进最稳",
+      "roles": ["content", "data"],
+      "constraints": "4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-44 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾落款",
+      "use": "收尾：等宽大字 + 一句行动提醒 + 琥珀描边按钮 + 药丸 + 提示符块，如一次干净退出",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-48 字；按钮 ≤8 字；药丸 ≤12 字；提示符块 ≤16 字"
+    },
+    {
+      "id": "code",
+      "name": "代码示例",
+      "use": "终端窗口母题：标题栏三圆点 + 文件名 + 语言标签，等宽代码块直排，状态栏一句话收底",
+      "roles": ["code"],
+      "constraints": "代码 6-10 行、每行 ≤56 字符（尖括号要转义）；配文件名 + 语言标签 + 状态栏一句 + 页尾一句说明；一份 deck 至多 1-2 页"
+    }
+  ],
+  "fonts": ["JetBrains Mono", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/gruvbox-dark",
+    "license": "Apache-2.0"
+  }
+}

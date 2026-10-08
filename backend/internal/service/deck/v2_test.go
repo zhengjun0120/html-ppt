@@ -8,6 +8,7 @@ package deck
 // 这批测试第一个炸。
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -94,6 +95,17 @@ func TestV2FullPipeline(t *testing.T) {
 		t.Fatalf("确认大纲: %v", err)
 	}
 	mustStage(t, s, uid, id, StageSelectingTemplate)
+
+	// 重复确认撞阶段守卫：必须返回 StageMismatch（handler 据此映射 409），
+	// 不能退化成普通错误走 400——前端要靠它区分"重复点击"和"请求坏了"
+	_, err = s.ConfirmOutline(uid, id)
+	var sm StageMismatch
+	if !errors.As(err, &sm) {
+		t.Fatalf("重复确认应返回 StageMismatch，得到: %T %v", err, err)
+	}
+	if sm.Current != StageSelectingTemplate || sm.Require != StageOutlineReview {
+		t.Errorf("StageMismatch 字段不对: %+v", sm)
+	}
 
 	// 选模板（实例化）
 	if _, err := s.SelectTemplate(uid, id, "tech-sharing", "blue"); err != nil {

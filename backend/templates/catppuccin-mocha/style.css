@@ -1,0 +1,119 @@
+/* catppuccin-mocha — Catppuccin 摩卡。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/catppuccin-mocha（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深灰蓝摩卡底 + 薰衣草/青/粉三颗糖果：暗色卡片在更暗的背景上，
+ * 层级靠柔和色彩区分而非硬边框；柔光圆点是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。
+ * 禁纯黑禁高饱和：底色 #1E1E2E 也是翻页时 letterbox 的底色（渐变中段值）。 */
+.tpl-catppuccin-mocha{
+  --bg:#1E1E2E;              /* 摩卡底（letterbox 同色，翻页不跳） */
+  --bg-soft:#262637;         /* 提亮一档的表面 */
+  --ink:#CDD6F4;             /* 柔蓝白标题正文 */
+  --ink-2:#A6ADC8;           /* 灰蓝正文 */
+  --ink-3:#7F849C;           /* 退后的注释灰 */
+  --border:rgba(205,214,244,.16);
+  --border-soft:rgba(205,214,244,.09);
+  --lav:#B4BEFE;             /* 薰衣草：结构与强调 */
+  --teal:#94E2D5;            /* 青：路径与成功 */
+  --pink:#F5C2E7;            /* 粉：字符串与提醒，一屏 ≤2 处 */
+  --on-accent:#1E1E2E;       /* 实底糖果色上的深字 */
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：清晰的开发者字体，字重中等，标题不刺眼 ---- */
+.tpl-catppuccin-mocha .h1{font-size:84px;line-height:1.14;font-weight:700;letter-spacing:-.015em;color:var(--ink);margin-bottom:12px}
+.tpl-catppuccin-mocha .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-catppuccin-mocha h4{font-family:inherit;color:var(--ink);font-weight:600;font-size:25px;letter-spacing:.01em}
+.tpl-catppuccin-mocha .lede{font-size:23px;line-height:1.85;color:var(--ink-2);font-weight:300;letter-spacing:.01em}
+.tpl-catppuccin-mocha .deck-footer{font-family:'JetBrains Mono',Consolas,monospace;font-size:14px;color:var(--ink-3);letter-spacing:.12em}
+
+/* ---- slide 底：摩卡的层次（径向柔光，中段即 --bg） ---- */
+.tpl-catppuccin-mocha .slide{
+  background:radial-gradient(1200px 780px at 20% -8%,#2A2A40 0%,#1E1E2E 55%,#1A1A28 100%);
+}
+
+/* ---- ambient：柔光圆点，左上一簇 + 右下一簇（学上游磨砂玻璃里的光点） ---- */
+.tpl-catppuccin-mocha .slide::before{
+  content:"";position:absolute;width:640px;height:560px;left:-40px;top:30px;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(circle 26px at 14% 22%,rgba(180,190,254,.17) 0%,transparent 100%),
+    radial-gradient(circle 15px at 46% 64%,rgba(148,226,213,.13) 0%,transparent 100%),
+    radial-gradient(circle 20px at 72% 30%,rgba(245,194,231,.11) 0%,transparent 100%),
+    radial-gradient(circle 11px at 30% 86%,rgba(180,190,254,.12) 0%,transparent 100%);
+}
+.tpl-catppuccin-mocha .slide::after{
+  content:"";position:absolute;width:560px;height:480px;right:-30px;bottom:-20px;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(circle 18px at 34% 42%,rgba(148,226,213,.13) 0%,transparent 100%),
+    radial-gradient(circle 24px at 70% 22%,rgba(180,190,254,.12) 0%,transparent 100%),
+    radial-gradient(circle 12px at 52% 76%,rgba(245,194,231,.09) 0%,transparent 100%);
+}
+
+/* ---- 题签：发光圆点引导的小标签（页首） ---- */
+.tpl-catppuccin-mocha .mh-kicker{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',Consolas,monospace;font-size:15px;letter-spacing:.32em;color:var(--lav)}
+.tpl-catppuccin-mocha .mh-kicker::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--lav);box-shadow:0 0 12px var(--lav)}
+
+/* ---- 渐变线：标题下的一道三色柔光 ---- */
+.tpl-catppuccin-mocha .mh-line{width:230px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--lav),var(--teal) 55%,var(--pink));opacity:.85}
+
+/* ---- 暗色卡：更暗背景上的沉稳载体，层级靠柔和色彩 ---- */
+.tpl-catppuccin-mocha .mh-card{background:rgba(49,50,68,.55);border:1px solid var(--border-soft);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+.tpl-catppuccin-mocha .mh-card-top{position:relative;background:rgba(49,50,68,.55);border:1px solid var(--border-soft);border-radius:18px;padding:36px 40px}
+.tpl-catppuccin-mocha .mh-card-top::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;border-radius:18px 18px 0 0;background:linear-gradient(90deg,var(--lav),var(--teal),var(--pink));opacity:.7}
+
+/* ---- 药丸：半透明糖纸，柔和描边 ---- */
+.tpl-catppuccin-mocha .mh-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid var(--border);border-radius:999px;font-family:'JetBrains Mono',Consolas,monospace;font-size:15px;letter-spacing:.08em;color:var(--ink-2);background:rgba(49,50,68,.45);white-space:nowrap}
+.tpl-catppuccin-mocha .mh-pill-accent{border-color:rgba(180,190,254,.45);color:var(--lav);background:rgba(180,190,254,.10)}
+.tpl-catppuccin-mocha .mh-pill-teal{border-color:rgba(148,226,213,.45);color:var(--teal);background:rgba(148,226,213,.08)}
+
+/* ---- 目录行：等宽编号 + 篇名 + 说明 ---- */
+.tpl-catppuccin-mocha .mh-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-catppuccin-mocha .mh-item:last-child{border-bottom:none}
+.tpl-catppuccin-mocha .mh-n{flex:none;width:50px;height:50px;border:1px solid rgba(180,190,254,.4);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',Consolas,monospace;font-size:17px;font-weight:600;color:var(--lav);background:rgba(180,190,254,.07);align-self:center}
+.tpl-catppuccin-mocha .mh-t{flex:none;width:270px;font-size:27px;font-weight:600;letter-spacing:.02em;color:var(--ink)}
+.tpl-catppuccin-mocha .mh-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 柔光数字：数据页主视觉，等宽薰衣草 ---- */
+.tpl-catppuccin-mocha .mh-stat{border-top:2px solid #45475A;padding-top:30px}
+.tpl-catppuccin-mocha .mh-stat-v{font-family:'JetBrains Mono',Consolas,monospace;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.02em;color:var(--lav);text-shadow:0 0 28px rgba(180,190,254,.30)}
+.tpl-catppuccin-mocha .mh-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-catppuccin-mocha .mh-stat-l{margin-top:20px;font-size:25px;font-weight:600;letter-spacing:.02em;color:var(--ink)}
+.tpl-catppuccin-mocha .mh-stat-note{margin:12px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：柔蓝白大字 ---- */
+.tpl-catppuccin-mocha .mh-quote{font-size:58px;line-height:1.66;font-weight:700;letter-spacing:.01em;color:var(--ink);max-width:24em;margin:0}
+.tpl-catppuccin-mocha .mh-src{margin:0;font-family:'JetBrains Mono',Consolas,monospace;font-size:18px;letter-spacing:.08em;color:var(--ink-3)}
+
+/* ---- 时间线：柔光圆点 + 细连接线 ---- */
+.tpl-catppuccin-mocha .mh-tl{display:flex;gap:42px;margin-top:6px}
+.tpl-catppuccin-mocha .mh-tl-item{flex:1;position:relative}
+.tpl-catppuccin-mocha .mh-tl-item:not(:last-child)::before{content:"";position:absolute;top:27px;left:54px;right:-42px;height:1px;background:var(--border)}
+.tpl-catppuccin-mocha .mh-tl-dot{position:relative;z-index:1;width:54px;height:54px;border:1.5px solid rgba(148,226,213,.5);border-radius:50%;background:rgba(148,226,213,.07);box-shadow:0 0 16px rgba(148,226,213,.14);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',Consolas,monospace;font-size:18px;font-weight:600;color:var(--teal)}
+.tpl-catppuccin-mocha .mh-tl-t{margin-top:20px;font-family:'JetBrains Mono',Consolas,monospace;font-size:20px;font-weight:600;color:var(--lav);letter-spacing:.04em}
+.tpl-catppuccin-mocha .mh-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-catppuccin-mocha .mh-step{display:flex;align-items:center;gap:20px;padding:25px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-catppuccin-mocha .mh-step:last-child{border-bottom:none}
+.tpl-catppuccin-mocha .mh-mini-t{margin:0;font-size:20px;line-height:1.65;color:var(--ink)}
+
+/* ---- 行动钮：薰衣草实底，全模板少有的实色块 ---- */
+.tpl-catppuccin-mocha .mh-btn{display:inline-flex;align-items:center;gap:12px;padding:16px 42px;border-radius:999px;background:var(--lav);color:var(--on-accent);font-family:'JetBrains Mono',Consolas,monospace;font-size:19px;font-weight:700;letter-spacing:.08em;box-shadow:0 0 26px rgba(180,190,254,.22)}
+
+/* ---- 终端窗口：代码页母题（标题栏三圆点 + 文件名 + 语言标签） ---- */
+.tpl-catppuccin-mocha .mh-term{border:1px solid var(--border-soft);border-radius:16px;background:#181825;overflow:hidden;display:flex;flex-direction:column}
+.tpl-catppuccin-mocha .mh-bar{display:flex;align-items:center;gap:11px;padding:16px 24px;background:rgba(49,50,68,.38);border-bottom:1px solid var(--border-soft)}
+.tpl-catppuccin-mocha .mh-dot{flex:none;width:13px;height:13px;border-radius:50%}
+.tpl-catppuccin-mocha .mh-file{margin-left:8px;font-family:'JetBrains Mono',Consolas,monospace;font-size:16px;color:var(--ink-3);letter-spacing:.04em}
+.tpl-catppuccin-mocha .mh-lang{margin-left:auto;padding:4px 14px;border:1px solid rgba(148,226,213,.4);border-radius:999px;font-family:'JetBrains Mono',Consolas,monospace;font-size:14px;color:var(--teal);letter-spacing:.08em}
+.tpl-catppuccin-mocha .mh-codeblock{margin:0;padding:30px 38px;font-family:'JetBrains Mono','Noto Sans SC',Consolas,monospace;font-size:20px;line-height:1.9;color:var(--ink-2);white-space:pre;overflow:hidden}
+
+/* ---- 语法色：薰衣草管结构、粉管字符串、青管函数、灰管注释 ---- */
+.tpl-catppuccin-mocha .mh-kw{color:var(--lav)}
+.tpl-catppuccin-mocha .mh-str{color:var(--pink)}
+.tpl-catppuccin-mocha .mh-fn{color:var(--teal)}
+.tpl-catppuccin-mocha .mh-cm{color:#6C7086}
+.tpl-catppuccin-mocha .mh-num{color:#F9E2AF}
+
+/* ---- 页面切换（翻页动画）：柔雾轻移 ---- */
+.tpl-catppuccin-mocha{--page-shift:16px;--page-dur:.55s;--page-ease:cubic-bezier(.4,0,.2,1)}

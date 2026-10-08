@@ -259,15 +259,15 @@ export const useChatStore = defineStore('chat', {
       return null
     },
 
-    /** 发送用户消息（SSE 流式） */
-    async send(text: string, webSearch = false) {
+    /** 发送用户消息（SSE 流式；images 是压缩好的 data URL 附图） */
+    async send(text: string, webSearch = false, images: string[] = []) {
       const content = text.trim()
-      if (!content || this.status !== 'idle') return
+      if ((!content && !images.length) || this.status !== 'idle') return
       this.deckTouched = false
-      this.events.push({ kind: 'user', id: nextId(), text: content })
+      this.events.push({ kind: 'user', id: nextId(), text: content, images: images.length ? images : undefined })
       this.status = 'streaming'
       await this.consume(() =>
-        startChat({ sessionId: this.sessionId ?? 0, deckId: this.deckId, content, webSearch }),
+        startChat({ sessionId: this.sessionId ?? 0, deckId: this.deckId, content, webSearch, images }),
       )
     },
 
@@ -385,7 +385,7 @@ export function projectTranscript(t: Transcript): ViewEvent[] {
 
   for (const m of t.messages as TranscriptMessage[]) {
     if (m.role === 'user') {
-      out.push({ kind: 'user', id: next(), text: m.content })
+      out.push({ kind: 'user', id: next(), text: m.content, images: m.images })
       continue
     }
     if (m.role === 'assistant') {

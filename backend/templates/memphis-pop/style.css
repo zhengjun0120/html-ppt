@@ -1,0 +1,97 @@
+/* memphis-pop — 孟菲斯波普。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/memphis-pop（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 琥珀黄 #F59E0B × 薰衣草紫 #8B5CF6 的高饱和对撞：浅三色渐变打底，
+ * 卡用白纸底 + 3px 粗墨描边 + 同色硬投影（波普海报语言），
+ * 几何碎屑与页底锯齿彩带是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在内容之下，骨架零成本）。热闹只来自装饰与色彩，不来自密度。 */
+.tpl-memphis-pop{
+  --bg:#F8E9F3;              /* letterbox 底：渐变中段值，翻页不跳 */
+  --bg-soft:#FFF7DE;         /* 奶油纸 */
+  --ink:#0F172A;             /* 沉稳墨蓝黑（标题与描边） */
+  --ink-2:#374151;           /* 正文 */
+  --ink-3:#6B7280;           /* 次级灰 */
+  --amber:#F59E0B;           /* 琥珀黄 */
+  --violet:#8B5CF6;          /* 薰衣草紫 */
+  --indigo:#818CF8;          /* 靛蓝（第三撞色） */
+  --paper:rgba(255,255,255,.92);
+  --border:rgba(15,23,42,.30);
+  --border-soft:rgba(15,23,42,.14);
+  font-family:Inter,'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 画布底：奶油到粉紫到雾靛的浅三色渐变 ---- */
+.tpl-memphis-pop .slide{background:linear-gradient(135deg,#FFF7DE 0%,#FBE3F5 48%,#E4E2FB 100%)}
+
+/* ---- 字阶：900 字重大标题本身就是装饰，字距放宽给呼吸感 ---- */
+.tpl-memphis-pop .h1{font-size:92px;line-height:1.06;font-weight:900;letter-spacing:.02em;color:var(--ink);margin-bottom:12px}
+.tpl-memphis-pop .h2{font-size:54px;line-height:1.12;font-weight:900;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-memphis-pop h4{font-family:inherit;color:var(--ink);font-weight:800;font-size:25px;letter-spacing:.03em}
+.tpl-memphis-pop .lede{font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-memphis-pop .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em;font-weight:500}
+
+/* ---- ambient：右上几何碎屑 + 页底锯齿彩带，z-index:-1 画在内容之下 ---- */
+.tpl-memphis-pop .slide::before{
+  content:"";position:absolute;right:36px;top:26px;width:470px;height:380px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 470 380'%3E%3Cpolygon points='330,30 402,150 258,150' fill='%23F59E0B' opacity='0.9' transform='rotate(14 330 90)'/%3E%3Ccircle cx='120' cy='64' r='26' fill='%238B5CF6' opacity='0.72'/%3E%3Ccircle cx='432' cy='244' r='13' fill='%230F172A' opacity='0.32'/%3E%3Crect x='58' y='248' width='34' height='34' fill='%23F59E0B' opacity='0.6' transform='rotate(28 75 265)'/%3E%3Cpath d='M196 300 h44 M218 278 v44' stroke='%238B5CF6' stroke-width='8' opacity='0.5'/%3E%3Cpath d='M330 306 q20 -28 40 0 q20 28 40 0' stroke='%23F59E0B' stroke-width='6' fill='none' opacity='0.85'/%3E%3Ccircle cx='60' cy='150' r='7' fill='%23818CF8' opacity='0.6'/%3E%3C/svg%3E") no-repeat right top;
+}
+.tpl-memphis-pop .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:16px;z-index:-1;
+  background:repeating-linear-gradient(90deg,var(--amber) 0 28px,var(--violet) 28px 56px);
+  clip-path:polygon(0 100%,5% 0,10% 100%,15% 0,20% 100%,25% 0,30% 100%,35% 0,40% 100%,45% 0,50% 100%,55% 0,60% 100%,65% 0,70% 100%,75% 0,80% 100%,85% 0,90% 100%,95% 0,100% 100%);
+}
+
+/* ---- 题签：黑底奶油字的小方块标签（页首），全模板至多一枚 ---- */
+.tpl-memphis-pop .mp-kicker{display:inline-flex;align-self:flex-start;background:var(--ink);color:var(--bg-soft);padding:9px 20px;font-size:15px;font-weight:800;letter-spacing:.26em;white-space:nowrap}
+
+/* ---- 波浪线：标题下的一笔，薰衣草紫手绘感 ---- */
+.tpl-memphis-pop .mp-wave{width:220px;height:14px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 14'%3E%3Cpath d='M2 11 q14 -16 27 0 q14 16 27 0 q14 -16 27 0 q14 16 27 0 q14 -16 27 0 q14 16 27 0 q14 -16 27 0 q14 16 27 0' stroke='%238B5CF6' stroke-width='5' fill='none'/%3E%3C/svg%3E") no-repeat left center}
+
+/* ---- 粗描边卡：白纸底 + 3px 墨边 + 硬投影，投影三色在网格里轮换 ---- */
+.tpl-memphis-pop .mp-card{position:relative;background:var(--paper);border:3px solid var(--ink);box-shadow:9px 9px 0 var(--violet);padding:34px 36px;display:flex;flex-direction:column;min-height:296px}
+.tpl-memphis-pop .grid .mp-card:nth-child(2){box-shadow:9px 9px 0 var(--amber)}
+.tpl-memphis-pop .grid .mp-card:nth-child(3){box-shadow:9px 9px 0 var(--indigo)}
+.tpl-memphis-pop .mp-card-amber{box-shadow:9px 9px 0 var(--amber)}
+
+/* ---- 描边签：粗描边小胶囊；solid 变体是琥珀底 + 小硬影 ---- */
+.tpl-memphis-pop .mp-tag{display:inline-flex;align-items:center;align-self:flex-start;border:2.5px solid var(--ink);background:var(--paper);color:var(--ink);padding:8px 18px;font-size:16px;font-weight:800;letter-spacing:.1em;white-space:nowrap}
+.tpl-memphis-pop .mp-tag-solid{background:var(--amber);box-shadow:4px 4px 0 var(--ink)}
+
+/* ---- 目录行：编号圆球 + 篇名 + 说明，虚线分行 ---- */
+.tpl-memphis-pop .mp-item{display:flex;align-items:baseline;gap:24px;padding:25px 4px;border-bottom:2.5px dashed var(--border-soft)}
+.tpl-memphis-pop .mp-item:last-child{border-bottom:none}
+.tpl-memphis-pop .mp-n{flex:none;width:52px;height:52px;border:3px solid var(--ink);border-radius:50%;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--ink);align-self:center}
+.tpl-memphis-pop .mp-t{flex:none;width:250px;font-size:27px;font-weight:900;letter-spacing:.04em;color:var(--ink)}
+.tpl-memphis-pop .mp-d{flex:1;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 数字卡：粗描边 + 硬投影，数值用墨黑压阵（大字重已足够喧闹） ---- */
+.tpl-memphis-pop .mp-stat{background:var(--paper);border:3px solid var(--ink);box-shadow:9px 9px 0 var(--violet);padding:30px 32px}
+.tpl-memphis-pop .grid .mp-stat:nth-child(2){box-shadow:9px 9px 0 var(--amber)}
+.tpl-memphis-pop .grid .mp-stat:nth-child(3){box-shadow:9px 9px 0 var(--indigo)}
+.tpl-memphis-pop .mp-stat-v{font-size:96px;line-height:1;font-weight:900;letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums}
+.tpl-memphis-pop .mp-stat-u{font-size:26px;font-weight:700;color:var(--ink-3);margin-left:8px}
+.tpl-memphis-pop .mp-stat-l{margin-top:18px;font-size:23px;font-weight:900;letter-spacing:.04em;color:var(--ink)}
+.tpl-memphis-pop .mp-stat-note{margin:10px 0 0;font-size:17px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 巨字引言：海报口号 ---- */
+.tpl-memphis-pop .mp-quote{font-size:62px;line-height:1.5;font-weight:900;letter-spacing:.02em;color:var(--ink);max-width:26em;margin:0}
+.tpl-memphis-pop .mp-src{margin:0;font-size:18px;font-weight:700;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：编号圆球 + 虚线串联，时间点用薰衣草紫 ---- */
+.tpl-memphis-pop .mp-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-memphis-pop .mp-tl-item{flex:1;position:relative}
+.tpl-memphis-pop .mp-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:62px;right:-44px;border-top:3px dashed var(--border)}
+.tpl-memphis-pop .mp-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:3px solid var(--ink);border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--ink)}
+.tpl-memphis-pop .mp-tl-t{margin-top:18px;font-size:22px;font-weight:900;color:var(--violet);letter-spacing:.04em}
+.tpl-memphis-pop .mp-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-memphis-pop .mp-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:2.5px dashed var(--border-soft)}
+.tpl-memphis-pop .mp-step:last-child{border-bottom:none}
+.tpl-memphis-pop .mp-mini-t{margin:0;font-size:19px;line-height:1.65;color:var(--ink-2);font-weight:500}
+
+/* ---- 行动钮：琥珀底粗描边 + 硬投影，收尾页唯一的大色块 ---- */
+.tpl-memphis-pop .mp-btn{display:inline-flex;align-items:center;padding:14px 38px;border:3px solid var(--ink);background:var(--amber);color:var(--ink);font-size:21px;font-weight:900;letter-spacing:.14em;box-shadow:6px 6px 0 var(--ink);white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：带一点弹跳的进场 ---- */
+.tpl-memphis-pop{--page-shift:18px;--page-dur:.55s;--page-ease:cubic-bezier(.3,1.3,.5,1)}

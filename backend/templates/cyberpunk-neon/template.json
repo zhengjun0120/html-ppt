@@ -1,0 +1,81 @@
+{
+  "id": "cyberpunk-neon",
+  "name": "赛博霓虹",
+  "description": "纯黑夜幕被霓虹粉青撕裂：冷白标题自带辉光，故障网格与扫描线自动衬底，发光描边勾出暗色卡片——未来已来，且不问你是否准备好",
+  "tags": ["宣言", "科技", "深色"],
+  "scenario": ["技术分享", "产品发布", "黑客马拉松", "地下文化分享", "夜拍主题展"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "霓虹封面",
+      "use": "开场：等宽题签 + 辉光大标题 + 一句定位，粉青描边标签点题",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 28-56 字；题签 ≤16 字；标签各 ≤10 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录屏",
+      "use": "议程：暗卡里 4 行篇目（青色描边编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡点位",
+      "use": "三个并列要点：暗卡 + 粉描边题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边标签），右边暗卡装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个标签；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "霓虹数字",
+      "use": "三个关键数据：青色发光大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "夜行引文",
+      "use": "整页一句引文：辉光大字 + 出处 + 两个支撑标签",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 辉光大字章节名 + 一个过渡问题 + 两个看点标签",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "巡展时间线",
+      "use": "3-4 个节点的横向时间线：发光方块节点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾入场",
+      "use": "收尾：辉光大字 + 一句行动提醒 + 粉底按钮 + 描边标签",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；标签 ≤12 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/cyberpunk-neon",
+    "license": "Apache-2.0"
+  }
+}

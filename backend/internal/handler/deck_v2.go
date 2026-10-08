@@ -7,19 +7,22 @@ package handler
 // 归属问题 → 404（与 v1 同一条"不泄露存在性"纪律）。
 
 import (
+	"context"
 	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
-	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/authctx"
-	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/response"
+	"html-ppt/backend/internal/service/deck"
+	"html-ppt/backend/internal/service/tplsuggest"
 )
 
 func (h *Handler) uid(c *gin.Context) (uint, bool) {
@@ -39,6 +42,12 @@ func mapDeckErr(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{
 			"code": "outline_conflict", "latest_version": conflict.LatestVersion, "message": err.Error(),
 		})
+		return
+	}
+	var mismatch deck.StageMismatch
+	if errors.As(err, &mismatch) {
+		// 重复确认/重复提交落在已前进的阶段上：不是请求错误，是状态冲突
+		response.Err(c, http.StatusConflict, err.Error())
 		return
 	}
 	var locked agent.ErrStageLocked
@@ -102,10 +111,20 @@ func (h *Handler) ConfirmOutline(c *gin.Context) {
 	if !ok {
 		return
 	}
-	to, err := h.decks.ConfirmOutline(uid, c.Param("id"))
+	id := c.Param("id")
+	to, err := h.decks.ConfirmOutline(uid, id)
 	if err != nil {
 		mapDeckErr(c, err)
 		return
+	}
+	// gate 1 一过就后台预热模板推荐：等用户读到选模板页，结果多半已写进
+	// deck.json 缓存，推荐区秒出——LLM 的十几秒延迟从关键路径上整个挪走。
+	// client 必须在请求 ctx 里解析（BYOK 的 key 挂在 authctx），后台换用独立
+	// context 活过本次响应；失败静默，预热只是增强。
+	if h.suggest != nil && h.agent != nil {
+		if cl, ok := h.suggestLLM(c.Request.Context()); ok {
+			go h.prewarmSuggestions(cl, uid, id)
+		}
 	}
 	response.OK(c, gin.H{"stage": to})
 }
@@ -132,6 +151,65 @@ func (h *Handler) SelectTemplate(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"stage": to})
+}
+
+// TemplateSuggestions POST /api/decks/:id/template-suggestions[?refresh=1] ——
+// 选模板阶段的 AI 推荐（tplsuggest）。LLM/解析失败返回空 suggestions（200），
+// 前端静默隐藏推荐区；归属走 404 口径，阶段不对走 409（mapDeckErr）。
+// 澄清诉求是尽力而为的上下文：取不到（降级模式等）就空着，不阻断推荐。
+func (h *Handler) TemplateSuggestions(c *gin.Context) {
+	uid, ok := h.uid(c)
+	if !ok {
+		return
+	}
+	if h.suggest == nil {
+		response.Err(c, http.StatusServiceUnavailable, "推荐服务不可用")
+		return
+	}
+	cl, ok := h.suggestLLM(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusServiceUnavailable, "推荐服务不可用")
+		return
+	}
+	deckID := c.Param("id")
+	sugs, err := h.suggest.Suggest(c.Request.Context(), uid, deckID, cl,
+		h.clarifyContext(c.Request.Context(), uid, deckID),
+		c.Query("refresh") == "1")
+	if err != nil {
+		mapDeckErr(c, err)
+		return
+	}
+	if sugs == nil {
+		sugs = []deck.TplSuggestion{}
+	}
+	response.OK(c, gin.H{"suggestions": sugs})
+}
+
+// suggestLLM 推荐调用的 LLM 接入参数。必须在请求 ctx 里解析——BYOK 的
+// 用户 key 挂在 authctx 上，换 ctx 就拿不到了。
+func (h *Handler) suggestLLM(ctx context.Context) (tplsuggest.LLM, bool) {
+	if h.agent == nil {
+		return tplsuggest.LLM{}, false
+	}
+	cl := h.agent.CustomizeLLMFor(ctx)
+	return tplsuggest.LLM{Client: cl.Client, Model: cl.Model}, cl.Client != nil
+}
+
+// clarifyContext 澄清诉求（尽力而为）：任何失败都当"没有诉求"，不阻断推荐。
+func (h *Handler) clarifyContext(ctx context.Context, uid uint, deckID string) string {
+	s, err := h.agent.ClarifyUserMessages(ctx, uid, deckID, 2000)
+	if err != nil {
+		return ""
+	}
+	return s
+}
+
+// prewarmSuggestions 后台预计算模板推荐（gate 1 确认后启动）。与用户主动请求
+// 走同一个 Suggest：缓存命中就空转，同 deck 在飞去重锁保证不会重复调 LLM。
+func (h *Handler) prewarmSuggestions(cl tplsuggest.LLM, uid uint, deckID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	_, _ = h.suggest.Suggest(ctx, uid, deckID, cl, h.clarifyContext(ctx, uid, deckID), false)
 }
 
 // GenerateDeck POST /api/decks/:id/generate?session_id=N[&resume=1] —— 触发生成 run。

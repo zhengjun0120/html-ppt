@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>暮松色板 · 给开源项目做一套色彩系统</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-rose-pine">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="rp-kicker">设计系统分享 · 暮松 v2.0</p>
+    <h1 class="h1 mt-m">给开源项目，<br>做一套色板。</h1>
+    <div class="rp-rule mt-s"></div>
+    <p class="lede mt-m" style="max-width:52ch">一块暮色紫黑，一枝玫瑰粉，两针松青。暮松 v2.0：12 个语义色槽与三端 token 的社区实验。</p>
+    <div class="row mt-l" style="gap:24px">
+      <span class="rp-chip">npm i duskpine</span>
+      <span class="rp-pill">分享人 · 林暮</span>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场先让画面停两秒，观众的眼睛需要先适应暗色，再开始讲色板。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="rp-kicker">今晚的脉络</p>
+    <h2 class="h2 mt-m">四步种出一片松林</h2>
+    <div class="rp-card mt-l" style="margin-top:44px">
+      <div class="rp-item"><span class="rp-n">01</span><span class="rp-t">为什么要做</span><span class="rp-d">零散取色，让暗色界面越改越乱</span></div>
+      <div class="rp-item"><span class="rp-n">02</span><span class="rp-t">十二个色槽</span><span class="rp-d">语义先行，颜色只是语义的皮肤</span></div>
+      <div class="rp-item"><span class="rp-n">03</span><span class="rp-t">对比与呼吸</span><span class="rp-d">AA 及格线与暗色层级一起守</span></div>
+      <div class="rp-item"><span class="rp-n">04</span><span class="rp-t">社区与生长</span><span class="rp-d">两百位贡献者怎么接住这套色</span></div>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">前两段偏设计，后两段偏工程；结尾有 npm 与仓库入口。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="rp-kicker">暮松 · 公开数据</p>
+    <h2 class="h2 mt-m">色板之外的三个数字</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="rp-stat"><div class="rp-stat-v">12<span class="rp-stat-u">个</span></div><div class="rp-stat-l">语义色槽</div><p class="rp-stat-note">底面文字三层、强调四槽、语义两槽，见 v2.0 文档</p></div>
+      <div class="rp-stat"><div class="rp-stat-v">217<span class="rp-stat-u">人</span></div><div class="rp-stat-l">累计贡献者</div><p class="rp-stat-note">仓库 contributors 页，2026-08 读数</p></div>
+      <div class="rp-stat"><div class="rp-stat-v">48<span class="rp-stat-u">万</span></div><div class="rp-stat-l">周下载量</div><p class="rp-stat-note">npm 每周下载近四周中位，四舍五入</p></div>
+    </div>
+    <p class="rp-src mt-m" style="margin-top:40px">来源：暮松仓库与 npm 公开页（2026-08/09 读数）。</p>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">数字放在前面是想说：这不只是审美，是一套被用起来的基础设施。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="rp-kicker">第二章 · 语义先行</p>
+    <h1 class="h1 mt-m">先定语义，<br>再挑颜色。</h1>
+    <p class="lede mt-m" style="max-width:48ch">名字定了职责：玫瑰管心跳，松青管呼吸，金色只在大事发生时出现。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="rp-pill rp-pill-accent">玫瑰 · 强调</span>
+      <span class="rp-pill">金 · 奖赏</span>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">这页把三色分工讲透，后面所有页都在兑现这句话。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="rp-kicker">三条设计约定</p>
+    <h2 class="h2 mt-m">暗色里的温柔纪律</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="rp-card"><span class="rp-pill rp-pill-accent">语义</span><h4 class="mt-m">名字先于色值</h4><p class="rp-note mt-s">每个槽位先写用途再写色值；改名字要过社区 RFC，改色值不用。</p></div>
+      <div class="rp-card"><span class="rp-pill rp-pill-accent">及格线</span><h4 class="mt-m">正文对比 4.5:1</h4><p class="rp-note mt-s">正文对底色一律过 AA；玫瑰粉只给标题与图标，不排小正文。</p></div>
+      <div class="rp-card"><span class="rp-pill rp-pill-accent">呼吸感</span><h4 class="mt-m">层级靠亮度差</h4><p class="rp-note mt-s">底、面、浮三层只用亮度分家，边框轻到几乎看不见为止。</p></div>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">三条约定是 v2.0 的 RFC 摘要，完整文档在仓库 wiki。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="rp-kicker">从色卡到落地</p>
+    <h2 class="h2 mt-m">一套色板，三步种进产品</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">语义定好后，先用脚本把色值灌进设计工具，再生成三端 token；每季跑一次对比度巡检，不达标的槽位当场亮黄牌。</p>
+        <p class="rp-note mt-m">色值改动永远走 PR，改前改后的截图贴进描述里。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="rp-pill">token 自动生成</span>
+          <span class="rp-pill">每季巡检</span>
+        </div>
+      </div>
+      <div class="rp-card">
+        <div class="rp-step"><span class="rp-n">01</span><p class="rp-mini-t">写语义 RFC，定槽位职责</p></div>
+        <div class="rp-step"><span class="rp-n">02</span><p class="rp-mini-t">脚本生成三端 token</p></div>
+        <div class="rp-step"><span class="rp-n">03</span><p class="rp-mini-t">巡检对比度，黄牌整改</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">巡检脚本是社区贡献的，这页顺便感谢 217 人里的那一位。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="rp-kicker">主题即代码</p>
+    <h2 class="h2 mt-m">一份主题，就是一段 JSON</h2>
+    <div class="rp-term mt-l" style="margin-top:44px">
+      <div class="rp-term-bar"><span class="rp-dot"></span><span class="rp-dot"></span><span class="rp-dot"></span><span class="rp-term-name">themes/duskpine.json</span><span class="rp-lang">json</span></div>
+      <pre class="rp-codeblock"><code>{
+  "name": "duskpine-v2",
+  "base": { "bg": "#191724", "surface": "#1f1d2e" },
+  "text": { "hi": "#e0def4", "lo": "#908caa" },
+  "rose": { "accent": "#eb6f92" },
+  "gold": { "reward": "#f6c177" },
+  "foam": { "calm": "#9ccfd8" },
+  "meta": { "slots": 12, "contrast": "AA" }
+}</code></pre>
+      <div class="rp-status"><span>duskpine-v2 · 12 槽位</span><span>contrast AA · 源自暮松</span></div>
+    </div>
+    <p class="rp-note mt-m" style="margin-top:28px">产品侧只认识槽位名，不认识色值；改主题，不改一行业务代码。</p>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">这份 JSON 是全项目唯一允许出现色值的地方——纪律本身就是设计。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="rp-kicker">暮松年轮</p>
+    <h2 class="h2 mt-m">一片松林的四年</h2>
+    <div class="rp-tl mt-l" style="margin-top:52px">
+      <div class="rp-tl-item"><div class="rp-tl-dot">01</div><div class="rp-tl-t">2023.02</div><p class="rp-tl-d">v0.1 上架 npm，只有六个色槽</p></div>
+      <div class="rp-tl-item"><div class="rp-tl-dot">02</div><div class="rp-tl-t">2024.05</div><p class="rp-tl-d">语义重构，槽位收敛为十二个</p></div>
+      <div class="rp-tl-item"><div class="rp-tl-dot">03</div><div class="rp-tl-t">2025.03</div><p class="rp-tl-d">编辑器与终端主题开源</p></div>
+      <div class="rp-tl-item"><div class="rp-tl-dot">04</div><div class="rp-tl-t">2026.06</div><p class="rp-tl-d">v2.0 发版，贡献者破两百</p></div>
+    </div>
+    <p class="rp-src mt-m" style="margin-top:44px">年份取自仓库 release 标签，人数为发版次日读数。</p>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">时间线上有两次「做减法」：从 v0.1 到语义重构，是项目真正的转折。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="rp-kicker">设计师的话</p>
+    <p class="rp-quote mt-l" style="margin-top:40px">「好的设计，是尽可能少的设计。」</p>
+    <p class="rp-src mt-m">—— Dieter Rams · 设计十诫之十</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="rp-pill rp-pill-accent">少即是温柔</span>
+      <span class="rp-pill">槽位十二个</span>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">十二个槽位就是对这句话的回应——每多一个槽位，都要给得出理由。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="rp-kicker">把暮松带回家</p>
+    <h1 class="h1 mt-m">暮色有尽，<br>松青常新。</h1>
+    <p class="lede mt-m" style="max-width:48ch">色板与三端 token 以 MIT 许可开放，仓库与 npm 入口见页脚；用之前，先读完那份十二槽语义表。</p>
+    <div class="row mt-l" style="gap:24px">
+      <span class="rp-btn">试用色板</span>
+      <span class="rp-pill">v2.0 · MIT</span>
+      <span class="rp-chip">npm i duskpine</span>
+    </div>
+    <div class="deck-footer"><span>暮松色板 · 2026</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：今晚装上，明天把项目里的硬编码色值换掉。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

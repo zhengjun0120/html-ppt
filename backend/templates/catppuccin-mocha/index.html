@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>终端美化的分寸</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-catppuccin-mocha">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="mh-kicker">终端自习室 · 夜谈第 7 期</p>
+    <h1 class="h1 mt-m">终端美化的分寸，<br>比主题更重要。</h1>
+    <div class="mh-line mt-s"></div>
+    <p class="lede mt-m" style="max-width:50ch">一套主题用了三年的人，聊聊终端配置该在哪里停手：三处颜色、一条耗时预算，和一份不再折腾的 dotfiles。</p>
+    <div class="row mt-l" style="gap:18px">
+      <span class="mh-pill mh-pill-accent">摩卡配色 · 实操向</span>
+      <span class="mh-pill">2025-10-17 · 线上直播</span>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场先立题：今晚不晒花哨配置，讲「分寸」两个字。等下有一页真实配置可以照抄。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="mh-kicker">今晚议程</p>
+    <h2 class="h2 mt-m">夜谈四段</h2>
+    <div class="mh-card mt-l" style="margin-top:44px">
+      <div class="mh-item"><span class="mh-n">01</span><span class="mh-t">为什么讲分寸</span><span class="mh-d">配置是怎么从三行膨胀到三百行的</span></div>
+      <div class="mh-item"><span class="mh-n">02</span><span class="mh-t">摩卡的三原则</span><span class="mh-d">底色恒定、点缀不超三色、耗时设预算</span></div>
+      <div class="mh-item"><span class="mh-n">03</span><span class="mh-t">动手改三处</span><span class="mh-d">拿真实配置演示：符号、路径、耗时提醒</span></div>
+      <div class="mh-item"><span class="mh-n">04</span><span class="mh-t">收敛与备份</span><span class="mh-d">把改动收进 dotfiles，升级不痛</span></div>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">四段是递进关系：先看清问题，再立原则，最后动手。重点在第三段，会留跟练时间。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="mh-kicker">社区问卷 · 2025</p>
+    <h2 class="h2 mt-m">先看三个数字</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="mh-stat"><div class="mh-stat-v">62<span class="mh-stat-u">%</span></div><div class="mh-stat-l">主题换过三套</div><p class="mh-stat-note">312 份问卷中选「三套及以上」者的占比</p></div>
+      <div class="mh-stat"><div class="mh-stat-v">218<span class="mh-stat-u">行</span></div><div class="mh-stat-l">配置体面上限</div><p class="mh-stat-note">20 份公开 dotfiles 的行数中位数，超出多半在堆插件</p></div>
+      <div class="mh-stat"><div class="mh-stat-v">40<span class="mh-stat-u">ms</span></div><div class="mh-stat-l">提示符预算</div><p class="mh-stat-note">zsh 5.9 加 starship 冷启动实测中位数，超了就感觉卡</p></div>
+    </div>
+    <p class="mt-m" style="margin-top:44px;font-size:17px;color:#7F849C;letter-spacing:.04em">来源：终端自习室 2025-09 问卷（N=312）与 GitHub 公开 dotfiles 抽样；耗时实测机为 M2 Air。</p>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">三个数字给今晚定调：换主题的人很多，留住配置的很少；218 行和 40ms 是后面所有判断的尺子。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="mh-kicker">第二段 · 摩卡的三原则</p>
+    <h1 class="h1 mt-m">先定底色，<br>再谈点缀。</h1>
+    <p class="lede mt-m" style="max-width:48ch">深灰蓝的底是桌面，粉彩是桌上的灯：灯最多留三盏，再多就成夜市了。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="mh-pill mh-pill-accent">底色恒定</span>
+      <span class="mh-pill">点缀 ≤3 色</span>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">过渡页：把三条原则讲清楚，后面动手才不会改回老路。摩卡配色正好是这三条的范本。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="mh-kicker">摩卡的三原则</p>
+    <h2 class="h2 mt-m">三颗糖果，各管一摊</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="mh-card mh-card-top"><span class="mh-pill mh-pill-accent">#B4BEFE</span><h4 class="mt-m">薰衣草管结构</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#A6ADC8">关键词、目录编号、按钮底：凡是「骨架」的位置都用它，眼睛扫过去能原路找回来。</p></div>
+      <div class="mh-card mh-card-top"><span class="mh-pill mh-pill-teal">#94E2D5</span><h4 class="mt-m">青管路径成功</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#A6ADC8">路径、对钩、构建通过：给「找得到」和「没问题」一个专属颜色，状态一眼可辨。</p></div>
+      <div class="mh-card mh-card-top"><span class="mh-pill">#F5C2E7</span><h4 class="mt-m">粉只给字符串</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#A6ADC8">粉是全桌最甜的糖，只留给字符串与高亮提醒，一屏别超过两处，多了会腻。</p></div>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">颜色分工比颜色本身重要：结构、状态、内容三层分开，主题怎么换都不会乱。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="mh-kicker">动手环节</p>
+    <h2 class="h2 mt-m">打开配置，只改三处</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">打开 starship.toml，你会想改一百个字段。今晚请只改三处：提示符符号、目录颜色、耗时提醒——其余保持上游默认，将来升级才不会痛。</p>
+        <p class="mt-m" style="font-size:19px;line-height:1.8;color:#A6ADC8">验收标准：改完重启终端，要能一眼说出哪个颜色管什么；说不出来就是改多了。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="mh-pill mh-pill-accent">40ms 预算</span>
+          <span class="mh-pill">三处封顶</span>
+        </div>
+      </div>
+      <div class="mh-card">
+        <div class="mh-step"><span class="mh-n">1</span><p class="mh-mini-t">备份：复制一份原配置，文件名带上当天日期</p></div>
+        <div class="mh-step"><span class="mh-n">2</span><p class="mh-mini-t">改色：只动 character 与 directory 两个小节</p></div>
+        <div class="mh-step"><span class="mh-n">3</span><p class="mh-mini-t">回测：跑一次构建，看青色对钩还在不在</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">这三步今晚每个人都跟一遍。卡在第二步入场的，助教在连麦区逐个看配置。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="mh-kicker">实操演示 · 照抄即可</p>
+    <h2 class="h2 mt-m">把原则写进配置</h2>
+    <div class="mh-term mt-l" style="margin-top:38px">
+      <div class="mh-bar"><span class="mh-dot" style="background:#f38ba8"></span><span class="mh-dot" style="background:#f9e2af"></span><span class="mh-dot" style="background:#a6e3a1"></span><span class="mh-file">starship.toml</span><span class="mh-lang">TOML</span></div>
+      <pre class="mh-codeblock"><code><span class="mh-cm"># starship.toml —— 摩卡配色，只动三处</span>
+<span class="mh-kw">[character]</span>
+success_symbol = <span class="mh-str">"[❯](bold #b4befe)"</span>  <span class="mh-cm"># 薰衣草：安静的成功色</span>
+error_symbol = <span class="mh-str">"[❯](bold #f38ba8)"</span>   <span class="mh-cm"># 红只留给出错</span>
+<span class="mh-kw">[directory]</span>
+style = <span class="mh-str">"bold #94e2d5"</span>              <span class="mh-cm"># 青：路径一眼定位</span>
+<span class="mh-kw">[cmd_duration]</span>
+min_time = <span class="mh-num">40</span>                       <span class="mh-cm"># 超过预算才显示</span>
+style = <span class="mh-str">"bold #f9e2af"</span></code></pre>
+    </div>
+    <p class="mt-m" style="font-size:18px;line-height:1.7;color:#A6ADC8">符号与三处颜色，四十毫秒预算写进 min_time，其余字段原封不动。</p>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">这九行就是全部改动：两处符号、一处路径色、一处预算。抄完记得重启终端再验收。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="mh-kicker">我的配置编年史</p>
+    <h2 class="h2 mt-m">三年，越改越少</h2>
+    <div class="mh-tl mt-l" style="margin-top:52px">
+      <div class="mh-tl-item"><div class="mh-tl-dot">1</div><div class="mh-tl-t">2023.03</div><p class="mh-tl-d">初尝 ricing，一口气堆到 12 个插件</p></div>
+      <div class="mh-tl-item"><div class="mh-tl-dot">2</div><div class="mh-tl-t">2023.11</div><p class="mh-tl-d">第一次做减法，插件砍到 5 个</p></div>
+      <div class="mh-tl-item"><div class="mh-tl-dot">3</div><div class="mh-tl-t">2024.08</div><p class="mh-tl-d">锁定摩卡底色，自定项收敛到三处</p></div>
+      <div class="mh-tl-item"><div class="mh-tl-dot">4</div><div class="mh-tl-t">2025.09</div><p class="mh-tl-d">配置停在 218 行，一年没再动过</p></div>
+    </div>
+    <p class="mt-m" style="margin-top:44px;font-size:17px;color:#7F849C;letter-spacing:.04em">读法：方向只有一个——变少。218 行是 2025 年 9 月的仓库快照，不是目标值。</p>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">这页是我的真实仓库历史。 ricing 的尽头是克制，这句话等会儿引文页还会出现一次。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="mh-kicker">一位听众的留言</p>
+    <p class="mh-quote mt-l" style="margin-top:40px">「主题是命令行的衣服，<br>合身比好看重要。」</p>
+    <p class="mh-src mt-m">—— 终端自习室第 6 期课后问卷</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="mh-pill mh-pill-accent">一年没换</span>
+      <span class="mh-pill">删过两回插件</span>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">第 6 期收到的两百多条留言里，被顶得最高的一条。今晚的「分寸」两个字，就是它。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="mh-kicker">今晚三件事</p>
+    <h1 class="h1 mt-m">把分寸带回家。</h1>
+    <p class="lede mt-m" style="max-width:48ch">回去只做三步：备份、改三处、跑一遍构建。下周同一时间开跟练场，晒出你的 40ms。</p>
+    <div class="row mt-l" style="gap:22px">
+      <span class="mh-btn">领配置模板</span>
+      <span class="mh-pill">github.com/terminal-study/mocha</span>
+    </div>
+    <div class="deck-footer"><span>终端自习室 · 2025</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：领模板。仓库里有今晚的完整配置与回滚说明，出问题一条命令还原。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

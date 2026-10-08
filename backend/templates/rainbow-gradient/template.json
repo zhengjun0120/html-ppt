@@ -1,0 +1,81 @@
+{
+  "id": "rainbow-gradient",
+  "name": "彩虹渐变",
+  "description": "彩虹在白底流动，每一帧都是庆祝的理由：七彩丝带贯穿全页，白色卡片浮在柔彩之上，欢快但不混乱",
+  "tags": ["庆典", "渐变", "撞色"],
+  "scenario": ["年度庆典", "城市活动策划", "品牌营销发布", "团队年会", "亲子运动会"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "彩虹开场",
+      "use": "开场：题签胶囊 + 大字标题 + 彩虹条 + 一句定位，彩色圆点芯片点缀，底部彩虹浪自动衬底",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 28-48 字；题签 ≤14 字；胶囊 ≤12 字"
+    },
+    {
+      "id": "contents",
+      "name": "庆典目录",
+      "use": "议程：白色大卡里 4 行篇目（彩虹环编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 12-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三彩要点",
+      "use": "三个并列要点：白卡 + 彩签胶囊 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；彩签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左讲右办",
+      "use": "左边把一件事讲透（lede + 补充 + 胶囊），右边白卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个胶囊；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "庆祝数字",
+      "use": "三个关键数据：玫红到紫的渐变大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "欢呼引言",
+      "use": "整页一句引文：大字 + 出处 + 两个支撑胶囊，右侧留白处缀一段彩虹条",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；胶囊各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "彩门章节",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡问题 + 两个看点胶囊",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；胶囊各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "赛程时间线",
+      "use": "4 个节点的横向时间线：彩虹环圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "冲线收尾",
+      "use": "收尾：大字 + 一句行动提醒 + 海军蓝按钮 + 胶囊与彩点，像冲过终点线",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；胶囊 ≤10 字"
+    }
+  ],
+  "fonts": ["PingFang SC", "Microsoft YaHei", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/rainbow-gradient",
+    "license": "Apache-2.0"
+  }
+}

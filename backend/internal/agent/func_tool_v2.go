@@ -464,6 +464,7 @@ func layoutIDsOf(tpl *template.Template) []string {
 }
 
 // emitV2 向前端推送 v2 管线事件（ctx 里没有 emit 时静默跳过——单测环境）。
+// 载荷同时放进 Data（对象，API 直连直接读）与 Content（遗留的 JSON 字符串形态）。
 func (a *AgentService) emitV2(ctx context.Context, eventType string, payload map[string]any) {
 	emit := emitFrom(ctx)
 	if emit == nil {
@@ -473,7 +474,7 @@ func (a *AgentService) emitV2(ctx context.Context, eventType string, payload map
 	if err != nil {
 		return
 	}
-	_ = emit(StreamEvent{Type: eventType, Content: string(data)})
+	_ = emit(StreamEvent{Type: eventType, Content: string(data), Data: data})
 }
 
 // marshalTool v2 工具的返回序列化。入参全是 map/struct 字面量（必然可序列化），
@@ -527,6 +528,13 @@ func (a *AgentService) buildToolsV2(stage string) map[string]Tool {
 	switch stage {
 	case "clarifying":
 		mountCommon()
+		// 冷启动首轮也给 submit_outline：用户第一条消息把主题/受众/页数说清（或
+		// 明确免提问）时一步到位，API 直连不再被迫"先答一轮澄清"两步走。
+		// 纪律约束在 clarify.md：拿不准仍先 ask_user。clarifying 作用域只出现在
+		// 无 deck 的冷启动首轮（scopeForSession），不会漏给已有 deck 的阶段。
+		mountTool[submitOutlineArgs](tools, "submit_outline",
+			"提交结构化大纲并创建 deck。仅当用户第一条消息已把主题/受众/页数等关键信息说清、或明确要求不要提问时直接使用；信息不够先 ask_user。提交成功后向用户逐行展示页面结构。",
+			a.toolSubmitOutline, 0)
 	case deck.StageOutlining:
 		mountCommon()
 		mountTool[submitOutlineArgs](tools, "submit_outline",

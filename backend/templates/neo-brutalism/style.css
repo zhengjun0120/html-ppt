@@ -1,0 +1,95 @@
+/* neo-brutalism — 新野兽派（大胆 · 宣言）。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/neo-brutalism（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 设计界的朋克摇滚：3-4px 厚黑描边 + 零模糊硬阴影（Npx Npx 0）+ 暖画布上的
+ * 高饱和撞色（荧光橙 × 信号红 × 奶油白）。禁细线边框、禁模糊阴影、禁柔和颜色；
+ * 卡片允许少量歪斜与偏移，但默认留足空隙，不做积木墙。 */
+.tpl-neo-brutalism{
+  --bg:#FFEDD5;              /* 暖白→柔黄渐变的中段（letterbox 翻页不跳） */
+  --ink:#0F172A;             /* 深墨：描边与标题 */
+  --ink-2:#1E293B;           /* 暗石板正文 */
+  --ink-3:#475569;           /* 石板灰小字 */
+  --border:#0F172A;          /* 粗黑描边专用 */
+  --cream:#FFF7ED;           /* 奶油白 */
+  --orange:#F97316;          /* 荧光橙：主情绪 */
+  --red:#EF4444;             /* 信号红：副情绪 */
+  --yellow:#FDE68A;          /* 荧光黄：荧光笔划 */
+  font-family:'Inter','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：大且自信，900 为骨 ---- */
+.tpl-neo-brutalism .h1{font-size:76px;line-height:1.08;font-weight:900;letter-spacing:-.02em;color:var(--ink);margin-bottom:12px}
+.tpl-neo-brutalism .h2{font-size:58px;line-height:1.1;font-weight:900;letter-spacing:-.015em;color:var(--ink);margin-bottom:10px}
+.tpl-neo-brutalism h4{font-family:inherit;font-size:24px;font-weight:900;color:var(--ink);letter-spacing:-.005em}
+.tpl-neo-brutalism .lede{font-size:22px;line-height:1.7;color:var(--ink-2);font-weight:400;max-width:54ch}
+.tpl-neo-brutalism .deck-footer{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--ink-3);text-transform:uppercase}
+
+/* ---- ambient：暖白→柔黄画布 + 角落斜置描边色块（低透明度，不抢拳头） ---- */
+.tpl-neo-brutalism .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(160deg,#FFF7ED 0%,#FFEDD5 50%,#FDE68A 100%);
+}
+.tpl-neo-brutalism .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' preserveAspectRatio='none'%3E%3Crect x='1400' y='-150' width='600' height='400' fill='%23F97316' stroke='%230F172A' stroke-width='6' transform='rotate(-6 1700 50)' opacity='.38'/%3E%3Crect x='-90' y='850' width='460' height='330' fill='%23EF4444' stroke='%230F172A' stroke-width='6' transform='rotate(4 140 1015)' opacity='.32'/%3E%3C/svg%3E") no-repeat center;
+  background-size:100% 100%;
+}
+
+/* ---- 粗标签与黑底徽章 ---- */
+.tpl-neo-brutalism .nb-kicker{font-size:15px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--ink)}
+.tpl-neo-brutalism .nb-badge{display:inline-flex;align-items:center;padding:7px 16px;background:var(--ink);color:var(--orange);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--red);font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+/* ---- 描边标题盒：标题住在盒子里，阴影是橙色的 ---- */
+.tpl-neo-brutalism .nb-box{display:inline-block;background:var(--cream);border:4px solid var(--ink);box-shadow:7px 7px 0 var(--orange);padding:10px 28px}
+
+/* ---- 白卡：3px 黑描边 + 零模糊硬阴影；阴影颜色轮换黑/橙/红 ---- */
+.tpl-neo-brutalism .nb-card{background:rgba(255,255,255,.96);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:28px 30px;display:flex;flex-direction:column}
+.tpl-neo-brutalism .nb-hot{box-shadow:6px 6px 0 var(--orange)}
+.tpl-neo-brutalism .nb-wild{box-shadow:6px 6px 0 var(--red)}
+.tpl-neo-brutalism .grid .nb-card:nth-child(1){transform:rotate(-.6deg)}
+.tpl-neo-brutalism .grid .nb-card:nth-child(3){transform:rotate(.7deg)}
+
+/* ---- 描边标签：歪斜是手感 ---- */
+.tpl-neo-brutalism .nb-tag{display:inline-flex;align-items:center;padding:8px 18px;background:var(--cream);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap}
+.tpl-neo-brutalism .row .nb-tag:nth-child(odd){transform:rotate(-1.2deg)}
+.tpl-neo-brutalism .row .nb-tag:nth-child(even){transform:rotate(1.3deg)}
+
+/* ---- 目录行 / 步骤行：黄色编号方块 ---- */
+.tpl-neo-brutalism .nb-row{display:flex;align-items:baseline;gap:24px;padding:20px 4px;border-bottom:3px solid rgba(15,23,42,.12)}
+.tpl-neo-brutalism .nb-row:last-child{border-bottom:none}
+.tpl-neo-brutalism .nb-step{display:flex;align-items:center;gap:20px;padding:20px 4px;border-bottom:3px solid rgba(15,23,42,.12)}
+.tpl-neo-brutalism .nb-step:last-child{border-bottom:none}
+.tpl-neo-brutalism .nb-n,.tpl-neo-brutalism .nb-step-i{flex:none;width:44px;height:44px;background:var(--yellow);border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--ink);align-self:center}
+.tpl-neo-brutalism .nb-t{flex:none;width:280px;font-size:24px;font-weight:900;color:var(--ink)}
+.tpl-neo-brutalism .nb-d{flex:1;font-size:17px;line-height:1.7;color:var(--ink-2)}
+.tpl-neo-brutalism .nb-mini-t{margin:0;font-size:19px;line-height:1.6;color:var(--ink)}
+
+/* ---- 数据卡：硬阴影三连，一张橙底重色卡做焦点 ---- */
+.tpl-neo-brutalism .nb-stat{background:rgba(255,255,255,.96);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:26px 28px}
+.tpl-neo-brutalism .nb-stat-hot{background:var(--orange)}
+.tpl-neo-brutalism .nb-stat-v{font-size:78px;line-height:1;font-weight:900;letter-spacing:-.02em;color:var(--ink)}
+.tpl-neo-brutalism .nb-stat-l{margin-top:12px;font-size:17px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-neo-brutalism .nb-stat-note{margin:8px 0 0;font-size:15px;line-height:1.65;color:var(--ink-2)}
+.tpl-neo-brutalism .nb-src{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:.08em;color:var(--ink-2)}
+
+/* ---- 立场宣言：900 大字 + 荧光黄荧光笔划 ---- */
+.tpl-neo-brutalism .nb-quote{font-size:56px;line-height:1.4;font-weight:900;letter-spacing:-.01em;color:var(--ink);max-width:24em;margin:0}
+.tpl-neo-brutalism .nb-mark{display:inline-block;background:var(--yellow);padding:2px 12px}
+
+/* ---- 时间线：描边方块节点，颜色轮换奶油/橙/黄/红 ---- */
+.tpl-neo-brutalism .nb-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-neo-brutalism .nb-tl-item{flex:1;position:relative}
+.tpl-neo-brutalism .nb-tl-item:not(:last-child)::before{content:"";position:absolute;top:23px;left:54px;right:-40px;height:3px;background:var(--ink)}
+.tpl-neo-brutalism .nb-tl-dot{position:relative;z-index:1;width:46px;height:46px;background:var(--cream);border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--ink)}
+.tpl-neo-brutalism .nb-tl-item:nth-child(2) .nb-tl-dot{background:var(--orange)}
+.tpl-neo-brutalism .nb-tl-item:nth-child(3) .nb-tl-dot{background:var(--yellow)}
+.tpl-neo-brutalism .nb-tl-item:nth-child(4) .nb-tl-dot{background:var(--red);color:var(--cream)}
+.tpl-neo-brutalism .nb-tl-t{margin-top:18px;font-size:20px;font-weight:900;color:var(--ink)}
+.tpl-neo-brutalism .nb-tl-d{margin-top:8px;font-size:17px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮与黑通栏条：收尾的重拳 ---- */
+.tpl-neo-brutalism .nb-btn{display:inline-flex;align-items:center;padding:16px 44px;background:var(--orange);color:var(--ink);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);font-size:20px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.tpl-neo-brutalism .nb-strip{background:var(--ink);color:var(--cream);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--orange);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+/* ---- 页面切换（翻页动画）：砸桌子的顿挫感 ---- */
+.tpl-neo-brutalism{--page-shift:48px;--page-dur:.38s}

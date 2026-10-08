@@ -1,0 +1,100 @@
+/* editorial-serif — 杂志衬线。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/editorial-serif（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 奶油纸三段渐变 + 全衬线正文：衬线标题、首字下沉、左缘栏线、斜体英文副题，
+ * 深橙是编辑的红色铅笔，只画线与圈点；页边栏线与刊尾花饰是每页自动衬底的
+ * ambient 层（z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-editorial-serif{
+  --bg:#FDF4E3;              /* 奶油纸中段（letterbox 翻页不跳） */
+  --paper-1:#FEF7ED;         /* 纸渐变起 */
+  --paper-2:#FFF7ED;         /* 纸渐变中 */
+  --paper-3:#FFFBEB;         /* 纸渐变终 */
+  --ink:#431407;             /* 深褐标题 */
+  --ink-2:#7C2D12;           /* 焦棕正文 */
+  --ink-3:#9A6B4F;           /* 弱说明与图注 */
+  --border:rgba(120,53,15,.22);
+  --border-soft:rgba(120,53,15,.13);
+  --accent:#EA580C;          /* 深橙（编辑的红色铅笔） */
+  --accent-soft:#F97316;     /* 亮橙 */
+  font-family:Georgia,'Songti SC','STSong','Noto Serif SC','SimSun',serif;
+}
+
+/* ---- 画布：奶油纸三段渐变，如泛黄的信纸 ---- */
+.tpl-editorial-serif .slide{background:linear-gradient(160deg,var(--paper-1) 0%,var(--paper-2) 52%,var(--paper-3) 100%)}
+
+/* ---- 字阶：全衬线，标题优雅、正文舒展，段首可下沉 ---- */
+.tpl-editorial-serif .h1{font-size:92px;line-height:1.06;font-weight:700;letter-spacing:.01em;color:var(--ink);margin-bottom:12px}
+.tpl-editorial-serif .h2{font-size:58px;line-height:1.14;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:8px}
+.tpl-editorial-serif h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:27px;letter-spacing:.02em}
+.tpl-editorial-serif .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400;max-width:56ch}
+.tpl-editorial-serif .deck-footer{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.20em}
+
+/* ---- ambient：左缘页边栏线 + 刊尾花饰线，z-index:-1 画在内容之下 ---- */
+.tpl-editorial-serif .slide::before{
+  content:"";position:absolute;left:52px;top:96px;bottom:96px;width:1px;z-index:-1;
+  background:rgba(120,53,15,.18);
+}
+.tpl-editorial-serif .slide::after{
+  content:"";position:absolute;right:88px;bottom:60px;width:120px;height:36px;z-index:-1;opacity:.55;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 36'%3E%3Cpath d='M4,18 Q30,4 60,18 T116,18' stroke='%23EA580C' stroke-width='1.5' fill='none' opacity='0.5'/%3E%3Ccircle cx='60' cy='18' r='3' fill='%23EA580C' opacity='0.55'/%3E%3C/svg%3E") no-repeat center;
+}
+
+/* ---- 刊名标签：等宽字 + 深橙细杠，页首的刊物口吻 ---- */
+.tpl-editorial-serif .es-tag{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:15px;font-weight:700;letter-spacing:.30em;color:var(--accent);text-transform:uppercase}
+.tpl-editorial-serif .es-tag::before{content:"";width:40px;height:2px;background:var(--accent)}
+
+/* ---- 编辑短线：标题下的深橙 2px 短线 ---- */
+.tpl-editorial-serif .es-rule{width:72px;height:2px;background:var(--accent)}
+
+/* ---- 首字下沉：导语第一个字沉下去，人文刊物的签名 ---- */
+.tpl-editorial-serif .es-drop{float:left;font-family:inherit;font-size:88px;line-height:.82;font-weight:700;color:var(--accent);margin:6px 14px 0 0}
+
+/* ---- 暖白卡：纸张的温度，极淡棕描边 ---- */
+.tpl-editorial-serif .es-card{background:rgba(255,250,245,.90);border:1px solid var(--border);padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 引言块：亮橙左线的斜体引文，编辑批注口吻 ---- */
+.tpl-editorial-serif .es-quote-block{border-left:2px solid var(--accent-soft);padding-left:24px;font-size:21px;line-height:1.75;color:var(--ink-2);font-style:italic}
+
+/* ---- 描边药丸：细描边胶囊；橙色款是红笔圈点 ---- */
+.tpl-editorial-serif .es-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 20px;border:1px solid rgba(120,53,15,.30);border-radius:999px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:15px;letter-spacing:.16em;color:var(--ink-2);white-space:nowrap}
+.tpl-editorial-serif .es-pill-accent{border-color:var(--accent);color:var(--accent)}
+
+/* ---- 要目行：橙圈序号 + 篇名 + 说明，细线分组 ---- */
+.tpl-editorial-serif .es-item{display:flex;align-items:baseline;gap:24px;padding:27px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-editorial-serif .es-item:last-child{border-bottom:none}
+.tpl-editorial-serif .es-n{flex:none;width:52px;height:52px;border-radius:50%;border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:Georgia,'Songti SC',serif;font-size:19px;color:var(--accent);align-self:center}
+.tpl-editorial-serif .es-t{flex:none;width:260px;font-family:inherit;font-size:29px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-editorial-serif .es-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 橙批数字：数据页主视觉 ---- */
+.tpl-editorial-serif .es-stat{border-top:2px solid var(--accent);padding-top:28px}
+.tpl-editorial-serif .es-stat-v{font-family:Georgia,'Songti SC',serif;font-size:102px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--accent)}
+.tpl-editorial-serif .es-stat-u{font-size:26px;color:var(--ink-3);margin-left:8px}
+.tpl-editorial-serif .es-stat-l{margin-top:18px;font-family:inherit;font-size:27px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-editorial-serif .es-stat-note{margin:12px 0 0;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 卷首引文：衬线大字 ---- */
+.tpl-editorial-serif .es-quote{font-family:inherit;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.02em;color:var(--ink);max-width:26em;margin:0}
+.tpl-editorial-serif .es-src{margin:0;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.20em;color:var(--ink-3)}
+
+/* ---- 斜体英文副题：段落之间的一行气口 ---- */
+.tpl-editorial-serif .es-en{font-family:Georgia,serif;font-style:italic;font-size:18px;letter-spacing:.06em;color:var(--ink-3)}
+
+/* ---- 时间线：橙圈圆点 + 细棕连接线 ---- */
+.tpl-editorial-serif .es-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-editorial-serif .es-tl-item{flex:1;position:relative}
+.tpl-editorial-serif .es-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:52px;right:-44px;height:1px;background:rgba(120,53,15,.25)}
+.tpl-editorial-serif .es-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;border:1px solid var(--accent);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:Georgia,'Songti SC',serif;font-size:19px;color:var(--accent)}
+.tpl-editorial-serif .es-tl-t{margin-top:18px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:18px;font-weight:700;letter-spacing:.12em;color:#C2410C}
+.tpl-editorial-serif .es-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-editorial-serif .es-step{display:flex;align-items:center;gap:20px;padding:25px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-editorial-serif .es-step:last-child{border-bottom:none}
+.tpl-editorial-serif .es-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：深褐描边，收尾页 ---- */
+.tpl-editorial-serif .es-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:2px solid var(--ink);font-family:inherit;font-size:22px;font-weight:700;letter-spacing:.20em;color:var(--ink)}
+
+/* ---- 页面切换：像翻一本好书，缓而不滞 ---- */
+.tpl-editorial-serif{--page-shift:18px;--page-dur:.55s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

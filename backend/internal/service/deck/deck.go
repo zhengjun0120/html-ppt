@@ -1,6 +1,7 @@
 package deck
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,11 @@ import (
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
 )
+
+// ErrNotInstantiated v2 deck 还没选模板（index.html 不存在）。预览端点用
+// errors.Is 识别它出友好占位页——iframe 里糊一层裸 JSON 太吓人，且"deck 不存在"
+// 的文案是误导（deck 在，只是还没生成页面）。
+var ErrNotInstantiated = errors.New("deck 尚未生成页面（先选择模板）")
 
 // idPattern 是 deck id 的白名单。所有来自外部（URL、LLM 工具调用）的 id
 // 都是"不可信输入"：不校验就拼路径，攻击者可以传 ../../ 绕出数据目录
@@ -26,12 +32,15 @@ func IsValidID(id string) bool {
 type Meta struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
+	// Stage 生成流程状态：封面缩略图只有 generating/iterating 才有得渲染，
+	// 前端据此决定要不要发封面请求（未实例化的 deck 没有 index.html）
+	Stage string `json:"stage,omitempty"`
 }
 
 // Service 负责 deck 文件的存取 + 归属校验。
 // 归属的权威在 decks 表：文件系统只是内容存储，"这个 deck 是谁的"只认 DB。
 type Service struct {
-	decksDir string
+	decksDir  string
 	assetsDir string
 	st        *store.Store // nil = 数据库降级模式：所有操作返回不可用
 	deckLocks sync.Map
@@ -77,12 +86,15 @@ func (s *Service) List(userID uint) ([]Meta, error) {
 		return nil, errStorage
 	}
 	var rows []store.Deck
-	if err := s.st.DB.Where("user_id = ? AND format = ?", userID, FormatV2).Order("id").Find(&rows).Error; err != nil {
+	// 新建的排前面：按创建时间倒序（deck-9001 这类"号大但老"的测试稿按 id 排会
+	// 误霸首位），同刻再按 id 倒序兜底稳定
+	if err := s.st.DB.Where("user_id = ? AND format = ?", userID, FormatV2).
+		Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("查询 deck 列表: %w", err)
 	}
 	out := make([]Meta, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, Meta{ID: r.ID, Title: r.Title})
+		out = append(out, Meta{ID: r.ID, Title: r.Title, Stage: r.Stage})
 	}
 	return out, nil
 }
@@ -105,7 +117,10 @@ func (s *Service) readIndex(id string) (string, error) {
 	}
 	data, err := os.ReadFile(p)
 	if err != nil {
-		return "", fmt.Errorf("deck %s 尚未实例化（index.html 缺失，先选择模板）", id)
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("deck %s: %w", id, ErrNotInstantiated)
+		}
+		return "", err
 	}
 	return string(data), nil
 }

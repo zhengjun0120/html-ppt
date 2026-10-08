@@ -3,18 +3,23 @@ import { request } from './client'
 export interface DeckMeta {
   id: string
   title: string
+  /** 生成流程状态：只有 generating/iterating 生成过页面、才有封面可取 */
+  stage?: string
 }
 
 export interface VersionMeta {
   version: string
   time: number
-  operation: 'run' | 'restore'
+  operation: 'run' | 'restore' | 'edit'
   detail: string
   slides: number
 }
 
 export const deckApi = {
   list: () => request<DeckMeta[]>('/api/decks'),
+  /** 编辑器全量保存：body 是 iframe 内序列化的完整 HTML（raw，不 JSON 包装） */
+  saveFile: (deckId: string, html: string) =>
+    request<{ ok: boolean }>(`/api/decks/${deckId}/file`, { method: 'PUT', body: html, raw: true }),
   history: (deckId: string) => request<VersionMeta[]>(`/api/decks/${deckId}/history`),
   restore: (deckId: string, version: string) =>
     request<{ restored: string }>(`/api/decks/${deckId}/history/${version}/restore`, { method: 'POST' }),

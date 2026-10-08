@@ -1,0 +1,98 @@
+/* vaporwave — 蒸汽波。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/vaporwave（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深紫渐变 + 粉青双色：粉 #FF71CE 与青 #01CDFE 只做 ambient（日轮/网格/柱影）
+ * 与点缀（数字/时间线/按钮），正文永远灰白落在深紫底上保证对比度。
+ * 卡是半透明暗紫大圆角——硬边框是隔壁 sharp-mono 的事，这里一切柔和。 */
+.tpl-vaporwave{
+  --bg:#28124E;              /* letterbox 深紫中段（翻页不跳） */
+  --bg-deep:#16062E;
+  --ink:#F8FAFC;             /* 冷白标题 */
+  --ink-2:#E2E8F0;           /* 灰白正文 */
+  --ink-3:#A99BC8;           /* 淡紫小字（页脚/来源行） */
+  --border:rgba(255,113,206,.35);
+  --accent:#FF71CE;          /* 蒸汽粉 */
+  --accent-2:#01CDFE;        /* 蒸汽青 */
+  --violet:#7C3AED;          /* 渐变紫 */
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 画布：深紫到暗蓝的日落渐变（亮带让给装饰，正文区保持深底） ---- */
+.tpl-vaporwave .deck{background:linear-gradient(180deg,#16062E 0%,#2E1065 36%,#4C1D95 62%,#312E81 82%,#141033 100%)}
+
+/* ---- 字阶：衬线宽字距像大理石碑文，正文轻柔浮在色彩上 ---- */
+.tpl-vaporwave .h1{font-family:Georgia,'Times New Roman','Noto Serif SC','Songti SC',serif;font-size:92px;line-height:1.14;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:12px;text-shadow:0 0 32px rgba(255,113,206,.35),0 0 64px rgba(1,205,254,.18)}
+.tpl-vaporwave .h2{font-family:Georgia,'Times New Roman','Noto Serif SC','Songti SC',serif;font-size:56px;line-height:1.18;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:10px;text-shadow:0 0 26px rgba(255,113,206,.3)}
+.tpl-vaporwave h4{font-family:Georgia,'Noto Serif SC',serif;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.06em}
+.tpl-vaporwave .lede{font-size:24px;line-height:1.8;color:var(--ink-2);font-weight:400;letter-spacing:.03em;max-width:54ch}
+.tpl-vaporwave .deck-footer{font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.22em}
+
+/* ---- ambient：条纹落日 + 希腊柱影（上），地平线网格 + 辉光地平线（下） ---- */
+.tpl-vaporwave .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FF71CE'/%3E%3Cstop offset='1' stop-color='%2301CDFE'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='100' cy='100' r='96' fill='url(%23s)' opacity='0.30'/%3E%3Cg stroke='%2316062E' stroke-width='6' opacity='0.6'%3E%3Cline x1='0' y1='52' x2='200' y2='52'/%3E%3Cline x1='0' y1='86' x2='200' y2='86'/%3E%3Cline x1='0' y1='120' x2='200' y2='120'/%3E%3Cline x1='0' y1='150' x2='200' y2='150'/%3E%3Cline x1='0' y1='176' x2='200' y2='176'/%3E%3C/g%3E%3C/svg%3E") no-repeat 74% 34px / 360px 360px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 900' preserveAspectRatio='none'%3E%3Cg stroke='%23FF71CE' stroke-width='2' fill='none' opacity='0.26'%3E%3Crect x='34' y='20' width='52' height='14'/%3E%3Crect x='26' y='34' width='68' height='10'/%3E%3Cline x1='38' y1='44' x2='38' y2='852'/%3E%3Cline x1='60' y1='44' x2='60' y2='852'/%3E%3Cline x1='82' y1='44' x2='82' y2='852'/%3E%3Crect x='26' y='852' width='68' height='10'/%3E%3Crect x='34' y='862' width='52' height='14'/%3E%3C/g%3E%3C/svg%3E") no-repeat 24px 0 / 110px 100%,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 900' preserveAspectRatio='none'%3E%3Cg stroke='%23FF71CE' stroke-width='2' fill='none' opacity='0.26'%3E%3Crect x='34' y='20' width='52' height='14'/%3E%3Crect x='26' y='34' width='68' height='10'/%3E%3Cline x1='38' y1='44' x2='38' y2='852'/%3E%3Cline x1='60' y1='44' x2='60' y2='852'/%3E%3Cline x1='82' y1='44' x2='82' y2='852'/%3E%3Crect x='26' y='852' width='68' height='10'/%3E%3Crect x='34' y='862' width='52' height='14'/%3E%3C/g%3E%3C/svg%3E") no-repeat calc(100% - 24px) 0 / 110px 100%;
+}
+.tpl-vaporwave .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 340' preserveAspectRatio='none'%3E%3Cg stroke='%2301CDFE' stroke-width='1.5' opacity='0.32'%3E%3Cline x1='960' y1='-80' x2='-1240' y2='340'/%3E%3Cline x1='960' y1='-80' x2='-480' y2='340'/%3E%3Cline x1='960' y1='-80' x2='220' y2='340'/%3E%3Cline x1='960' y1='-80' x2='700' y2='340'/%3E%3Cline x1='960' y1='-80' x2='960' y2='340'/%3E%3Cline x1='960' y1='-80' x2='1220' y2='340'/%3E%3Cline x1='960' y1='-80' x2='1700' y2='340'/%3E%3Cline x1='960' y1='-80' x2='2200' y2='340'/%3E%3Cline x1='960' y1='-80' x2='3160' y2='340'/%3E%3C/g%3E%3Cg stroke='%23FF71CE' stroke-width='1.5' opacity='0.28'%3E%3Cline x1='0' y1='30' x2='1920' y2='30'/%3E%3Cline x1='0' y1='95' x2='1920' y2='95'/%3E%3Cline x1='0' y1='175' x2='1920' y2='175'/%3E%3Cline x1='0' y1='262' x2='1920' y2='262'/%3E%3C/g%3E%3C/svg%3E") no-repeat 0 100% / 100% 320px,
+    linear-gradient(90deg,rgba(255,113,206,.55),rgba(1,205,254,.55)) no-repeat 0 calc(100% - 322px) / 100% 2px;
+}
+
+/* ---- 题签：渐变细线 + 等宽小字（页首） ---- */
+.tpl-vaporwave .vw-kicker{display:flex;align-items:center;gap:16px;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.3em;color:var(--accent-2)}
+.tpl-vaporwave .vw-kicker::before{content:"";flex:none;width:40px;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+
+/* ---- 紫卡：半透明暗紫 + 粉描边 + 大圆角，一切柔和 ---- */
+.tpl-vaporwave .vw-card{background:rgba(46,16,101,.58);border:1px solid rgba(255,113,206,.32);border-radius:22px;padding:36px 40px;display:flex;flex-direction:column;min-height:280px;backdrop-filter:blur(8px)}
+
+/* ---- 描边药丸：细描边胶囊，粉为强调 ---- */
+.tpl-vaporwave .vw-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid rgba(255,113,206,.5);border-radius:999px;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-vaporwave .vw-pill-accent{border-color:var(--accent);color:var(--accent)}
+
+/* ---- 目录行：青圈编号 + 篇名 + 说明 ---- */
+.tpl-vaporwave .vw-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid rgba(255,113,206,.16)}
+.tpl-vaporwave .vw-item:last-child{border-bottom:none}
+.tpl-vaporwave .vw-n{flex:none;width:52px;height:52px;border:1.5px solid rgba(1,205,254,.6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:var(--accent-2);align-self:center}
+.tpl-vaporwave .vw-t{flex:none;width:270px;font-family:Georgia,'Noto Serif SC',serif;font-size:29px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
+.tpl-vaporwave .vw-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 渐变数字：数据页主视觉，粉青渐变 + 粉顶线 ---- */
+.tpl-vaporwave .vw-stat{border-top:2px solid rgba(255,113,206,.45);padding-top:28px}
+.tpl-vaporwave .vw-stat-v{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--accent-2)}
+@supports (-webkit-background-clip:text){
+  .tpl-vaporwave .vw-stat-v{background:linear-gradient(90deg,var(--accent) 10%,var(--accent-2) 90%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+}
+.tpl-vaporwave .vw-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-vaporwave .vw-stat-l{margin-top:18px;font-family:Georgia,'Noto Serif SC',serif;font-size:26px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-vaporwave .vw-stat-note{margin:10px 0 0;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 题记引文：衬线宽距大字 ---- */
+.tpl-vaporwave .vw-quote{font-family:Georgia,'Times New Roman','Noto Serif SC',serif;font-size:62px;line-height:1.55;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:24em;margin:0;text-shadow:0 0 34px rgba(255,113,206,.3),0 0 68px rgba(1,205,254,.15)}
+.tpl-vaporwave .vw-src{margin:0;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:18px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排短语：只放留白处，一页至多一条 ---- */
+.tpl-vaporwave .vw-vert{writing-mode:vertical-rl;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:22px;letter-spacing:.5em;line-height:2.2;color:var(--ink-2)}
+.tpl-vaporwave .vw-vert-accent{color:var(--accent)}
+
+/* ---- 时间线：渐变圆点 + 粉青渐变连接线 ---- */
+.tpl-vaporwave .vw-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-vaporwave .vw-tl-item{flex:1;position:relative}
+.tpl-vaporwave .vw-tl-item:not(:last-child)::before{content:"";position:absolute;top:13px;left:58px;right:-40px;height:1px;background:linear-gradient(90deg,rgba(255,113,206,.6),rgba(1,205,254,.6))}
+.tpl-vaporwave .vw-tl-dot{position:relative;z-index:1;width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 0 14px rgba(255,113,206,.5)}
+.tpl-vaporwave .vw-tl-t{margin-top:16px;font-family:'JetBrains Mono','IBM Plex Mono','Noto Sans SC',monospace;font-size:20px;font-weight:700;letter-spacing:.06em;color:var(--accent-2)}
+.tpl-vaporwave .vw-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-vaporwave .vw-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid rgba(255,113,206,.16)}
+.tpl-vaporwave .vw-step:last-child{border-bottom:none}
+.tpl-vaporwave .vw-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 行动钮：粉青渐变胶囊，收尾页 ---- */
+.tpl-vaporwave .vw-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 44px;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#16062E;font-size:21px;font-weight:700;letter-spacing:.14em;box-shadow:0 0 28px rgba(255,113,206,.4)}
+
+/* ---- 页面切换（翻页动画）：像磁带换面一样缓 ---- */
+.tpl-vaporwave{--page-shift:24px;--page-dur:.6s;--page-ease:cubic-bezier(.4,0,.2,1)}

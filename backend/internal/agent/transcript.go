@@ -2,8 +2,10 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/store"
 	"time"
 
@@ -51,10 +53,13 @@ type TranscriptToolCall struct {
 // 工具调用挂在产生它的 assistant 消息上（ToolCalls）；工具结果单独一条
 // role=tool 的消息，用 ToolCallID 关联。ToolName 是顺手解好的名字——
 // 协议里 tool 消息只有 id，不解好的话每个前端都得自己往前翻 assistant 声明。
+// Images 是用户消息的附图（data URL，与库里消息 JSON 同源）——刷新恢复
+// 缩略图全靠它；模型侧可见性由滑动窗口另行控制，与回放无关。
 type TranscriptMessage struct {
 	Seq        int64                `json:"seq"`
 	Role       string               `json:"role"` // user | assistant | tool
 	Content    string               `json:"content"`
+	Images     []string             `json:"images,omitempty"`
 	ToolCalls  []TranscriptToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string               `json:"tool_call_id,omitempty"`
 	ToolName   string               `json:"tool_name,omitempty"`
@@ -185,6 +190,30 @@ func (as *AgentService) SessionTranscript(ctx context.Context, userID, sessionID
 	return t, nil
 }
 
+// 合成 user 消息清单：这几条是后端写给模型的工作流指令（生成开工/续跑、
+// 工具预算吹哨），协议上是 user 角色，但不是"用户说过的话"——回放投影时
+// 滤掉，前端不把它们当用户气泡展示（2026-09-27 用户反馈）。发给模型的不受
+// 影响（消息照常进上下文与落库）。文案改动必须改这里的常量：构造处
+// （agent.go）与过滤处共用同一出处，改一处两边同步。
+const (
+	kickoffGenerateMsg = "开始生成：按工作流走——先 plan_pages 全局规划（被打回就调整重提），" +
+		"然后分批 write_pages 写完全部页，处理量测与 lint 反馈，需要时 review_slides 看图，最后如实汇报。"
+	resumeGenerateMsg = "继续生成：先 list_slides 对齐已写入的页，然后从缺失的页继续 write_pages；" +
+		"若全部页已写入，则按最近一次量测结果修复问题页，修完汇报。"
+	budgetWarnMsg = "工具调用预算还剩 4 轮：只修硬伤（溢出/截断/拒收的页），停止打磨性改动，然后准备收尾汇报"
+	budgetFinalMsg = "工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"
+)
+
+// isSyntheticUserMsg 判断一条 user 消息是否后端合成的工作流指令（不该展示）。
+// 精确匹配：这些文案只由本包常量构造，库里不会出现"长得像"的用户话。
+func isSyntheticUserMsg(content string) bool {
+	switch content {
+	case kickoffGenerateMsg, resumeGenerateMsg, budgetWarnMsg, budgetFinalMsg:
+		return true
+	}
+	return false
+}
+
 // projectTranscript 把协议消息数组投影成回放列表（纯函数，DB 之外可测）。
 //
 // system 不进对话流——它是提示词不是对话内容。
@@ -207,7 +236,18 @@ func projectTranscript(messages []openai.ChatCompletionMessageParamUnion, pendin
 		seq := int64(i)
 		switch {
 		case m.OfUser != nil:
-			out = append(out, TranscriptMessage{Seq: seq, Role: "user", Content: contentString(m.OfUser.Content.OfString)})
+			// 带图消息的 content 是 parts 数组，走 wire JSON 提取文本与图片
+			//（字符串形态与旧路径等价）。合成的工作流指令（开工/续跑/预算）不进
+			// 对话流——用户没说过这话，展示出来就是"系统预设提示词漏到前端"。
+			// seq 照样占位（口径同 system）。
+			userWire, merr := json.Marshal(m.OfUser)
+			content, userImages := "", []string(nil)
+			if merr == nil {
+				content, userImages = chatimg.UserTextAndImages(userWire)
+			}
+			if !isSyntheticUserMsg(content) {
+				out = append(out, TranscriptMessage{Seq: seq, Role: "user", Content: content, Images: userImages})
+			}
 		case m.OfAssistant != nil:
 			tm := TranscriptMessage{Seq: seq, Role: "assistant", Content: contentString(m.OfAssistant.Content.OfString)}
 			for _, tc := range m.OfAssistant.ToolCalls {

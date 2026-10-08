@@ -1,0 +1,81 @@
+{
+  "id": "red-research-framework",
+  "name": "丹朱教研",
+  "description": "白底丹朱红骨架的教研汇报风：红底白字标题带、红描边模块卡与金黄推进箭头，把复杂内容拆成可讲述的模块与路径，重逻辑推进而非装饰",
+  "tags": ["教育", "国风"],
+  "scenario": ["教学设计", "教研成果汇报", "职业教育说课", "党政培训", "课程框架展示"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "课题封面",
+      "use": "开场：等宽品牌行 + 红色徽标 + 红底白字标题带（主标题 + 一句副题）+ 一句汇报语境",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；副题 14-26 字；lede 24-48 字；徽标 ≤6 字"
+    },
+    {
+      "id": "contents",
+      "name": "结题提纲",
+      "use": "提纲：红描边白卡内 4 行板块（红圆编号 + 板块名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；板块名 ≤8 字；说明 12-24 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三模块要点",
+      "use": "三个并列模块：红描边白卡 + 红色大编号 + 小标题 + 两句说明，如框架图的三模块",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；编号 2 字符；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左讲右序",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边红描边白卡装三行步骤或规程",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "成效数据",
+      "use": "三个关键数据：淡红底红左线数据块 + 丹朱大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 12-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "教育题记",
+      "use": "整页一句引文：近黑大字 + 出处 + 两个支撑药丸，教育立场的压轴一笔",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：品牌行 + 徽标 + 红底白字标题带（章节名 + 一句过渡语）+ 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡语 14-26 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "课题历程",
+      "use": "3-4 个节点的横向时间线：红圆点编号 + 金黄虚线连接 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "结题致谢",
+      "use": "收尾：红字大标题 + 一句说明 + 丹朱实底按钮 + 药丸，结题落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤14 字"
+    }
+  ],
+  "fonts": ["PingFang SC", "Noto Sans SC", "Menlo"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/red-research-framework",
+    "license": "Apache-2.0"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "id": "chinese-porcelain-rose",
+  "name": "中国传统色·凝脂杨妃",
+  "description": "凝脂米白与杨妃玫瑰粉双主色的瓷韵国风：顶部釉色细带、缠枝柔线、楷体色名与胭脂小印，如传世瓷器安静讲述",
+  "tags": ["国风", "奢华"],
+  "scenario": ["瓷器茶器品牌", "艺术展览导览", "文化遗产分享", "高端礼品发布", "传统节日活动"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "瓷面封面",
+      "use": "开场：题签 + 宋体大字标题 + 釉线 + 一句定位，顶部色带与缠枝衬底，可配胭脂小印",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；小印 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "展目",
+      "use": "议程：象牙卡内 4 行展目（瓷圈编号 + 展区名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；展区名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "釉色三卡",
+      "use": "三个并列釉色系列：色卡（楷体色名大字 + 拼音小字 + 释义 + hex）",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；色名 2-3 字；拼音 ≤8 字符；释义 22-44 字；hex 为真实色值"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边胶囊），右象牙卡装三行体验步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个胶囊；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "胭脂数字",
+      "use": "三个关键数据：胭脂大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "瓷语引文",
+      "use": "整页一句引文：宋体大字 + 出处 + 两个支撑胶囊，留白处可立竖排短句",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；胶囊各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度题签 + 大字章节名 + 一个过渡问题 + 两个看点胶囊",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；胶囊各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "导览时间线",
+      "use": "3-4 个站点的横向时间线：瓷圈站号 + 时间点 + 一句看点",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾相邀",
+      "use": "收尾：宋体大字 + 一句行动提醒 + 胭脂实底按钮 + 描边胶囊与小印",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；胶囊 ≤10 字"
+    }
+  ],
+  "fonts": ["Songti SC", "KaiTi", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/chinese-porcelain-rose",
+    "license": "Apache-2.0"
+  }
+}
