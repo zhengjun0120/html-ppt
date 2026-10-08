@@ -21,47 +21,47 @@ type AnswerRequest struct {
 	Note      string       `json:"note"` //用户拒绝回答则为空，如果有新的指示则使用这个字段，如 用户说“你来决定吧”并跳过问题
 }
 
-func (h *Handler) AskUser(c *gin.Context){
-	uid,ok := authctx.UserID(c.Request.Context())
-	if !ok{
-		response.Err(c,http.StatusUnauthorized,"未登录")
+func (h *Handler) AskUser(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
 
 	var req AnswerRequest
-	if err := c.ShouldBindJSON(&req);err !=nil{
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ParameterErr(c)
 		return
 	}
 
-	if req.SessionID==0{
-		response.Err(c,400,"缺少 session_id")
+	if req.SessionID == 0 {
+		response.Err(c, 400, "缺少 session_id")
 		return
 	}
 
-	if err := h.agent.EnsureSessionOwner(uid,req.SessionID);err !=nil{
-		response.Err(c,http.StatusNotFound,"会话不存在")
+	if err := h.agent.EnsureSessionOwner(uid, req.SessionID); err != nil {
+		response.Err(c, http.StatusNotFound, "会话不存在")
 		return
 	}
 
 	var payload any
-	if len(req.Answers) >0{
-		payload = map[string]any{"answers":req.Answers}
-	}else{
+	if len(req.Answers) > 0 {
+		payload = map[string]any{"answers": req.Answers}
+	} else {
 		note := req.Note
-		if note == ""{
+		if note == "" {
 			note = "用户未作答，请使用推荐答案"
 		}
-		payload = map[string]any{"note":note}
+		payload = map[string]any{"note": note}
 	}
-	data,err := json.Marshal(payload)
-	if err !=nil{
-		response.Err(c,500,"回答序列化json失败")
+	data, err := json.Marshal(payload)
+	if err != nil {
+		response.Err(c, 500, "回答序列化json失败")
 		return
 	}
 
-	serveAgentSSE(c,func(emit func(agent.StreamEvent) error) (uint, error) {
-		return h.agent.AnswerChat(c.Request.Context(),uid,req.SessionID,string(data),emit)
+	serveAgentSSE(c, func(emit func(agent.StreamEvent) error) (uint, error) {
+		return h.agent.AnswerChat(c.Request.Context(), uid, req.SessionID, string(data), emit)
 	})
 }
 
@@ -75,34 +75,34 @@ func (h *Handler) AskUser(c *gin.Context){
 // 这个会话就只能弃掉。有了它，刷新后卡片能原样回来，硬拦截才不构成死路。
 //
 // 没有暂停时 questions 返回空串（不是错误）：那是正常状态。
-func (h *Handler) PendingAsk(c *gin.Context){
-	uid,ok := authctx.UserID(c.Request.Context())
-	if !ok{
-		response.Err(c,http.StatusUnauthorized,"未登录")
+func (h *Handler) PendingAsk(c *gin.Context) {
+	uid, ok := authctx.UserID(c.Request.Context())
+	if !ok {
+		response.Err(c, http.StatusUnauthorized, "未登录")
 		return
 	}
 
-	sessionID,err := queryUint(c,"session_id")
-	if err !=nil{
-		response.Err(c,400,"session_id 必须是数字")
+	sessionID, err := queryUint(c, "session_id")
+	if err != nil {
+		response.Err(c, 400, "session_id 必须是数字")
 		return
 	}
-	if sessionID == 0{
-		response.Err(c,400,"缺少 session_id")
-		return
-	}
-
-	if err := h.agent.EnsureSessionOwner(uid,sessionID);err !=nil{
-		response.Err(c,http.StatusNotFound,"会话不存在")
+	if sessionID == 0 {
+		response.Err(c, 400, "缺少 session_id")
 		return
 	}
 
-	questions,err := h.agent.PendingAskQuestions(c.Request.Context(),uid,sessionID)
-	if err != nil{
+	if err := h.agent.EnsureSessionOwner(uid, sessionID); err != nil {
+		response.Err(c, http.StatusNotFound, "会话不存在")
+		return
+	}
+
+	questions, err := h.agent.PendingAskQuestions(c.Request.Context(), uid, sessionID)
+	if err != nil {
 		// 会话存在但读不出提问（消息损坏之类）：不该 500 让页面卡住，
 		// 返回"没有待答提问"即可——真有问题用户发消息时会拿到明确报错
-		response.OK(c,gin.H{"questions":""})
+		response.OK(c, gin.H{"questions": ""})
 		return
 	}
-	response.OK(c,gin.H{"questions":questions})
+	response.OK(c, gin.H{"questions": questions})
 }
