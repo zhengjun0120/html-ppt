@@ -1,0 +1,13 @@
+2026/10/07 10:46:58 [info] 数据库已连接: root@127.0.0.1:3306/html_ppt
+2026/10/07 10:47:02 [info] 模板库: 101 个模板就绪（templates）
+2026/10/07 10:47:02 [info] agent 挂载 10 个工具: ask_user delete_slide insert_slide list_history list_slides read_history_diff read_slide review_slides update_slide web_search
+2026/10/07 10:47:02 [info] 组件库目录（read_component 只读）: D:\go_files\html-ppt\backend\web\assets
+2026/10/07 10:47:02 [info] 联网搜索（DeepSeek 服务端 web_search，走 Anthropic 兼容入口）: true
+2026/10/07 10:47:02 [info] agent 观测（trace）: true，落盘目录 D:\go_files\html-ppt\backend\data\traces（截图 true，每会话保留 20 个 run）
+2026/10/07 10:47:02 [info] 视觉审查已开启：无头浏览器走 http://127.0.0.1:8080 取页
+2026/10/07 10:47:02 [info] deck-v2 导出已开启（pdf/png/html，超时 60s）
+2026/10/07 10:47:02 [warn] 用户模板 ut-f044bad5 的 style.css 覆盖不了 base 新骨架的类，layouts.md 保持旧版（请重新 fork）
+2026/10/07 10:47:02 [info] 用户自定义模板已开启（D:\go_files\html-ppt\backend\data\user-templates）
+2026/10/07 10:47:02 [info] HTTP server listening on :8080
+2026/10/07 10:47:03 [info] tplthumb: 预热开始 内置待渲染 0 张，磁盘命中 101 张
+2026/10/07 23:21:16 [info] shutting down...
