@@ -23,6 +23,10 @@ type Config struct {
 	CaptureImages bool
 	RetainRuns    int
 	MaxFieldBytes int
+	// UsageSink 用量账本的落库回调（可 nil）：每条 usage 事件触发一次，由
+	// main.go 装配进各服务的 trace.Config，各开 recorder 的地方原样转发进 Options。
+	// 观测 JSONL 会滚动删除，账本要长期留存，两条链路在这里分叉。
+	UsageSink func(UsageRecord)
 }
 
 // Options 建一个 Recorder 需要的东西。
@@ -37,6 +41,24 @@ type Options struct {
 	MaxFieldBytes int // 0 = 不截断
 	RetainRuns    int // 每个会话最多留几个 run；0 = 不限
 	Live          func(Event)
+	// Model 这次 run 用的模型名，只进用量账本（JSONL 的 run_start/llm_request
+	// 事件各自带 model，不依赖这里）。联网搜索子调用的账本也记它——与观测
+	// 数据同款口径（web_search 的 trace data 里记的就是主模型名）。
+	Model string
+	// UsageSink 可 nil；trace.Usage 每记一笔分项用量就带归属调它一次（锁外）。
+	UsageSink func(UsageRecord)
+}
+
+// UsageRecord 一笔用量连同它的归属，交给账本落库。字段与 store.UsageEvent 对齐，
+// trace 包不 import store（账本侧换算），Day 由落库方按 At 的本地时区算。
+type UsageRecord struct {
+	UserID    uint
+	SessionID uint
+	RunID     string
+	Component string
+	Model     string
+	At        time.Time
+	UsagePart
 }
 
 // Recorder 一次 run 的写入端。**必须由调用方 Close**，否则文件句柄会跟着会话数一起涨。
@@ -50,6 +72,11 @@ type Recorder struct {
 	disabled bool
 
 	runID      string
+	userID     uint
+	sessionID  uint
+	model      string
+	sink       func(UsageRecord)
+	ledger     bool // LedgerOnly 构造的标记：观测关闭但账本还开着（判别用，构造后不变）
 	filePath   string
 	imgDir     string
 	live       func(Event)
@@ -87,6 +114,10 @@ func New(o Options) (*Recorder, error) {
 
 	r := &Recorder{
 		runID:      o.RunID,
+		userID:     o.UserID,
+		sessionID:  o.SessionID,
+		model:      o.Model,
+		sink:       o.UsageSink,
 		filePath:   filepath.Join(sessDir, o.RunID+".jsonl"),
 		imgDir:     filepath.Join(sessDir, o.RunID, "img"),
 		live:       o.Live,
@@ -109,6 +140,26 @@ func New(o Options) (*Recorder, error) {
 	return r, nil
 }
 
+// LedgerOnly 建"只记账、不落盘"的 recorder：观测开关关闭或开文件失败时，
+// 用量账本仍要继续记——账本是业务数据，观测是调试数据，两者不该绑死。
+// disabled 保持 true：Emit/Active/Summary 全按关闭走（没有任何 JSONL 开销），
+// 唯独 Usage 的账本回调放行。
+func LedgerOnly(o Options) *Recorder {
+	return &Recorder{
+		disabled:   true,
+		ledger:     true,
+		runID:      o.RunID,
+		userID:     o.UserID,
+		sessionID:  o.SessionID,
+		model:      o.Model,
+		sink:       o.UsageSink,
+		capture:    o.CaptureImages,
+		maxField:   o.MaxFieldBytes,
+		retainRuns: o.RetainRuns,
+		started:    time.Now(),
+	}
+}
+
 // NewRunID 生成 run_id：13 位 unix 毫秒 + 4 位随机十六进制。
 //
 // 定宽时间戳在前，字典序就等于时间序，所以列表和裁剪都不需要额外的时间字段排序；
@@ -121,6 +172,11 @@ func NewRunID(t time.Time) string {
 		return fmt.Sprintf("%013d-0000", t.UnixMilli())
 	}
 	return fmt.Sprintf("%013d-%s", t.UnixMilli(), hex.EncodeToString(b[:]))
+}
+
+// IsLedgerOnly 报告这是不是账本-only recorder（观测关闭但账本还开着的形态）。
+func (r *Recorder) IsLedgerOnly() bool {
+	return r != nil && r.ledger
 }
 
 // Close 收尾。可重复调用。
@@ -383,8 +439,10 @@ func (s scope) applyTo(e *Event) {
 
 // With 把 recorder 挂进 ctx。r 为 nil / Discard 时原样返回，
 // 于是"关掉 trace"不需要在业务代码里散落任何 if。
+// 例外：LedgerOnly（disabled 但带账本回调）要挂上去——Usage 靠它记账，
+// 而 Emit/Active 仍按 disabled 走，JSONL 的开销一点都不会有。
 func With(ctx context.Context, r *Recorder) context.Context {
-	if r == nil || r.disabled {
+	if r == nil || (r.disabled && r.sink == nil) {
 		return ctx
 	}
 	return context.WithValue(ctx, recorderKey{}, r)
@@ -449,11 +507,18 @@ func Emit(ctx context.Context, e Event) {
 // 后者是为了实时看的时候能看着数字往上涨，而不是等这轮结束才知道花了多少。
 func Usage(ctx context.Context, component string, part UsagePart) {
 	r := From(ctx)
-	if r == nil || r.disabled {
+	if r == nil {
 		return
 	}
 	if part.Calls == 0 {
 		part.Calls = 1 // 没显式给次数就按"一次调用"记；否则分项上会出现 0 次却有 token
+	}
+	// 观测关闭（Discard 无归属；LedgerOnly 带归属）时账本照记、JSONL 不写。
+	if r.disabled {
+		if r.sink != nil {
+			r.sink(newUsageRecord(r, component, part))
+		}
+		return
 	}
 
 	r.mu.Lock()
@@ -470,6 +535,23 @@ func Usage(ctx context.Context, component string, part UsagePart) {
 
 	if r.live != nil && live.Seq > 0 {
 		r.live(live)
+	}
+	// 账本落库同样在锁外：sink 自己保证不慢（异步队列），但这里不持有写锁
+	// 是底线。归属字段构造后不变，读它们不需要锁。
+	if r.sink != nil {
+		r.sink(newUsageRecord(r, component, part))
+	}
+}
+
+func newUsageRecord(r *Recorder, component string, part UsagePart) UsageRecord {
+	return UsageRecord{
+		UserID:    r.userID,
+		SessionID: r.sessionID,
+		RunID:     r.runID,
+		Component: component,
+		Model:     r.model,
+		At:        time.Now(),
+		UsagePart: part,
 	}
 }
 

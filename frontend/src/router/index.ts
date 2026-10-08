@@ -27,6 +27,7 @@ const router = createRouter({
     { path: '/decks/:id', name: 'deck', component: () => import('@/views/DeckView.vue') },
     { path: '/settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/trace', component: () => import('@/views/TraceView.vue') },
+    { path: '/usage', component: () => import('@/views/UsageView.vue') },
     { path: '/', redirect: '/decks' },
     { path: '/:pathMatch(.*)*', redirect: '/decks' },
   ],

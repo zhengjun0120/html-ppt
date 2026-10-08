@@ -26,6 +26,7 @@ import (
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/service/tplthumb"
+	"html-ppt/backend/internal/service/usage"
 	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
@@ -96,6 +97,16 @@ func run() error {
 	}
 	authSvc := auth.New(db, rdb, box, cfg.Auth.JWTSecret, cfg.Auth.TTL(), cfg.SMTP)
 
+	// 用量账本：观测 usage 事件的长期落库（观测 JSONL 每会话只留 20 个 run，
+	// 撑不起"本月用了多少"这类统计）。异步批量写，失败只丢数据不挡生成流。
+	// 数据库降级（st==nil）时没有账本，用量页返回 503。
+	var usageSvc *usage.Service
+	var usageSink func(trace.UsageRecord)
+	if st != nil {
+		usageSvc = usage.New(st.DB)
+		usageSink = usageSvc.Sink()
+	}
+
 	deckSvc := deck.New(cfg.Data.Dir, cfg.Assets.Dir, st)
 
 	// deck-v2 模板注册表：启动时一次加载+校验。失败不阻塞整个服务
@@ -129,6 +140,7 @@ func run() error {
 		CaptureImages: cfg.Trace.CaptureImages,
 		RetainRuns:    cfg.Trace.RetainRunsPerSession,
 		MaxFieldBytes: cfg.Trace.MaxFieldBytes,
+		UsageSink:     usageSink,
 	}); err != nil {
 		return fmt.Errorf("初始化 agent: %w", err)
 	}
@@ -186,6 +198,7 @@ func run() error {
 			MaxFieldBytes: cfg.Trace.MaxFieldBytes,
 			RetainRuns:    cfg.Trace.RetainRunsPerSession,
 			CaptureImages: cfg.Trace.CaptureImages, // 用户附图落盘与视觉截图同一开关
+			UsageSink:     usageSink,
 		})
 		// base 侧修了结构契约（骨架/数量行）后，旧 fork 的 layouts.md 也要跟上。
 		// 必须在下面的重挂循环之前落盘，挂载时读到的才是新文件。骨架的公共类
@@ -214,6 +227,7 @@ func run() error {
 		Dir:           cfg.Trace.Dir,
 		MaxFieldBytes: cfg.Trace.MaxFieldBytes,
 		RetainRuns:    cfg.Trace.RetainRunsPerSession,
+		UsageSink:     usageSink,
 	}
 	// 模板缩略图：loopback 就绪才装配（渲染浏览器从这里拉 preview 页）。
 	// ChromePath 空串 = chromedp 自动探测本机 Chrome（与导出/观测同口径），
@@ -223,7 +237,7 @@ func run() error {
 		thumbSvc = tplthumb.New(templateReg, loopback, cfg.Vision.ChromePath,
 			filepath.Join(cfg.Data.Dir, "template-thumbs"), 60*time.Second)
 	}
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc, traceCfg, thumbSvc)
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc, traceCfg, thumbSvc, usageSvc)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 

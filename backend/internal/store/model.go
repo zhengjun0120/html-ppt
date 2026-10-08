@@ -47,6 +47,29 @@ type ChatSession struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// UsageEvent 用量账本：一次 LLM API 调用记一行（含主循环/看图/联网/推荐/定制全部分项）。
+// 观测台 JSONL 每会话只留 20 个 run、更早的会删，做不了长期统计；这张表是只增不删的
+// 权威账本，用量页（/usage）从它聚合。
+//
+// Day 是" yyyy-mm-dd "服务端本地时区的日期串，时间维度只认它：跨 MySQL/测试用 sqlite
+// 没有时区解析差异，字符串比较即日期范围。CreatedAt 只作落库顺序参考，不参与聚合。
+type UsageEvent struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"index:idx_usage_user_day,priority:1;not null" json:"user_id"`
+	Day       string    `gorm:"index:idx_usage_user_day,priority:2;size:10;not null" json:"day"`
+	Component string    `gorm:"size:32;not null" json:"component"` // main | vision | web_search
+	Model     string    `gorm:"size:128" json:"model"`
+	SessionID uint      `json:"session_id"`
+	RunID     string    `gorm:"size:64" json:"run_id"`
+	Prompt      int64 `json:"prompt"`
+	Completion  int64 `json:"completion"`
+	Total       int64 `json:"total"`
+	Cached      int64 `json:"cached"`
+	Reasoning   int64 `json:"reasoning"`
+	Calls       int   `json:"calls"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 // UserTemplate 用户自定义模板：文件在磁盘（data/user-templates/<id>/ 四件套），
 // 这张表负责 id → 归属/可见性/发布状态 的权威映射。
 //

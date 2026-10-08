@@ -143,6 +143,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.GET("/traces/:sessionID/:runID/events/:seq", h.GetTraceEvent)
 			guarded.GET("/traces/:sessionID/:runID/img/:name", h.GetTraceImage)
 			guarded.GET("/traces/:sessionID/:runID/export", h.ExportTrace)
+
+			// 用量统计（/usage 页）：从账本表（store.UsageEvent）聚合，与观测
+			// JSONL 分离——观测会滚动删除，账本只增不删。
+			guarded.GET("/usage/overview", h.UsageOverview)
 		}
 	}
 

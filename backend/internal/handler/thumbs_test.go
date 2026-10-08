@@ -28,7 +28,7 @@ func newThumbTestHandler(t *testing.T) (*Handler, string, string) {
 	}
 	thumbDir := t.TempDir()
 	h := New(nil, nil, nil, nil, nil, trace.NewStore(t.TempDir()), reg, nil, nil, trace.Config{},
-		tplthumb.New(reg, "http://127.0.0.1:0", "", thumbDir, 0))
+		tplthumb.New(reg, "http://127.0.0.1:0", "", thumbDir, 0), nil)
 	v, err := reg.ContentVersion("tech-sharing")
 	if err != nil {
 		t.Fatalf("ContentVersion: %v", err)
@@ -54,7 +54,7 @@ func TestTemplateThumb(t *testing.T) {
 	h, dir, version := newThumbTestHandler(t)
 
 	t.Run("未装配404", func(t *testing.T) {
-		bare := New(nil, nil, nil, nil, nil, trace.NewStore(t.TempDir()), nil, nil, nil, trace.Config{}, nil)
+		bare := New(nil, nil, nil, nil, nil, trace.NewStore(t.TempDir()), nil, nil, nil, trace.Config{}, nil, nil)
 		if w := thumbRequest(bare, "tech-sharing", version); w.Code != http.StatusNotFound {
 			t.Fatalf("status = %d, 期望 404", w.Code)
 		}

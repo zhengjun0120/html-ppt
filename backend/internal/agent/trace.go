@@ -38,7 +38,7 @@ type runTraceInfo struct {
 //   - **实时回调用 rec.Emit 而不是包级 Emit**：此时 ctx 还没绑定 recorder。
 func (as *AgentService) openTraceRecorder(info runTraceInfo, emit func(StreamEvent) error) *trace.Recorder {
 	if !as.TraceCfg.Enabled {
-		return trace.Discard
+		return as.ledgerTrace(info)
 	}
 	if info.SessionID == 0 {
 		// 没有会话号就没有目录归属，也过不了读侧的校验。理论上到不了这里
@@ -73,11 +73,13 @@ func (as *AgentService) openTraceRecorder(info runTraceInfo, emit func(StreamEve
 		CaptureImages: as.TraceCfg.CaptureImages,
 		MaxFieldBytes: as.TraceCfg.MaxFieldBytes,
 		RetainRuns:    as.TraceCfg.RetainRuns,
+		Model:         as.ModelID,
+		UsageSink:     as.TraceCfg.UsageSink,
 		Live:          live,
 	})
 	if err != nil {
 		log.Printf("[warn] trace: 开启观测失败，本轮不记录 err: %v", err)
-		return trace.Discard
+		return as.ledgerTrace(info)
 	}
 
 	// 挂载了哪些工具要记下来：features 开关的效果在这里一眼可见。
@@ -100,6 +102,20 @@ func (as *AgentService) openTraceRecorder(info runTraceInfo, emit func(StreamEve
 		Tools:       names,
 	})
 	return rec
+}
+
+// ledgerTrace 观测关闭/落盘失败时的账本-only recorder：用量账本是业务数据，
+// 不跟着观测开关一起断（ledgerOnly 不落 JSONL，Active 为 false，零序列化开销）。
+func (as *AgentService) ledgerTrace(info runTraceInfo) *trace.Recorder {
+	return trace.LedgerOnly(trace.Options{
+		SessionID:   info.SessionID,
+		RunID:       trace.NewRunID(time.Now()),
+		UserID:      info.UserID,
+		DeckID:      info.DeckID,
+		ParentRunID: info.ParentRunID,
+		Model:       as.ModelID,
+		UsageSink:   as.TraceCfg.UsageSink,
+	})
 }
 
 // usagePartFrom 把 SDK 的用量换算成观测口径。

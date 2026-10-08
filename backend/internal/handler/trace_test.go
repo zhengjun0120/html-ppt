@@ -45,7 +45,7 @@ func TestListTraces(t *testing.T) {
 	seedTraceRun(t, dir, 3, 7, "1700000000003-c", "deck-0002", long, "tplsugg", true)
 	seedTraceRun(t, dir, 9, 99, "1700000000009-x", "deck-999", "别人的", "", true)
 
-	h := New(nil, nil, nil, nil, nil, trace.NewStore(dir), nil, nil, nil, trace.Config{}, nil)
+	h := New(nil, nil, nil, nil, nil, trace.NewStore(dir), nil, nil, nil, trace.Config{}, nil, nil)
 	r := gin.New()
 	r.GET("/api/traces", h.ListTraces)
 	do := func(query string, uid uint) *httptest.ResponseRecorder {
