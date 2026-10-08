@@ -37,21 +37,16 @@ function fmt(n: number): string {
   return n.toLocaleString()
 }
 
-// 1.2k / 34.5k / 1.2m：卡片和悬浮提示都用短格式，长数字在图表里读不出形状
-function fmtShort(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
-  return String(n)
-}
-
-function dayTitle(d: UsageDay): string {
-  const label = d.date.slice(5)
-  if (d.total === 0) return `${label}：无调用`
-  return `${label}：输入 ${fmtShort(d.uncached_in + d.cached)}（缓存 ${fmtShort(d.cached)}）/ 输出 ${fmtShort(d.output)} · 共 ${fmt(d.total)} tok · ${d.calls} 次`
-}
-
 function rateText(rate: number): string {
   return `${Math.round(rate * 100)}%`
+}
+
+// 悬浮卡片贴边翻转：贴着左右边缘的柱子，卡片朝卡片内侧展开，避免溢出容器
+function tipPos(i: number): string {
+  const n = ov.value?.daily.length ?? 0
+  if (n === 0 || i <= 2) return 'left-0'
+  if (i >= n - 3) return 'right-0'
+  return 'left-1/2 -translate-x-1/2'
 }
 
 // 轴标签：首、每 7 天、末
@@ -115,19 +110,41 @@ function showAxis(i: number): boolean {
             <div
               v-for="(d, i) in ov.daily"
               :key="d.date"
-              class="flex h-full min-w-0 flex-1 flex-col items-center justify-end"
+              class="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end"
             >
+              <!-- 悬浮明细卡：整列都是热区（比细柱好悬停）；贴边列翻转对齐 -->
+              <div
+                v-if="d.total > 0"
+                class="pointer-events-none absolute bottom-full z-10 mb-1 hidden w-max min-w-[150px] rounded-control border border-line bg-surface px-3 py-2 text-left shadow-md group-hover:block"
+                :class="tipPos(i)"
+              >
+                <p class="font-mono text-[11px] text-ink-3">{{ d.date }}</p>
+                <p class="mt-1 flex items-center gap-1.5 text-[11.5px]">
+                  <i class="h-2 w-2 shrink-0 rounded-[2px] bg-success" />缓存命中
+                  <span class="ml-auto pl-3 font-mono">{{ fmt(d.cached) }}</span>
+                </p>
+                <p class="mt-0.5 flex items-center gap-1.5 text-[11.5px]">
+                  <i class="h-2 w-2 shrink-0 rounded-[2px] bg-accent" />未命中输入
+                  <span class="ml-auto pl-3 font-mono">{{ fmt(d.uncached_in) }}</span>
+                </p>
+                <p class="mt-0.5 flex items-center gap-1.5 text-[11.5px]">
+                  <i class="h-2 w-2 shrink-0 rounded-[2px] bg-info" />输出
+                  <span class="ml-auto pl-3 font-mono">{{ fmt(d.output) }}</span>
+                </p>
+                <p class="mt-1 border-t border-line pt-1 text-[11px] text-ink-3">
+                  共 {{ fmt(d.total) }} tok · {{ d.calls }} 次调用
+                </p>
+              </div>
               <div
                 v-if="d.total > 0"
                 class="flex w-full max-w-[20px] flex-col justify-end overflow-hidden rounded-t-[3px]"
                 :style="{ height: barH(d) }"
-                :title="dayTitle(d)"
               >
                 <div class="w-full bg-info" :style="{ height: segH(d.output, d.total) }" />
                 <div class="w-full bg-accent" :style="{ height: segH(d.uncached_in, d.total) }" />
                 <div class="w-full bg-success" :style="{ height: segH(d.cached, d.total) }" />
               </div>
-              <div v-else class="h-[2px] w-full max-w-[20px] rounded-full bg-line" :title="dayTitle(d)" />
+              <div v-else class="h-[2px] w-full max-w-[20px] rounded-full bg-line" :title="`${d.date.slice(5)}：无调用`" />
               <span
                 class="mt-1 h-[14px] font-mono text-[10px] leading-none text-ink-3"
                 :class="showAxis(i) ? '' : 'invisible'"
