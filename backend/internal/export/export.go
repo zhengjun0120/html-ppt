@@ -160,6 +160,11 @@ func (s *Service) EnsureThumbs(ctx context.Context, uid uint, deckID string) (st
 	if err != nil {
 		return "", err
 	}
+	// 没生成过页面的 deck（还在澄清/大纲/选模板阶段）没有 index.html：
+	// 快速失败，别把 chromedp 发出去渲占位页白等 2s 再报"渲染失败"
+	if _, err := os.Stat(indexPath); err != nil {
+		return "", fmt.Errorf("deck 尚未生成页面（index.html 不存在）")
+	}
 	if thumbs.Valid(dir, indexPath) {
 		return dir, nil
 	}

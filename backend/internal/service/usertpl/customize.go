@@ -11,15 +11,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/openai/openai-go/v3"
 
+	"html-ppt/backend/internal/chatimg"
+	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
+	"html-ppt/backend/internal/trace"
 )
 
 // LLM 定制对话的模型接入（由装配层从 agent 服务构造，避免包依赖环）。
@@ -71,6 +76,91 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 		},
 	}),
 	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "write_style",
+		Description: openai.String("整体重写模板的 style.css（全文替换）。必须基于系统提示里的当前全文改造，不要凭空杜撰既有规则；保留 .tpl- 作用域前缀与 token 声明区。安全预检会拒绝 url( 网络外链（仅允许 data: 内联）、@import、expression 等内容，被拒时根据报错修正后重试。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"css": map[string]any{"type": "string", "description": "style.css 完整新全文"},
+			},
+			"required": []string{"css"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "write_demo",
+		Description: openai.String("整体重写模板 demo 的 index.html（全文替换）。必须保留 head 里的 /assets/deck-v2/ 样式引用（fonts/base/animations.css）与 href=\"style.css\" 链接（丢了 base.css 翻页堆叠和字号底线全失效）、body 上的 tpl- 作用域 class 与 /assets/deck-v2/runtime.js 脚本引用；页面是 .deck 下的 <section class=\"slide\"> 序列，版式与类名沿用模板既有体系（不要发明 layouts.md 里没有的版式）。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"html": map[string]any{"type": "string", "description": "index.html 完整新全文"},
+			},
+			"required": []string{"html"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "set_layout_roles",
+		Description: openai.String("改某个版式的适用场景（role，覆盖式不是增量）。roles 是词表的子集、最多 3 个：cover（封面）/toc（目录）/divider（章节）/content（正文）/data（数据）/quote（金句）/code（代码）/cta（行动号召）/thanks（收尾）。用户说「这个版式也能用在数据页」「封面不要用这个」时用它；空数组 = 清空限定（任何场景按内容性质选用）。layout 必须是结构契约里登记的版式 id。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout": map[string]any{"type": "string", "description": "版式 id（结构契约里登记的，如 blank-data）"},
+				"roles": map[string]any{
+					"type": "array",
+					"items": map[string]any{
+						"type": "string",
+						"enum": []string{"cover", "toc", "divider", "content", "data", "quote", "code", "cta", "thanks"},
+					},
+					"description": "新的角色清单（整组替换，最多 3 个）；空数组 = 清空限定",
+				},
+			},
+			"required": []string{"layout", "roles"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "set_layout_meta",
+		Description: openai.String("改某个版式给生成模型看的名称与用途描述（直接影响生成时的版式选择，写得越具体模型选得越准）。name ≤40 字、use ≤200 字；不改的字段省略。layout 必须是结构契约里登记的版式 id。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout": map[string]any{"type": "string", "description": "版式 id（结构契约里登记的）"},
+				"name":   map[string]any{"type": "string", "description": "新版式名称；不改就省略"},
+				"use":    map[string]any{"type": "string", "description": "新用途描述（一句话说清什么内容适合用它）；不改就省略"},
+			},
+			"required": []string{"layout"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "add_layout",
+		Description: openai.String("新增一个版式（写新骨架 + 登记类名 + 可选新 CSS + 可选 demo 示例页），服务端全量校验、失败自动整体回滚。什么时候用：用户想要的内容现有版式装不下（如要三步流程、对比表格、时间线）。要求：layout_id 用小写字母开头的短横线命名（3-40 位）；skeleton 必须是单个顶层 <section class=\"slide …\" data-layout=\"layout_id\">，带 {{中文占位符}}，可带 <div class=\"notes\">讲稿</div>；classes 列出骨架里用到的每一个类（base 原语 + 新类都算），骨架里出现而未声明的类会被拒；fingerprint 从 8 词表选一个（满版居中=hero，纵向条列=stack，卡片阵列=cards，左右分栏=split，代码主导=code，表格行=table，数据图表=chart，大段引用=quote）；新类名必须在 css_append 里给规则（.tpl- 作用域写法、禁网络外链）——只复用既有类就不用传；demo_html 建议提供（完整 <section>，预览与质量体检靠它），占位符用具体示例文案。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout_id":   map[string]any{"type": "string", "description": "版式 id：小写字母开头，3-40 位小写字母/数字/短横线（如 blank-flow）"},
+				"name":        map[string]any{"type": "string", "description": "版式名称（≤40 字）"},
+				"use":         map[string]any{"type": "string", "description": "用途：什么内容适合用它，写具体（≤200 字），直接影响生成时的选择"},
+				"roles":       map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"cover", "toc", "divider", "content", "data", "quote", "code", "cta", "thanks"}}, "description": "适用场景（≤3 个）：决定生成时哪些页面角色会选中它"},
+				"fingerprint": map[string]any{"type": "string", "enum": []string{"hero", "stack", "cards", "split", "code", "table", "chart", "quote"}, "description": "视觉指纹：节奏校验按它判「连续页面长得一样」"},
+				"classes":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "该版式的合法类名全集：骨架里用到的每个类都必须在这里（含 base 原语如 slide/kicker/h2/grid/card/mt-* 等）"},
+				"skeleton":    map[string]any{"type": "string", "description": "骨架 HTML：单个顶层 <section>，data-layout=layout_id，只准用 classes 里声明的类，{{中文占位符 · 提示}} 风格"},
+				"css_append":  map[string]any{"type": "string", "description": "可选：新类名的 CSS 规则（追加到 style.css 末尾，.tpl- 作用域，禁网络外链）；只用既有类就不用传"},
+				"demo_html":   map[string]any{"type": "string", "description": "可选但建议：demo 示例页（完整 <section>，data-layout=layout_id，用具体示例文案代替占位符）"},
+				"constraints": map[string]any{"type": "string", "description": "可选：内容约束（如「2-4 步；每步 12-30 字」）"},
+			},
+			"required": []string{"layout_id", "name", "use", "roles", "fingerprint", "classes", "skeleton"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+		Name:        "remove_layout",
+		Description: openai.String("删除一个版式：自动清理 demo 里引用它的示例页，并做死锁健康检查——删后正文（content）候选不足 3 个会被拒绝（5 页以上的 deck 会因同版式连续超限无合法解），此时应先建议用户加新版式。失败自动整体回滚。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]any{
+				"layout_id": map[string]any{"type": "string", "description": "要删除的版式 id（结构契约里登记的）"},
+			},
+			"required": []string{"layout_id"},
+		},
+	}),
+	openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 		Name:        "finish",
 		Description: openai.String("本轮定制结束。把做了什么、让用户去看哪里复述给用户。"),
 		Parameters: openai.FunctionParameters{
@@ -83,13 +173,24 @@ var customizeTools = []openai.ChatCompletionToolUnionParam{
 	}),
 }
 
-// Customize 一轮对话：把用户消息追加进会话，跑到 finish 或轮次上限。
-func (s *Service) Customize(ctx context.Context, userID uint, id, message string, llm LLM) (string, error) {
+// Customize 一轮对话：把用户消息（可带附图）追加进会话，跑到 finish 或轮次上限。
+// 附图只在本轮可见：本轮成功结束后降级为文本占位（customize_images.go 的设计
+// 说明）；本轮失败时保留，重试那轮模型还能看到。本轮有实际文件写入时记一条
+// chat 版本（docs/user-template-history-plan.md §3.2），备注用 finish 的汇报
+// ——历史列表因此可读。
+//
+// emit 为 SSE 客户端的事件出口（nil = 同步调用，只落观测不推流）。
+// 整轮同时落 trace 事件（customize_trace.go），观测台可见。
+func (s *Service) Customize(ctx context.Context, userID uint, id, message string, images []string, llm LLM, emit func(CustEvent) error) (string, error) {
 	row, err := s.GetOwned(userID, id)
 	if err != nil {
 		return "", err
 	}
-	if message == "" {
+	imgs, err := chatimg.Normalize(images)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(message) == "" && len(imgs) == 0 {
 		return "", fmt.Errorf("消息不能为空")
 	}
 
@@ -101,36 +202,92 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 	if len(sess.messages) == 0 {
 		sess.messages = append(sess.messages, openai.SystemMessage(s.customizeSystemPrompt(row)))
 	}
-	sess.messages = append(sess.messages, openai.UserMessage(message))
+	userMsgIdx := len(sess.messages)
+	sess.messages = append(sess.messages, chatimg.BuildUserMessage(message, imgs))
 
+	rec := s.openCustRecorder(userID, row, message, imgs, llm.Model)
+	defer rec.Close()
+	ctx = trace.With(ctx, rec)
+
+	reply, dirty, note, loopErr := s.customizeLoop(ctx, sess, row, llm, emit)
+	if loopErr == nil {
+		degradeUserMessage(sess, userMsgIdx, len(imgs), message)
+	}
+	if loopErr != nil {
+		// 中途出错的 run 也要收尾：不落 run_end，观测页会永远停在"运行中"并一直轮询
+		trace.Emit(ctx, trace.Event{Kind: trace.KindError, Error: loopErr.Error()})
+		sum := rec.Summary()
+		trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Status: trace.StatusError, Summary: &sum})
+		return "", loopErr
+	}
+	sum := rec.Summary()
+	trace.Emit(ctx, trace.Event{Kind: trace.KindRunEnd, Status: trace.StatusOK, Summary: &sum})
+	if dirty {
+		_ = s.recordVersionUT(row.ID, OpChat, note)
+	}
+	if emit != nil {
+		// 收尾帧：答复全文 + dirty（前端据此把流式草稿落成正式消息、刷新预览与历史）
+		if emitErr := emit(CustEvent{Type: CustEvDone, Dirty: dirty, Reply: reply}); emitErr != nil {
+			return "", emitErr
+		}
+	}
+	return reply, nil
+}
+
+// customizeLoop 工具循环（会话锁内调用）。返回最终答复、是否有文件写入、
+// 版本备注（finish 汇报优先，兜底用答复摘要）。
+// 每轮的请求/回复/工具调用/用量都在 turnCtx 归属下落 trace；emit 非 nil 时
+// 工具气泡（tool_start/tool_done）与生成进度（tool_progress）实时推给客户端。
+func (s *Service) customizeLoop(ctx context.Context, sess *customizeSession, row *store.UserTemplate, llm LLM, emit func(CustEvent) error) (string, bool, string, error) {
 	const maxTurns = 6
+	dirty := false
+	note := ""
+	retriedEmpty := false
 	for turn := 0; turn < maxTurns; turn++ {
-		completion, err := llm.Client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-			Model:    openai.ChatModel(llm.Model),
-			Messages: sess.messages,
-			Tools:    customizeTools,
-			ToolChoice: openai.ChatCompletionToolChoiceOptionUnionParam{
-				OfAuto: openai.String("auto"),
-			},
-			MaxTokens:   openai.Int(4000),
-			Temperature: openai.Float(0.4),
-		})
+		turnCtx := trace.WithTurn(ctx, turn)
+		msg, finish, _, err := s.custStream(turnCtx, sess, llm, emit)
 		if err != nil {
-			return "", fmt.Errorf("模型调用失败: %w", err)
+			return "", false, "", fmt.Errorf("模型调用失败: %w", err)
 		}
-		if len(completion.Choices) == 0 {
-			return "", fmt.Errorf("模型返回空响应")
+		// 推理模型把输出预算全花在 reasoning 上（finish=length、零正文零工具）
+		// 时，回退这轮重试一次；不重试用户看到的就是"（本轮无回复）"。
+		if len(msg.ToolCalls) == 0 && strings.TrimSpace(msg.Content) == "" && finish == "length" && !retriedEmpty {
+			retriedEmpty = true
+			turn--
+			continue
 		}
-		msg := completion.Choices[0].Message
 		sess.messages = append(sess.messages, msg.ToParam())
 
 		if len(msg.ToolCalls) == 0 {
 			// 没调工具直接回话：视为最终答复
-			return strings.TrimSpace(msg.Content), nil
+			reply := strings.TrimSpace(msg.Content)
+			if reply == "" {
+				return "", false, "", fmt.Errorf("模型返回空响应，请重试")
+			}
+			if note == "" {
+				note = truncateNote(reply)
+			}
+			return reply, dirty, note, nil
 		}
 		replied := ""
 		for _, tc := range msg.ToolCalls {
-			result := s.execCustomTool(row, tc.Function.Name, tc.Function.Arguments)
+			// 归属挂进 ctx：工具调用/返回两条事件自动带上轮次与 tool_call_id
+			toolCtx := trace.WithTool(turnCtx, tc.Function.Name, tc.ID)
+			trace.Emit(toolCtx, trace.Event{Kind: trace.KindToolCall, Args: tc.Function.Arguments})
+			started := time.Now()
+			result, d := s.execCustomTool(row, tc.Function.Name, tc.Function.Arguments)
+			trace.Emit(toolCtx, trace.Event{
+				Kind: trace.KindToolResult, Result: result,
+				DurationMS: time.Since(started).Milliseconds(),
+			})
+			if d {
+				dirty = true
+			}
+			if emit != nil {
+				if emitErr := emit(CustEvent{Type: CustEvToolDone, ToolCallID: tc.ID, ToolName: tc.Function.Name, Content: toolBrief(result)}); emitErr != nil {
+					return "", false, "", fmt.Errorf("事件推送失败: %w", emitErr)
+				}
+			}
 			replied = result
 			sess.messages = append(sess.messages, openai.ToolMessage(result, tc.ID))
 		}
@@ -141,40 +298,114 @@ func (s *Service) Customize(ctx context.Context, userID uint, id, message string
 					Reply string `json:"reply"`
 				}
 				_ = json.Unmarshal([]byte(tc.Function.Arguments), &out)
-				if out.Reply != "" {
-					return out.Reply, nil
+				reply := out.Reply
+				if reply == "" {
+					reply = replied
 				}
-				return replied, nil
+				if note == "" {
+					note = truncateNote(reply)
+				}
+				return reply, dirty, note, nil
 			}
 		}
 	}
-	return "本轮改动已应用（达到对话轮次上限）。可以继续描述，或去预览确认效果。", nil
+	// 轮次上限：模型连续多轮调工具没调 finish（write_demo 这类大输出常见）。
+	// 备注兜底不能空着——历史列表里空 detail 不可读。
+	reply := "本轮改动已应用（达到对话轮次上限）。可以继续描述，或去预览确认效果。"
+	if note == "" {
+		note = truncateNote(reply)
+	}
+	return reply, dirty, note, nil
 }
 
-// execCustomTool 执行一个定制工具，返回给模型的结果文本。
-func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) string {
+// truncateNote 版本备注上限（index.json 里的人读字段，太长列表没法看）。
+func truncateNote(s string) string {
+	r := []rune(strings.TrimSpace(s))
+	if len(r) > 120 {
+		return string(r[:120]) + "…"
+	}
+	if len(r) == 0 {
+		return "对话定制"
+	}
+	return string(r)
+}
+
+// execCustomTool 执行一个定制工具，返回给模型的结果文本与"是否写了文件"
+// （dirty = 本轮对话需要记一条历史版本）。
+func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) (string, bool) {
+	// D2 已发布锁定（修现状问题 C：此前 write_tokens 可绕过门禁改已发布模板）。
+	// 门禁运行态（publishing）同理——量测期间内容不能变。finish 不受影响。
+	if name != "finish" && (row.Status == "published" || row.Status == "publishing") {
+		return "该模板已发布（或正在跑发布门禁），请先下架再修改。", false
+	}
 	switch name {
 	case "write_tokens":
 		var in struct {
 			Tokens map[string]string `json:"tokens"`
 		}
 		if err := json.Unmarshal([]byte(args), &in); err != nil {
-			return "参数不是合法 JSON: " + err.Error()
+			return "参数不是合法 JSON: " + err.Error(), false
 		}
 		if err := s.writeTokenBlock(row.ID, row.BaseID, in.Tokens); err != nil {
-			return "写入失败: " + err.Error()
+			return "写入失败: " + err.Error(), false
 		}
-		return "已写入 " + fmt.Sprint(len(in.Tokens)) + " 个 token，预览刷新即可看到。"
+		return "已写入 " + fmt.Sprint(len(in.Tokens)) + " 个 token，预览刷新即可看到。", len(in.Tokens) > 0
+	case "write_style":
+		var in struct {
+			CSS string `json:"css"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		if len(in.CSS) > maxToolFileBytes {
+			return fmt.Sprintf("style.css 内容 %d 字节，超过 %d 上限，请精简。", len(in.CSS), maxToolFileBytes), false
+		}
+		if err := scanCSS(in.CSS); err != nil {
+			return "安全预检未过：" + err.Error() + "。请修正后重试。", false
+		}
+		if err := s.writeTemplateFile(row.ID, "style.css", in.CSS); err != nil {
+			return "写入失败: " + err.Error(), false
+		}
+		if err := s.remountUT(row.ID); err != nil {
+			return fmt.Sprintf("style.css 已写入并记入历史，但注册表校验未过：%v。预览可见，但生成侧可能仍挂旧版——请检查是否破坏了版式契约或文件结构（可用质量体检核对）。", err), true
+		}
+		return "style.css 已整体更新，预览刷新即可看到。", true
+	case "write_demo":
+		var in struct {
+			HTML string `json:"html"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		if len(in.HTML) > maxToolFileBytes {
+			return fmt.Sprintf("index.html 内容 %d 字节，超过 %d 上限，请精简。", len(in.HTML), maxToolFileBytes), false
+		}
+		if err := scanHTML(in.HTML); err != nil {
+			return "安全预检未过：" + err.Error() + "。请修正后重试。", false
+		}
+		if err := s.writeTemplateFile(row.ID, "index.html", in.HTML); err != nil {
+			return "写入失败: " + err.Error(), false
+		}
+		if err := s.remountUT(row.ID); err != nil {
+			return fmt.Sprintf("index.html 已写入并记入历史，但注册表校验未过：%v。预览可见，但生成侧可能仍挂旧版——最常见原因是发明了 layouts.md 里没有的 data-layout，请改回已登记的版式。", err), true
+		}
+		msg := "demo index.html 已整体更新，预览刷新即可看到。"
+		// demo 示例文案是生成时模仿的范本，AI 腔会传染给每一次生成——
+		// 整份逐页 lint（taste-skill 词表，与生成侧 write_pages 同源），提示不阻塞
+		if hints := lintDemoSections(in.HTML); len(hints) > 0 {
+			msg += "\nAI 味提示（品味问题不阻塞，下一轮顺手修）：\n- " + strings.Join(hints, "\n- ")
+		}
+		return msg, true
 	case "set_meta":
 		var in struct {
 			Name        string `json:"name"`
 			Description string `json:"description"`
 		}
 		if err := json.Unmarshal([]byte(args), &in); err != nil {
-			return "参数不是合法 JSON: " + err.Error()
+			return "参数不是合法 JSON: " + err.Error(), false
 		}
 		if err := s.applyMetaFile(row.ID, in.Name, in.Description); err != nil {
-			return "写入失败: " + err.Error()
+			return "写入失败: " + err.Error(), false
 		}
 		updates := map[string]any{}
 		if in.Name != "" {
@@ -185,18 +416,67 @@ func (s *Service) execCustomTool(row *store.UserTemplate, name, args string) str
 		}
 		if len(updates) > 0 {
 			if err := s.st.DB.Model(row).Updates(updates).Error; err != nil {
-				return "入库失败: " + err.Error()
+				return "入库失败: " + err.Error(), false
 			}
 		}
-		return "名称/描述已更新。"
+		return "名称/描述已更新。", len(updates) > 0
+	case "set_layout_roles", "set_layout_meta":
+		var in struct {
+			Layout string   `json:"layout"`
+			Roles  []string `json:"roles"`
+			Name   *string  `json:"name"`
+			Use    *string  `json:"use"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		patch := LayoutMetaPatch{}
+		if name == "set_layout_roles" {
+			patch.Roles = &in.Roles
+		} else {
+			if in.Name == nil && in.Use == nil {
+				return "name/use 至少传一个（只改适用场景请用 set_layout_roles）", false
+			}
+			patch.Name, patch.Use = in.Name, in.Use
+		}
+		warning, err := s.UpdateLayoutMeta(row.UserID, row.ID, in.Layout, patch)
+		if err != nil {
+			return "修改失败: " + err.Error(), false
+		}
+		if warning != "" {
+			return warning, true
+		}
+		return "版式元数据已更新（template.json 为权威，注册表已重挂，生成侧立即生效）。", true
+	case "add_layout":
+		var in AddLayoutSpec
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		summary, err := s.AddLayout(row.UserID, row.ID, in)
+		if err != nil {
+			return "新增版式失败: " + err.Error(), false
+		}
+		return summary, true
+	case "remove_layout":
+		var in struct {
+			LayoutID string `json:"layout_id"`
+		}
+		if err := json.Unmarshal([]byte(args), &in); err != nil {
+			return "参数不是合法 JSON: " + err.Error(), false
+		}
+		summary, err := s.RemoveLayout(row.UserID, row.ID, in.LayoutID)
+		if err != nil {
+			return "删除版式失败: " + err.Error(), false
+		}
+		return summary, true
 	case "finish":
 		var out struct {
 			Reply string `json:"reply"`
 		}
 		_ = json.Unmarshal([]byte(args), &out)
-		return out.Reply
+		return out.Reply, false
 	default:
-		return "未知工具 " + name
+		return "未知工具 " + name, false
 	}
 }
 
@@ -240,8 +520,12 @@ func (s *Service) writeTokenBlock(id, baseID string, tokens map[string]string) e
 	if err := os.WriteFile(p, []byte(out), 0o644); err != nil {
 		return err
 	}
-	// 已挂载的模板（fork 即挂载）重挂一次，让注册表里的 style.css 快照同步
-	return s.reg.MountUser(dir)
+	// 已挂载的模板重挂一次，让注册表里的 style.css 快照同步；失败不阻断
+	// （token 写入本身已成功，校验问题由发布门禁终审）
+	if err := s.remountUT(id); err != nil {
+		log.Printf("[warn] 模板 %s token 写入后重挂失败: %v", id, err)
+	}
+	return nil
 }
 
 // applyMetaFile 把对话里的改名/描述同步进 template.json（注册表重挂后生效）。
@@ -268,7 +552,10 @@ func (s *Service) applyMetaFile(id, name, description string) error {
 	if err := os.WriteFile(p, out, 0o644); err != nil {
 		return err
 	}
-	return s.reg.MountUser(s.Dir(id))
+	if err := s.remountUT(id); err != nil {
+		log.Printf("[warn] 模板 %s 元数据写入后重挂失败: %v", id, err)
+	}
+	return nil
 }
 
 // scopeOf 模板的 CSS 作用域类（body class）。fork 沿用 base 的作用域
@@ -287,24 +574,79 @@ func (s *Service) scopeOf(id, baseID string) string {
 	return "tpl-" + baseID
 }
 
-// customizeSystemPrompt 定制对话的系统提示词（含当前 token 值，模型有上下文）。
+// maxToolFileBytes 对话整文件重写工具（write_style/write_demo）的内容上限。
+// style.css 实测量级 20-60KB、demo 30KB；512KB 给足余量同时防 token 失控。
+const maxToolFileBytes = 512 << 10
+
+// customizeSystemPrompt 定制对话的系统提示词（注入当前 style.css 全文，模型有上下文）。
 func (s *Service) customizeSystemPrompt(row *store.UserTemplate) string {
-	tokens := ""
+	styleAll := ""
 	if raw, err := os.ReadFile(filepath.Join(s.Dir(row.ID), "style.css")); err == nil {
-		if m := tokenBlockRe.FindStringSubmatch(string(raw)); m != nil {
-			tokens = m[1]
-		}
+		styleAll = string(raw)
 	}
-	return "你是 PPT 模板定制助手。用户会用自然语言描述想改的视觉风格（配色、圆角、观感），" +
-		"你通过 write_tokens 工具落地，改完用 finish 汇报。\n\n" +
+	if r := []rune(styleAll); len(r) > 8000 {
+		styleAll = string(r[:8000]) + "\n/* …（已截断，重写时以磁盘现状为准并保留未展示部分的结构） */"
+	}
+	return "你是 PPT 模板定制助手。用户会用自然语言描述想改的视觉风格与页面结构，" +
+		"你通过工具落地，改完用 finish 汇报。\n\n" +
+		"工具选择：\n" +
+		"- 改配色/圆角等设计 token：优先 write_tokens（精准、影响面小）。\n" +
+		"- token 表达不了的样式改动（布局、间距、装饰、字体规则）：用 write_style 整体重写 " +
+		"style.css——必须基于下方当前全文改造，输出完整新全文。\n" +
+		"- 改 demo 页面结构（加删页面/卡片、改布局骨架）：用 write_demo 整体重写 index.html——" +
+		"必须保留 body 的 tpl- 作用域类与 /assets/deck-v2/runtime.js 引用。\n" +
+		"- 改版式的适用场景（role）或名称/用途：set_layout_roles / set_layout_meta——" +
+		"layout 传下方结构契约里登记的版式 id。\n" +
+		"- 加/删版式：add_layout / remove_layout——服务端全量校验、失败自动回滚；" +
+		"骨架只准用 classes 里声明的类，新类名的 CSS 必须随 css_append 一起提交。\n" +
+		"- 改模板名/描述：set_meta。\n\n" +
 		"纪律：\n" +
-		"- 只改列出的 token；一次改动要成套（比如改主色时同步考虑 --accent-2/--accent-3 的协调，以及文字在新底色上的可读性）。\n" +
-		"- 用户说「更圆/直角」时调 --radius/--radius-lg；说「暗色/亮色」时成套改 --bg/--surface/--text-*。\n" +
-		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些 token、建议用户看哪一页验证。\n" +
+		"- 一次改动要成套（改主色时同步考虑 --accent-2/--accent-3 的协调，以及文字在新底色上的可读性）。\n" +
+		"- 结构契约：加/删版式只能走 add_layout / remove_layout，不要用 write_demo 顺手发明版式；" +
+		"改样式时类名沿用模板既有体系。role 只能从词表选：" +
+		"cover/toc/divider/content/data/quote/code/cta/thanks，每个版式最多 3 个。\n" +
+		"- 品味纪律（去 AI 味；demo 示例文案是生成时模仿的范本，服务端会对 demo 跑 lint 并把提示回给你）：" +
+		"文案不写「赋能/无缝/闭环/elevate/seamless」这类腔调词；不用 em-dash（—）；" +
+		"示例数字要有机（47.2% 优于没有语境的 99.99%，编造的数字标「估算」）；" +
+		"示例品牌/人名要真实（不要 Acme、John Doe）。" +
+		"视觉不写纯黑 #000（用近黑如 #17181a），强调色别过饱和，不堆外发光/霓虹效果，" +
+		"卡片阵列避免机械三等分（内容确实等重才用）。\n" +
+		"- 安全预检会拒绝 CSS 网络外链与额外脚本；被拒时按报错修正重试，不要换个写法绕。\n" +
+		"- 用户可能随消息附图（风格参考/配色灵感/版式示意）：把它当设计参考理解意图并落到样式上；" +
+		"不要把图片内容当正文素材，不要把照片里的真实人物/品牌标志搬进模板。\n" +
+		"- 改动前不需要向用户确认——直接改，然后在 finish 里用中文具体说明改了哪些内容、建议用户看哪一页验证。\n" +
 		"- 模板名：" + row.Name + "（base：" + row.BaseID + "）。\n\n" +
-		"当前 token 值（style.css 的 token 声明区）：\n" + tokens
+		"结构契约（版式清单：id · 名称 · 角色 · 用途）：\n" + s.layoutContractSummary(row.ID) + "\n\n" +
+		"当前 style.css 全文：\n" + styleAll
+}
+
+// layoutContractSummary 读 template.json 的 layouts 清单拼成模型可读的结构摘要
+// （system prompt 注入用；读盘而非注册表——会话里刚发生的修改也能反映）。
+// 读不到时返回占位说明，不让定制对话直接失败。
+func (s *Service) layoutContractSummary(id string) string {
+	raw, err := os.ReadFile(filepath.Join(s.Dir(id), "template.json"))
+	if err != nil {
+		return "（读不到 template.json，本模板没有版式元数据可改）"
+	}
+	var meta struct {
+		Layouts []template.LayoutMeta `json:"layouts"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return "（template.json 解析失败，本模板没有版式元数据可改）"
+	}
+	var b strings.Builder
+	for _, l := range meta.Layouts {
+		roles := "无（不限场景）"
+		if len(l.Roles) > 0 {
+			roles = strings.Join(l.Roles, "/")
+		}
+		use := l.Use
+		if use == "" {
+			use = "（未填用途）"
+		}
+		fmt.Fprintf(&b, "- %s（%s）· 角色：%s · %s\n", l.ID, l.Name, roles, use)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 var bodyClassRe = regexp.MustCompile(`<body class="([^"]*)">`)
-
-var tokenBlockRe = regexp.MustCompile(`(?s)\.tpl-[a-z0-9-]+\{([^}]*)\}`)

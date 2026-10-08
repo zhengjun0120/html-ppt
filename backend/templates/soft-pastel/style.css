@@ -88,3 +88,6 @@
 
 /* ---- 迷你步骤卡里的一句话 ---- */
 .tpl-soft-pastel .sp-mini-t{margin:0;font-size:20px;font-weight:600;color:var(--text-1);line-height:1.5}
+
+/* ---- 页面切换（翻页动画）：温柔淡移 ---- */
+.tpl-soft-pastel{--page-shift:10px;--page-dur:.55s}

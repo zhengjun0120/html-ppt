@@ -1,0 +1,95 @@
+/* orange-sea — 晴橙落日海。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/orange-sea（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 天空→云层→夕阳的垂直渐变（ambient ::after inset:0）+ 波浪纹收底；
+ * 太阳、海鸥与云画在 ::before。白色大圆角卡浮在暮色上，落日橙只做
+ * 题签、上边线与关键数字（收暗为 #C2410C 保对比）；标题用深海蓝
+ * #1F6E96——橙蓝撞色是这套风格的骨架，深暗色与霓虹都在禁列。 */
+.tpl-orange-sea{
+  --bg:#F7ECD8;              /* letterbox：渐变中段值（翻页不跳） */
+  --bg-soft:#FFF6E6;
+  --ink:#1F6E96;             /* 深海蓝（标题） */
+  --ink-2:#3E5F6E;           /* 蓝灰正文 */
+  --ink-3:#8A6A45;           /* 暖灰小字 */
+  --border:rgba(31,110,150,.16);
+  --border-soft:rgba(31,110,150,.09);
+  --sea:#48C6F0;             /* 晴空蓝 */
+  --sunset:#FF8A3D;          /* 落日橙（填充身份色） */
+  --accent:#C2410C;          /* 关键数据/时间点（落日橙收暗档） */
+  --cream:#FFF0D6;           /* 柔杏白 */
+  --card-line:rgba(255,138,61,.28);
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：无衬线 Bold 简洁有力，轻盈但不轻浮 ---- */
+.tpl-orange-sea .h1{font-size:84px;line-height:1.12;font-weight:800;letter-spacing:-.015em;color:var(--ink);margin-bottom:12px}
+.tpl-orange-sea .h2{font-size:52px;line-height:1.18;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-orange-sea h4{color:var(--ink);font-weight:700;font-size:24px}
+.tpl-orange-sea .lede{font-size:24px;line-height:1.85;color:var(--ink-2);font-weight:400}
+.tpl-orange-sea .deck-footer{font-size:15px;color:#7A4515;letter-spacing:.16em}
+
+/* ---- ambient：太阳+海鸥+云（::before 右上）；天海渐变+波浪纹（::after 整页） ---- */
+.tpl-orange-sea .slide::before{
+  content:"";position:absolute;top:64px;right:104px;width:380px;height:300px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 380 300'%3E%3Cg fill='%23FFFFFF' opacity='0.85'%3E%3Cellipse cx='70' cy='58' rx='52' ry='16'/%3E%3Ccircle cx='54' cy='44' r='18'/%3E%3Ccircle cx='80' cy='40' r='22'/%3E%3C/g%3E%3Cg stroke='%232A6B8A' stroke-width='3' fill='none' stroke-linecap='round' opacity='0.5'%3E%3Cpath d='M36 132 Q48 120 60 132'/%3E%3Cpath d='M78 152 Q88 143 98 152'/%3E%3C/g%3E%3Ccircle cx='292' cy='196' r='112' fill='%23FFB36B' opacity='0.28'/%3E%3CradialGradient id='osSun' cx='40%25' cy='38%25' r='75%25'%3E%3Cstop offset='0%25' stop-color='%23FFE3AE'/%3E%3Cstop offset='58%25' stop-color='%23FFB36B'/%3E%3Cstop offset='100%25' stop-color='%23FF8A3D'/%3E%3C/radialGradient%3E%3Ccircle cx='292' cy='196' r='86' fill='url(%23osSun)'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+.tpl-orange-sea .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 240'%3E%3Cg stroke='%23FFFFFF' stroke-linecap='round'%3E%3Cline x1='120' y1='96' x2='640' y2='96' stroke-width='4' opacity='0.5'/%3E%3Cline x1='540' y1='148' x2='1260' y2='148' stroke-width='5' opacity='0.42'/%3E%3Cline x1='1180' y1='196' x2='1660' y2='196' stroke-width='4' opacity='0.36'/%3E%3Cline x1='900' y1='72' x2='1240' y2='72' stroke-width='3' opacity='0.3'/%3E%3C/g%3E%3Crect x='1350' y='0' width='230' height='240' fill='%23FFB36B' opacity='0.3'/%3E%3C/svg%3E") no-repeat bottom center / 100% auto,
+    radial-gradient(ellipse 50% 60% at 82% 62%,rgba(255,180,107,.4) 0%,rgba(255,180,107,0) 70%),
+    linear-gradient(180deg,#B5E5F8 0%,#DDF2FC 30%,#FFF3DE 55%,#FFD9A8 76%,#FFC892 100%);
+}
+
+/* ---- 题签：落日橙胶囊药丸（上游预览的 kicker 母题） ---- */
+.tpl-orange-sea .os-kicker{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;background:var(--sunset);color:#4A2508;font-size:15px;font-weight:700;letter-spacing:.22em;padding:9px 24px;border-radius:999px}
+
+/* ---- 太阳印：正圆落日 + 白描边，封面与收尾的落款 ---- */
+.tpl-orange-sea .os-badge{flex:none;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 40% 38%,#FFE3AE 0%,#FFB36B 58%,#FF8A3D 100%);border:3px solid rgba(255,255,255,.8);box-shadow:0 0 34px rgba(255,138,61,.45);display:flex;align-items:center;justify-content:center;text-align:center;font-size:19px;font-weight:700;color:#4A2508;line-height:1.25;letter-spacing:.08em}
+
+/* ---- 白卡：唯一卡型，大圆角半透明白 + 晴蓝调柔影 ---- */
+.tpl-orange-sea .os-card{background:rgba(255,255,255,.9);border:1px solid var(--card-line);border-radius:26px;padding:36px 40px;display:flex;flex-direction:column;min-height:268px;box-shadow:0 20px 44px rgba(72,198,240,.16)}
+
+/* ---- 药丸：杏白描边胶囊；accent 版落日橙软底 ---- */
+.tpl-orange-sea .os-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.66);font-size:16px;letter-spacing:.1em;color:#35586B;white-space:nowrap}
+.tpl-orange-sea .os-pill-accent{border-color:rgba(255,138,61,.5);background:rgba(255,138,61,.14);color:var(--accent);font-weight:600}
+
+/* ---- 目录行：杏白圆角块编号 + 篇名 + 说明 ---- */
+.tpl-orange-sea .os-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-orange-sea .os-item:last-child{border-bottom:none}
+.tpl-orange-sea .os-n{flex:none;width:52px;height:52px;border-radius:16px;background:var(--cream);border:1.5px solid rgba(255,138,61,.5);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-orange-sea .os-t{flex:none;width:250px;font-size:27px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.tpl-orange-sea .os-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 落日数字：数据页主视觉（上游：落日橙突出关键数字） ---- */
+.tpl-orange-sea .os-stat{border-top:3px solid var(--sunset);padding-top:28px}
+.tpl-orange-sea .os-stat-v{font-size:100px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--accent)}
+.tpl-orange-sea .os-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-orange-sea .os-stat-l{margin-top:18px;font-size:26px;font-weight:700;color:var(--ink)}
+.tpl-orange-sea .os-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 海风引文：无衬线大字，简洁有力 ---- */
+.tpl-orange-sea .os-quote{font-size:60px;line-height:1.6;font-weight:800;letter-spacing:.01em;color:var(--ink);max-width:24em;margin:0}
+.tpl-orange-sea .os-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 海鸥一对：quote 页右侧留白，装饰不写字 ---- */
+.tpl-orange-sea .os-gulls{position:absolute;right:150px;top:40%;width:170px;height:90px;z-index:-1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 170 90'%3E%3Cg stroke='%232A6B8A' stroke-width='4' fill='none' stroke-linecap='round' opacity='0.55'%3E%3Cpath d='M30 46 Q52 24 74 46'/%3E%3Cpath d='M96 66 Q112 50 128 66'/%3E%3Cpath d='M20 70 Q30 61 40 70'/%3E%3C/g%3E%3C/svg%3E") no-repeat center / contain}
+
+/* ---- 时间线：杏白圆点 + 深橙时间点 ---- */
+.tpl-orange-sea .os-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-orange-sea .os-tl-item{flex:1;position:relative}
+.tpl-orange-sea .os-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:54px;right:-44px;height:1px;background:var(--border)}
+.tpl-orange-sea .os-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:var(--cream);border:2px solid var(--sea);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-orange-sea .os-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.tpl-orange-sea .os-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-orange-sea .os-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-orange-sea .os-step:last-child{border-bottom:none}
+.tpl-orange-sea .os-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：深海蓝胶囊，收尾页唯一实底按钮（撞色担当） ---- */
+.tpl-orange-sea .os-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 40px;border-radius:999px;background:var(--ink);color:#F0FAFF;font-size:20px;font-weight:600;letter-spacing:.14em;box-shadow:0 12px 28px rgba(31,110,150,.25)}
+
+/* ---- 页面切换（翻页动画）：像潮水推进，轻而缓 ---- */
+.tpl-orange-sea{--page-shift:14px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

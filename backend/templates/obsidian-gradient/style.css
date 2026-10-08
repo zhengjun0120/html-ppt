@@ -74,3 +74,6 @@
   --oc-accent-rgb:234,88,12;--oc-accent2-rgb:249,115,22;
   --oc-g1:#fb923c;--oc-g2:#f472b6;--oc-g3:#fbbf24;
 }
+
+/* ---- 页面切换（翻页动画）：缓慢浮现，黑曜石般的柔（≤650ms 截图上限） ---- */
+.tpl-obsidian-claude-gradient{--page-shift:12px;--page-dur:.6s}

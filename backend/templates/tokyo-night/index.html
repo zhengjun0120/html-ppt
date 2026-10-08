@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>异步第一课 · 从回调到协程</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-tokyo-night">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="tn-kicker">深夜课堂 · 异步第一课</p>
+    <h1 class="h1 mt-m">从回调，<br>到协程。</h1>
+    <div class="tn-rule mt-s"></div>
+    <p class="lede mt-m" style="max-width:52ch">二十年的语言进化只为一件事：把嵌套的回拉直。今晚从 1995 年的回调，一路讲到协程。</p>
+    <div class="row mt-l" style="gap:24px">
+      <span class="tn-tag">$ node intro.js</span>
+      <span class="tn-pill">零基础友好</span>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场用「等外卖还是先打游戏」引入异步，别直接上术语。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="tn-kicker">今晚四段</p>
+    <h2 class="h2 mt-m">从地狱到协程的路线</h2>
+    <div class="tn-card mt-l" style="margin-top:44px">
+      <div class="tn-item"><span class="tn-n">[01]</span><span class="tn-t">回调的地狱</span><span class="tn-d">嵌套一深，错误处理先失守</span></div>
+      <div class="tn-item"><span class="tn-n">[02]</span><span class="tn-t">事件循环</span><span class="tn-d">看懂排队执行的运行时</span></div>
+      <div class="tn-item"><span class="tn-n">[03]</span><span class="tn-t">await 登场</span><span class="tn-d">把回调拉直成能读的句子</span></div>
+      <div class="tn-item"><span class="tn-n">[04]</span><span class="tn-t">并发与陷阱</span><span class="tn-d">什么时候快，什么时候踩坑</span></div>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">路线按年代走，每段开头都先讲「它为什么会出现」。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="tn-kicker">一次本机压测</p>
+    <h2 class="h2 mt-m">拉直之后，快了多少</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="tn-stat"><div class="tn-stat-v">6.4<span class="tn-stat-u">秒</span></div><div class="tn-stat-l">串行版本耗时</div><p class="tn-stat-note">一千次模拟 IO 逐个 await，总时长为各段相加</p></div>
+      <div class="tn-stat"><div class="tn-stat-v">0.7<span class="tn-stat-u">秒</span></div><div class="tn-stat-l">并发版本耗时</div><p class="tn-stat-note">同批任务 Promise.all 合并等待，取最长一路</p></div>
+      <div class="tn-stat"><div class="tn-stat-v">0<span class="tn-stat-u">个</span></div><div class="tn-stat-l">新增线程</div><p class="tn-stat-note">全程单线程事件循环完成，未开 worker</p></div>
+    </div>
+    <p class="tn-src mt-m" style="margin-top:40px">来源：本机演示脚本压测（Node 22，2026-09，脚本随仓库开源）。</p>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">讲 6.4 到 0.7 时在白板上画依赖图，数字才有说服力。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="tn-kicker">第二章 · 把回拉直</p>
+    <h1 class="h1 mt-m">别再嵌套，<br>把它拉直。</h1>
+    <p class="lede mt-m" style="max-width:48ch">回调是写给机器的，await 是写给人的。今晚只求一件事：代码像说话一样往下走。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="tn-pill tn-pill-accent">可读性</span>
+      <span class="tn-pill">可调试</span>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">过渡页。提醒听众：写法变化的背后，是运行时能力的升级。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="tn-kicker">三代方案</p>
+    <h2 class="h2 mt-m">处理异步的三种姿势</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="tn-card"><span class="tn-pill tn-pill-accent">第一代</span><h4 class="mt-m">回调函数</h4><p class="tn-note mt-s">「做完叫我」最直觉，嵌套三层之后，错误处理与阅读一起崩塌。</p></div>
+      <div class="tn-card"><span class="tn-pill tn-pill-accent">第二代</span><h4 class="mt-m">Promise 链</h4><p class="tn-note mt-s">把回调换成返回值，then 串起来；错误终于有了统一出口。</p></div>
+      <div class="tn-card"><span class="tn-pill tn-pill-accent">第三代</span><h4 class="mt-m">async/await</h4><p class="tn-note mt-s">异步长得像同步，try/catch 直接可用，调试器也能跟上。</p></div>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">三代不是替换而是叠加，生产环境三者共存，按场景选。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="tn-kicker">一次真实改造</p>
+    <h2 class="h2 mt-m">串行六秒，怎么压进一秒</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">把「取用户、取订单、取优惠券」画成依赖图：互不依赖就别排队。用 Promise.all 同批发出，总耗时由最长的一路决定，而不是三路相加。</p>
+        <p class="tn-note mt-m">有依赖的步骤保持 await，别为了并发制造竞态。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="tn-pill">先找依赖</span>
+          <span class="tn-pill">再谈并发</span>
+        </div>
+      </div>
+      <div class="tn-card">
+        <div class="tn-step"><span class="tn-n">[01]</span><p class="tn-mini-t">画出三个请求的依赖图</p></div>
+        <div class="tn-step"><span class="tn-n">[02]</span><p class="tn-mini-t">无依赖的一起进 all</p></div>
+        <div class="tn-step"><span class="tn-n">[03]</span><p class="tn-mini-t">有依赖的保持顺序 await</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">这页是今晚的动手环节，示例仓库里有对应的练习分支。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="tn-kicker">同一件事的三种写法</p>
+    <h2 class="h2 mt-m">伪代码：把回拉直的过程</h2>
+    <div class="tn-term mt-l" style="margin-top:44px">
+      <div class="tn-term-bar"><span class="tn-dot"></span><span class="tn-dot"></span><span class="tn-dot"></span><span class="tn-term-name">demo/pseudo.js</span><span class="tn-lang">伪代码</span></div>
+      <pre class="tn-codeblock"><code>// 同一件事的三种写法（伪代码）
+getUser(id, (err, u) =&gt; next(u))          // ① 回调
+getUser(id).then(next).catch(onError)     // ② Promise
+const u = await getUser(id)               // ③ await
+const rs = await all([getA(), getB()])    // ④ 并发
+// 有依赖才等待，无依赖就并行</code></pre>
+      <div class="tn-status"><span>pseudo · 单线程事件循环</span><span>demo · 行 7</span></div>
+    </div>
+    <p class="tn-note mt-m" style="margin-top:28px">真实代码还要处理超时与取消；先看清结构，语法细节交给文档。</p>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">逐行念一遍，让听众听到语气从命令变成了陈述。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="tn-kicker">异步三十年</p>
+    <h2 class="h2 mt-m">等待的艺术，四个路标</h2>
+    <div class="tn-tl mt-l" style="margin-top:52px">
+      <div class="tn-tl-item"><div class="tn-tl-dot">01</div><div class="tn-tl-t">1995</div><p class="tn-tl-d">浏览器脚本用回调响应点击</p></div>
+      <div class="tn-tl-item"><div class="tn-tl-dot">02</div><div class="tn-tl-t">2009</div><p class="tn-tl-d">Node 把事件循环带进服务端</p></div>
+      <div class="tn-tl-item"><div class="tn-tl-dot">03</div><div class="tn-tl-t">2015</div><p class="tn-tl-d">Promise 写进语言标准</p></div>
+      <div class="tn-tl-item"><div class="tn-tl-dot">04</div><div class="tn-tl-t">2017</div><p class="tn-tl-d">async/await 标准化定稿</p></div>
+    </div>
+    <p class="tn-src mt-m" style="margin-top:44px">年份以规范与运行时首次落地为准，各引擎实现略有先后。</p>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">时间线收尾时点题：协程是这一路的现在完成时。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="tn-kicker">Go 谚语</p>
+    <p class="tn-quote mt-l" style="margin-top:40px">「并发是结构，并行是执行。」</p>
+    <p class="tn-src mt-m">—— Rob Pike · Heroku 演讲</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="tn-pill tn-pill-accent">结构思维</span>
+      <span class="tn-pill">单核也并发</span>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">这句话用来纠正「并发就是开多线程」的误会，正好接回压测页。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="tn-kicker">带走这份思路</p>
+    <h1 class="h1 mt-m">深夜之后，<br>代码不堵车。</h1>
+    <p class="lede mt-m" style="max-width:48ch">示例与压测脚本以 MIT 许可挂在仓库；回去把你的串行链画出依赖图，试一次 all。</p>
+    <div class="row mt-l" style="gap:24px">
+      <span class="tn-btn">带走示例</span>
+      <span class="tn-pill">示例 · MIT 许可</span>
+      <span class="tn-tag">$ git clone async-101</span>
+    </div>
+    <div class="deck-footer"><span>异步第一课 · 2026</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：clone 下来跑一遍压测，亲眼看 6.4 变 0.7。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

@@ -1,0 +1,88 @@
+/* swiss-international — 瑞士国际主义（设计 · 理性）。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/swiss-international（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 严格网格 + 极端字号对比 + 单一强调色：越大越细、越小越粗，一切左对齐，
+ * 内容的结构本身就是视觉。全部直角、无阴影、无圆角、无渐变；
+ * 一个 deck 只用一种强调色（IKB 蓝 #002FA7）。 */
+.tpl-swiss-international{
+  --bg:#FAFAF8;              /* 暖白纸底（letterbox 同色，翻页不跳） */
+  --ink:#0A0A0A;             /* 近黑主字 */
+  --ink-2:#737373;           /* 中灰正文 */
+  --ink-3:#D4D4D2;           /* 浅灰结构线与巨号 */
+  --hair:#F0F0EE;            /* 极细环境网格 */
+  --border:#D4D4D2;
+  --accent:#002FA7;          /* IKB 蓝：全模板唯一强调色 */
+  --accent-ink:#FAFAF8;
+  font-family:'Inter','Helvetica Neue','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：主标题与正文比例 ≥8:1，越大越细、越小越粗 ---- */
+.tpl-swiss-international .h1{font-size:140px;line-height:1.0;font-weight:200;letter-spacing:-.025em;color:var(--ink);margin-bottom:14px}
+.tpl-swiss-international .h2{font-size:64px;line-height:1.05;font-weight:200;letter-spacing:-.02em;color:var(--ink);margin-bottom:12px}
+.tpl-swiss-international h4{font-family:inherit;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:0}
+.tpl-swiss-international .lede{font-size:22px;line-height:1.7;color:var(--ink);font-weight:400;max-width:52ch}
+.tpl-swiss-international .deck-footer{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.16em;color:var(--ink-2);text-transform:uppercase}
+
+/* ---- ambient：5% 极细灰网格铺满全页（z-index:-1，结构即装饰） ---- */
+.tpl-swiss-international .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(var(--hair) 1px,transparent 1px),
+             linear-gradient(90deg,var(--hair) 1px,transparent 1px);
+  background-size:96px 96px;
+}
+
+/* ---- 元信息行：mono 全大写 + 8x8 直角蓝方块，每页页首 ---- */
+.tpl-swiss-international .si-meta{display:flex;align-items:center;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+.tpl-swiss-international .si-square{flex:none;width:16px;height:16px;background:var(--accent)}
+.tpl-swiss-international .si-accent{color:var(--accent)}
+.tpl-swiss-international .si-line{height:2px;background:var(--ink);width:100%}
+
+/* ---- 黑缝拼格：1px 缝隙当分隔线，格内一张暖白纸 ---- */
+.tpl-swiss-international .si-mesh{gap:1px;background:var(--ink);border:1px solid var(--ink)}
+.tpl-swiss-international .si-metric{background:var(--bg);padding:30px 32px;display:flex;flex-direction:column;justify-content:flex-end;min-height:190px}
+.tpl-swiss-international .si-metric-accent{background:var(--accent);color:var(--accent-ink)}
+.tpl-swiss-international .si-metric-v{font-size:84px;line-height:1;font-weight:200;letter-spacing:-.02em}
+.tpl-swiss-international .si-metric-l{margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.tpl-swiss-international .si-metric-accent .si-metric-l{color:rgba(250,250,248,.78)}
+
+/* ---- 目录表 / 步骤行：hairline 分隔，mono 蓝色索引 ---- */
+.tpl-swiss-international .si-toc-row{display:flex;align-items:baseline;gap:28px;padding:26px 4px;border-bottom:1px solid var(--border)}
+.tpl-swiss-international .si-toc-row:last-child{border-bottom:none}
+.tpl-swiss-international .si-step{display:flex;align-items:baseline;gap:22px;padding:24px 2px;border-bottom:1px solid var(--border)}
+.tpl-swiss-international .si-step:last-child{border-bottom:none}
+.tpl-swiss-international .si-i{flex:none;font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.1em;color:var(--accent)}
+.tpl-swiss-international .si-t{flex:none;width:280px;font-size:26px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}
+.tpl-swiss-international .si-d{flex:1;font-size:17px;line-height:1.7;color:var(--ink-2)}
+.tpl-swiss-international .si-mini-t{margin:0;font-size:19px;line-height:1.6;color:var(--ink)}
+
+/* ---- 定义三格（keynotes 用） ---- */
+.tpl-swiss-international .si-cell{background:var(--bg);padding:34px 36px;display:flex;flex-direction:column;min-height:280px}
+.tpl-swiss-international .si-cell-accent{background:var(--accent);color:var(--accent-ink)}
+.tpl-swiss-international .si-cell-i{margin:0 0 18px;font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.14em;color:var(--accent)}
+.tpl-swiss-international .si-cell-accent .si-cell-i{color:rgba(250,250,248,.85)}
+.tpl-swiss-international .si-cell-d{margin:14px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+.tpl-swiss-international .si-cell-accent .si-cell-d{color:rgba(250,250,248,.8)}
+
+/* ---- 方角标签：直角、细描边、mono，无圆点无胶囊 ---- */
+.tpl-swiss-international .si-tag{display:inline-flex;align-items:center;padding:9px 18px;border:1px solid var(--ink);font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.tpl-swiss-international .si-tag-accent{border-color:var(--accent);color:var(--accent)}
+
+/* ---- 宣言页：细体大字，两行，下行套蓝 ---- */
+.tpl-swiss-international .si-quote{font-size:84px;line-height:1.18;font-weight:200;letter-spacing:-.02em;color:var(--ink);max-width:22em;margin:0}
+.tpl-swiss-international .si-src{margin:0;font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.12em;color:var(--ink-2)}
+
+/* ---- 章节巨号：浅灰细体，只放右下留白处 ---- */
+.tpl-swiss-international .si-num{font-size:230px;line-height:.8;font-weight:200;letter-spacing:-.04em;color:var(--ink-3)}
+
+/* ---- 时间线：黑色通栏线 + 直角蓝方块节点 ---- */
+.tpl-swiss-international .si-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-swiss-international .si-tl-item{flex:1;position:relative;border-top:1px solid var(--ink);padding-top:24px}
+.tpl-swiss-international .si-tl-item::before{content:"";position:absolute;top:-7px;left:0;width:13px;height:13px;background:var(--accent)}
+.tpl-swiss-international .si-tl-t{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:.12em;color:var(--ink)}
+.tpl-swiss-international .si-tl-d{margin-top:12px;font-size:17px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮：蓝底方角，唯一的大色块 ---- */
+.tpl-swiss-international .si-btn{display:inline-flex;align-items:center;padding:16px 46px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:19px;letter-spacing:.08em}
+
+/* ---- 页面切换（翻页动画）：干净利落的短平移 ---- */
+.tpl-swiss-international{--page-shift:26px;--page-dur:.4s}

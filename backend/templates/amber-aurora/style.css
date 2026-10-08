@@ -1,0 +1,103 @@
+/* amber-aurora — 扁豆紫蜜陀僧 · 国风治愈。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/amber-aurora（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 扁豆紫天色 → 蜜陀僧落日水面的垂直渐变 + 浅金萤光是每页自动衬底的 ambient 层
+ * （z-index:-1，骨架零成本）。黄昏原色对浅字对比不足，故把渐变整体掺一层
+ * 米白雾（雾化后顶 #B28672 底 #F2B27C），正文用深琥珀墨（对全幅 ≥4.5:1），
+ * 落日与萤光只做装饰，不承载文字。国风小细节：方角印章、竖排短语、楷宋大字。 */
+.tpl-amber-aurora{
+  --bg:#D89868;               /* 黄昏渐变中段值（letterbox，翻页不跳） */
+  --cream:#FBF3E8;            /* 奶白 */
+  --ink:#3A2012;              /* 深琥珀墨（标题） */
+  --ink-2:#54311C;            /* 赭褐正文 */
+  --ink-3:#6E4526;            /* 浅褐小字 */
+  --border:rgba(58,32,18,.22);
+  --border-soft:rgba(58,32,18,.12);
+  --lentil:#9E7059;           /* 扁豆紫（上游原色，用于线与装饰） */
+  --honey:#EC954E;            /* 蜜陀僧（上游原色，用于线与装饰） */
+  --amber:#8F4413;            /* 深蜜褐（大数字/时间点的强调色） */
+  --gold:#F4D9B0;             /* 浅金萤光 */
+  --umber:rgba(90,42,16,.88); /* 暮色深褐（印章/按钮底） */
+  --accent:#8F4413;
+  --accent-ink:#FBF3E8;
+  font-family:'Songti SC','STSong','KaiTi','SimSun',serif;
+}
+
+/* ---- 字阶：楷宋大字 + 宽行距，小字标签用无衬线 ---- */
+.tpl-amber-aurora .h1{font-size:84px;line-height:1.16;font-weight:700;letter-spacing:.12em;color:var(--ink);margin-bottom:10px}
+.tpl-amber-aurora .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.1em;color:var(--ink);margin-bottom:8px}
+.tpl-amber-aurora h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.06em}
+.tpl-amber-aurora .lede{font-size:24px;line-height:1.95;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-amber-aurora .deck-footer{font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.2em}
+
+/* ---- ambient：暮色天空 + 落日光晕 + 云层萤光（整幅）+ 水面倒影（页底），z-index:-1 ---- */
+.tpl-amber-aurora .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='sky' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23B28672'/%3E%3Cstop offset='0.34' stop-color='%23C99262'/%3E%3Cstop offset='0.62' stop-color='%23E2A168'/%3E%3Cstop offset='1' stop-color='%23F2B27C'/%3E%3C/linearGradient%3E%3CradialGradient id='glow'%3E%3Cstop offset='0' stop-color='%23FFF0D6' stop-opacity='0.9'/%3E%3Cstop offset='0.45' stop-color='%23FFD6AA' stop-opacity='0.45'/%3E%3Cstop offset='1' stop-color='%23FFD6AA' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='url(%23sky)'/%3E%3Ccircle cx='960' cy='660' r='340' fill='url(%23glow)'/%3E%3Cellipse cx='360' cy='150' rx='340' ry='62' fill='%23FFF0DC' opacity='0.34'/%3E%3Cellipse cx='1480' cy='110' rx='300' ry='54' fill='%23FFF0DC' opacity='0.3'/%3E%3Cellipse cx='930' cy='250' rx='390' ry='58' fill='%23FFF0DC' opacity='0.24'/%3E%3Ccircle cx='300' cy='240' r='6' fill='%23F4D9B0' opacity='0.8'/%3E%3Ccircle cx='520' cy='180' r='4' fill='%23F4D9B0' opacity='0.6'/%3E%3Ccircle cx='1240' cy='170' r='5' fill='%23F4D9B0' opacity='0.7'/%3E%3Ccircle cx='1500' cy='260' r='6' fill='%23F4D9B0' opacity='0.55'/%3E%3Ccircle cx='760' cy='300' r='4' fill='%23F4D9B0' opacity='0.5'/%3E%3Ccircle cx='1700' cy='140' r='5' fill='%23F4D9B0' opacity='0.65'/%3E%3C/svg%3E") no-repeat center center;
+  background-size:100% 100%;
+}
+.tpl-amber-aurora .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:210px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 210' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='water' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%237C3A10' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%237C3A10' stop-opacity='0.2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1920' height='210' fill='url(%23water)'/%3E%3Cellipse cx='960' cy='90' rx='200' ry='24' fill='%23FFEBC8' opacity='0.4'/%3E%3Cellipse cx='960' cy='128' rx='320' ry='30' fill='%23FFEBC8' opacity='0.2'/%3E%3Cpath d='M0,54 Q480,38 960,56 T1920,50' stroke='%23FFF0DC' stroke-width='2' fill='none' opacity='0.5'/%3E%3Cpath d='M0,120 Q420,104 900,122 T1920,112' stroke='%23FFF0DC' stroke-width='2' fill='none' opacity='0.35'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：细字距小标，前后各一点浅金 ·（页首） ---- */
+.tpl-amber-aurora .aa-kicker{display:inline-flex;align-items:center;gap:18px;align-self:flex-start;font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:16px;letter-spacing:.38em;color:var(--ink-2)}
+.tpl-amber-aurora .aa-kicker::before{content:"·";font-size:22px;color:var(--amber)}
+.tpl-amber-aurora .aa-kicker::after{content:"·";font-size:22px;color:var(--amber)}
+
+/* ---- 飘带渐变线：紫入橙出的一笔，标题下 ---- */
+.tpl-amber-aurora .aa-line{width:250px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--lentil),var(--amber) 45%,var(--gold))}
+
+/* ---- 暮色印：深褐方章微斜，全模板唯一的深底元素 ---- */
+.tpl-amber-aurora .aa-seal{flex:none;width:76px;height:76px;background:var(--umber);color:var(--cream);border-radius:6px;transform:rotate(-3deg);display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:700;line-height:1.3;letter-spacing:.1em;box-shadow:0 10px 26px rgba(90,42,16,.35)}
+
+/* ---- 半透米白卡：浮在暮色上，无阴影硬角 ---- */
+.tpl-amber-aurora .aa-card{background:rgba(251,243,232,.78);border:1px solid var(--border-soft);border-radius:8px;padding:36px 42px;display:flex;flex-direction:column;min-height:280px}
+.tpl-amber-aurora .aa-card-line{background:rgba(251,243,232,.78);border:1px solid var(--border-soft);border-left:4px solid var(--amber);border-radius:8px;padding:36px 42px;display:flex;flex-direction:column}
+
+/* ---- 胶囊：米白细描边；强调款即小暮色章 ---- */
+.tpl-amber-aurora .aa-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:4px;background:rgba(251,243,232,.6);font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-amber-aurora .aa-pill-accent{background:var(--umber);border-color:rgba(90,42,16,.9);color:var(--cream)}
+
+/* ---- 目录行：暮色方章编号 + 篇名 + 说明 ---- */
+.tpl-amber-aurora .aa-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-amber-aurora .aa-item:last-child{border-bottom:none}
+.tpl-amber-aurora .aa-n{flex:none;width:50px;height:50px;background:var(--umber);color:var(--cream);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'PingFang SC',sans-serif;font-size:18px;font-weight:700;align-self:center}
+.tpl-amber-aurora .aa-t{flex:none;width:250px;font-size:29px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-amber-aurora .aa-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 香事数字：数据页主视觉 ---- */
+.tpl-amber-aurora .aa-stat{border-top:2px solid rgba(58,32,18,.55);padding-top:30px}
+.tpl-amber-aurora .aa-stat-v{font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--amber)}
+.tpl-amber-aurora .aa-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-amber-aurora .aa-stat-l{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-amber-aurora .aa-stat-note{margin:10px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 香语引文：楷宋大字 ---- */
+.tpl-amber-aurora .aa-quote{font-size:58px;line-height:1.7;font-weight:700;letter-spacing:.1em;color:var(--ink);max-width:22em;margin:0}
+.tpl-amber-aurora .aa-src{margin:0;font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排短语：诗句/点缀，只放留白处，一页至多一条 ---- */
+.tpl-amber-aurora .aa-vert{writing-mode:vertical-rl;font-size:26px;letter-spacing:.48em;line-height:2.1;color:var(--ink-2)}
+.tpl-amber-aurora .aa-vert-accent{color:var(--amber)}
+
+/* ---- 当夜时间线：暮色方点 + 金线 ---- */
+.tpl-amber-aurora .aa-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-amber-aurora .aa-tl-item{flex:1;position:relative}
+.tpl-amber-aurora .aa-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:50px;right:-44px;height:2px;background:linear-gradient(90deg,rgba(143,68,19,.5),rgba(244,217,176,.9))}
+.tpl-amber-aurora .aa-tl-dot{position:relative;z-index:1;width:50px;height:50px;background:var(--umber);color:var(--cream);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'PingFang SC',sans-serif;font-size:18px;font-weight:700}
+.tpl-amber-aurora .aa-tl-t{margin-top:18px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:21px;font-weight:700;color:var(--amber);letter-spacing:.04em}
+.tpl-amber-aurora .aa-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-amber-aurora .aa-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-amber-aurora .aa-step:last-child{border-bottom:none}
+.tpl-amber-aurora .aa-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：暮色深褐底奶白字，收尾页 ---- */
+.tpl-amber-aurora .aa-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;border:1px solid rgba(244,217,176,.7);background:var(--umber);color:var(--cream);border-radius:4px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:22px;font-weight:700;letter-spacing:.18em;box-shadow:0 12px 30px rgba(90,42,16,.3)}
+
+/* ---- 页面切换（翻页动画）：如暮色缓缓沉下来 ---- */
+.tpl-amber-aurora{--page-shift:14px;--page-dur:.62s;--page-ease:cubic-bezier(.45,.05,.35,.95)}

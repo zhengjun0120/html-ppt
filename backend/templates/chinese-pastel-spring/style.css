@@ -1,0 +1,120 @@
+/* chinese-pastel-spring — 中国传统色·春日嫩柳。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/chinese-pastel-spring（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 嫩柳绿 + 柳芽黄绿 + 桃花粉的初春配色：顶部四段渐变色带与右上桃枝是每页自动
+ * 衬底的 ambient 层（z-index:-1，画在内容之下，骨架零成本）；宣纸米底、墨黛字、
+ * 朱砂点睛。标题宋体/楷体，数字细无衬线——温柔不腻，明媚不艳。 */
+.tpl-chinese-pastel-spring{
+  --bg:#F7F3E8;              /* 宣纸米 */
+  --bg-soft:#FBF8F0;         /* 象牙白（卡底/印字） */
+  --ink:#3A3A3A;             /* 墨黛标题 */
+  --ink-2:#5A4030;           /* 深棕正文 */
+  --ink-3:#8A7A66;           /* 暖棕灰小字 */
+  --border:rgba(58,58,58,.18);
+  --border-soft:rgba(58,58,58,.10);
+  --ps-willow:#A8BF8F;       /* 嫩柳绿 */
+  --ps-bud:#C5D99E;          /* 柳芽黄绿 */
+  --ps-blush:#F8C9B8;        /* 淡樱粉 */
+  --ps-peach:#F3A694;        /* 桃花粉 */
+  --ps-gold:#D4A574;         /* 淡金（数据顶线点缀） */
+  --cinnabar:#C0392B;        /* 朱砂：印章/题签短线/关键数据/强调药丸 */
+  --cinnabar-ink:#FBF8F0;
+  font-family:'Songti SC','STSong','SimSun','Noto Serif SC',serif;
+}
+
+/* ---- 字阶：宋体标题 + 楷体次级标题，正文深棕宽行距 ---- */
+.tpl-chinese-pastel-spring .h1{font-family:'Songti SC','STSong','SimSun','Noto Serif SC',serif;font-size:88px;line-height:1.15;font-weight:800;letter-spacing:.08em;color:var(--ink);margin-bottom:10px}
+.tpl-chinese-pastel-spring .h2{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.1em;color:var(--ink);margin-bottom:8px}
+.tpl-chinese-pastel-spring h4{font-family:'STKaiti','KaiTi','Songti SC',serif;color:var(--ink);font-weight:700;font-size:25px;letter-spacing:.06em}
+.tpl-chinese-pastel-spring .lede{font-size:23px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-chinese-pastel-spring .deck-footer{font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- 宣纸底：柳绿与桃粉两团淡彩晕染 + 米色轻渐变 ---- */
+.tpl-chinese-pastel-spring .slide{
+  background:
+    radial-gradient(ellipse at 12% 16%,rgba(168,191,143,.22) 0%,transparent 50%),
+    radial-gradient(ellipse at 88% 82%,rgba(243,166,148,.18) 0%,transparent 50%),
+    linear-gradient(135deg,var(--bg-soft) 0%,var(--bg) 100%);
+}
+
+/* ---- ambient：顶部四段渐变色带（页首） ---- */
+.tpl-chinese-pastel-spring .slide::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:10px;z-index:-1;
+  background:linear-gradient(90deg,var(--ps-willow) 0%,var(--ps-bud) 35%,var(--ps-blush) 65%,var(--ps-peach) 100%);
+}
+
+/* ---- ambient：右上桃枝圆瓣花（整枝出画，压在内容之下） ---- */
+.tpl-chinese-pastel-spring .slide::after{
+  content:"";position:absolute;top:0;right:0;width:400px;height:350px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 380'%3E%3Cpath d='M420,40 Q300,80 220,160 Q140,240 60,360' stroke='%235A4030' stroke-width='4' fill='none' opacity='0.5'/%3E%3Cpath d='M350,100 Q330,150 360,220' stroke='%235A4030' stroke-width='2.5' fill='none' opacity='0.42'/%3E%3Ccircle cx='300' cy='110' r='22' fill='%23F3A694' opacity='0.72'/%3E%3Ccircle cx='290' cy='100' r='14' fill='%23F8C9B8' opacity='0.85'/%3E%3Ccircle cx='312' cy='125' r='12' fill='%23F8C9B8' opacity='0.85'/%3E%3Ccircle cx='240' cy='170' r='20' fill='%23F3A694' opacity='0.68'/%3E%3Ccircle cx='232' cy='162' r='12' fill='%23F8C9B8' opacity='0.82'/%3E%3Ccircle cx='370' cy='200' r='18' fill='%23F3A694' opacity='0.62'/%3E%3Ccircle cx='362' cy='194' r='11' fill='%23F8C9B8' opacity='0.8'/%3E%3Ccircle cx='160' cy='250' r='20' fill='%23F3A694' opacity='0.6'/%3E%3Ccircle cx='152' cy='242' r='12' fill='%23F8C9B8' opacity='0.75'/%3E%3Ccircle cx='172' cy='266' r='11' fill='%23F8C9B8' opacity='0.72'/%3E%3Cellipse cx='330' cy='140' rx='10' ry='4' fill='%23A8BF8F' opacity='0.8' transform='rotate(40 330 140)'/%3E%3Cellipse cx='270' cy='190' rx='11' ry='4' fill='%23C5D99E' opacity='0.8' transform='rotate(-20 270 190)'/%3E%3Cellipse cx='200' cy='220' rx='10' ry='4' fill='%23A8BF8F' opacity='0.72' transform='rotate(30 200 220)'/%3E%3Cellipse cx='120' cy='300' rx='11' ry='4' fill='%23C5D99E' opacity='0.7' transform='rotate(-35 120 300)'/%3E%3C/svg%3E") no-repeat top right;
+}
+
+/* ---- 题签：朱砂短线引导的小字标签 ---- */
+.tpl-chinese-pastel-spring .ps-kicker{display:flex;align-items:center;gap:14px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.3em;color:var(--ink-2)}
+.tpl-chinese-pastel-spring .ps-kicker::before{content:"";width:30px;height:2px;background:var(--cinnabar)}
+
+/* ---- 四色短线：标题下的一笔，从柳绿走到桃粉 ---- */
+.tpl-chinese-pastel-spring .ps-line{width:210px;height:4px;background:linear-gradient(90deg,var(--ps-willow) 0%,var(--ps-bud) 35%,var(--ps-blush) 65%,var(--ps-peach) 100%)}
+
+/* ---- 朱砂印：正方块小印 ---- */
+.tpl-chinese-pastel-spring .ps-seal{flex:none;width:72px;height:72px;background:var(--cinnabar);color:var(--cinnabar-ink);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 宣纸卡：半透明暖底 + 细描边；暖卡左竖线（桃粉）仅限 split 右列 ---- */
+.tpl-chinese-pastel-spring .ps-card{background:rgba(251,248,240,.82);border:1px solid var(--border-soft);padding:34px 40px}
+.tpl-chinese-pastel-spring .ps-card-line{background:rgba(251,248,240,.82);border:1px solid var(--border-soft);border-left:5px solid var(--ps-peach);padding:34px 40px}
+
+/* ---- 目录行：柔色圆点编号 + 篇名 + 说明 ---- */
+.tpl-chinese-pastel-spring .ps-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-pastel-spring .ps-item:last-child{border-bottom:none}
+.tpl-chinese-pastel-spring .ps-n{flex:none;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--ink);align-self:center;background:var(--ps-blush)}
+.tpl-chinese-pastel-spring .ps-item:nth-of-type(2) .ps-n,.tpl-chinese-pastel-spring .ps-step:nth-of-type(2) .ps-n{background:var(--ps-willow)}
+.tpl-chinese-pastel-spring .ps-item:nth-of-type(3) .ps-n,.tpl-chinese-pastel-spring .ps-step:nth-of-type(3) .ps-n{background:var(--ps-peach)}
+.tpl-chinese-pastel-spring .ps-item:nth-of-type(4) .ps-n{background:var(--ink-2);color:var(--bg-soft)}
+.tpl-chinese-pastel-spring .ps-t{flex:none;width:240px;font-family:'Songti SC','STSong','SimSun',serif;font-size:28px;font-weight:800;letter-spacing:.06em;color:var(--ink)}
+.tpl-chinese-pastel-spring .ps-d{flex:1;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列，编号沿用柔色圆点） ---- */
+.tpl-chinese-pastel-spring .ps-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-chinese-pastel-spring .ps-step:last-child{border-bottom:none}
+
+/* ---- 实色小色卡：嫩柳绿 / 柳芽黄绿 / 桃花粉，墨黛字，keynotes 专用 ---- */
+.tpl-chinese-pastel-spring .ps-chip{padding:32px 28px;display:flex;flex-direction:column;min-height:300px;color:var(--ink)}
+.tpl-chinese-pastel-spring .ps-chip p{margin:0;font-size:18px;line-height:1.8;letter-spacing:.02em;color:var(--ink)}
+.tpl-chinese-pastel-spring .ps-chip-green{background:var(--ps-willow)}
+.tpl-chinese-pastel-spring .ps-chip-bud{background:var(--ps-bud)}
+.tpl-chinese-pastel-spring .ps-chip-pink{background:var(--ps-peach)}
+.tpl-chinese-pastel-spring .ps-chip-num{font-family:'Inter','Noto Sans SC',sans-serif;font-size:52px;font-weight:800;line-height:1;letter-spacing:.02em;color:var(--ink)}
+
+/* ---- 朱砂数字：数据页主视觉，细无衬线 ---- */
+.tpl-chinese-pastel-spring .ps-stat{border-top:3px solid var(--ps-willow);padding-top:28px}
+.tpl-chinese-pastel-spring .ps-stat:nth-of-type(2){border-top-color:var(--ps-peach)}
+.tpl-chinese-pastel-spring .ps-stat:nth-of-type(3){border-top-color:var(--ps-gold)}
+.tpl-chinese-pastel-spring .ps-stat-v{font-family:'Inter','Noto Sans SC',sans-serif;font-size:102px;line-height:1;font-weight:300;letter-spacing:0;color:var(--cinnabar)}
+.tpl-chinese-pastel-spring .ps-stat-u{font-size:25px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-chinese-pastel-spring .ps-stat-l{margin-top:18px;font-family:'STKaiti','KaiTi',serif;font-size:26px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-chinese-pastel-spring .ps-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 题跋引文：楷体大字 ---- */
+.tpl-chinese-pastel-spring .ps-quote{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:60px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:24em;margin:0}
+.tpl-chinese-pastel-spring .ps-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 描边药丸：细描边胶囊 ---- */
+.tpl-chinese-pastel-spring .ps-pill{display:inline-flex;align-items:center;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-chinese-pastel-spring .ps-pill-accent{border-color:var(--cinnabar);color:var(--cinnabar)}
+
+/* ---- 行动钮：墨黛描边，收尾页 ---- */
+.tpl-chinese-pastel-spring .ps-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;border:2px solid var(--ink-2);font-family:'STKaiti','KaiTi',serif;font-size:22px;font-weight:700;letter-spacing:.18em;color:var(--ink-2)}
+
+/* ---- 时间线：柔色圆点 + 虚线连接 ---- */
+.tpl-chinese-pastel-spring .ps-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-chinese-pastel-spring .ps-tl-item{flex:1;position:relative}
+.tpl-chinese-pastel-spring .ps-tl-item:not(:last-child)::before{content:"";position:absolute;top:25px;left:51px;right:-40px;height:0;border-top:1px dashed var(--border)}
+.tpl-chinese-pastel-spring .ps-tl-dot{position:relative;z-index:1;width:51px;height:51px;border-radius:50%;background:var(--ps-blush);color:var(--ink);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700}
+.tpl-chinese-pastel-spring .ps-tl-item:nth-of-type(2) .ps-tl-dot{background:var(--ps-willow)}
+.tpl-chinese-pastel-spring .ps-tl-item:nth-of-type(3) .ps-tl-dot{background:var(--ps-peach)}
+.tpl-chinese-pastel-spring .ps-tl-item:nth-of-type(4) .ps-tl-dot{background:var(--ink-2);color:var(--bg-soft)}
+.tpl-chinese-pastel-spring .ps-tl-t{margin-top:18px;font-family:'Inter','Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--cinnabar);letter-spacing:.02em}
+.tpl-chinese-pastel-spring .ps-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 页面切换（翻页动画）：柔和淡入，轻滑不锐利 ---- */
+.tpl-chinese-pastel-spring{--page-shift:10px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

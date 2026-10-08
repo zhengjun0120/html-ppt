@@ -44,7 +44,7 @@ function stateOf(no: number): 'ok' | 'fail' | 'pending' {
         <span class="w-8 shrink-0 font-mono text-[10.5px] text-ink-3">{{ String(p.no).padStart(2, '0') }}</span>
         <span
           class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px]"
-          :class="stateOf(p.no) === 'ok' ? 'border-accent bg-accent text-on-accent' : stateOf(p.no) === 'fail' ? 'border-danger text-danger' : 'border-line text-transparent'"
+          :class="stateOf(p.no) === 'ok' ? 'border-accent bg-accent text-accent-contrast' : stateOf(p.no) === 'fail' ? 'border-danger text-danger' : 'border-line text-transparent'"
         >
           {{ stateOf(p.no) === 'ok' ? '✓' : stateOf(p.no) === 'fail' ? '!' : '·' }}
         </span>

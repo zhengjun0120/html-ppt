@@ -1,0 +1,74 @@
+/* 空白模板 —— 中性灰阶起点。
+   所有规则都在 .tpl-blank 作用域内（body class，fork/复制不漂移）；
+   改本文件 = 改整个模板的视觉：对话 write_style、工作台样式面板、历史回滚都覆盖它。 */
+
+.tpl-blank{
+  --bg:#f5f5f4;
+  --bg-soft:#ececea;
+  --surface:#ffffff;
+  --surface-2:#f1f1ef;
+  --border:#d8d8d4;
+  --border-strong:#b9b9b3;
+  --text-1:#26262a;
+  --text-2:#6b6b70;
+  --text-3:#9a9aa0;
+  --accent:#52525b;
+  --accent-2:#71717a;
+  --accent-3:#3f3f46;
+  --accent-ink:#ffffff;
+  --radius:10px;
+  --radius-lg:16px;
+  --shadow:0 12px 40px rgba(0,0,0,.10);
+  font-family:'Inter','Noto Sans SC',sans-serif;
+}
+.tpl-blank{background:var(--bg);color:var(--text-1)}
+/* 满版居中（hero 类版式：封面/章节/金句/收尾共用）。
+   注意 .slide 不能写 position：base.css 用 absolute+inset:0 做页面堆叠模型，
+   覆盖成 relative 会把所有页塌缩进文档流（实测 2026-10-05）；.bl-ghost 的
+   absolute 定位祖先由 base 的 absolute 直接满足，无需这里动手。 */
+.tpl-blank .slide{padding:96px 120px;background:var(--bg);color:var(--text-1)}
+.tpl-blank .slide.full{display:flex;flex-direction:column;justify-content:center}
+
+/* 排版基线（覆盖 base 的同名字段，作用域内必赢） */
+.tpl-blank .h1{font-size:76px;line-height:1.08;font-weight:800;letter-spacing:-.02em;color:var(--text-1)}
+.tpl-blank .h2{font-size:44px;line-height:1.2;font-weight:700;color:var(--text-1)}
+.tpl-blank .h4{font-size:24px;line-height:1.3;font-weight:650;color:var(--text-1)}
+.tpl-blank .kicker{color:var(--accent)}
+.tpl-blank .lede{color:var(--text-2)}
+.tpl-blank .dim{color:var(--text-2)}
+
+/* 卡片 */
+.tpl-blank .card{padding:28px 30px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+
+/* 目录：编号条目行（blank-toc） */
+.tpl-blank .bl-toc{display:flex;flex-direction:column;gap:0}
+.tpl-blank .bl-toc-row{display:flex;align-items:baseline;gap:20px;padding:18px 4px;border-bottom:1px solid var(--border)}
+.tpl-blank .bl-toc-n{font-size:20px;color:var(--accent);font-weight:600}
+.tpl-blank .bl-toc-t{font-size:25px;font-weight:650;color:var(--text-1)}
+.tpl-blank .bl-toc-d{font-size:17px;margin-left:auto;text-align:right}
+
+/* 章节页右下角 ghost 大数字（blank-divider） */
+.tpl-blank .bl-ghost{position:absolute;right:72px;bottom:-30px;font-size:300px;line-height:1;font-weight:800;color:var(--surface-2);user-select:none}
+
+/* 编号列表（blank-list） */
+.tpl-blank .bl-list-row{align-items:flex-start;gap:22px}
+.tpl-blank .bl-list-n{font-size:22px;font-weight:700;color:var(--accent)}
+.tpl-blank .bl-list-t{font-size:25px;font-weight:650;color:var(--text-1)}
+
+/* 对照卡（blank-split）：说明沉底，前提以分隔线托住 */
+.tpl-blank .bl-panel{display:flex;flex-direction:column}
+.tpl-blank .bl-panel-note{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);font-size:17px;color:var(--text-2)}
+
+/* 大数卡（blank-data） */
+.tpl-blank .bl-stat{padding:26px 28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.tpl-blank .bl-stat-v{font-size:64px;line-height:1.05;font-weight:800;letter-spacing:-.02em;color:var(--accent-3)}
+.tpl-blank .bl-stat-l{font-size:20px;font-weight:650;margin-top:8px;color:var(--text-1)}
+.tpl-blank .bl-stat-note{font-size:15px;margin-top:6px}
+.tpl-blank .bl-source{font-size:15px}
+
+/* 金句（blank-quote） */
+.tpl-blank .bl-quote{font-size:52px;line-height:1.3;font-weight:700;color:var(--text-1);max-width:26ch}
+.tpl-blank .bl-quote-src{font-size:17px;color:var(--text-2)}
+
+/* 收尾联系行（blank-thanks） */
+.tpl-blank .bl-contact{font-size:19px;color:var(--accent)}

@@ -54,3 +54,6 @@
 .tpl-graphify-dark-graph .gd-codebox .fn{color:var(--gd-blue)}
 
 .tpl-graphify-dark-graph.gd-sunset .gd-big.gd-rainbow{background:linear-gradient(90deg,#fb923c,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---- 页面切换（翻页动画）：快而精确，数据仪表盘的节奏 ---- */
+.tpl-graphify-dark-graph{--page-shift:16px;--page-dur:.32s}

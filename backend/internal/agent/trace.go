@@ -59,7 +59,7 @@ func (as *AgentService) openTraceRecorder(info runTraceInfo, emit func(StreamEve
 		}
 		// 这里**吞掉** emit 的错误：它表示客户端断了（见 serveAgentSSE），
 		// 而丢一条观测事件远好过因此中断整轮对话
-		_ = emit(StreamEvent{Type: EventTypeTrace, Content: string(raw)})
+		_ = emit(StreamEvent{Type: EventTypeTrace, Content: string(raw), Data: raw})
 	}
 
 	runID := trace.NewRunID(time.Now())

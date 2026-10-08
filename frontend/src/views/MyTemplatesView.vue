@@ -1,25 +1,44 @@
 <script setup lang="ts">
 import { PhArrowClockwise, PhArrowsOutSimple, PhGlobe, PhGlobeHemisphereWest, PhPencilSimple, PhPlus, PhSpinner, PhTrash } from '@phosphor-icons/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
+import { authedUrl } from '@/api/client'
 import { templateApi, type TemplateMeta } from '@/api/templates'
 import { userTemplateApi, userTemplatePreviewUrl, type CommunityTemplate, type UserTemplateRow } from '@/api/userTemplates'
+import TemplateFilterBar from '@/components/templates/TemplateFilterBar.vue'
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal.vue'
+import DeckEditModal from '@/components/editor/DeckEditModal.vue'
 import Button from '@/components/ui/Button.vue'
+import Dialog from '@/components/ui/Dialog.vue'
 import Empty from '@/components/ui/Empty.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import { useTemplateFilter } from '@/lib/templateFilter'
 import { useToast } from '@/stores/toast'
+import { watch } from 'vue'
 
 /**
  * 我的模板（plan-v3 B3）：克隆/定制/发布/下架/删除的管理页。
- * 发布跑自动门禁（结构校验 + demo 渲染量测），结果与失败原因就地展示。
+ * 发布 = 挂载校验秒级完成（2026-09-28 门禁降级），视觉质量用工作台的「质量体检」随时量测。
  * 「从内置模板派生」直接展示内置模板卡片（真实缩略 + 中文名 + 适用场景标签）——
- * 派生是挑"视觉起点"，看不见起点就没法挑。
+ * 派生是挑"视觉起点"，看不见起点就没法挑。从空白新建走独立命名弹窗。
  */
 
 const router = useRouter()
 const toast = useToast()
+const route = useRoute()
+
+// —— 二级导航：三个模块各自独立页面（/my-templates/mine|community|builtin），
+// 缺省与非法值回退「我的模板」；数据仍在挂载时一次拉全，切 tab 不重复请求。——//
+type TemplateTab = 'mine' | 'community' | 'builtin'
+const tabs: { value: TemplateTab; label: string }[] = [
+  { value: 'mine', label: '我的模板' },
+  { value: 'community', label: '社区模板' },
+  { value: 'builtin', label: '内置模板' },
+]
+const tab = computed<TemplateTab>(() =>
+  route.params.tab === 'community' || route.params.tab === 'builtin' ? (route.params.tab as TemplateTab) : 'mine',
+)
 const mine = ref<UserTemplateRow[]>([])
 const community = ref<CommunityTemplate[]>([])
 const templates = ref<TemplateMeta[]>([])
@@ -28,14 +47,24 @@ const busyId = ref('')
 const publishReport = ref('')
 
 const STATUS_LABELS: Record<string, string> = {
-  draft: '草稿', publishing: '门禁运行中', published: '已公开', failed: '门禁未过',
+  draft: '草稿', publishing: '发布审核中', published: '已公开', failed: '未通过审核',
 }
 
 const metaOf = computed(() => new Map(templates.value.map((t) => [t.id, t])))
 /** 可派生的内置模板（注册表合并视图里的用户模板不算"内置"） */
 const builtins = computed(() => templates.value.filter((t) => !t.id.startsWith('ut-')))
+// —— 派生选起点也要筛/搜：百来个内置模板靠翻页找太费劲（docs/template-filter-plan.md）——//
+const {
+  query: builtinQuery,
+  activeTag: builtinTag,
+  vocab: builtinVocab,
+  filtered: filteredBuiltins,
+  toggleTag: toggleBuiltinTag,
+  reset: resetBuiltinFilter,
+} = useTemplateFilter(builtins)
 /** base_id → 中文名（内置模板都有中文名；查不到兜底原 id） */
 function baseName(id: string): string {
+  if (id === '_blank') return '空白起点'
   return metaOf.value.get(id)?.name ?? id
 }
 
@@ -51,7 +80,7 @@ async function load() {
       if (p.value > n) p.value = n
     }
     clamp(minePage, Math.max(1, Math.ceil(m.length / MINE_PER_PAGE)))
-    clamp(builtinPage, Math.max(1, Math.ceil(builtins.value.length / BUILTIN_PER_PAGE)))
+    clamp(builtinPage, Math.max(1, Math.ceil(filteredBuiltins.value.length / BUILTIN_PER_PAGE)))
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '模板加载失败')
   } finally {
@@ -66,9 +95,9 @@ const BUILTIN_PER_PAGE = 9
 const minePage = ref(1)
 const builtinPage = ref(1)
 const minePageCount = computed(() => Math.max(1, Math.ceil(mine.value.length / MINE_PER_PAGE)))
-const builtinPageCount = computed(() => Math.max(1, Math.ceil(builtins.value.length / BUILTIN_PER_PAGE)))
+const builtinPageCount = computed(() => Math.max(1, Math.ceil(filteredBuiltins.value.length / BUILTIN_PER_PAGE)))
 const pagedMine = computed(() => mine.value.slice((minePage.value - 1) * MINE_PER_PAGE, minePage.value * MINE_PER_PAGE))
-const pagedBuiltins = computed(() => builtins.value.slice((builtinPage.value - 1) * BUILTIN_PER_PAGE, builtinPage.value * BUILTIN_PER_PAGE))
+const pagedBuiltins = computed(() => filteredBuiltins.value.slice((builtinPage.value - 1) * BUILTIN_PER_PAGE, builtinPage.value * BUILTIN_PER_PAGE))
 const mineSection = ref<HTMLElement>()
 const builtinSection = ref<HTMLElement>()
 function setMinePage(p: number) {
@@ -80,18 +109,56 @@ function setBuiltinPage(p: number) {
   nextTick(() => builtinSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
 }
 
+// 筛选/搜索条件变化后过滤列表变短，停在原页可能直接越界——统一回第 1 页
+watch([builtinQuery, builtinTag], () => {
+  builtinPage.value = 1
+})
+
 async function fork(baseId: string) {
   busyId.value = 'fork:' + baseId
   try {
     const row = await userTemplateApi.fork(baseId)
-    toast.info(`已从「${baseName(row.base_id)}」派生，去定制工作台改出你的风格`)
+    toast.info(`已基于「${baseName(row.base_id)}」新建你的模板，去定制工作台改出你的风格`)
     await router.push(`/my-templates/${row.id}/edit`)
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : '派生失败')
+    toast.error(e instanceof Error ? e.message : '基于模板新建失败')
   } finally {
     busyId.value = ''
   }
 }
+
+// 从空白新建：中性灰阶脚手架（两个最小说明版式），结构与视觉在工作台里从零长出来。
+// 命名走独立弹窗（原生 prompt 在部分环境抓不到焦点且样式割裂）；留空用默认名。
+const blankOpen = ref(false)
+const blankName = ref('')
+const blankCreating = ref(false)
+const blankInput = ref<HTMLInputElement | null>(null)
+
+function openBlankDialog() {
+  blankName.value = ''
+  blankOpen.value = true
+  // Dialog 自己会把焦点钉在确认按钮上（另一个 watcher），宏任务里抢回来给输入框
+  setTimeout(() => blankInput.value?.focus(), 0)
+}
+
+async function createBlank() {
+  if (blankCreating.value) return
+  blankCreating.value = true
+  try {
+    const row = await userTemplateApi.blank(blankName.value.trim())
+    blankOpen.value = false
+    toast.info('空白模板已创建，去工作台把它长成你的样子')
+    await router.push(`/my-templates/${row.id}/edit`)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '创建失败')
+  } finally {
+    blankCreating.value = false
+  }
+}
+
+watch(blankOpen, (o) => {
+  if (!o) blankName.value = ''
+})
 
 async function togglePublish(row: UserTemplateRow) {
   busyId.value = row.id + ':pub'
@@ -114,8 +181,14 @@ async function togglePublish(row: UserTemplateRow) {
   }
 }
 
+// 删除确认走 Dialog（与空白新建同款交互，替代原生 confirm 的样式割裂）
+const removeTarget = ref<UserTemplateRow | null>(null)
+function requestRemove(row: UserTemplateRow) {
+  removeTarget.value = row
+}
+
 async function remove(row: UserTemplateRow) {
-  if (!window.confirm(`删除模板「${row.name}」？已生成的文稿不受影响。`)) return
+  removeTarget.value = null
   busyId.value = row.id + ':del'
   try {
     await userTemplateApi.remove(row.id)
@@ -173,20 +246,33 @@ interface PreviewTarget {
   pages?: number
 }
 const preview = ref<PreviewTarget | null>(null)
+// 缩略图加载失败（Chrome 未装配/版本过期）→ 该卡回退活 iframe
+const thumbFailed = ref<Record<string, boolean>>({})
 const previewSandbox = computed(() =>
   preview.value?.kind === 'user' ? 'allow-scripts' : 'allow-scripts allow-same-origin',
 )
 /** 预览模式 src：?preview=1 激活 runtime 协议，之后翻页走 preview-goto
- * postMessage（无刷新、带过渡）。不再需要 #/N 深链。 */
+ * postMessage（无刷新、带过渡）。不再需要 #/N 深链。
+ * ut 走 authedUrl（?token=）：草稿态的 index.html/style.css 只对属主开放，
+ * 不带 token 就是 404 空白 iframe（iframe 带不了鉴权头，同卡片缩略图的妥协）。 */
 const previewSrc = computed(() => {
   const t = preview.value
   if (!t) return ''
   return t.kind === 'builtin'
     ? `/api/templates/${t.id}/preview?preview=1`
-    : `/user-templates/${t.id}/index.html?preview=1`
+    : authedUrl(`/user-templates/${t.id}/index.html`, { preview: 1 })
 })
 function openBuiltinPreview(b: TemplateMeta) {
   preview.value = { kind: 'builtin', id: b.id, name: b.name, canvas: b.canvas, pages: b.demo_pages }
+}
+function openCommunityPreview(c: CommunityTemplate) {
+  preview.value = {
+    kind: 'user',
+    id: c.id,
+    name: c.name,
+    canvas: c.canvas ?? { w: 1920, h: 1080 },
+    pages: c.demo_pages,
+  }
 }
 function openUserPreview(row: UserTemplateRow) {
   const base = row.base_id ? metaOf.value.get(row.base_id) : undefined
@@ -198,14 +284,16 @@ function openUserPreview(row: UserTemplateRow) {
     pages: base?.demo_pages,
   }
 }
+
+// —— 编辑弹窗（deck-editor-plan §4.6）：仅用户模板可编辑，内置卡只读。——//
+const editing = ref<UserTemplateRow | null>(null)
 </script>
 
 <template>
   <div class="mx-auto max-w-[1100px] p-6">
     <div class="mb-5 flex items-center justify-between">
       <div>
-        <h1 class="text-[16px] font-bold">我的模板</h1>
-        <p class="mt-0.5 text-[12px] text-ink-3">从内置模板派生，对话里定制视觉；过自动门禁后公开给所有人用。</p>
+        <h1 class="text-[16px] font-bold">模板</h1>
       </div>
       <Button :loading="loading" @click="load">
         <PhArrowClockwise :size="13" />
@@ -213,8 +301,23 @@ function openUserPreview(row: UserTemplateRow) {
       </Button>
     </div>
 
-    <!-- 我的模板 -->
-    <div v-if="loading" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <!-- 二级导航 -->
+    <nav class="flex flex-wrap gap-2" aria-label="模板分类">
+      <RouterLink
+        v-for="t in tabs"
+        :key="t.value"
+        :to="`/my-templates/${t.value}`"
+        class="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors"
+        :class="tab === t.value ? 'bg-accent text-accent-contrast' : 'bg-surface-2 text-ink-2 hover:text-ink'"
+      >
+        {{ t.label }}
+      </RouterLink>
+    </nav>
+
+    <!-- 模块一：我的模板 -->
+    <div v-if="tab === 'mine'" class="mt-6">
+      <p class="text-[12px] text-ink-3">你基于模板新建的版本：编辑、发布、下架都在这里。</p>
+      <div v-if="loading" class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="i in 3" :key="i" class="overflow-hidden rounded-card border border-line bg-surface">
         <div class="flex h-[130px] items-center justify-center"><PhSpinner :size="20" class="animate-spin text-ink-3" /></div>
       </div>
@@ -222,11 +325,11 @@ function openUserPreview(row: UserTemplateRow) {
     <Empty
       v-else-if="mine.length === 0"
       title="还没有自己的模板"
-      desc="在下方「从内置模板派生」里挑一个起点，克隆后在定制工作台里和 agent 一起改出你的风格。"
+      desc="在下方「内置模板」里挑一个喜欢的，基于它新建，再到定制工作台里和 agent 一起改出你的风格。"
     >
       <template #icon><PhGlobeHemisphereWest /></template>
     </Empty>
-    <div v-else ref="mineSection" class="scroll-mt-4">
+    <div v-else ref="mineSection" class="mt-3 scroll-mt-4">
       <div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div v-for="row in pagedMine" :key="row.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface">
         <div
@@ -235,7 +338,17 @@ function openUserPreview(row: UserTemplateRow) {
           class="relative w-full overflow-hidden border-b border-line bg-surface-2"
           :style="{ aspectRatio: `${(row.canvas?.w ?? 1920)} / ${(row.canvas?.h ?? 1080)}` }"
         >
+          <img
+            v-if="row.thumb && !thumbFailed[row.id]"
+            :src="templateApi.thumbUrl(row.id, row.thumb)"
+            loading="lazy"
+            decoding="async"
+            class="absolute inset-0 h-full w-full border-0 object-cover"
+            alt="模板缩略图"
+            @error="thumbFailed[row.id] = true"
+          />
           <iframe
+            v-else
             :src="userTemplatePreviewUrl(row.id)"
             class="pointer-events-none absolute left-0 top-0 border-0"
             :style="{
@@ -250,7 +363,7 @@ function openUserPreview(row: UserTemplateRow) {
           />
           <span
             class="absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
-            :class="row.visibility === 'public' ? 'bg-accent text-on-accent' : 'bg-surface-3 text-ink-2'"
+            :class="row.visibility === 'public' ? 'bg-accent text-accent-contrast' : 'bg-surface-3 text-ink-2'"
           >
             {{ row.visibility === 'public' ? '已公开' : '私有' }}
           </span>
@@ -263,19 +376,29 @@ function openUserPreview(row: UserTemplateRow) {
             <PhArrowsOutSimple :size="11" />
             预览
           </button>
+          <!-- 编辑入口：改的是模板 demo 本身（保存滚动备份 5 版；已发布模板需先下架） -->
+          <button
+            type="button"
+            class="absolute bottom-2 right-[74px] inline-flex cursor-pointer items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ink-2 shadow-sm backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+            title="手动编辑 demo"
+            @click="editing = row"
+          >
+            <PhPencilSimple :size="11" />
+            编辑
+          </button>
         </div>
         <div class="space-y-2 p-3">
           <div class="flex items-center justify-between gap-2">
             <p class="truncate text-[13.5px] font-semibold" :title="row.name">{{ row.name }}</p>
             <span
               class="shrink-0 rounded px-1.5 py-0.5 text-[10px]"
-              :class="row.status === 'failed' ? 'bg-[#FDEBEC] text-[#9F2F2D]' : 'bg-surface-2 text-ink-3'"
+              :class="row.status === 'failed' ? 'bg-danger-soft text-danger' : 'bg-surface-2 text-ink-3'"
             >
               {{ STATUS_LABELS[row.status] ?? row.status }}
             </span>
           </div>
-          <p class="text-[11px] text-ink-3">派生自「{{ baseName(row.base_id) }}」</p>
-          <p v-if="row.publish_error" class="line-clamp-3 rounded bg-[#FDEBEC] p-1.5 text-[11px] text-[#9F2F2D]" :title="row.publish_error">
+          <p class="text-[11px] text-ink-3">基于「{{ baseName(row.base_id) }}」</p>
+          <p v-if="row.publish_error" class="line-clamp-3 rounded bg-danger-soft p-1.5 text-[11px] text-danger" :title="row.publish_error">
             {{ row.publish_error }}
           </p>
           <div class="flex flex-wrap gap-1.5 pt-1">
@@ -291,7 +414,7 @@ function openUserPreview(row: UserTemplateRow) {
               <PhGlobe :size="12" />
               {{ row.visibility === 'public' ? '下架' : '发布' }}
             </Button>
-            <Button size="sm" variant="ghost" :loading="busyId === row.id + ':del'" @click="remove(row)">
+            <Button size="sm" variant="ghost" :loading="busyId === row.id + ':del'" @click="requestRemove(row)">
               <PhTrash :size="12" />
               删除
             </Button>
@@ -308,32 +431,98 @@ function openUserPreview(row: UserTemplateRow) {
       />
     </div>
 
-    <!-- 社区模板 -->
-    <div class="mt-8">
-      <h2 class="text-[14px] font-bold">社区模板</h2>
-      <p class="mt-0.5 text-[12px] text-ink-3">其他用户发布并通过门禁的模板，可以直接选用或再派生。</p>
-      <div v-if="community.length" class="mt-3 flex flex-wrap gap-2">
-        <span
+    </div>
+
+    <!-- 模块二：社区模板 -->
+    <div v-else-if="tab === 'community'" class="mt-6">
+      <p class="text-[12px] text-ink-3">其他用户发布并通过审核的模板，点一下按钮就能新建自己的版本。</p>
+      <div v-if="community.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
+        <div
           v-for="c in community"
           :key="c.id"
-          class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-ink-2"
+          class="mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent"
+          title="点击预览"
+          @click="openCommunityPreview(c)"
         >
-          {{ c.name }}
-          <span class="text-ink-3">来自 {{ c.author }}</span>
-          <button class="cursor-pointer font-semibold text-accent hover:underline" @click="fork(c.id)">
-            <PhPlus :size="11" class="inline" />
-            派生
-          </button>
-        </span>
+          <div
+            :ref="setBoxRef('community-' + c.id)"
+            :data-card-id="'community-' + c.id"
+            class="relative w-full overflow-hidden border-b border-line bg-surface-2"
+            :style="{ aspectRatio: `${(c.canvas?.w ?? 1920)} / ${(c.canvas?.h ?? 1080)}` }"
+          >
+            <img
+              v-if="c.thumb && !thumbFailed['community-' + c.id]"
+              :src="templateApi.thumbUrl(c.id, c.thumb)"
+              :alt="c.name + ' 封面'"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              @error="thumbFailed['community-' + c.id] = true"
+            />
+            <iframe
+              v-else
+              :src="userTemplatePreviewUrl(c.id)"
+              class="pointer-events-none absolute left-0 top-0 border-0"
+              :style="{
+                width: `${c.canvas?.w ?? 1920}px`,
+                height: `${c.canvas?.h ?? 1080}px`,
+                transform: `scale(${scaleFor('community-' + c.id, c.canvas ?? { w: 1920, h: 1080 })})`,
+                transformOrigin: 'top left',
+              }"
+              sandbox="allow-scripts"
+              loading="lazy"
+              :title="c.name + ' 预览'"
+            />
+            <button
+              type="button"
+              class="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ink-2 shadow-sm backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+              title="放大预览"
+              @click.stop="openCommunityPreview(c)"
+            >
+              <PhArrowsOutSimple :size="11" />
+              预览
+            </button>
+          </div>
+          <div class="p-3">
+            <div class="flex items-center gap-2">
+              <p class="truncate text-[13.5px] font-semibold" :title="c.name">{{ c.name }}</p>
+              <button
+                type="button"
+                class="ml-auto inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11px] font-semibold text-accent transition-colors hover:bg-accent-soft"
+                title="以此模板为起点创建自己的副本"
+                @click.stop="fork(c.id)"
+              >
+                <PhPlus :size="11" class="inline" />
+                基于此模板新建
+              </button>
+            </div>
+            <p class="mt-0.5 truncate text-[11px] text-ink-3">
+              来自 {{ c.author }}<template v-if="c.description"> · {{ c.description }}</template>
+            </p>
+          </div>
+        </div>
       </div>
       <p v-else class="mt-2 text-[12px] text-ink-3">还没有公开的社区模板——发布第一个吧。</p>
     </div>
 
-    <!-- 从内置模板派生 -->
-    <div ref="builtinSection" class="mt-8 scroll-mt-4">
-      <h2 class="text-[14px] font-bold">从内置模板派生</h2>
-      <p class="mt-0.5 text-[12px] text-ink-3">选一个接近的起点，结构契约继承内置模板，定制只动视觉 token，质量有底。</p>
-      <div class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
+    <!-- 模块三：内置模板 -->
+    <div v-else ref="builtinSection" class="mt-6 scroll-mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-[12px] text-ink-3">官方提供的模板，挑一个顺眼的新建你的版本，再到定制工作台里改成你想要的样式。</p>
+        <Button @click="openBlankDialog">
+          从空白新建
+        </Button>
+      </div>
+      <TemplateFilterBar
+        v-model:query="builtinQuery"
+        :active-tag="builtinTag"
+        :vocab="builtinVocab"
+        :total="builtins.length"
+        :shown="filteredBuiltins.length"
+        class="mt-4"
+        @update:active-tag="toggleBuiltinTag"
+      />
+      <div v-if="filteredBuiltins.length" class="mt-3 columns-1 gap-4 sm:columns-2 lg:columns-3">
         <div v-for="b in pagedBuiltins" :key="b.id" class="mb-4 break-inside-avoid overflow-hidden rounded-card border border-line bg-surface transition-colors hover:border-accent">
           <div
             :ref="setBoxRef('base-' + b.id)"
@@ -341,7 +530,17 @@ function openUserPreview(row: UserTemplateRow) {
             class="relative w-full overflow-hidden border-b border-line bg-surface-2"
             :style="{ aspectRatio: `${b.canvas.w} / ${b.canvas.h}` }"
           >
+            <img
+              v-if="b.thumb && !thumbFailed['base-' + b.id]"
+              :src="templateApi.thumbUrl(b.id, b.thumb)"
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full border-0 object-cover"
+              :alt="b.name + ' 缩略图'"
+              @error="thumbFailed['base-' + b.id] = true"
+            />
             <iframe
+              v-else
               :src="templateApi.previewUrl(b.id, '', 1, 1)"
               class="pointer-events-none absolute left-0 top-0 border-0"
               :style="{
@@ -375,14 +574,23 @@ function openUserPreview(row: UserTemplateRow) {
             <div class="pt-1">
               <Button size="sm" :loading="busyId === 'fork:' + b.id" @click="fork(b.id)">
                 <PhPlus :size="12" />
-                从这个派生
+                基于此模板新建
               </Button>
             </div>
           </div>
         </div>
       </div>
+      <div
+        v-else
+        class="mt-4 flex flex-col items-center gap-2 rounded-card border border-dashed border-line px-6 py-10 text-center"
+      >
+        <p class="text-[13px] text-ink-2">没有匹配的内置模板</p>
+        <button class="cursor-pointer text-[12.5px] font-semibold text-accent hover:underline" @click="resetBuiltinFilter">
+          清空筛选条件
+        </button>
+      </div>
       <Pagination
-        v-if="builtins.length > BUILTIN_PER_PAGE"
+        v-if="filteredBuiltins.length > BUILTIN_PER_PAGE"
         class="mt-6"
         :model-value="builtinPage"
         :page-count="builtinPageCount"
@@ -399,6 +607,48 @@ function openUserPreview(row: UserTemplateRow) {
       :sandbox="previewSandbox"
       :src="previewSrc"
       @close="preview = null"
+    />
+
+    <!-- 编辑弹窗：用户模板 demo 手改；保存后刷新列表（模板卡 iframe 是 no-cache，重挂即新版） -->
+    <DeckEditModal
+      :open="editing != null"
+      kind="usertpl"
+      :id="editing?.id ?? ''"
+      :title="editing?.name ?? ''"
+      :canvas="editing?.canvas ?? { w: 1920, h: 1080 }"
+      @close="editing = null"
+      @saved="load()"
+    />
+
+    <!-- 从空白新建：命名弹窗（回车=创建，留空用默认名「空白模板」） -->
+    <Dialog
+      :open="blankOpen"
+      title="从空白新建"
+      desc="空白起点：自带九个最简版式（封面到收尾，正文另有四种可选），配色、字体、版式都在工作台里从零定制。"
+      confirm-text="创建"
+      @confirm="createBlank"
+      @close="blankOpen = false"
+    >
+      <input
+        ref="blankInput"
+        v-model="blankName"
+        class="mt-4 w-full rounded-control border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-3 focus-visible:border-accent"
+        placeholder="模板名称（留空则叫「空白模板」）"
+        maxlength="40"
+        :disabled="blankCreating"
+        @keydown.enter.prevent="createBlank"
+      />
+    </Dialog>
+
+    <!-- 删除确认：danger 态，替代原生 window.confirm -->
+    <Dialog
+      :open="!!removeTarget"
+      :title="`删除模板「${removeTarget?.name ?? ''}」`"
+      desc="删除后不可恢复；已生成的文稿不受影响。"
+      confirm-text="删除"
+      danger
+      @confirm="removeTarget && remove(removeTarget)"
+      @close="removeTarget = null"
     />
   </div>
 </template>

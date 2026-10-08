@@ -1,0 +1,81 @@
+{
+  "id": "dopamine-clash",
+  "name": "多巴胺活力撞色",
+  "description": "淡紫、亮绿、玫粉三色的几何撞色：大色块切割、黑描边硬阴影卡片与等宽数字标签，高饱和但比例克制、正文对比度合规，把一颗快乐糖塞进每一页",
+  "tags": ["撞色", "潮流"],
+  "scenario": ["品牌新品发布", "潮流营销活动", "校园招新宣讲", "青年文化论坛", "节日促销企划"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "撞色封面",
+      "use": "开场：黑底题签 + 特粗大标题 + 一句定位，玫粉菱形糖与旋转贴纸同排",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；贴纸 ≤14 字"
+    },
+    {
+      "id": "contents",
+      "name": "色卡目录",
+      "use": "议程：描边大卡里 4 行篇目（撞色编号块 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三糖要点",
+      "use": "三个并列要点：描边硬阴影卡 + 撞色题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右格",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边描边卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "像素数字",
+      "use": "三个关键数据：等宽大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "高亮引文",
+      "use": "整页一句引文：特粗大字带荧光笔高亮 + 出处 + 两个支撑药丸",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节切换",
+      "use": "章节过渡：进度题签 + 特粗章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "快闪时间线",
+      "use": "3-4 个节点的横向时间线：贴纸圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "落幕按钮",
+      "use": "收尾：特粗大字 + 一句行动提醒 + 黑底硬阴影按钮 + 描边药丸 + 菱形糖",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Noto Sans SC", "Alibaba PuHuiTi", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/dopamine-clash",
+    "license": "Apache-2.0"
+  }
+}

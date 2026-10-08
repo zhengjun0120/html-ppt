@@ -88,3 +88,6 @@
   font-family:var(--font-serif);font-size:320px;line-height:.94;font-weight:700;
   color:transparent;-webkit-text-stroke:1.5px var(--accent);opacity:.18;
 }
+
+/* ---- 页面切换（翻页动画）：纯淡入，安静 ---- */
+.tpl-minimal-quiet{--page-shift:0px;--page-dur:.45s}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html-ppt/backend/internal/authctx"
+	"html-ppt/backend/internal/chatimg"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/store"
@@ -210,7 +211,7 @@ func refreshSystem(messages []openai.ChatCompletionMessageParamUnion, systemProm
 	return messages
 }
 
-func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID string, emit func(StreamEvent) error) (uint, error) {
+func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID string, imgs []chatimg.Image, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
 	client := as.clientFor(ctx)
 
@@ -248,7 +249,10 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		messages = append(messages, openai.SystemMessage(dec.sys))
 	}
 
-	messages = append(messages, openai.UserMessage(userContent))
+	// 用户消息（可带附图）落进会话历史并持久化。图存库是**有意的**：文稿对话
+	// 的会话刷新可恢复，图随消息 JSON 落库，回放能拿回缩略图；模型侧的可见性
+	// 由 streamOnce 里的滑动窗口控制（最近 4 张，更早的请求时降级不落库）。
+	messages = append(messages, chatimg.BuildUserMessage(userContent, imgs))
 	if err := as.persistSession(sess, messages); err != nil {
 		return sess.ID, err
 	}
@@ -408,7 +412,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		turnCtx := trace.WithTurn(ctx, i)
 		//预算将尽：提前吹哨，让模型把剩余轮次留给硬伤，而不是被硬掐后仓促收尾
 		if warn := scope.maxTurns - 4; warn > 0 && i == warn {
-			messages = append(messages, openai.UserMessage("工具调用预算还剩 4 轮：只修硬伤（溢出/截断/拒收的页），停止打磨性改动，然后准备收尾汇报"))
+			messages = append(messages, openai.UserMessage(budgetWarnMsg))
 			opt.Messages = messages
 			if err := as.persistSession(sess, messages); err != nil {
 				return false, rr, err
@@ -416,7 +420,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		}
 		//预算花完了
 		if i > scope.maxTurns {
-			messages = append(messages, openai.UserMessage("工具调用预算已用完：不要再调用任何工具，直接基于以上获取的信息给出最终回答"))
+			messages = append(messages, openai.UserMessage(budgetFinalMsg))
 			opt.Messages = messages
 			opt.Tools = nil
 			err := as.persistSession(sess, messages)
@@ -515,7 +519,13 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				if err := as.persistSession(sess, messages); err != nil {
 					return false, rr, err
 				}
-				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments}); emitErr != nil {
+				// Data 附结构化形态：arguments 正常是模型产的合法 JSON；防御一下
+				// 非法 JSON 时只留 Content（旧形态），不让坏载荷混进 data
+				var askData json.RawMessage
+				if json.Valid([]byte(tool.Function.Arguments)) {
+					askData = json.RawMessage(tool.Function.Arguments)
+				}
+				if emitErr := emit(StreamEvent{Type: EventTypeAskUser, ToolCallID: tool.ID, Content: tool.Function.Arguments, Data: askData}); emitErr != nil {
 					return false, rr, fmt.Errorf("事件推送失败: %w", emitErr)
 				}
 				trace.Emit(askCtx, trace.Event{Kind: trace.KindToolResult, Result: `{"note":"已向用户提问，本轮暂停等回答"}`})
@@ -720,8 +730,18 @@ func (as *AgentService) execTool(ctx context.Context, tool openai.ChatCompletion
 }
 
 func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, opt openai.ChatCompletionNewParams, fullText *strings.Builder, emit func(StreamEvent) error) (openai.ChatCompletionMessage, openai.CompletionUsage, error) {
+	// 滑动窗口（chatimg.KeepRecentImages）：历史里只保留最近 N 张用户附图，
+	// 更早的在**请求时**降级为文字占位。只变换本次请求，不落库——库里的完整
+	// 历史与刷新回放的缩略图不受影响。无图历史是零开销快速路径。
+	if windowed, changed, werr := chatimg.WindowOldestImages(opt.Messages, chatimg.KeepRecentImages); werr != nil {
+		log.Printf("[warn] agent: 附图窗口变换失败，本轮按原样发送 err: %v", werr)
+	} else if changed {
+		opt.Messages = windowed
+	}
+
 	// 观测：把这一轮**实际发给模型的东西**记下来。这是"模型为什么这么答"唯一能查的证据——
 	// 只记工具的输入输出是不够的：同一个工具结果，在不同上下文里会被理解成不同的意思。
+	// 附图的 data URL 在这里脱敏（原图在会话库里，不在观测文件里）。
 	//
 	// trace.Active 这层判断是必要的：序列化整份上下文是 MB 级的开销（每轮重发整份消息），
 	// 关掉观测就不该白做一遍。其余地方的 Emit 不用套它——Discard 本身就是空操作。
@@ -733,6 +753,7 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 			log.Printf("[warn] trace: 序列化上下文失败 err: %v", err)
 			raw = json.RawMessage(`null`)
 		}
+		raw = chatimg.RedactDataURLs(raw)
 		trace.Emit(ctx, trace.Event{
 			Kind:         trace.KindLLMRequest,
 			Model:        as.ModelID,
@@ -879,11 +900,9 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 
 	var userMsg string
 	if resume {
-		userMsg = "继续生成：先 list_slides 对齐已写入的页，然后从缺失的页继续 write_pages；" +
-			"若全部页已写入，则按最近一次量测结果修复问题页，修完汇报。"
+		userMsg = resumeGenerateMsg // 常量在 transcript.go：回放投影按它滤展示
 	} else {
-		userMsg = "开始生成：按工作流走——先 plan_pages 全局规划（被打回就调整重提），" +
-			"然后分批 write_pages 写完全部页，处理量测与 lint 反馈，需要时 review_slides 看图，最后如实汇报。"
+		userMsg = kickoffGenerateMsg
 	}
 	messages := []openai.ChatCompletionMessageParamUnion{
 		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df), outline))),

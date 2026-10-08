@@ -1,0 +1,99 @@
+/* mountain-green-literary — 山野葱郁。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/mountain-green-literary（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 图重字轻是这套风格的张力：页底深绿山峦 + 晒亮的黄草地 ambient 压住画面下半，
+ * 淡草雾浅底让正文可读；粗笔手写大字（楷体重字重）压场，细字诗句留白，
+ * 草黄 #ECCB2D 只做笔触与标签（黄上深字，不做黄字）。
+ * 页顶日光与飞鸟、页底山峦草地是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-mountain-green-literary{
+  --bg:#F2F6EA;              /* 淡草雾浅底 */
+  --bg-soft:#FAFCF4;         /* 亮一档的纸白 */
+  --ink:#26421C;             /* 深林正文 */
+  --ink-2:#4E6640;           /* 苔绿次级文字 */
+  --ink-3:#7E9070;           /* 远山灰绿小字 */
+  --pine:#3E7228;            /* 深绿山峦（身份色/主强调） */
+  --pine-mid:#408F77;        /* 浅绿山过渡层 */
+  --grass:#ECCB2D;           /* 草地亮黄（笔触与标签底） */
+  --grass-light:#EFE32C;     /* 阳光高光黄 */
+  --mist:#CFDFCC;            /* 淡蓝绿平衡色 */
+  --border:rgba(62,114,40,.32);
+  --border-soft:rgba(62,114,40,.16);
+  --accent:#3E7228;          /* 身份色：山绿 */
+  --accent-ink:#F7FAF0;      /* 绿上文字 */
+  font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：粗笔楷体压场 + 细无衬线正文，一重一轻 ---- */
+.tpl-mountain-green-literary .h1{font-family:'STKaiti','KaiTi','Yuanti SC',serif;font-size:92px;line-height:1.12;font-weight:800;letter-spacing:.06em;color:var(--ink);margin-bottom:12px}
+.tpl-mountain-green-literary .h2{font-family:'STKaiti','KaiTi','Yuanti SC',serif;font-size:54px;line-height:1.18;font-weight:800;letter-spacing:.05em;color:var(--ink);margin-bottom:8px}
+.tpl-mountain-green-literary h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.04em}
+.tpl-mountain-green-literary .lede{font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-mountain-green-literary .deck-footer{font-size:14px;color:var(--ink-2);letter-spacing:.16em}
+
+/* ---- ambient：页顶日光飞鸟 + 页底三层山峦与晒亮草地，z-index:-1 画在内容之下 ---- */
+.tpl-mountain-green-literary .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    radial-gradient(420px 300px at 86% 0%, rgba(239,227,44,.2), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 90'%3E%3Cpath d='M40,32 Q50,22 60,32 Q70,22 80,32' stroke='%232F5A1F' stroke-width='3' fill='none' opacity='.45' stroke-linecap='round'/%3E%3Cpath d='M116,56 Q124,48 132,56 Q140,48 148,56' stroke='%232F5A1F' stroke-width='2.5' fill='none' opacity='.35' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 72px 66px / 260px 90px;
+}
+.tpl-mountain-green-literary .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:240px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 240' preserveAspectRatio='none'%3E%3Cpath d='M0,120 Q240,58 480,100 Q720,140 960,88 Q1200,44 1440,102 Q1680,150 1920,92 L1920,240 L0,240 Z' fill='%233E7228' opacity='.8'/%3E%3Cpath d='M0,168 Q300,120 600,156 Q900,190 1200,150 Q1500,116 1920,160 L1920,240 L0,240 Z' fill='%23408F77' opacity='.55'/%3E%3Cpath d='M0,206 Q480,190 960,205 Q1440,218 1920,197 L1920,240 L0,240 Z' fill='%23ECCB2D' opacity='.92'/%3E%3Cpath d='M0,224 Q480,211 960,223 Q1440,233 1920,215 L1920,240 L0,240 Z' fill='%23EFE32C' opacity='.85'/%3E%3Cellipse cx='1500' cy='224' rx='64' ry='7' fill='%23FFF7C2' opacity='.5'/%3E%3Cellipse cx='430' cy='231' rx='84' ry='6' fill='%23FFF7C2' opacity='.4'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 标签：草黄胶囊（黄底深字，像草地上一块晒亮的色卡） ---- */
+.tpl-mountain-green-literary .mg-kicker{display:flex;align-items:center;gap:14px;font-size:16px;font-weight:700;letter-spacing:.3em;color:var(--pine)}
+.tpl-mountain-green-literary .mg-kicker::before{content:"";flex:none;width:14px;height:14px;background:var(--grass);border-radius:50% 50% 50% 20%;transform:rotate(-12deg)}
+.tpl-mountain-green-literary .mg-chip{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border-radius:999px;background:var(--grass);color:#4A3D08;font-size:17px;font-weight:800;letter-spacing:.1em;white-space:nowrap}
+.tpl-mountain-green-literary .mg-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1.6px solid var(--pine);border-radius:999px;background:rgba(255,255,250,.5);font-size:16px;font-weight:700;letter-spacing:.1em;color:var(--pine);white-space:nowrap}
+
+/* ---- 纸卡：纸白 + 山绿软描边 + 不规则圆角 ---- */
+.tpl-mountain-green-literary .mg-card{background:rgba(255,255,250,.74);border:2px solid rgba(62,114,40,.5);border-radius:22px 30px 24px 32px / 30px 22px 34px 24px;padding:36px 40px;display:flex;flex-direction:column}
+
+/* ---- 目录行：色卡圆点编号（松绿→浅绿→草黄→雾绿轮换）+ 篇名 + 说明 ---- */
+.tpl-mountain-green-literary .mg-item{display:flex;align-items:center;gap:26px;padding:25px 6px;border-bottom:1.6px dashed var(--border-soft)}
+.tpl-mountain-green-literary .mg-item:last-child{border-bottom:none}
+.tpl-mountain-green-literary .mg-n{flex:none;width:54px;height:54px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--accent-ink);background:var(--pine);border-radius:50% 46% 52% 48% / 48% 52% 46% 50%}
+.tpl-mountain-green-literary .mg-item:nth-child(2) .mg-n{background:var(--pine-mid)}
+.tpl-mountain-green-literary .mg-item:nth-child(3) .mg-n{background:var(--grass);color:#4A3D08}
+.tpl-mountain-green-literary .mg-item:nth-child(4) .mg-n{background:var(--mist);color:#2F5A1F}
+.tpl-mountain-green-literary .mg-t{flex:none;width:250px;font-size:27px;font-weight:800;letter-spacing:.06em;color:var(--ink)}
+.tpl-mountain-green-literary .mg-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 松白数字：深绿大数字 + 草黄笔触指标名 ---- */
+.tpl-mountain-green-literary .mg-stat{border-top:3px solid var(--pine);padding-top:28px}
+.tpl-mountain-green-literary .mg-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--pine)}
+.tpl-mountain-green-literary .mg-stat-u{font-size:26px;font-weight:700;color:var(--ink-3);margin-left:8px}
+.tpl-mountain-green-literary .mg-stat-l{display:inline-block;margin-top:18px;font-size:25px;font-weight:800;letter-spacing:.05em;color:var(--ink);background:linear-gradient(180deg,transparent 62%,rgba(236,203,45,.55) 62%);padding:0 8px}
+.tpl-mountain-green-literary .mg-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 手记引文：粗笔大字 + 竖排诗句 ---- */
+.tpl-mountain-green-literary .mg-quote{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:60px;line-height:1.6;font-weight:800;letter-spacing:.04em;color:var(--ink);max-width:26em;margin:0}
+.tpl-mountain-green-literary .mg-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+.tpl-mountain-green-literary .mg-vert{writing-mode:vertical-rl;font-family:'STKaiti','KaiTi',serif;font-size:26px;font-weight:700;letter-spacing:.44em;line-height:1.9;color:var(--pine)}
+.tpl-mountain-green-literary .mg-vert-accent{color:#B98A00}
+
+/* ---- 时间线：色卡圆点 + 细松绿连接线 ---- */
+.tpl-mountain-green-literary .mg-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-mountain-green-literary .mg-tl-item{flex:1;position:relative}
+.tpl-mountain-green-literary .mg-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:55px;right:-44px;height:2px;background:rgba(62,114,40,.35)}
+.tpl-mountain-green-literary .mg-tl-dot{position:relative;z-index:1;width:53px;height:53px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--accent-ink);background:var(--pine);border-radius:50% 46% 52% 48% / 48% 52% 46% 50%}
+.tpl-mountain-green-literary .mg-tl-item:nth-child(2) .mg-tl-dot{background:var(--pine-mid)}
+.tpl-mountain-green-literary .mg-tl-item:nth-child(3) .mg-tl-dot{background:var(--grass);color:#4A3D08}
+.tpl-mountain-green-literary .mg-tl-item:nth-child(4) .mg-tl-dot{background:var(--mist);color:#2F5A1F}
+.tpl-mountain-green-literary .mg-tl-t{margin-top:18px;font-size:21px;font-weight:800;color:#8F7200;letter-spacing:.04em}
+.tpl-mountain-green-literary .mg-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列纸卡） ---- */
+.tpl-mountain-green-literary .mg-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1.6px dashed var(--border-soft)}
+.tpl-mountain-green-literary .mg-step:last-child{border-bottom:none}
+.tpl-mountain-green-literary .mg-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：深绿实心楷体，像一块木牌 ---- */
+.tpl-mountain-green-literary .mg-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 44px;background:var(--pine);color:var(--accent-ink);font-family:'STKaiti','KaiTi',serif;font-size:23px;font-weight:800;letter-spacing:.18em;border-radius:16px 22px 14px 20px / 20px 14px 22px 16px}
+
+/* ---- 页面切换（翻页动画）：风吹过山野的自然感 ---- */
+.tpl-mountain-green-literary{--page-shift:16px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

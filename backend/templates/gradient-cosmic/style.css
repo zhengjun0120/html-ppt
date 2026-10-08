@@ -1,0 +1,101 @@
+/* gradient-cosmic — 梦幻分界·星河烟火。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/gradient-cosmic（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深紫蓝星河渐变 + 金橙高光的强明暗对比：星野、流星与「分界光带」住在
+ * ambient 层（.slide::before/::after，z-index:-1，画在内容之下），骨架零成本。
+ * 深色模板：正文一律浅色（星白 #F5F6FF / 浅紫灰 #C9CFF0 / 小字 #96A0D6），
+ * 卡为半透明深色底 + 金边；金色只做身份件，不做大面积底色。
+ * --bg 取星河渐变中段值，letterbox 与翻页过渡不跳色。 */
+.tpl-gradient-cosmic{
+  --bg:#171B48;              /* 星河渐变中段值 */
+  --ink:#F5F6FF;             /* 星白标题 */
+  --ink-2:#C9CFF0;           /* 浅紫灰正文 */
+  --ink-3:#96A0D6;           /* 小字与页脚 */
+  --gold:#FFD700;            /* 星金（身份色） */
+  --gold-deep:#FFC400;       /* 亮金 */
+  --ember:#FF6D00;           /* 火花橙 */
+  --cream:#FFF3D6;           /* 金米 */
+  --border:rgba(255,215,0,.26);     /* 金色细描边 */
+  --border-soft:rgba(201,207,240,.16);
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：星白大字带一点金晕，引文走衬线斜体 ---- */
+.tpl-gradient-cosmic .h1{font-size:90px;line-height:1.12;font-weight:800;letter-spacing:.02em;color:var(--ink);text-shadow:0 0 36px rgba(255,196,0,.22);margin-bottom:12px}
+.tpl-gradient-cosmic .h2{font-size:50px;line-height:1.2;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:10px}
+.tpl-gradient-cosmic h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.02em}
+.tpl-gradient-cosmic .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:300}
+.tpl-gradient-cosmic .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：深紫蓝星河渐变 + 紫金双星云，右下角向金橙过渡（分界的一半） ---- */
+.tpl-gradient-cosmic .slide::before{
+  content:"";position:absolute;inset:-6%;z-index:-1;
+  background:
+    radial-gradient(40% 46% at 84% 80%, rgba(255,109,0,.20), transparent 70%),
+    radial-gradient(46% 50% at 92% 92%, rgba(255,196,0,.14), transparent 72%),
+    radial-gradient(50% 55% at 70% 28%, rgba(124,58,237,.26), transparent 72%),
+    radial-gradient(36% 40% at 16% 72%, rgba(59,29,110,.45), transparent 75%),
+    linear-gradient(115deg,#04050F 0%,#0D1240 34%,#241A5E 58%,#2E1B5C 76%,#3A2210 100%);
+}
+/* ---- ambient：星点、流星与「梦幻分界」光带（细金线 + 宽晕），svg 一层画完 ---- */
+.tpl-gradient-cosmic .slide::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='gl' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFD700' stop-opacity='0'/%3E%3Cstop offset='0.45' stop-color='%23FFD700' stop-opacity='0.55'/%3E%3Cstop offset='0.62' stop-color='%23FF9800' stop-opacity='0.5'/%3E%3Cstop offset='1' stop-color='%23FF6D00' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg fill='%23F5F6FF'%3E%3Ccircle cx='80' cy='110' r='1.5' opacity='0.85'/%3E%3Ccircle cx='200' cy='70' r='1' opacity='0.6'/%3E%3Ccircle cx='340' cy='170' r='2' opacity='0.9'/%3E%3Ccircle cx='120' cy='290' r='1' opacity='0.55'/%3E%3Ccircle cx='280' cy='400' r='1.5' opacity='0.75'/%3E%3Ccircle cx='420' cy='260' r='1' opacity='0.6'/%3E%3Ccircle cx='180' cy='520' r='2' opacity='0.85'/%3E%3Ccircle cx='380' cy='620' r='1' opacity='0.5'/%3E%3Ccircle cx='80' cy='700' r='1.5' opacity='0.7'/%3E%3Ccircle cx='500' cy='150' r='1' opacity='0.55'/%3E%3Ccircle cx='600' cy='330' r='1.5' opacity='0.7'/%3E%3Ccircle cx='240' cy='640' r='1' opacity='0.45'/%3E%3Ccircle cx='460' cy='760' r='1.5' opacity='0.65'/%3E%3Ccircle cx='660' cy='90' r='1.2' opacity='0.6'/%3E%3Ccircle cx='860' cy='220' r='1.4' opacity='0.7'/%3E%3Ccircle cx='980' cy='80' r='1' opacity='0.5'/%3E%3Ccircle cx='1080' cy='300' r='1.3' opacity='0.6'/%3E%3Ccircle cx='740' cy='430' r='1' opacity='0.5'/%3E%3Ccircle cx='1180' cy='170' r='1.5' opacity='0.7'/%3E%3Ccircle cx='1600' cy='90' r='1.2' opacity='0.5'/%3E%3Ccircle cx='1780' cy='260' r='1' opacity='0.45'/%3E%3C/g%3E%3Cg fill='%23FFD700'%3E%3Ccircle cx='160' cy='200' r='2.4' opacity='0.9'/%3E%3Ccircle cx='320' cy='480' r='2' opacity='0.8'/%3E%3Ccircle cx='540' cy='240' r='2.4' opacity='0.85'/%3E%3Ccircle cx='920' cy='560' r='1.8' opacity='0.7'/%3E%3C/g%3E%3Cline x1='1560' y1='120' x2='1420' y2='232' stroke='%23FFF3D6' stroke-width='2.5' stroke-linecap='round' opacity='0.5'/%3E%3Crect x='1246' y='0' width='23' height='1080' fill='url(%23gl)' opacity='0.16'/%3E%3Crect x='1256' y='0' width='3' height='1080' fill='url(%23gl)' opacity='0.8'/%3E%3C/svg%3E") no-repeat center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：金色短线 + 宽字距小标（页首） ---- */
+.tpl-gradient-cosmic .gc-kicker{display:flex;align-items:center;gap:14px;font-size:16px;font-weight:600;letter-spacing:.38em;color:var(--gold)}
+.tpl-gradient-cosmic .gc-kicker::before{content:"";flex:none;width:26px;height:2px;background:var(--gold)}
+
+/* ---- 金橙光线：标题下的一道星火 ---- */
+.tpl-gradient-cosmic .gc-line{width:220px;height:3px;border-radius:2px;background:linear-gradient(90deg,#FFD700,#FF6D00 60%,transparent)}
+
+/* ---- 星夜卡：半透明深色底 + blur + 金色细描边，唯一卡型 ---- */
+.tpl-gradient-cosmic .gc-card{background:rgba(9,12,38,.58);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+/* 金边亮一档的星夜卡：承载步骤等需要被指认的块 */
+.tpl-gradient-cosmic .gc-card-gold{background:rgba(9,12,38,.66);border:1px solid rgba(255,215,0,.36);border-left:3px solid var(--gold-deep);padding:38px 42px}
+
+/* ---- 药丸：浅描边胶囊；强调款换星金 ---- */
+.tpl-gradient-cosmic .gc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(201,207,240,.30);font-size:16px;font-weight:500;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-gradient-cosmic .gc-pill-accent{border-color:rgba(255,215,0,.55);color:var(--gold);background:rgba(255,215,0,.08)}
+
+/* ---- 金月：发光圆盘，只放留白处（装饰，不放文字） ---- */
+.tpl-gradient-cosmic .gc-moon{flex:none;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFF6E0 0%,#FFD700 62%,#FF9800 100%);box-shadow:0 0 70px rgba(255,196,0,.42)}
+
+/* ---- 目录行：金圈编号 + 篇名 + 说明 ---- */
+.tpl-gradient-cosmic .gc-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid rgba(255,215,0,.14)}
+.tpl-gradient-cosmic .gc-item:last-child{border-bottom:none}
+.tpl-gradient-cosmic .gc-n{flex:none;width:52px;height:52px;border-radius:50%;background:rgba(9,12,38,.65);border:1.5px solid rgba(255,215,0,.5);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--gold);align-self:center}
+.tpl-gradient-cosmic .gc-t{flex:none;width:250px;font-size:29px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-gradient-cosmic .gc-d{flex:1;font-size:19px;line-height:1.7;color:#AAB4E8;letter-spacing:.01em}
+
+/* ---- 星光数据：金线压顶 + 金橙渐变大数字，页尾标来源 ---- */
+.tpl-gradient-cosmic .gc-stat{border-top:2px solid rgba(255,196,0,.5);padding-top:30px}
+.tpl-gradient-cosmic .gc-stat-v{font-size:96px;line-height:1;font-weight:800;letter-spacing:-.01em;background:linear-gradient(120deg,#FFD700,#FF6D00);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tpl-gradient-cosmic .gc-stat-u{font-size:26px;font-weight:500;color:var(--ink-3)}
+.tpl-gradient-cosmic .gc-stat-l{font-size:26px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-gradient-cosmic .gc-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:#AAB4E8}
+
+/* ---- 题跋引文：衬线斜体金米大字，诗意压轴 ---- */
+.tpl-gradient-cosmic .gc-quote{font-family:Georgia,'Noto Serif SC','Songti SC',serif;font-style:italic;font-size:58px;line-height:1.6;font-weight:600;letter-spacing:.03em;color:var(--cream);text-shadow:0 0 30px rgba(255,196,0,.2);max-width:24em;margin:0}
+.tpl-gradient-cosmic .gc-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--gold)}
+
+/* ---- 时间线：星点圆号 + 金橙连接线 ---- */
+.tpl-gradient-cosmic .gc-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-gradient-cosmic .gc-tl-item{flex:1;position:relative}
+.tpl-gradient-cosmic .gc-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1.5px;background:linear-gradient(90deg,rgba(255,215,0,.45),rgba(255,109,0,.25))}
+.tpl-gradient-cosmic .gc-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:50%;background:rgba(9,12,38,.75);border:1.5px solid rgba(255,215,0,.5);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--gold);box-shadow:0 0 18px rgba(255,196,0,.22)}
+.tpl-gradient-cosmic .gc-tl-t{margin-top:20px;font-size:21px;font-weight:700;letter-spacing:.04em;color:var(--gold)}
+.tpl-gradient-cosmic .gc-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:#AAB4E8}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-gradient-cosmic .gc-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px solid rgba(255,215,0,.14)}
+.tpl-gradient-cosmic .gc-step:last-child{border-bottom:none}
+.tpl-gradient-cosmic .gc-mini-t{margin:0;font-size:20px;line-height:1.6;color:#DCE2FA;letter-spacing:.01em}
+
+/* ---- 行动钮：金火渐变实底 + 深墨字，全模板唯一的实色块 ---- */
+.tpl-gradient-cosmic .gc-btn{display:inline-flex;align-items:center;gap:14px;padding:16px 42px;border-radius:12px;background:linear-gradient(120deg,#FFC400,#FF6D00);color:#241300;font-size:22px;font-weight:800;letter-spacing:.08em;box-shadow:0 12px 36px rgba(255,140,0,.35)}
+
+/* ---- 页面切换（翻页动画）：如夜幕缓缓切换，渐隐渐现 ---- */
+.tpl-gradient-cosmic{--page-shift:20px;--page-dur:.62s;--page-ease:cubic-bezier(.45,0,.55,1)}

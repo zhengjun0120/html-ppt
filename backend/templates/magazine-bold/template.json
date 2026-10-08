@@ -1,0 +1,81 @@
+{
+  "id": "magazine-bold",
+  "name": "杂志大字",
+  "description": "奶油纸上的超大衬线标题：深棕大字配琥珀点缀，橙色像杂志的荧光笔标记，大字排版与宽松行距让翻开的每一页都值得当封面",
+  "tags": ["杂志", "宣言"],
+  "scenario": ["专栏文章", "封面故事", "品牌月刊", "产品目录", "专题报道"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "封面大字",
+      "use": "开场：期号标签 + 超大衬线标题 + 琥珀短杠 + 一句导语，右下可立巨型水印字",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；标签 ≤14 字；水印 1-2 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录页",
+      "use": "议程：奶油白卡内 4 行篇目（琥珀大序号 + 篇名 + 一句说明），虚线分组",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：奶油白卡 + 琥珀题签 + 衬线小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边奶油卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "琥珀数字",
+      "use": "三个关键数据：琥珀衬线大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "金句拉页",
+      "use": "整页一句金句：超大衬线 + 出处 + 两个支撑药丸，右侧留白可立巨型水印字",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度标签 + 超大衬线章节名 + 一个过渡句 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：琥珀圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾订阅",
+      "use": "收尾：超大衬线 + 一句行动提醒 + 琥珀实底按钮 + 描边药丸",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Georgia", "Songti SC", "Inter", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/magazine-bold",
+    "license": "Apache-2.0"
+  }
+}

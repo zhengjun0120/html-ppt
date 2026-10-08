@@ -1,0 +1,81 @@
+{
+  "id": "geography-classroom",
+  "name": "地理课堂·蓝图",
+  "description": "白纸冰蓝底图上的观察图册：海军蓝标题结构与编号块，等高线与经纬网自动衬底，珊瑚红与明黄只做重点批注——像一份被老师讲过、学生划过重点的地理课本",
+  "tags": ["教育"],
+  "scenario": ["中学地理课件", "区域地理讲解", "等高线判读训练", "自然环境单元复习", "课堂活动与实验教学"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "课题封面",
+      "use": "开场：课程题签 + 课题大字 + 青绿课线 + 本课要解决的问题，配课时标签与授课信息",
+      "roles": ["cover"],
+      "constraints": "课题名 ≤10 字；lede 24-48 字；题签 ≤14 字；课时标签 ≤8 字"
+    },
+    {
+      "id": "contents",
+      "name": "环节目录",
+      "use": "议程：图册大卡里 4 行教学环节（海军蓝编号块 + 环节名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；环节名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：图册卡 + 珊瑚红题签 + 小标题 + 两句讲解",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左讲右证",
+      "use": "左边把一件事讲透（lede + 判断标准 + 描边药丸），右边图册卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "考点数字",
+      "use": "三个关键数据：珊瑚红大数字 + 指标名 + 口径，页尾标来源（教材页码或权威机构）",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "谚语引读",
+      "use": "整页一句引文：宋体大字 + 出处 + 两个支撑描边药丸，可配英文图注点缀",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "环节幕",
+      "use": "环节过渡：进度题签 + 课题大字 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "环节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "课时流程",
+      "use": "3-4 个节点的横向时间线：海军蓝编号块 + 时间点 + 一句安排",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "课堂收束",
+      "use": "收尾：课题大字 + 一句课后任务 + 海军蓝按钮 + 标签药丸，如下课前的黑板小结",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Noto Sans SC", "Inter", "Georgia", "Songti SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/geography-classroom",
+    "license": "Apache-2.0"
+  }
+}

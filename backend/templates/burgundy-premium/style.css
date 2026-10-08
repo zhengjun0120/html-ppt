@@ -1,0 +1,91 @@
+/* burgundy-premium — 勃艮第红高级感。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/burgundy-premium（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 酒窖晚宴桌：勃艮第酒红渐变打底，金色细线是唯一装饰语言，奶白衬线字承担
+ * 全部标题与正文；橡木桶年轮衬在页角（.slide::after，z-index:-1，内容之下）。
+ * 深色纪律：正文文字用奶白系保证对比度；letterbox 的 --bg 取渐变中段值，翻页不跳。 */
+.tpl-burgundy-premium{
+  --bg:#5E1224;              /* 渐变中段 = 勃艮第酒红（letterbox 同色，翻页不跳） */
+  --ink:#F5EDE0;             /* 奶白主字 */
+  --ink-2:#D9C8B6;           /* 淡奶白正文 */
+  --ink-3:#B79E8A;           /* 旧金灰小字（对酒红 ≥4.5:1） */
+  --border:rgba(201,160,99,.32);
+  --border-soft:rgba(201,160,99,.16);
+  --wine:#5E1224;            /* 勃艮第酒红（上游 #81021F 收深一档定调） */
+  --wine-deep:#300810;       /* 酒窖暗部 */
+  --gold:#C9A063;            /* 香槟金细线 */
+  --gold-bright:#E8C08E;     /* 亮金（数字与强调） */
+  color:var(--ink);
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Serif SC',serif;
+}
+.tpl-burgundy-premium .slide{background:linear-gradient(158deg,#6E1529 0%,var(--wine) 48%,var(--wine-deep) 100%)}
+
+/* ---- 字阶：衬线大字 + 宽行距，金线只做细装饰 ---- */
+.tpl-burgundy-premium .h1{font-size:92px;line-height:1.14;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:12px}
+.tpl-burgundy-premium .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:.06em;color:var(--ink);margin-bottom:10px}
+.tpl-burgundy-premium h4{font-family:inherit;color:var(--gold-bright);font-weight:700;font-size:26px;letter-spacing:.05em}
+.tpl-burgundy-premium .lede{font-size:23px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-burgundy-premium .deck-footer{font-family:'Inter','Noto Sans SC',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.22em}
+
+/* ---- ambient：金色细框（全页内衬）+ 橡木桶年轮（页角），z-index:-1 ---- */
+.tpl-burgundy-premium .slide::before{
+  content:"";position:absolute;inset:28px;border:1px solid var(--border-soft);z-index:-1;
+}
+.tpl-burgundy-premium .slide::after{
+  content:"";position:absolute;right:-140px;bottom:-150px;width:600px;height:600px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600'%3E%3Cg fill='none' stroke='%23C9A063'%3E%3Ccircle cx='300' cy='300' r='70' stroke-opacity='.26'/%3E%3Ccircle cx='300' cy='300' r='125' stroke-opacity='.19'/%3E%3Ccircle cx='300' cy='300' r='180' stroke-opacity='.13'/%3E%3Ccircle cx='300' cy='300' r='235' stroke-opacity='.09'/%3E%3Ccircle cx='300' cy='300' r='290' stroke-opacity='.06'/%3E%3C/g%3E%3C/svg%3E") no-repeat center;
+}
+
+/* ---- 题签：金色字距标签 + 细金线（页首） ---- */
+.tpl-burgundy-premium .bg-kicker{display:flex;align-items:center;gap:16px;font-family:'Inter','Noto Sans SC',sans-serif;font-size:16px;font-weight:500;letter-spacing:.38em;color:var(--gold)}
+.tpl-burgundy-premium .bg-kicker::before{content:"";width:44px;height:1px;background:var(--gold)}
+
+/* ---- 金线：1px 细金分隔，从左向右渐隐 ---- */
+.tpl-burgundy-premium .bg-rule{width:230px;height:1px;background:linear-gradient(90deg,var(--gold) 0%,rgba(201,160,99,.05) 100%)}
+
+/* ---- 庄园徽记：金框方块字（封面/收尾用） ---- */
+.tpl-burgundy-premium .bg-mark{flex:none;width:64px;height:64px;border:1.5px solid var(--gold);color:var(--gold-bright);display:flex;align-items:center;justify-content:center;text-align:center;font-size:26px;font-weight:700;letter-spacing:.05em}
+
+/* ---- 酒标卡：深色半透明 + 金细边，无阴影 ---- */
+.tpl-burgundy-premium .bg-card{background:rgba(20,3,9,.35);border:1px solid var(--border-soft);padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：直角小签，克制 ---- */
+.tpl-burgundy-premium .bg-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid var(--border);border-radius:2px;font-family:'Inter','Noto Sans SC',sans-serif;font-size:16px;letter-spacing:.16em;color:var(--ink-2);white-space:nowrap}
+.tpl-burgundy-premium .bg-pill-accent{border-color:var(--gold);color:var(--gold-bright)}
+
+/* ---- 目录行：金框编号 + 篇名 + 说明 ---- */
+.tpl-burgundy-premium .bg-item{display:flex;align-items:baseline;gap:26px;padding:26px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-burgundy-premium .bg-item:last-child{border-bottom:none}
+.tpl-burgundy-premium .bg-n{flex:none;width:52px;height:52px;border:1px solid var(--gold);color:var(--gold-bright);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;letter-spacing:.06em;align-self:center}
+.tpl-burgundy-premium .bg-t{flex:none;width:260px;font-size:29px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-burgundy-premium .bg-d{flex:1;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 酒窖数字：亮金衬线大数字（全模板最亮的一处） ---- */
+.tpl-burgundy-premium .bg-stat{border-top:1px solid var(--gold);padding-top:28px}
+.tpl-burgundy-premium .bg-stat-v{font-size:96px;line-height:1;font-weight:700;letter-spacing:.01em;color:var(--gold-bright)}
+.tpl-burgundy-premium .bg-stat-u{font-size:26px;color:var(--ink-3);margin-left:8px}
+.tpl-burgundy-premium .bg-stat-l{margin-top:18px;font-size:25px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-burgundy-premium .bg-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 题酒引文：奶白衬线大字 ---- */
+.tpl-burgundy-premium .bg-quote{font-size:60px;line-height:1.62;font-weight:700;letter-spacing:.05em;color:var(--ink);max-width:26em;margin:0}
+.tpl-burgundy-premium .bg-src{margin:0;font-family:'Inter','Noto Sans SC',sans-serif;font-size:18px;letter-spacing:.18em;color:var(--ink-3)}
+
+/* ---- 流程时间线：金圈圆点 + 细金连接线 ---- */
+.tpl-burgundy-premium .bg-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-burgundy-premium .bg-tl-item{flex:1;position:relative}
+.tpl-burgundy-premium .bg-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1px;background:var(--border)}
+.tpl-burgundy-premium .bg-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1px solid var(--gold);border-radius:50%;background:var(--wine-deep);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--gold-bright)}
+.tpl-burgundy-premium .bg-tl-t{margin-top:18px;font-family:'Inter','Noto Sans SC',sans-serif;font-size:21px;font-weight:700;letter-spacing:.06em;color:var(--gold-bright)}
+.tpl-burgundy-premium .bg-tl-d{margin-top:8px;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（左叙右列的右列） ---- */
+.tpl-burgundy-premium .bg-step{display:flex;align-items:center;gap:20px;padding:25px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-burgundy-premium .bg-step:last-child{border-bottom:none}
+.tpl-burgundy-premium .bg-mini-t{margin:0;font-size:20px;line-height:1.65;color:var(--ink)}
+
+/* ---- 行动钮：金框字距，请柬落款 ---- */
+.tpl-burgundy-premium .bg-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 42px;border:1px solid var(--gold);color:var(--gold-bright);font-size:22px;font-weight:700;letter-spacing:.3em}
+
+/* ---- 页面切换（翻页动画）：晚宴节奏，稳而不拖 ---- */
+.tpl-burgundy-premium{--page-shift:12px;--page-dur:.6s;--page-ease:cubic-bezier(.22,.61,.36,1)}

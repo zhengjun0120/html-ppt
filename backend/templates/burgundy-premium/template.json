@@ -1,0 +1,81 @@
+{
+  "id": "burgundy-premium",
+  "name": "勃艮第红高级感",
+  "description": "勃艮第酒红渐变打底的晚宴桌：金色细线做唯一装饰语言，奶白衬线字承担标题与正文，橡木桶年轮衬在页角——一眼即贵、沉得住的克制奢华",
+  "tags": ["深色", "奢华", "庆典"],
+  "scenario": ["品鉴会与晚宴", "高端品牌发布", "奢侈品与腕表珠宝营销", "艺术展览开幕", "高端年终汇报"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "晚宴封面",
+      "use": "开场：金色题签 + 衬线大字标题 + 金线 + 一句定位，配庄园徽记与时间地点",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；徽记 1 字"
+    },
+    {
+      "id": "contents",
+      "name": "晚宴次序",
+      "use": "议程：酒标卡里 4 行次序（金框编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡看点",
+      "use": "三个并列看点：酒标卡 + 金色题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左叙右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边酒标卡装三行条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "酒窖数字",
+      "use": "三个关键数据：亮金衬线大数字 + 指标名 + 口径，页尾标来源与「以当日为准」",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "题酒引文",
+      "use": "整页一句引文：奶白衬线大字 + 出处 + 两个金色描边药丸",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "篇章幕",
+      "use": "篇章过渡：进度题签 + 衬线大字 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "篇章名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "流程时间线",
+      "use": "3-4 个节点的横向时间线：金圈圆点 + 时间点 + 一句安排",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "订席收尾",
+      "use": "收尾：衬线大字 + 一句行动提醒 + 金框按钮 + 徽记药丸，如请柬落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Georgia", "Songti SC", "Inter", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/burgundy-premium",
+    "license": "Apache-2.0"
+  }
+}

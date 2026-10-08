@@ -59,3 +59,16 @@ func (g *Grants) Take(nonce string) (uid uint,deckID string,ok bool){
 	return v.uid,v.deckID,true
 }
 
+
+// Peek 校验 nonce 但不消费。模板 demo 的门禁渲染要依次拉 index.html 与
+// style.css（跨多次导航），一次性语义不适用；TTL 照旧 2 分钟，过期自然失效，
+// Issue 的过期清扫会回收条目。deck 的截图管线继续用一次性的 Take。
+func (g *Grants) Peek(nonce string) (uid uint, deckID string, ok bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	v, found := g.open[nonce]
+	if !found || time.Now().After(v.expires) {
+		return 0, "", false
+	}
+	return v.uid, v.deckID, true
+}

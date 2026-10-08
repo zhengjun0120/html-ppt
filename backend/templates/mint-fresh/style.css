@@ -1,0 +1,103 @@
+/* mint-fresh — 薄荷清新 · 高级绿。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/mint-fresh（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 低饱和高明度的植物绿：奶白绿画布 + 大圆角半透明卡 + 叶脉线稿，
+ * 留白是构图的一半；薄荷青只做身份填充（题签/编号块/上边线），深墨绿只做
+ * 标题与按钮。角落的柔光斑与蕨叶线稿是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-mint-fresh{
+  --bg:#EAF2E7;              /* 奶白绿画布 */
+  --bg-soft:#F5FAF3;
+  --ink:#2F4A3A;             /* 深墨绿（标题） */
+  --ink-2:#5C6B60;           /* 暖灰绿正文 */
+  --ink-3:#8CA093;           /* 灰绿小字 */
+  --border:rgba(47,74,58,.15);
+  --border-soft:rgba(47,74,58,.09);
+  --mint:#B5D7C3;            /* 浅薄荷青（身份填充） */
+  --mint-soft:#DCEBE0;
+  --bean:#A3C4A9;            /* 豆沙绿 */
+  --sage:#8FA89A;            /* 灰绿（衬线轻字） */
+  --moss:#3E7A5E;            /* 苔绿（关键数据） */
+  --moss-ink:#F2F8F0;
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：无衬线中粗 + 宽行距；衬线轻字只做 h1 里的点睛一词 ---- */
+.tpl-mint-fresh .h1{font-size:84px;line-height:1.1;font-weight:700;letter-spacing:-.015em;color:var(--ink);margin-bottom:12px}
+.tpl-mint-fresh .h2{font-size:52px;line-height:1.16;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-mint-fresh h4{color:var(--ink);font-weight:700;font-size:24px}
+.tpl-mint-fresh .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:300;letter-spacing:.01em}
+.tpl-mint-fresh .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+.tpl-mint-fresh .mf-thin{font-family:'Songti SC','STSong','SimSun',serif;font-weight:300;color:var(--sage)}
+
+/* ---- ambient：右上薄荷柔光斑 + 两枚叶脉线稿；左下豆沙绿柔光斑 ---- */
+.tpl-mint-fresh .slide::before{
+  content:"";position:absolute;top:-150px;right:-130px;width:660px;height:660px;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 112'%3E%3Cpath d='M42 8 C24 36 18 68 42 104 C66 68 60 36 42 8 Z' stroke='%232F4A3A' stroke-width='1.3' fill='none' opacity='0.3'/%3E%3Cline x1='42' y1='16' x2='42' y2='96' stroke='%232F4A3A' stroke-width='0.9' opacity='0.24'/%3E%3C/svg%3E") no-repeat right 64px top 128px / 84px 112px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 160'%3E%3Cpath d='M60 12 C32 52 22 100 60 148 C98 100 88 52 60 12 Z' stroke='%232F4A3A' stroke-width='1.6' fill='none' opacity='0.32'/%3E%3Cline x1='60' y1='24' x2='60' y2='140' stroke='%232F4A3A' stroke-width='1' opacity='0.26'/%3E%3Cpath d='M60 52 C50 60 44 68 42 78' stroke='%232F4A3A' stroke-width='0.9' fill='none' opacity='0.22'/%3E%3Cpath d='M60 86 C70 94 76 102 78 112' stroke='%232F4A3A' stroke-width='0.9' fill='none' opacity='0.22'/%3E%3C/svg%3E") no-repeat right 216px top 300px / 120px 160px,
+    radial-gradient(circle at 60% 38%,rgba(181,215,195,.55) 0%,rgba(181,215,195,0) 70%);
+}
+.tpl-mint-fresh .slide::after{
+  content:"";position:absolute;bottom:-170px;left:-150px;width:640px;height:640px;z-index:-1;
+  background:
+    radial-gradient(circle at 38% 62%,rgba(163,196,169,.48) 0%,rgba(163,196,169,0) 70%),
+    radial-gradient(circle at 62% 40%,rgba(143,168,154,.26) 0%,rgba(143,168,154,0) 62%);
+}
+
+/* ---- 题签：薄荷胶囊 + 苔绿圆点，全模板的标签身份 ---- */
+.tpl-mint-fresh .mf-kicker{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;background:var(--mint);color:var(--ink);font-size:15px;font-weight:600;letter-spacing:.22em;padding:9px 24px;border-radius:999px}
+.tpl-mint-fresh .mf-kicker::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--moss)}
+
+/* ---- 薄荷渐变线：标题下的一笔，从薄荷到透明 ---- */
+.tpl-mint-fresh .mf-line{width:210px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--mint) 0%,rgba(181,215,195,0) 100%)}
+
+/* ---- 苔绿方印：圆角方块小印，封面与收尾的品牌落款 ---- */
+.tpl-mint-fresh .mf-badge{flex:none;width:76px;height:76px;border-radius:20px;background:var(--moss);color:var(--moss-ink);display:flex;align-items:center;justify-content:center;text-align:center;font-size:19px;font-weight:700;line-height:1.3;letter-spacing:.1em}
+
+/* ---- 半透明圆角卡：唯一卡型，大圆角 + 极轻环境影 ---- */
+.tpl-mint-fresh .mf-card{background:rgba(255,255,255,.62);border:1px solid var(--border-soft);border-radius:24px;padding:36px 40px;display:flex;flex-direction:column;min-height:270px;box-shadow:0 18px 40px rgba(47,74,58,.06)}
+
+/* ---- 药丸：细描边胶囊；accent 版用苔绿字 ---- */
+.tpl-mint-fresh .mf-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.55);font-size:16px;letter-spacing:.1em;color:var(--ink-2);white-space:nowrap}
+.tpl-mint-fresh .mf-pill-accent{border-color:rgba(62,122,94,.45);color:var(--moss);background:rgba(181,215,195,.26);font-weight:600}
+
+/* ---- 目录行：薄荷圆角块编号 + 篇名 + 说明 ---- */
+.tpl-mint-fresh .mf-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-mint-fresh .mf-item:last-child{border-bottom:none}
+.tpl-mint-fresh .mf-n{flex:none;width:52px;height:52px;border-radius:14px;background:var(--mint-soft);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-mint-fresh .mf-t{flex:none;width:250px;font-size:27px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.tpl-mint-fresh .mf-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 苔绿数字：数据页主视觉 ---- */
+.tpl-mint-fresh .mf-stat{border-top:3px solid var(--mint);padding-top:28px}
+.tpl-mint-fresh .mf-stat-v{font-size:100px;line-height:1;font-weight:800;letter-spacing:-.01em;color:var(--moss)}
+.tpl-mint-fresh .mf-stat-u{font-size:26px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-mint-fresh .mf-stat-l{margin-top:18px;font-size:26px;font-weight:700;color:var(--ink)}
+.tpl-mint-fresh .mf-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 叶间引文：宋体大字 ---- */
+.tpl-mint-fresh .mf-quote{font-family:'Songti SC','STSong','SimSun',serif;font-size:60px;line-height:1.62;font-weight:700;letter-spacing:.02em;color:var(--ink);max-width:24em;margin:0}
+.tpl-mint-fresh .mf-src{margin:0;font-size:20px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 蕨叶线稿：只立留白处（quote 页右侧），装饰不写字 ---- */
+.tpl-mint-fresh .mf-fern{position:absolute;right:130px;top:50%;transform:translateY(-50%);width:140px;height:320px;z-index:-1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 320'%3E%3Cpath d='M70 8 C62 100 64 210 74 312' stroke='%238FA89A' stroke-width='2' fill='none' opacity='0.5'/%3E%3Cpath d='M67 62 Q40 52 32 30 Q58 36 67 62 Z' fill='%238FA89A' opacity='0.42'/%3E%3Cpath d='M68 62 Q94 50 102 28 Q76 36 68 62 Z' fill='%23A3C4A9' opacity='0.42'/%3E%3Cpath d='M66 120 Q36 110 26 86 Q56 92 66 120 Z' fill='%23A3C4A9' opacity='0.4'/%3E%3Cpath d='M67 120 Q96 108 106 84 Q76 92 67 120 Z' fill='%238FA89A' opacity='0.4'/%3E%3Cpath d='M68 178 Q40 170 32 146 Q60 152 68 178 Z' fill='%238FA89A' opacity='0.38'/%3E%3Cpath d='M69 178 Q98 168 106 144 Q78 152 69 178 Z' fill='%23A3C4A9' opacity='0.38'/%3E%3Cpath d='M71 236 Q46 228 40 206 Q66 212 71 236 Z' fill='%23A3C4A9' opacity='0.36'/%3E%3Cpath d='M72 236 Q98 226 104 204 Q78 212 72 236 Z' fill='%238FA89A' opacity='0.36'/%3E%3C/svg%3E") no-repeat center / contain}
+
+/* ---- 时间线：薄荷圆角块 + 细连接线 ---- */
+.tpl-mint-fresh .mf-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-mint-fresh .mf-tl-item{flex:1;position:relative}
+.tpl-mint-fresh .mf-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:54px;right:-44px;height:1px;background:var(--border)}
+.tpl-mint-fresh .mf-tl-dot{position:relative;z-index:1;width:53px;height:53px;border-radius:14px;background:var(--mint-soft);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-mint-fresh .mf-tl-t{margin-top:20px;font-size:21px;font-weight:700;color:var(--moss);letter-spacing:.04em}
+.tpl-mint-fresh .mf-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-mint-fresh .mf-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-mint-fresh .mf-step:last-child{border-bottom:none}
+.tpl-mint-fresh .mf-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：深墨绿胶囊，收尾页唯一实底按钮 ---- */
+.tpl-mint-fresh .mf-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 40px;border-radius:999px;background:var(--ink);color:#F2F8F0;font-size:20px;font-weight:600;letter-spacing:.14em}
+
+/* ---- 页面切换（翻页动画）：像叶片轻轻放下 ---- */
+.tpl-mint-fresh{--page-shift:18px;--page-dur:.6s;--page-ease:cubic-bezier(.22,.61,.36,1)}

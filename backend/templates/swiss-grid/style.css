@@ -1,0 +1,92 @@
+/* swiss-grid — 瑞士网格（大胆 · 宣言）。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/swiss-grid（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 与 swiss-international 的克制路线刻意区分：本模板把网格「外露」——
+ * 12 栏 × 8 行的浅灰网格线直接画在纸面上；Inter 900 大字 + 近黑块压阵，
+ * 正红 #EF4444 是唯一的情绪出口（红线 / 红块 / 红通栏）。全直角、无圆角阴影。 */
+.tpl-swiss-grid{
+  --bg:#F8FAFC;              /* 近白蓝灰（letterbox 同色） */
+  --ink:#0F172A;             /* 深墨标题 */
+  --ink-2:#334155;           /* 石板灰正文 */
+  --ink-3:#94A3B8;           /* 弱灰小字 */
+  --border:rgba(15,23,42,.14);
+  --gridline:#E2E8F0;        /* 外露网格线 */
+  --accent:#EF4444;          /* 正红：唯一的情绪出口 */
+  --accent-ink:#FFFFFF;
+  --block:#111827;           /* 近黑块 */
+  font-family:'Inter','Helvetica Neue','Noto Sans SC',sans-serif;
+}
+
+/* ---- 字阶：900 大字，一切左对齐，层级严格 ---- */
+.tpl-swiss-grid .h1{font-size:96px;line-height:1.0;font-weight:900;letter-spacing:-.025em;color:var(--ink);margin-bottom:14px}
+.tpl-swiss-grid .h2{font-size:64px;line-height:1.05;font-weight:900;letter-spacing:-.02em;color:var(--ink);margin-bottom:12px}
+.tpl-swiss-grid h4{font-family:inherit;font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+.tpl-swiss-grid .lede{font-size:22px;line-height:1.7;color:var(--ink-2);font-weight:400;max-width:56ch}
+.tpl-swiss-grid .deck-footer{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase}
+
+/* ---- ambient：外露网格线直接画在纸面上（12 栏 × 8 行，z-index:-1） ---- */
+.tpl-swiss-grid .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/12 - 1px),var(--gridline) calc(100%/12 - 1px),var(--gridline) calc(100%/12)),
+    repeating-linear-gradient(0deg,transparent 0,transparent calc(100%/8 - 1px),var(--gridline) calc(100%/8 - 1px),var(--gridline) calc(100%/8)),
+    linear-gradient(160deg,#FFFFFF 0%,#F8FAFC 65%,#F1F5F9 100%);
+}
+
+/* ---- 红色标签：800 全大写宽字距，页首锚点 ---- */
+.tpl-swiss-grid .sg-kicker{font-size:15px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+.tpl-swiss-grid .sg-line{height:3px;background:var(--accent)}
+.tpl-swiss-grid .sg-accent{color:var(--accent)}
+
+/* ---- 红块与近黑块：模块化色块，文字压在色块上 ---- */
+.tpl-swiss-grid .sg-square{background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+.tpl-swiss-grid .sg-square span{font-size:20px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+.tpl-swiss-grid .sg-block{background:var(--block);color:#fff;padding:32px 36px;display:flex;flex-direction:column;justify-content:center}
+.tpl-swiss-grid .sg-block-label{margin:0 0 12px;font-size:15px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--accent)}
+.tpl-swiss-grid .sg-block-d{margin:0;font-size:17px;line-height:1.7;color:rgba(255,255,255,.78)}
+
+/* ---- 白卡：hairline 描边，无阴影；红顶线卡是唯一焦点 ---- */
+.tpl-swiss-grid .sg-card{background:rgba(255,255,255,.96);border:1px solid var(--border);padding:32px 34px;display:flex;flex-direction:column}
+.tpl-swiss-grid .sg-card-top{border-top:6px solid var(--accent)}
+.tpl-swiss-grid .sg-card-i{margin:0 0 16px;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;letter-spacing:.12em;color:var(--ink-3)}
+.tpl-swiss-grid .sg-card-d{margin:12px 0 0;font-size:17px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 目录行 / 步骤行：mono 红索引 + 900 篇名 ---- */
+.tpl-swiss-grid .sg-toc-row{display:flex;align-items:baseline;gap:26px;padding:24px 4px;border-bottom:1px solid var(--border)}
+.tpl-swiss-grid .sg-toc-row:last-child{border-bottom:none}
+.tpl-swiss-grid .sg-step{display:flex;align-items:center;gap:20px;padding:22px 4px;border-bottom:1px solid var(--border)}
+.tpl-swiss-grid .sg-step:last-child{border-bottom:none}
+.tpl-swiss-grid .sg-i{flex:none;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;letter-spacing:.1em;color:var(--accent)}
+.tpl-swiss-grid .sg-t{flex:none;width:280px;font-size:26px;font-weight:900;letter-spacing:-.01em;color:var(--ink)}
+.tpl-swiss-grid .sg-d{flex:1;font-size:17px;line-height:1.7;color:var(--ink-2)}
+.tpl-swiss-grid .sg-mini-t{margin:0;font-size:19px;line-height:1.6;color:var(--ink)}
+
+/* ---- 方角标签：1.5px 描边，红变体是情绪出口 ---- */
+.tpl-swiss-grid .sg-tag{display:inline-flex;align-items:center;padding:9px 18px;border:1.5px solid var(--ink);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap}
+.tpl-swiss-grid .sg-tag-red{border-color:var(--accent);color:var(--accent)}
+
+/* ---- 数据锚点：黑顶线统计块，900 巨号 ---- */
+.tpl-swiss-grid .sg-stat{border-top:3px solid var(--ink);padding-top:26px}
+.tpl-swiss-grid .sg-stat-hot .sg-stat-v{color:var(--accent)}
+.tpl-swiss-grid .sg-stat-v{font-size:92px;line-height:1;font-weight:900;letter-spacing:-.03em;color:var(--ink)}
+.tpl-swiss-grid .sg-stat-l{margin-top:14px;font-size:18px;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.tpl-swiss-grid .sg-stat-note{margin:10px 0 0;font-size:16px;line-height:1.7;color:var(--ink-2)}
+.tpl-swiss-grid .sg-src{font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.06em;color:var(--ink-3)}
+
+/* ---- 宣言：900 大字两行，下行套红 ---- */
+.tpl-swiss-grid .sg-quote{font-size:64px;line-height:1.2;font-weight:900;letter-spacing:-.025em;color:var(--ink);max-width:22em;margin:0}
+
+/* ---- 时间线：红色方块节点压在 hairline 上 ---- */
+.tpl-swiss-grid .sg-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-swiss-grid .sg-tl-item{flex:1;position:relative;border-top:1px solid var(--ink-3);padding-top:28px}
+.tpl-swiss-grid .sg-tl-item::before{content:"";position:absolute;top:-7px;left:0;width:14px;height:14px;background:var(--accent)}
+.tpl-swiss-grid .sg-tl-t{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.tpl-swiss-grid .sg-tl-d{margin-top:10px;font-size:17px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 行动钮与红色通栏条：大色块压轴 ---- */
+.tpl-swiss-grid .sg-btn{display:inline-flex;align-items:center;padding:16px 44px;background:var(--accent);color:#fff;font-size:19px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.tpl-swiss-grid .sg-bar{background:var(--accent);color:#fff;padding:18px 30px;display:flex;align-items:center;justify-content:space-between}
+.tpl-swiss-grid .sg-bar span{font-size:19px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+
+/* ---- 页面切换（翻页动画）：利落的宣言步进 ---- */
+.tpl-swiss-grid{--page-shift:30px;--page-dur:.4s}

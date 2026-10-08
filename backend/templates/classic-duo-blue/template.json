@@ -1,0 +1,81 @@
+{
+  "id": "classic-duo-blue",
+  "name": "经典双色·米黄深蓝",
+  "description": "暖米黄与深海蓝的强对比双色：如精装典籍的封面与扉页，衬线大字、细金线与从容留白，沉稳而有书卷气，是经得起时间考验的高级感",
+  "tags": ["浅色", "商务", "奢华"],
+  "scenario": ["高端品牌发布", "金融咨询提案", "企业年报", "年度总结", "传统文化讲座"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "典籍封面",
+      "use": "开场：金线题签 + 衬线大字标题 + 金棕细线 + 一句定位，米黄底上立深蓝标识块",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-52 字；题签 ≤14 字；标识 2-4 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录卷页",
+      "use": "议程：米色卡内 4 行篇目（金棕衬线序号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡举措",
+      "use": "三个并列举措：米色卡 + 金棕题签 + 衬线小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边米色卡装三行步骤",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "基线数字",
+      "use": "三个关键基线数据：深蓝衬线大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "题铭引言",
+      "use": "整页一句引言：衬线大字 + 出处 + 两个支撑药丸，右侧深蓝书脊色块衬竖排题铭",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤24 字且真实；药丸各 ≤8 字；竖排题铭 ≤7 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节扉页",
+      "use": "章节过渡：进度题签 + 衬线大字章节名 + 一句过渡 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤12 字；过渡句 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "季度路线",
+      "use": "4 个节点的横向时间线：衬线序号圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "恰好 4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "落款收尾",
+      "use": "收尾：衬线大字 + 一句行动提醒 + 深蓝按钮 + 描边药丸，如典籍落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-48 字；按钮 ≤6 字；药丸 ≤14 字"
+    }
+  ],
+  "fonts": ["Playfair Display", "Noto Serif SC", "Songti SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/classic-duo-blue",
+    "license": "Apache-2.0"
+  }
+}

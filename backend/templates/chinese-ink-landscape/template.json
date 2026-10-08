@@ -1,0 +1,81 @@
+{
+  "id": "chinese-ink-landscape",
+  "name": "中式水墨意境·山水",
+  "description": "青灰山色与暖沙米交织的深远山水：层峦叠嶂隐于云雾，宋体大字沉稳、留白即云雾，为文旅与人文提案铺开辽阔澄明的东方意境",
+  "tags": ["国风"],
+  "scenario": ["文旅度假区提案", "文化哲思讲座", "地产文旅发布", "艺术视觉提案", "品牌愿景发布"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "云山封面",
+      "use": "开场：题签 + 宋体大字标题 + 山棱线 + 一句定位，远山云雾衬底，可配朱砂印与色卡",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；题签 ≤14 字；印章 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "目录四卷",
+      "use": "议程：宣纸卡内 4 行卷目（墨圈编号 + 卷名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；卷名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三境要点",
+      "use": "三个并列要点：宣纸卡 + 朱砂题签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右径",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边宣纸卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "山河数字",
+      "use": "三个关键数据：朱砂大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "绝顶引文",
+      "use": "整页一句引文：宋体大字 + 出处 + 两个支撑描边药丸，留白处立竖排诗句",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节云雾",
+      "use": "章节过渡：进度题签 + 宋体大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "季节时间线",
+      "use": "3-4 个节点的横向时间线：墨圈圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾远望",
+      "use": "收尾：宋体大字 + 一句行动提醒 + 墨框按钮 + 描边药丸，如登高后的落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["Songti SC", "KaiTi", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/chinese-ink-landscape",
+    "license": "Apache-2.0"
+  }
+}

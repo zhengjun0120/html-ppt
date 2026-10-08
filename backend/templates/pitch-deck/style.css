@@ -58,3 +58,6 @@
 
 .tpl-pitch-deck.pd-ember{--grad:linear-gradient(135deg,#c2410c,#f97316)}
 .tpl-pitch-deck.pd-ember .ask-box{background:linear-gradient(135deg,#c2410c,#f97316)}
+
+/* ---- 页面切换（翻页动画）：大步推进，路演页要动起来 ---- */
+.tpl-pitch-deck{--page-shift:44px;--page-dur:.4s}

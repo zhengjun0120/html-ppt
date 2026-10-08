@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,6 +31,8 @@ func (h *Handler) DeckThumbs(c *gin.Context) {
 	}
 	dir, err := h.exporter.EnsureThumbs(c.Request.Context(), uid, c.Param("id"))
 	if err != nil {
+		// 真实原因只进日志：响应体对外的 404 文案保持"不区分原因"（不泄露存在性）
+		log.Printf("[warn] deck thumb: %s 渲染失败 err: %v", c.Param("id"), err)
 		response.Err(c, http.StatusNotFound, "deck 不存在或缩略图渲染失败")
 		return
 	}
@@ -60,6 +63,8 @@ func (h *Handler) DeckThumb(c *gin.Context) {
 	}
 	dir, err := h.exporter.EnsureThumbs(c.Request.Context(), uid, c.Param("id"))
 	if err != nil {
+		// 真实原因只进日志：响应体对外的 404 文案保持"不区分原因"（不泄露存在性）
+		log.Printf("[warn] deck thumb: %s 渲染失败 err: %v", c.Param("id"), err)
 		response.Err(c, http.StatusNotFound, "deck 不存在或缩略图渲染失败")
 		return
 	}

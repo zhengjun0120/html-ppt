@@ -1,0 +1,88 @@
+{
+  "id": "engineering-whiteprint",
+  "name": "工程白图",
+  "description": "白色坐标纸上的工程制图课：海军蓝墨线勾勒骨架，等宽字体贯穿全站，网格与图框每页衬底，代码页是图纸风的等宽代码卡——工程思维的可视化",
+  "tags": ["浅色", "工程"],
+  "scenario": ["系统设计评审", "工程方案汇报", "技术分享", "架构白皮书宣讲", "产品发布"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "图框封面",
+      "use": "开场：图纸题签 + 等宽大标题 + 尺寸标注线 + 一句定位，右下可盖施工图签章",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-48 字；题签 ≤14 字；图签章 4 字内"
+    },
+    {
+      "id": "contents",
+      "name": "图纸目录",
+      "use": "议程：标注框内 4 行篇目（方框编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三框要点",
+      "use": "三个并列要点：标注框 + 图例框头 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；题签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "主图侧栏",
+      "use": "左边把一件事讲透（lede + 补充 + 描边药丸），右边标注框装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "读数",
+      "use": "三个关键数据：深蓝大数字 + 指标名 + 口径，页尾标来源，如图纸读数栏",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "规范引文",
+      "use": "整页一句引文：等宽大字 + 出处 + 两个支撑描边药丸，留白处盖一枚会签章",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；药丸各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "分册",
+      "use": "章节过渡：进度题签 + 等宽大字章节名 + 一个过渡问题 + 两个看点药丸",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；药丸各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "节点轴",
+      "use": "3-4 个节点的横向时间线：方框节点 + 时间点 + 一句事件，如施工横道图",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "code",
+      "name": "代码示例",
+      "use": "一段与叙事直接相关的伪代码/配置，装进图纸风代码卡：标题栏三圆点 + 文件名 + 等宽代码块",
+      "roles": ["code"],
+      "constraints": "代码 6-10 行、每行 ≤56 字符；语言标签 ≤8 字符；代码下配一句说明 14-28 字"
+    },
+    {
+      "id": "closing",
+      "name": "会签收尾",
+      "use": "收尾：等宽大字 + 一句行动提醒 + 双线按钮 + 描边药丸 + 会签章，如图纸会签",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤12 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤10 字"
+    }
+  ],
+  "fonts": ["JetBrains Mono", "Noto Sans SC"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/engineering-whiteprint",
+    "license": "Apache-2.0"
+  }
+}

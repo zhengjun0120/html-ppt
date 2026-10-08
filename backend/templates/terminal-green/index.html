@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行云：一个 Go 命令行工具的诞生</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-terminal-green">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="tg-kicker">v1.0.0 · 发布分享</p>
+    <h1 class="h1 mt-m">行云，<br>一个 CLI 的诞生。</h1>
+    <p class="tg-cmdline mt-s">brew install xingyun<span class="tg-cursor"></span></p>
+    <p class="lede mt-m" style="max-width:52ch">一个用 Go 写的下载工具：8 个子命令、4.2 MB 单文件。今天讲它从自用脚本到 v1.0.0 的十一个月。</p>
+    <div class="row mt-l" style="gap:18px">
+      <span class="tg-pill tg-pill-accent">Go 1.24</span>
+      <span class="tg-pill">仅标准库</span>
+      <span class="tg-pill">单二进制</span>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场先真跑一遍 brew install，让大家看见真实终端输出，再回到这页讲十一个月的时间线。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="tg-kicker">cat AGENDA.md</p>
+    <h2 class="h2 mt-m">今天的四段</h2>
+    <div class="tg-card mt-l" style="margin-top:44px">
+      <div class="tg-item"><span class="tg-n">01</span><span class="tg-t">为何写行云</span><span class="tg-d">下载工具的痛点，与一次失败的尝试</span></div>
+      <div class="tg-item"><span class="tg-n">02</span><span class="tg-t">flag 解析</span><span class="tg-d">子命令、环境变量、配置文件的三层合并</span></div>
+      <div class="tg-item"><span class="tg-n">03</span><span class="tg-t">发布数据</span><span class="tg-d">冷启动、体积与真实用户的反馈</span></div>
+      <div class="tg-item"><span class="tg-n">04</span><span class="tg-t">走向 1.0</span><span class="tg-d">API 承诺、版本时间线与下一步计划</span></div>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">四段按决策顺序排：为什么做、怎么做、做得怎样、接下来。重点在第二段。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="tg-kicker">xingyun --version</p>
+    <h2 class="h2 mt-m">v1.0.0 交出的三个数字</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="tg-stat"><div class="tg-stat-v">8<span class="tg-stat-u">个</span></div><div class="tg-stat-l">子命令</div><p class="tg-stat-note">覆盖搜索、下载、校验等高频场景，全部有 man 文档</p></div>
+      <div class="tg-stat"><div class="tg-stat-v">4.2<span class="tg-stat-u">MB</span></div><div class="tg-stat-l">单文件体积</div><p class="tg-stat-note">go build 静态产物，含全部依赖，目标机无运行时</p></div>
+      <div class="tg-stat"><div class="tg-stat-v">42<span class="tg-stat-u">ms</span></div><div class="tg-stat-l">冷启动中位数</div><p class="tg-stat-note">空跑 --help，M1 Pro 本地连跑 100 次取中位数</p></div>
+    </div>
+    <p class="mt-m" style="font-size:17px;color:#63a86c;letter-spacing:.06em">来源：行云 v1.0.0 Release Notes 与仓库 benchmark 记录（2026-08）。</p>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">三个数字给个预期：功能够用、交付够轻、启动够快。后面每一段都在解释这三个数怎么来的。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="tg-kicker">第二章 · 解析设计</p>
+    <h1 class="h1 mt-m">先立契约，<br>再写代码。</h1>
+    <p class="lede mt-m" style="max-width:48ch">命令行工具的第一性问题是如何接输入：谁定义参数、谁处理冲突、谁把报错翻译成人话。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="tg-pill tg-pill-accent">flag 语义</span>
+      <span class="tg-pill">报错文案</span>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">过渡页：下一页先看原则，再看一段真实的解析代码。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="tg-kicker">设计原则</p>
+    <h2 class="h2 mt-m">三条不妥协</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="tg-card"><span class="tg-pill tg-pill-accent">零依赖</span><h4 class="mt-m">只用标准库</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#7fc98e">依赖树越短，二进制越可信。行云连日志库都没引，error 自带上下文就够了。</p></div>
+      <div class="tg-card"><span class="tg-pill tg-pill-accent">说人话</span><h4 class="mt-m">报错带建议</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#7fc98e">每个 error 后面跟一句怎么修。用户不该为了一个参数去翻源码或 issue 区。</p></div>
+      <div class="tg-card"><span class="tg-pill tg-pill-accent">单文件</span><h4 class="mt-m">一次交付</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#7fc98e">go build 出一个二进制，scp 到服务器就能跑，不装运行时、不写全局配置。</p></div>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">这三条是从一次失败里长出来的：第一版引了六个依赖，交叉编译三天没跑通。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="tg-kicker">三层合并</p>
+    <h2 class="h2 mt-m">flag 不是唯一入口</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">配置的读取顺序是：配置文件给默认值，环境变量适配 CI，命令行 flag 最后生效。越靠后的来源优先级越高，用户的心智模型也最简单。</p>
+        <p class="mt-m" style="font-size:19px;line-height:1.8;color:#7fc98e">冲突不报错，只在 --verbose 里打印采用了哪一层——安静，但可解释。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="tg-pill">-c 并发数</span>
+          <span class="tg-pill">-o 输出目录</span>
+        </div>
+      </div>
+      <div class="tg-card">
+        <div class="tg-step"><span class="tg-n">01</span><p class="tg-mini-t">读配置文件取默认值，路径遵循 XDG 规范</p></div>
+        <div class="tg-step"><span class="tg-n">02</span><p class="tg-mini-t">环境变量 XINGYUN_ 前缀覆盖配置，适配流水线</p></div>
+        <div class="tg-step"><span class="tg-n">03</span><p class="tg-mini-t">命令行 flag 最后生效，冲突时打印采用来源</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">下一页是这段逻辑的真实代码，就是 ParseArgs 那 30 行。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="tg-kicker">internal/options.go</p>
+    <h2 class="h2 mt-m">三层合并的入口</h2>
+    <div class="tg-term mt-l" style="margin-top:40px">
+      <div class="tg-term-bar"><span class="tg-dot"></span><span class="tg-dot"></span><span class="tg-dot"></span><span class="tg-term-file">internal/options.go</span><span class="tg-lang">Go</span></div>
+      <pre class="tg-codeblock"><code>func ParseArgs(args []string) (*Options, error) {
+    opts := &amp;Options{Concurrency: 4}
+    fs := flag.NewFlagSet("xingyun", flag.ExitOnError)
+    fs.IntVar(&amp;opts.Concurrency, "c", 4, "并发数")
+    fs.StringVar(&amp;opts.Output, "o", "out/", "输出目录")
+    fs.BoolVar(&amp;opts.Verbose, "v", false, "详细日志")
+    if err := fs.Parse(args); err != nil {
+        return nil, err
+    }
+    return opts, nil
+}</code></pre>
+    </div>
+    <p class="tg-codenote mt-m">flag 只负责最后一步：环境变量与配置文件在进入这个函数之前已经合并完毕。</p>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">可以现场改一行参数再跑一次，让 --verbose 打印来源，比讲十句都直观。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="tg-kicker">git tag -l</p>
+    <h2 class="h2 mt-m">十一个月，四个版本</h2>
+    <div class="tg-tl mt-l" style="margin-top:52px">
+      <div class="tg-tl-item"><div class="tg-tl-dot"></div><div class="tg-tl-t">v0.1.0</div><p class="tg-tl-d">2025-03 首发：只有 fetch 一个子命令，自用为主</p></div>
+      <div class="tg-tl-item"><div class="tg-tl-dot"></div><div class="tg-tl-t">v0.4.0</div><p class="tg-tl-d">2025-09 并发下载上线，大文件场景提速 6 倍</p></div>
+      <div class="tg-tl-item"><div class="tg-tl-dot"></div><div class="tg-tl-t">v0.9.0</div><p class="tg-tl-d">2026-02 配置三层合并定稿，报错全部带修复建议</p></div>
+      <div class="tg-tl-item"><div class="tg-tl-dot"></div><div class="tg-tl-t">v1.0.0</div><p class="tg-tl-d">2026-08 冻结核心 API，上架 Homebrew 官方源</p></div>
+    </div>
+    <p class="mt-m" style="font-size:17px;color:#63a86c;letter-spacing:.06em">版本与日期取自 GitHub Releases 标签；提速倍数为本地对照测试（同一 2 GB 文件，四次取均值）。</p>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">时间线的重点不是快，是每个版本只解决一类问题——这也是敢承诺 1.0 的底气。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="tg-kicker">git log -1 v1.0.0</p>
+    <p class="tg-quote mt-l" style="margin-top:40px">「把复杂留给代码，把简单留给人。」</p>
+    <p class="tg-src mt-m">—— 行云 v1.0.0 发布说明</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="tg-pill tg-pill-accent">API 冻结</span>
+      <span class="tg-pill">Homebrew 上架</span>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">这句写在发布说明第一行。十一个月里删掉的代码比写下的多，复杂度都让给了 flag 解析和报错文案。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="tg-kicker">brew install xingyun</p>
+    <h1 class="h1 mt-m">让下载，<br>行云流水。</h1>
+    <p class="lede mt-m" style="max-width:48ch">v1.0.0 已上架 Homebrew，一条命令安装。issue 与 PR 都欢迎——好的报错文案，一半是从用户那来的。</p>
+    <div class="row mt-l" style="gap:22px">
+      <span class="tg-btn">安装行云</span>
+      <span class="tg-pill">开源 · Apache-2.0</span>
+    </div>
+    <div class="deck-footer"><span>行云 XingYun · 2026</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：装它。仓库地址与文档在 README，二维码在讲义附页。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

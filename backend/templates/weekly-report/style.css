@@ -72,3 +72,6 @@
 
 .tpl-weekly-report.wr-teal{--accent:#0e9488}
 .tpl-weekly-report.wr-teal .week-chip{background:#0e9488}
+
+/* ---- 页面切换（翻页动画）：汇报节奏，小幅稳移 ---- */
+.tpl-weekly-report{--page-shift:20px;--page-dur:.4s}

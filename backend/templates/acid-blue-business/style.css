@@ -1,0 +1,96 @@
+/* acid-blue-business — 酸蓝张力。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/acid-blue-business（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 电光蓝 #435BE1 是唯一主强调色，打在黑白灰画布上：左侧垂直色轨、硬朗直角、
+ * 虚线与轮廓几何建立方向。荧光黄绿 #CDFF3D 只作微观点缀（刻度方块、菱形），
+ * 永远不承载文字——正文与标题保持黑灰对白底的报告级对比度。
+ * 左轨与右下几何是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-acid-blue-business{
+  --bg:#F2F2F2;              /* 浅灰画布（letterbox 同色） */
+  --bg-soft:#FFFFFF;         /* 白卡底 */
+  --surface:#FFFFFF;
+  --surface-2:#D9D9D9;
+  --ink:#0D0D0D;             /* 近黑标题 */
+  --ink-2:#404040;           /* 深灰正文 */
+  --ink-3:#8A8F99;           /* 冷灰小字 */
+  --border:#D9D9D9;
+  --acid:#435BE1;            /* 电光酸蓝（唯一主强调色） */
+  --acid-ink:#FFFFFF;        /* 酸蓝上的文字（对比度 5.5:1） */
+  --volt:#CDFF3D;            /* 荧光点缀：只作几何刻度，永不承载文字 */
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 字阶：超重字重 + 紧行距，方向感从字重里来 ---- */
+.tpl-acid-blue-business .h1{font-size:92px;line-height:1.04;font-weight:900;letter-spacing:-.02em;color:var(--ink);margin-bottom:14px}
+.tpl-acid-blue-business .h2{font-size:56px;line-height:1.12;font-weight:900;letter-spacing:-.01em;color:var(--ink);margin-bottom:12px}
+.tpl-acid-blue-business h4{font-family:inherit;color:var(--ink);font-weight:800;font-size:24px;letter-spacing:.01em}
+.tpl-acid-blue-business .lede{font-size:24px;line-height:1.75;color:var(--ink-2);font-weight:400}
+.tpl-acid-blue-business .deck-footer{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.24em}
+
+/* ---- ambient：左侧电光蓝色轨 + 右下轮廓几何（方向与边界） ---- */
+.tpl-acid-blue-business .slide::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:18px;z-index:-1;
+  background:var(--acid);
+}
+.tpl-acid-blue-business .slide::after{
+  content:"";position:absolute;right:96px;bottom:56px;width:430px;height:200px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 430 200'%3E%3Ccircle cx='330' cy='96' r='86' fill='none' stroke='%230D0D0D' stroke-width='2' opacity='0.10'/%3E%3Ccircle cx='330' cy='96' r='58' fill='none' stroke='%23435BE1' stroke-width='2' opacity='0.14'/%3E%3Cpath d='M0,180 L430,180' stroke='%230D0D0D' stroke-width='2' stroke-dasharray='10 8' opacity='0.14'/%3E%3Cpath d='M60,168 L92,120 L124,168 Z' fill='none' stroke='%230D0D0D' stroke-width='2' opacity='0.12'/%3E%3C/svg%3E") no-repeat right bottom;
+}
+
+/* ---- 等宽题签：荧光刻度 + 等宽大写小字，像设备铭牌 ---- */
+.tpl-acid-blue-business .ab-meta{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;font-weight:700;letter-spacing:.3em;color:var(--acid);text-transform:uppercase}
+.tpl-acid-blue-business .ab-meta::before{content:"";flex:none;width:12px;height:12px;background:var(--volt);border:2px solid var(--ink)}
+
+/* ---- 酸蓝横线：论点下的5px 重线 ---- */
+.tpl-acid-blue-business .ab-hline{width:220px;height:5px;background:var(--acid)}
+
+/* ---- 标识块：酸蓝方标 ---- */
+.tpl-acid-blue-business .ab-badge{flex:none;width:72px;height:72px;background:var(--acid);color:var(--acid-ink);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;letter-spacing:.08em}
+
+/* ---- 白卡：黑描边硬直角 + 酸蓝错位投影，棱角感 ---- */
+.tpl-acid-blue-business .ab-card{background:var(--bg-soft);border:2px solid var(--ink);box-shadow:10px 10px 0 rgba(67,91,225,.16);padding:32px 36px;display:flex;flex-direction:column;min-height:260px}
+
+/* ---- 药丸：黑描边直角，酸蓝实底为强调 ---- */
+.tpl-acid-blue-business .ab-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:2px solid var(--ink);font-size:16px;font-weight:600;letter-spacing:.06em;color:var(--ink);white-space:nowrap}
+.tpl-acid-blue-business .ab-pill-accent{background:var(--acid);border-color:var(--acid);color:var(--acid-ink)}
+
+/* ---- 目录行：等宽编号方块 + 重字重篇名 + 说明 ---- */
+.tpl-acid-blue-business .ab-item{display:flex;align-items:baseline;gap:22px;padding:24px 6px;border-bottom:2px dashed var(--border)}
+.tpl-acid-blue-business .ab-item:last-child{border-bottom:none}
+.tpl-acid-blue-business .ab-n{flex:none;width:44px;height:44px;border:2px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-acid-blue-business .ab-t{flex:none;width:280px;font-size:25px;font-weight:900;color:var(--ink)}
+.tpl-acid-blue-business .ab-d{flex:1;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 关键数字：黑顶线 + 荧光刻度 + 酸蓝大数字 ---- */
+.tpl-acid-blue-business .ab-stat{position:relative;border-top:4px solid var(--ink);padding-top:28px}
+.tpl-acid-blue-business .ab-stat::before{content:"";position:absolute;top:0;left:0;width:14px;height:14px;background:var(--volt);border:2px solid var(--ink);transform:translateY(-50%)}
+.tpl-acid-blue-business .ab-stat-v{font-size:100px;line-height:1;font-weight:900;letter-spacing:-.02em;color:var(--acid)}
+.tpl-acid-blue-business .ab-stat-u{font-size:24px;font-weight:700;color:var(--ink-2);margin-left:8px}
+.tpl-acid-blue-business .ab-stat-l{margin-top:16px;font-size:24px;font-weight:800;color:var(--ink)}
+.tpl-acid-blue-business .ab-stat-note{margin:10px 0 0;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 原则引言 + 酸蓝圆环衬底（内嵌荧光菱形） ---- */
+.tpl-acid-blue-business .ab-quote{font-size:60px;line-height:1.5;font-weight:900;letter-spacing:-.01em;color:var(--ink);max-width:22em;margin:0}
+.tpl-acid-blue-business .ab-src{font-family:'JetBrains Mono','Noto Sans SC',monospace;margin:0;font-size:18px;letter-spacing:.12em;color:var(--ink-2)}
+.tpl-acid-blue-business .ab-circle{position:absolute;right:150px;top:50%;transform:translateY(-50%);width:280px;height:280px;border:3px solid var(--acid);border-radius:50%;pointer-events:none}
+.tpl-acid-blue-business .ab-circle::after{content:"";position:absolute;right:16%;bottom:12%;width:44px;height:44px;background:var(--volt);border:3px solid var(--ink);transform:rotate(45deg)}
+
+/* ---- 时间线：酸蓝编号方块 + 虚线连接 ---- */
+.tpl-acid-blue-business .ab-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-acid-blue-business .ab-tl-item{flex:1;position:relative}
+.tpl-acid-blue-business .ab-tl-item:not(:last-child)::before{content:"";position:absolute;top:21px;left:44px;right:-40px;height:0;border-top:2px dashed #B9BDC7}
+.tpl-acid-blue-business .ab-tl-dot{position:relative;z-index:1;width:42px;height:42px;background:var(--acid);color:var(--acid-ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;font-weight:800}
+.tpl-acid-blue-business .ab-tl-t{margin-top:18px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:19px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-acid-blue-business .ab-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-acid-blue-business .ab-step{display:flex;align-items:center;gap:18px;padding:22px 4px;border-bottom:2px dashed var(--border)}
+.tpl-acid-blue-business .ab-step:last-child{border-bottom:none}
+.tpl-acid-blue-business .ab-mini-t{margin:0;font-size:20px;line-height:1.6;font-weight:500;color:var(--ink)}
+
+/* ---- 行动钮：酸蓝实底 + 黑色错位投影，收尾页唯一的按钮 ---- */
+.tpl-acid-blue-business .ab-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 44px;background:var(--acid);color:var(--acid-ink);box-shadow:6px 6px 0 var(--ink);font-size:20px;font-weight:800;letter-spacing:.14em;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：利落的短距滑入 ---- */
+.tpl-acid-blue-business{--page-shift:22px;--page-dur:.45s;--page-ease:cubic-bezier(.2,0,.2,1)}

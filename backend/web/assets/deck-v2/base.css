@@ -88,12 +88,22 @@ body[data-fit="fluid"] .deck{width:100vw;height:100vh;transform:none}
      各模板在此基础上按内容角色继续放大。 */
   font-size:20px;
   opacity:0;pointer-events:none;
-  transition:opacity .5s var(--ease), transform .5s var(--ease);
-  transform:translateX(30px);
+  /* 页面切换（翻页动画契约）：时长/缓动/横移全部变量化，模板在自己的
+     style.css 里覆盖 --page-* 即可定制（.tpl-x 作用域，slide 从 body 继承），
+     未设置 = 下面的默认值（右滑 30px / .5s / 全局缓动）。
+     约束：--page-dur ≤ 650ms——截图管线（vision/v2.go）每页切换后等
+     v2SlideSwitch=650ms 才量测，超过会拍到过渡中间帧。
+     彻底换编排（缩放/竖移/擦除）：用 .tpl-x .slide 与 .tpl-x .slide.is-active、
+     .tpl-x .slide.is-prev 三态一起改写 transition/transform（模板 css 在
+     base.css 之后加载，同特异性按序胜出；只改静默态会把 is-active 的
+     transform 也压掉——active 特异性打平但源序在后）。 */
+  transition:opacity var(--page-dur,.5s) var(--page-ease,var(--ease)),
+              transform var(--page-dur,.5s) var(--page-ease,var(--ease));
+  transform:translateX(var(--page-shift,30px));
   overflow:hidden;
 }
 .slide.is-active{opacity:1;pointer-events:auto;transform:translateX(0);z-index:2}
-.slide.is-prev{transform:translateX(-30px)}
+.slide.is-prev{transform:translateX(calc(-1 * var(--page-shift,30px)))}
 
 /* single-page standalone (used when a layout file is opened directly) */
 body.single .slide{position:relative;width:100%;height:100%;opacity:1;transform:none;pointer-events:auto}

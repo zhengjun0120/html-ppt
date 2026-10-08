@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>深色模式的界面设计</title>
+<link rel="stylesheet" href="/assets/deck-v2/fonts.css">
+<link rel="stylesheet" href="/assets/deck-v2/base.css">
+<link rel="stylesheet" href="/assets/deck-v2/animations.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tpl-dracula">
+<div class="deck">
+<!-- SLIDES:START -->
+
+  <!-- 1. Cover -->
+  <section class="slide full" data-layout="cover">
+    <p class="dr-kicker">dark-mode.md</p>
+    <h1 class="h1 mt-m">深色模式，<br>不只是反色。</h1>
+    <div class="dr-line mt-s"></div>
+    <p class="lede mt-m" style="max-width:52ch">从对比度到语义色：把一套浅色界面改成深色，我们踩过的坑与沉淀下来的规则。</p>
+    <div class="row mt-l" style="gap:18px">
+      <span class="dr-pill dr-pill-accent">设计分享</span>
+      <span class="dr-pill">v3.2.0</span>
+      <span class="dr-pill">全平台</span>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="1" data-total="10"></span></div>
+    <div class="notes">开场先问一句：在座有多少人系统默认就是深色？等手举完再讲 82% 那个数字。</div>
+  </section>
+
+  <!-- 2. Contents -->
+  <section class="slide" data-layout="contents">
+    <p class="dr-kicker">outline</p>
+    <h2 class="h2 mt-m">四个决定</h2>
+    <div class="dr-card mt-l" style="margin-top:44px">
+      <div class="dr-item"><span class="dr-n">01</span><span class="dr-t">为何做深色</span><span class="dr-d">用户偏好与夜间场景的真实诉求</span></div>
+      <div class="dr-item"><span class="dr-n">02</span><span class="dr-t">对比度规则</span><span class="dr-d">三档灰阶与最低可读标准</span></div>
+      <div class="dr-item"><span class="dr-n">03</span><span class="dr-t">语义色映射</span><span class="dr-d">品牌色在深底上的重新校准</span></div>
+      <div class="dr-item"><span class="dr-n">04</span><span class="dr-t">落地与回滚</span><span class="dr-d">CSS 变量切换与灰度发布节奏</span></div>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="2" data-total="10"></span></div>
+    <div class="notes">四个决定按时间顺序排：为什么做、定什么规则、怎么映射、怎么落地。规则在第二段。</div>
+  </section>
+
+  <!-- 3. Metrics -->
+  <section class="slide" data-layout="metrics">
+    <p class="dr-kicker">data / beta-report</p>
+    <h2 class="h2 mt-m">灰度三个月的三个数字</h2>
+    <div class="grid g3 mt-l" style="gap:44px;margin-top:48px">
+      <div class="dr-stat"><div class="dr-stat-v">82<span class="dr-stat-u">%</span></div><div class="dr-stat-l">默认选择深色</div><p class="dr-stat-note">2026-03 灰度 1,200 人，设置页主题埋点</p></div>
+      <div class="dr-stat"><div class="dr-stat-v">4.6<span class="dr-stat-u">:1</span></div><div class="dr-stat-l">正文最低对比度</div><p class="dr-stat-note">正文 #E6E6E6 对 #121212 底，AA 标准为 4.5:1</p></div>
+      <div class="dr-stat"><div class="dr-stat-v">27<span class="dr-stat-u">%</span></div><div class="dr-stat-l">夜间时长提升</div><p class="dr-stat-note">上线后 30 天与前 30 天的夜间会话对比</p></div>
+    </div>
+    <p class="mt-m" style="font-size:17px;color:#8b91a0;letter-spacing:.06em">来源：拾贝产品团队《深色模式灰度复盘》（2026-06，N=1,200）。</p>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="3" data-total="10"></span></div>
+    <div class="notes">82% 不是用户爱深色，是深夜刷手机的人多。后面所有规则都是为这 82% 服务的。</div>
+  </section>
+
+  <!-- 4. Divider -->
+  <section class="slide full" data-layout="divider">
+    <p class="dr-kicker">chapter-2 rules</p>
+    <h1 class="h1 mt-m">先定灰阶，<br>再谈配色。</h1>
+    <p class="lede mt-m" style="max-width:48ch">深色模式的第一个决定不是颜色，是文字层级：几档灰、谁最亮、谁退后。</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="dr-pill dr-pill-accent">三档灰阶</span>
+      <span class="dr-pill">语义映射</span>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="4" data-total="10"></span></div>
+    <div class="notes">过渡页：先讲三条原则，再看代码里怎么落地。</div>
+  </section>
+
+  <!-- 5. Keynotes -->
+  <section class="slide" data-layout="keynotes">
+    <p class="dr-kicker">rules</p>
+    <h2 class="h2 mt-m">三条铁律</h2>
+    <div class="grid g3 mt-l" style="gap:32px;margin-top:44px">
+      <div class="dr-card"><span class="dr-pill dr-pill-accent">不是反色</span><h4 class="mt-m">灰阶靠亮度差</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#b3b8c3">白底黑字直接取反会刺眼。深色底用降饱和的浅灰，层级靠亮度差而不是色相。</p></div>
+      <div class="dr-card"><span class="dr-pill dr-pill-accent">重新调</span><h4 class="mt-m">强调色提亮</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#b3b8c3">粉与紫在深底上会发闷。统一提亮一档、降一档饱和，才回到浅色时的辨识度。</p></div>
+      <div class="dr-card"><span class="dr-pill dr-pill-accent">换描边</span><h4 class="mt-m">阴影改浮层</h4><p class="mt-s" style="font-size:19px;line-height:1.8;color:#b3b8c3">深色底上阴影不可见。浮层改用细描边加表面提亮，层级一样清楚。</p></div>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="5" data-total="10"></span></div>
+    <div class="notes">三条都来自返工：第一版直接取反，第二天就被内测群截图教育了。</div>
+  </section>
+
+  <!-- 6. Split -->
+  <section class="slide" data-layout="split">
+    <p class="dr-kicker">implementation</p>
+    <h2 class="h2 mt-m">切换不是翻色值</h2>
+    <div class="grid g2 mt-l" style="gap:72px;margin-top:44px;align-items:start">
+      <div>
+        <p class="lede">切换不是把色值翻一遍：所有颜色先收进 CSS 变量，再按主题出两套映射，组件一行不改。</p>
+        <p class="mt-m" style="font-size:19px;line-height:1.8;color:#b3b8c3">决定"暗在哪一层"的是背景与表面两个变量，文字色只跟着语义名走。</p>
+        <div class="row mt-l" style="gap:16px">
+          <span class="dr-pill">data-theme</span>
+          <span class="dr-pill">零组件改动</span>
+        </div>
+      </div>
+      <div class="dr-card">
+        <div class="dr-step"><span class="dr-n">01</span><p class="dr-mini-t">硬编码色值全部收进变量，设计走查把关</p></div>
+        <div class="dr-step"><span class="dr-n">02</span><p class="dr-mini-t">深浅两套映射对齐同名变量，语义不换名</p></div>
+        <div class="dr-step"><span class="dr-n">03</span><p class="dr-mini-t">跟随系统与手动开关双通道，回滚只切开关</p></div>
+      </div>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="6" data-total="10"></span></div>
+    <div class="notes">下一页是 tokens.css 的真实片段，就是这套映射的源头。</div>
+  </section>
+
+  <!-- 7. Code -->
+  <section class="slide" data-layout="code">
+    <p class="dr-kicker">src/theme/tokens.css</p>
+    <h2 class="h2 mt-m">主题只是一组变量</h2>
+    <div class="dr-term mt-l" style="margin-top:40px">
+      <div class="dr-term-bar"><span class="dr-dot"></span><span class="dr-dot"></span><span class="dr-dot"></span><span class="dr-term-file">tokens.css</span><span class="dr-lang">CSS</span></div>
+      <pre class="dr-codeblock"><code>:root[data-theme="dark"] {
+  --bg: #21222c;
+  --surface: #282a36;
+  --text-1: #f8f8f2;
+  --text-2: #b3b8c3;
+  --accent: #ff79c6;
+  --accent-2: #bd93f9;
+  --border: rgba(98,114,164,.25);
+}</code></pre>
+    </div>
+    <p class="dr-codenote mt-m">组件只读语义名：主题切换换的是变量值，对组件零侵入，回滚也只是换个 attribute。</p>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="7" data-total="10"></span></div>
+    <div class="notes">这段就是模板自己的配色来源——这套 deck 本身就是用这套 token 调的。</div>
+  </section>
+
+  <!-- 8. Moments -->
+  <section class="slide" data-layout="moments">
+    <p class="dr-kicker">milestones</p>
+    <h2 class="h2 mt-m">半年，四步走完</h2>
+    <div class="dr-tl mt-l" style="margin-top:52px">
+      <div class="dr-tl-item"><div class="dr-tl-dot"></div><div class="dr-tl-t">2026-01</div><p class="dr-tl-d">变量化改造：3,400 处硬编码色值清零</p></div>
+      <div class="dr-tl-item"><div class="dr-tl-dot"></div><div class="dr-tl-t">2026-03</div><p class="dr-tl-d">深色首版上线，1,200 人内测灰度</p></div>
+      <div class="dr-tl-item"><div class="dr-tl-dot"></div><div class="dr-tl-t">2026-04</div><p class="dr-tl-d">修复 23 个对比度不达标组件</p></div>
+      <div class="dr-tl-item"><div class="dr-tl-dot"></div><div class="dr-tl-t">2026-06</div><p class="dr-tl-d">全量推送，默认跟随系统设置</p></div>
+    </div>
+    <p class="mt-m" style="font-size:17px;color:#8b91a0;letter-spacing:.06em">时间取自设计系统仓库 milestone 标签；灰度人数为设置页埋点去重值。</p>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="8" data-total="10"></span></div>
+    <div class="notes">一月的变量化最苦也最值：没有它，后面每一步都要翻两遍组件。</div>
+  </section>
+
+  <!-- 9. Quote -->
+  <section class="slide" data-layout="quote">
+    <p class="dr-kicker">retrospect.md</p>
+    <p class="dr-quote mt-l" style="margin-top:40px">「深色模式的功力，全在没人注意的灰阶里。」</p>
+    <p class="dr-src mt-m">—— 拾贝设计团队 复盘会纪要</p>
+    <div class="row mt-l" style="gap:16px">
+      <span class="dr-pill dr-pill-accent">三档灰阶</span>
+      <span class="dr-pill">4.6:1 过线</span>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="9" data-total="10"></span></div>
+    <div class="notes">用户夸的永远是强调色，返工返的永远是灰阶。这句话贴在设计团队墙上半年了。</div>
+  </section>
+
+  <!-- 10. Closing -->
+  <section class="slide full" data-layout="closing">
+    <p class="dr-kicker">release v3.2.0</p>
+    <h1 class="h1 mt-m">今晚起，<br>换个颜色工作。</h1>
+    <p class="lede mt-m" style="max-width:48ch">深色模式已随 v3.2.0 全量推送，设置里可选跟随系统或手动切换。遇到刺眼的界面，截图发给我们。</p>
+    <div class="row mt-l" style="gap:22px">
+      <span class="dr-btn">更新到最新版</span>
+      <span class="dr-pill">v3.2.0 起可用</span>
+    </div>
+    <div class="deck-footer"><span>拾贝设计团队 · 2026</span><span class="slide-number" data-current="10" data-total="10"></span></div>
+    <div class="notes">收尾只留一个动作：更新。反馈入口在设置页最底部，带截图的 issue 处理最快。</div>
+  </section>
+
+<!-- SLIDES:END -->
+</div>
+<script src="/assets/deck-v2/runtime.js"></script>
+</body></html>

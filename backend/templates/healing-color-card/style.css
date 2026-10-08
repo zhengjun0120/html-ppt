@@ -1,0 +1,95 @@
+/* healing-color-card — 情绪疗愈色卡。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/healing-color-card（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 奶油白底上薰衣草紫、暖桃米、薄荷绿三色协奏：大圆角卡、柔和渐变、虚线分隔，
+ * 全模板没有一处锋利直角；右上月牙与柔光色晕、页底薄荷雾是每页自动衬底的
+ * ambient 层（z-index:-1，画在内容之下，骨架零成本）。 */
+.tpl-healing-color-card{
+  --bg:#FAF5EF;              /* letterbox 底：奶油白→暖象牙渐变中段，翻页不跳 */
+  --bg-soft:#FBF6F2;         /* 奶油白（卡外底） */
+  --ink:#4A4448;             /* 暖墨灰标题 */
+  --ink-2:#6B5D5F;           /* 柔棕正文 */
+  --ink-3:#A3969A;           /* 弱化柔棕小字 */
+  --border:rgba(155,127,181,.24);
+  --border-soft:rgba(155,127,181,.13);
+  --lav:#C8B8D9;--lav-soft:#DCC8E8;
+  --peach:#E8CEC8;--peach-soft:#F0DDD2;
+  --mint:#9CD9C9;--mint-soft:#BFE8DB;
+  --accent:#9B7FB5;          /* 藕荷紫：唯一强调色 */
+  --accent-ink:#FFFFFF;
+  --accent-deep:#7E63A0;
+  font-family:'Yuanti SC','YouYuan','PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+  /* 页面切换：极柔缓淡入，如清晨第一缕柔光 */
+  --page-shift:10px;--page-dur:.65s;--page-ease:cubic-bezier(.22,.61,.36,1);
+}
+
+/* ---- 字阶：圆润无衬线 + 宽行距，呼吸感是治愈的一半 ---- */
+.tpl-healing-color-card .h1{font-size:88px;line-height:1.16;font-weight:600;letter-spacing:.08em;color:var(--ink);margin-bottom:12px}
+.tpl-healing-color-card .h2{font-size:52px;line-height:1.2;font-weight:600;letter-spacing:.06em;color:var(--ink);margin-bottom:10px}
+.tpl-healing-color-card h4{color:var(--ink);font-weight:600;font-size:25px;letter-spacing:.04em}
+.tpl-healing-color-card .lede{font-size:23px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.04em}
+.tpl-healing-color-card .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.22em}
+
+/* ---- ambient：右上月牙与双色柔光（上）+ 页底薄荷雾（下） ---- */
+.tpl-healing-color-card .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 130 130'%3E%3Cdefs%3E%3CradialGradient id='m' cx='38%25' cy='35%25' r='78%25'%3E%3Cstop offset='0%25' stop-color='%23FBF6F2'/%3E%3Cstop offset='100%25' stop-color='%23DCC8E8'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='65' cy='65' r='54' fill='url(%23m)'/%3E%3C/svg%3E"),radial-gradient(ellipse 620px 440px at 10% 4%,rgba(200,184,217,.30),transparent 70%),radial-gradient(ellipse 660px 480px at 92% 16%,rgba(232,206,200,.32),transparent 70%);
+  background-position:right 128px top 78px,0 0,0 0;
+  background-repeat:no-repeat;background-size:132px 132px,auto,auto;
+}
+.tpl-healing-color-card .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:460px;z-index:-1;
+  background-image:radial-gradient(ellipse 880px 430px at 50% 106%,rgba(156,217,201,.26),transparent 72%);
+}
+
+/* ---- 情绪题签：柔光短线引导的小字标签（页首） ---- */
+.tpl-healing-color-card .hc-kicker{display:flex;align-items:center;gap:14px;font-size:16px;letter-spacing:.32em;color:var(--ink-2)}
+.tpl-healing-color-card .hc-kicker::before{content:"";width:30px;height:3px;border-radius:2px;background:linear-gradient(90deg,var(--lav),var(--accent))}
+
+/* ---- 小圆色板：色卡母题的随身记号，成组出现 ---- */
+.tpl-healing-color-card .hc-chip{flex:none;width:22px;height:22px;border-radius:50%;box-shadow:0 2px 8px rgba(155,127,181,.18)}
+.tpl-healing-color-card .hc-hex{font-size:14px;letter-spacing:.16em;color:var(--ink-3);white-space:nowrap}
+
+/* ---- 奶油卡：大圆角 + 半透明白 + 极软阴影，没有锋利边缘 ---- */
+.tpl-healing-color-card .hc-card{background:rgba(255,255,255,.66);border:1px solid var(--border-soft);border-radius:28px;padding:36px 38px;display:flex;flex-direction:column;min-height:280px;box-shadow:0 14px 34px rgba(155,127,181,.10)}
+.tpl-healing-color-card .hc-card-lav{background:linear-gradient(150deg,#E9DEF1 0%,#D8C9E6 100%)}
+.tpl-healing-color-card .hc-card-peach{background:linear-gradient(150deg,#F5E4DD 0%,#ECD2CA 100%)}
+.tpl-healing-color-card .hc-card-mint{background:linear-gradient(150deg,#D6EFE6 0%,#BEE3D5 100%)}
+
+/* ---- 药丸：白底细边胶囊，强调款藕荷紫 ---- */
+.tpl-healing-color-card .hc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 20px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid var(--border);font-size:16px;letter-spacing:.14em;color:var(--ink-2);white-space:nowrap}
+.tpl-healing-color-card .hc-pill-accent{background:rgba(155,127,181,.14);border-color:rgba(155,127,181,.35);color:var(--accent-deep)}
+
+/* ---- 目录行：圆点编号 + 篇名 + 说明，虚线分隔 ---- */
+.tpl-healing-color-card .hc-item{display:flex;align-items:baseline;gap:24px;padding:26px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-healing-color-card .hc-item:last-child{border-bottom:none}
+.tpl-healing-color-card .hc-n{flex:none;width:50px;height:50px;border-radius:50%;background:rgba(155,127,181,.14);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;align-self:center}
+.tpl-healing-color-card .hc-t{flex:none;width:250px;font-size:28px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.tpl-healing-color-card .hc-d{flex:1;font-size:19px;line-height:1.8;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-healing-color-card .hc-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-healing-color-card .hc-step:last-child{border-bottom:none}
+.tpl-healing-color-card .hc-mini-t{margin:0;font-size:20px;line-height:1.7;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 柔光数字：圆角浅卡 + 藕荷紫大数字 ---- */
+.tpl-healing-color-card .hc-stat{background:rgba(255,255,255,.62);border:1px solid var(--border-soft);border-radius:24px;padding:30px 32px}
+.tpl-healing-color-card .hc-stat-v{font-size:96px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--accent)}
+.tpl-healing-color-card .hc-stat-u{font-size:24px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-healing-color-card .hc-stat-l{margin-top:16px;font-size:25px;font-weight:600;letter-spacing:.05em;color:var(--ink)}
+.tpl-healing-color-card .hc-stat-note{margin:10px 0 0;font-size:18px;line-height:1.8;color:var(--ink-2)}
+
+/* ---- 手记引文：楷体大字，手写感 ---- */
+.tpl-healing-color-card .hc-quote{font-family:'STKaiti','KaiTi','Yuanti SC','PingFang SC',serif;font-size:60px;line-height:1.7;font-weight:700;letter-spacing:.05em;color:var(--ink);max-width:24em;margin:0}
+.tpl-healing-color-card .hc-src{margin:0;font-size:19px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：白底圆点 + 柔光连接线 ---- */
+.tpl-healing-color-card .hc-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-healing-color-card .hc-tl-item{flex:1;position:relative}
+.tpl-healing-color-card .hc-tl-item:not(:last-child)::before{content:"";position:absolute;top:24px;left:50px;right:-40px;height:2px;border-radius:1px;background:linear-gradient(90deg,var(--lav-soft),var(--mint-soft))}
+.tpl-healing-color-card .hc-tl-dot{position:relative;z-index:1;width:50px;height:50px;border-radius:50%;background:#FFFFFF;box-shadow:0 6px 16px rgba(155,127,181,.18);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--accent-deep)}
+.tpl-healing-color-card .hc-tl-t{margin-top:18px;font-size:21px;font-weight:700;color:var(--accent-deep);letter-spacing:.04em}
+.tpl-healing-color-card .hc-tl-d{margin-top:8px;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 行动钮：藕荷紫胶囊，全模板唯一的实心色块 ---- */
+.tpl-healing-color-card .hc-btn{display:inline-flex;align-items:center;gap:12px;padding:16px 42px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:21px;font-weight:600;letter-spacing:.16em;box-shadow:0 12px 28px rgba(155,127,181,.28);white-space:nowrap}

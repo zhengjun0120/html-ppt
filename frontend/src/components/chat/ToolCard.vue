@@ -36,7 +36,7 @@ const shownResult = computed(() => prettyResult(props.tool.result))
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-[10px] border border-line bg-surface-2 text-[12.5px]">
+  <div class="overflow-hidden rounded-card border border-line bg-surface-2 text-[12.5px]">
     <button
       class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left"
       :aria-expanded="expanded"
@@ -59,7 +59,7 @@ const shownResult = computed(() => prettyResult(props.tool.result))
           参数
           <span v-if="tool.state === 'running'" class="text-accent">（流式接收中…）</span>
         </p>
-        <pre class="max-h-40 overflow-auto whitespace-pre-wrap break-all bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink-2">{{ shownArgs }}</pre>
+        <pre class="max-h-40 overflow-auto whitespace-pre-wrap break-all bg-code px-3 py-2 font-mono text-[11.5px] text-ink-2">{{ shownArgs }}</pre>
       </template>
       <template v-if="tool.result">
         <p class="px-3 pt-2 text-[10.5px] text-ink-3">
@@ -72,7 +72,7 @@ const shownResult = computed(() => prettyResult(props.tool.result))
           </button>
         </p>
         <pre
-          class="overflow-auto whitespace-pre-wrap break-all bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink-2"
+          class="overflow-auto whitespace-pre-wrap break-all bg-code px-3 py-2 font-mono text-[11.5px] text-ink-2"
           :class="resultFull ? '' : 'max-h-40'"
         >{{ shownResult }}</pre>
       </template>

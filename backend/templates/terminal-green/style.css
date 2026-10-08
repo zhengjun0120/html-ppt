@@ -1,0 +1,111 @@
+/* terminal-green — 终端绿。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/terminal-green（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 深绿黑底 + 磷光绿等宽字：扫描线与辉光是唯一的装饰，文字本身就是界面。
+ * 全模板等宽字体主导（中文回落 Maple Mono CJK）；卡是半透明暗绿终端窗，
+ * 绿描边微光，不用硬投影；禁止第二色相（纯绿纪律）。
+ * ambient 层（扫描线 + 磷光辉光）画在 .slide::before/::after，
+ * z-index:-1 在全部内容之下，骨架零成本。 */
+.tpl-terminal-green{
+  --bg:#0d280d;                /* 渐变中段值：letterbox 翻页不跳色 */
+  --bg-deep:#0a1a0a;           /* CRT 暗面（渐变起点） */
+  --bg-window:#071a07;         /* 终端窗/代码块底 */
+  --ink:#86efac;               /* 正文浅绿（上游正文色） */
+  --ink-2:#7fc98e;             /* 说明文字 */
+  --ink-3:#63a86c;             /* 页脚/来源小字 */
+  --border:rgba(34,197,94,.32);   /* 发光描边（上游强调绿 #22c55e 系） */
+  --border-soft:rgba(34,197,94,.16);
+  --accent:#4ade80;            /* 亮绿：标题与强调（上游标题色） */
+  --accent-deep:#16a34a;       /* 深绿：次级强调 */
+  --glow:74,222,128;           /* 磷光 RGB 三元组 */
+  --accent-ink:#05200b;        /* 亮绿底上的墨绿字 */
+  color:var(--ink);
+  font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,'Noto Sans SC',monospace;
+  --page-shift:18px;--page-dur:.45s;--page-ease:cubic-bezier(.3,.7,.4,1);
+}
+
+/* ---- 画布：CRT 径向渐变 + ambient（扫描线在上、辉光在下，都在内容之下） ---- */
+.tpl-terminal-green .slide{
+  background:radial-gradient(circle at 20% 0%,#0a1a0a 0%,#0d280d 50%,#0f330f 100%);
+  color:var(--ink);
+}
+.tpl-terminal-green .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0,rgba(0,0,0,.22) 1px,transparent 1px,transparent 4px);
+  opacity:.5;
+}
+.tpl-terminal-green .slide::after{
+  content:"";position:absolute;left:50%;top:50%;width:76%;height:76%;z-index:-1;pointer-events:none;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(74,222,128,.07) 0%,transparent 62%);
+}
+
+/* ---- 字阶：等宽即一切，磷光只给标题 ---- */
+.tpl-terminal-green .h1{font-size:76px;line-height:1.14;font-weight:700;letter-spacing:.01em;color:var(--accent);text-shadow:0 0 28px rgba(var(--glow),.35),0 0 72px rgba(var(--glow),.14);margin-bottom:12px}
+.tpl-terminal-green .h2{font-size:48px;line-height:1.22;font-weight:700;letter-spacing:.01em;color:var(--accent);text-shadow:0 0 20px rgba(var(--glow),.26);margin-bottom:10px}
+.tpl-terminal-green h4{font-family:inherit;color:var(--accent);font-weight:700;font-size:24px;letter-spacing:.02em}
+.tpl-terminal-green .lede{font-size:22px;line-height:1.95;color:var(--ink-2);font-weight:400}
+.tpl-terminal-green .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- 提示符题签：$ 开头，全模板的导航语态 ---- */
+.tpl-terminal-green .tg-kicker{font-size:16px;letter-spacing:.3em;color:var(--accent);text-shadow:0 0 10px rgba(var(--glow),.4)}
+.tpl-terminal-green .tg-kicker::before{content:"$ ";color:var(--ink-3);text-shadow:none}
+
+/* ---- 命令行：封面的一行命令 + 闪烁块光标 ---- */
+.tpl-terminal-green .tg-cmdline{font-size:21px;color:var(--ink-2);letter-spacing:.02em}
+.tpl-terminal-green .tg-cmdline::before{content:"$ ";color:var(--accent);text-shadow:0 0 8px rgba(var(--glow),.5)}
+.tpl-terminal-green .tg-cursor{display:inline-block;width:11px;height:1.05em;margin-left:6px;background:var(--accent);vertical-align:text-bottom;box-shadow:0 0 8px rgba(var(--glow),.6);animation:tgBlink 1.1s step-end infinite}
+@keyframes tgBlink{50%{opacity:0}}
+
+/* ---- 描边标签：终端窗里的 chip，方角 ---- */
+.tpl-terminal-green .tg-pill{display:inline-flex;align-items:center;padding:8px 20px;border:1px solid var(--border);border-radius:4px;background:rgba(74,222,128,.05);font-size:16px;letter-spacing:.08em;color:var(--ink);white-space:nowrap}
+.tpl-terminal-green .tg-pill-accent{border-color:rgba(var(--glow),.65);color:var(--accent);box-shadow:0 0 14px rgba(var(--glow),.18),inset 0 0 10px rgba(var(--glow),.06)}
+
+/* ---- 终端窗卡：半透明暗绿 + 发光描边，顶部一道辉光细线 ---- */
+.tpl-terminal-green .tg-card{position:relative;background:rgba(10,26,10,.85);border:1px solid var(--border);border-radius:8px;padding:36px 40px}
+.tpl-terminal-green .tg-card::before{content:"";position:absolute;top:0;left:18px;right:18px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.55}
+
+/* ---- 目录行：等宽编号 + 篇名 + 说明 ---- */
+.tpl-terminal-green .tg-item{display:flex;align-items:baseline;gap:24px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-terminal-green .tg-item:last-child{border-bottom:none}
+.tpl-terminal-green .tg-n{flex:none;width:56px;font-size:19px;font-weight:700;color:var(--accent)}
+.tpl-terminal-green .tg-t{flex:none;width:280px;font-size:27px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-terminal-green .tg-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 磷光数字：数据页主视觉，辉光只给这里 ---- */
+.tpl-terminal-green .tg-stat{border-top:2px solid var(--border);padding-top:28px}
+.tpl-terminal-green .tg-stat-v{font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--accent);text-shadow:0 0 30px rgba(var(--glow),.4)}
+.tpl-terminal-green .tg-stat-u{font-size:26px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-terminal-green .tg-stat-l{margin-top:18px;font-size:25px;font-weight:700;color:var(--ink)}
+.tpl-terminal-green .tg-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引言：等宽大字，像一条被钉住的 commit message ---- */
+.tpl-terminal-green .tg-quote{font-size:56px;line-height:1.65;font-weight:700;letter-spacing:.02em;color:var(--accent);text-shadow:0 0 24px rgba(var(--glow),.3);max-width:24em;margin:0}
+.tpl-terminal-green .tg-src{margin:0;font-size:19px;letter-spacing:.1em;color:var(--ink-3)}
+
+/* ---- 时间线：发光圆点 + 细绿连接线 ---- */
+.tpl-terminal-green .tg-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-terminal-green .tg-tl-item{flex:1;position:relative}
+.tpl-terminal-green .tg-tl-item:not(:last-child)::before{content:"";position:absolute;top:8px;left:26px;right:-40px;height:1px;background:var(--border-soft)}
+.tpl-terminal-green .tg-tl-dot{position:relative;z-index:1;width:16px;height:16px;border-radius:50%;background:var(--bg-deep);border:2px solid var(--accent);box-shadow:0 0 10px rgba(var(--glow),.5)}
+.tpl-terminal-green .tg-tl-t{margin-top:18px;font-size:21px;font-weight:700;color:var(--accent)}
+.tpl-terminal-green .tg-tl-d{margin-top:8px;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-terminal-green .tg-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-terminal-green .tg-step:last-child{border-bottom:none}
+.tpl-terminal-green .tg-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：描边 + 微光，收尾页 ---- */
+.tpl-terminal-green .tg-btn{display:inline-flex;align-items:center;gap:12px;padding:14px 38px;border:1px solid var(--accent);border-radius:4px;font-size:21px;font-weight:700;letter-spacing:.14em;color:var(--accent);background:rgba(74,222,128,.06);box-shadow:0 0 18px rgba(var(--glow),.2);white-space:nowrap}
+
+/* ---- 终端窗（code 版式）：标题栏三圆点 + 文件名 + 语言标签 + 代码块 ---- */
+.tpl-terminal-green .tg-term{border:1px solid var(--border);border-radius:10px;background:rgba(7,26,7,.92);overflow:hidden;box-shadow:0 0 40px rgba(var(--glow),.08)}
+.tpl-terminal-green .tg-term-bar{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-soft);background:rgba(10,26,10,.9)}
+.tpl-terminal-green .tg-dot{width:12px;height:12px;border-radius:50%;background:var(--accent-deep)}
+.tpl-terminal-green .tg-dot:nth-child(2){opacity:.6}
+.tpl-terminal-green .tg-dot:nth-child(3){opacity:.35}
+.tpl-terminal-green .tg-term-file{margin-left:8px;font-size:16px;color:var(--ink-2);letter-spacing:.06em}
+.tpl-terminal-green .tg-lang{margin-left:auto;flex:none;padding:3px 12px;border:1px solid var(--border-soft);border-radius:4px;font-size:14px;letter-spacing:.14em;color:var(--ink-3)}
+.tpl-terminal-green .tg-codeblock{margin:0;padding:28px 32px;font-family:inherit;font-size:19px;line-height:1.95;color:var(--ink);overflow-x:auto;white-space:pre}
+.tpl-terminal-green .tg-codenote{margin:0;font-size:18px;line-height:1.7;color:var(--ink-2)}

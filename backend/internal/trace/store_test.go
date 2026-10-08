@@ -23,6 +23,7 @@ type seed struct {
 	runID   string
 	deckID  string
 	content string
+	kind    string // run_kind：空 = 文稿对话（旧数据口径）
 	end     bool
 	usage   map[string]UsagePart
 }
@@ -41,7 +42,7 @@ func seedRun(t *testing.T, root string, s seed) {
 
 	ctx := With(context.Background(), r)
 	Emit(ctx, Event{
-		Kind: KindRunStart, RunID: s.runID, SessionID: s.sessID, UserID: s.userID,
+		Kind: KindRunStart, RunKind: s.kind, RunID: s.runID, SessionID: s.sessID, UserID: s.userID,
 		DeckID: s.deckID, UserContent: s.content, Model: "test-model",
 	})
 
@@ -83,9 +84,12 @@ func TestListRunsNewestFirstAndSummarises(t *testing.T) {
 	}
 
 	st := NewStore(root)
-	metas, err := st.ListRuns(4, 0, 0, 0)
+	metas, total, err := st.ListRuns(4, ListFilter{}, 0, 0)
 	if err != nil {
 		t.Fatalf("列 run 失败: %v", err)
+	}
+	if total != 3 {
+		t.Fatalf("total 应为 3，实际 %d", total)
 	}
 	if len(metas) != 3 {
 		t.Fatalf("应有 3 个 run，实际 %d", len(metas))
@@ -111,13 +115,13 @@ func TestListRunsNewestFirstAndSummarises(t *testing.T) {
 	}
 
 	// 分页
-	if got, _ := st.ListRuns(4, 0, 2, 0); len(got) != 2 || got[0].RunID != "1700000000003-c" {
+	if got, _, _ := st.ListRuns(4, ListFilter{}, 2, 0); len(got) != 2 || got[0].RunID != "1700000000003-c" {
 		t.Errorf("limit=2 应返回最新两条，实际 %+v", got)
 	}
-	if got, _ := st.ListRuns(4, 0, 0, 2); len(got) != 1 || got[0].RunID != "1700000000001-a" {
+	if got, _, _ := st.ListRuns(4, ListFilter{}, 0, 2); len(got) != 1 || got[0].RunID != "1700000000001-a" {
 		t.Errorf("offset=2 应返回最旧那一条，实际 %+v", got)
 	}
-	if got, _ := st.ListRuns(4, 0, 0, 99); got == nil || len(got) != 0 {
+	if got, _, _ := st.ListRuns(4, ListFilter{}, 0, 99); got == nil || len(got) != 0 {
 		t.Errorf("offset 越界应返回空切片而不是 nil（JSON 要是 [] 不是 null），实际 %+v", got)
 	}
 }
@@ -129,14 +133,14 @@ func TestListRunsFiltersByOwner(t *testing.T) {
 	seedRun(t, root, seed{sessID: 2, userID: 2, runID: "1700000000002-b", content: "别人的"})
 
 	st := NewStore(root)
-	metas, err := st.ListRuns(1, 0, 0, 0)
+	metas, _, err := st.ListRuns(1, ListFilter{}, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(metas) != 1 || metas[0].UserContent != "我的" {
 		t.Errorf("只应看到自己的 run，实际 %+v", metas)
 	}
-	if got, _ := st.ListRuns(99, 0, 0, 0); len(got) != 0 {
+	if got, _, _ := st.ListRuns(99, ListFilter{}, 0, 0); len(got) != 0 {
 		t.Errorf("没有记录的用户应看到空列表，实际 %+v", got)
 	}
 }
@@ -211,7 +215,7 @@ func TestRejectsPathTraversalAndForeignRuns(t *testing.T) {
 	if _, err := st.ReadEvents(1, 1, "1700000000009-empty", ReadOptions{}); err != ErrNotFound {
 		t.Errorf("空文件（刚创建还没写）应视为不存在，实际 %v", err)
 	}
-	if got, _ := st.ListRuns(1, 0, 0, 0); len(got) != 1 {
+	if got, _, _ := st.ListRuns(1, ListFilter{}, 0, 0); len(got) != 1 {
 		t.Errorf("空文件不该出现在列表里，实际 %d 条", len(got))
 	}
 }
@@ -388,44 +392,114 @@ func TestReadEventsLimit(t *testing.T) {
 	}
 }
 
-// TestSumBySession 跨 run 累加。一次对话被 ask_user 打断后会分成两个 run，
-// 而"这次对话花了多少 token"是用户真正会问的那个问题——只看单个 run 只是半场。
-func TestSumBySession(t *testing.T) {
-	metas := []RunMeta{
-		{RunID: "1700000000003-c", SessionID: 7, StartedAt: time.Unix(3, 0), Status: StatusOK,
-			Usage: &Summary{Turns: 2, ToolCalls: 3, Total: UsagePart{Total: 100, Prompt: 80},
-				Usage: map[string]UsagePart{CompMain: {Total: 100, Prompt: 80, Calls: 2}}}},
-		{RunID: "1700000000002-b", SessionID: 7, StartedAt: time.Unix(2, 0), Status: StatusPaused,
-			Usage: &Summary{Turns: 1, Total: UsagePart{Total: 40, Prompt: 30},
-				Usage: map[string]UsagePart{CompVision: {Total: 40, Prompt: 30, Calls: 1}}}},
-		{RunID: "1700000000001-a", SessionID: 8, StartedAt: time.Unix(1, 0), Status: StatusRunning},
+// TestListRunsIndexTracksDiskChanges 索引必须跟得上磁盘：新 run 出现、run_end
+// 落盘（状态/耗时从"运行中"变"已完成"）、文件被裁剪删除——三种变化都要在
+// 下一次列表里如实反映。观测台是常开的页面，索引滞后 = 列表撒谎。
+func TestListRunsIndexTracksDiskChanges(t *testing.T) {
+	root := t.TempDir()
+	seedRun(t, root, seed{sessID: 5, userID: 1, runID: "1700000000001-a", content: "还在跑", end: false})
+	st := NewStore(root)
+
+	// 首扫建索引：没有 run_end 的 run 状态 running
+	metas, total, err := st.ListRuns(1, ListFilter{}, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(metas) != 1 || metas[0].Status != StatusRunning {
+		t.Fatalf("首次列表应为 1 条运行中, got total=%d meta=%+v", total, metas)
 	}
 
-	got := SumBySession(metas)
-	if len(got) != 2 {
-		t.Fatalf("应聚合成 2 个会话，实际 %d", len(got))
+	// run_end 追加落盘：size/mtime 变化 → 缓存失效重读，状态与耗时跟着变
+	path := filepath.Join(sessDir(root, 5), "1700000000001-a.jsonl")
+	appendRaw(t, path, Event{Seq: 6, Kind: KindRunEnd, Status: StatusOK,
+		Summary: &Summary{DurationMS: 4321, Turns: 2}})
+	metas, total, _ = st.ListRuns(1, ListFilter{}, 0, 0)
+	if total != 1 || metas[0].Status != StatusOK || metas[0].DurationMS != 4321 || metas[0].Turns != 2 {
+		t.Fatalf("run_end 落盘后列表应反映已完成与汇总, got total=%d meta=%+v", total, metas[0])
 	}
-	s7 := got[0]
-	if s7.SessionID != 7 || s7.Runs != 2 || s7.Latest != "1700000000003-c" {
-		t.Errorf("会话 7 的聚合不对: %+v", s7)
+
+	// 新 run 出现，排在最前
+	seedRun(t, root, seed{sessID: 5, userID: 1, runID: "1700000000002-b", content: "第二条", end: true})
+	metas, total, _ = st.ListRuns(1, ListFilter{}, 0, 0)
+	if total != 2 || metas[0].RunID != "1700000000002-b" {
+		t.Fatalf("新 run 应出现在列表最前, got total=%d", total)
 	}
-	if s7.Usage.Total.Total != 140 {
-		t.Errorf("跨 run 的 token 应累加为 140，实际 %d", s7.Usage.Total.Total)
+
+	// 文件被删（模拟写入侧裁剪）
+	if err := os.Remove(filepath.Join(sessDir(root, 5), "1700000000002-b.jsonl")); err != nil {
+		t.Fatal(err)
 	}
-	if len(s7.Usage.Usage) != 2 || s7.Usage.Usage[CompMain].Total != 100 || s7.Usage.Usage[CompVision].Total != 40 {
-		t.Errorf("分项应保留各自的来源（这是回答\"token 花在哪\"的关键）: %+v", s7.Usage.Usage)
+	_, total, _ = st.ListRuns(1, ListFilter{}, 0, 0)
+	if total != 1 {
+		t.Fatalf("被删的 run 应从列表消失, got total=%d", total)
 	}
-	if s7.Usage.Turns != 3 || s7.Usage.ToolCalls != 3 {
-		t.Errorf("轮数与工具调用数应累加: %+v", s7.Usage)
+}
+
+// TestListRunsFilters kind/status/q 三个筛选与 total 的口径。
+// kind=deck 必须兜住旧数据的空 run_kind——按 kind 筛"文稿对话"结果漏掉
+// 旧记录的话，用户会以为那些对话没被观测到。
+func TestListRunsFilters(t *testing.T) {
+	root := t.TempDir()
+	seedRun(t, root, seed{sessID: 1, userID: 1, runID: "1700000000001-a",
+		deckID: "deck-0001", content: "帮我做一份复试讲稿", end: true})
+	seedRun(t, root, seed{sessID: 2, userID: 1, runID: "1700000000002-b",
+		deckID: "ut-abc", content: "换个配色", kind: "customize"})
+	seedRun(t, root, seed{sessID: 3, userID: 1, runID: "1700000000003-c",
+		deckID: "deck-0002", content: "模板推荐：复试讲稿（5 页）", kind: "tplsugg"})
+	seedRun(t, root, seed{sessID: 4, userID: 1, runID: "1700000000004-d",
+		deckID: "deck-0003", content: "跑挂了的一次", end: true})
+	// 第 4 个改成 error：补一条 run_end 覆盖 seedRun 的 ok
+	errPath := filepath.Join(sessDir(root, 4), "1700000000004-d.jsonl")
+	appendRaw(t, errPath, Event{Seq: 6, Kind: KindRunEnd, Status: StatusError,
+		Summary: &Summary{DurationMS: 10}})
+
+	st := NewStore(root)
+
+	// kind=deck：两条 deck run（含空 run_kind 的旧口径）—— customize/tplsugg 不算
+	got, total, err := st.ListRuns(1, ListFilter{Kind: "deck"}, 0, 0)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if s7.RunningRuns != 0 {
-		t.Errorf("会话 7 没有运行中的 run，实际 %d", s7.RunningRuns)
+	if total != 2 || got[0].RunID != "1700000000004-d" || got[1].RunID != "1700000000001-a" {
+		t.Errorf("kind=deck 应只有 2 条文稿 run, total=%d got=%+v", total, got)
 	}
-	if got[1].SessionID != 8 || got[1].RunningRuns != 1 {
-		t.Errorf("会话 8 应报告 1 个运行中的 run（页面据此继续轮询）: %+v", got[1])
+
+	// kind=customize / tplsugg
+	if _, total, _ = st.ListRuns(1, ListFilter{Kind: "customize"}, 0, 0); total != 1 {
+		t.Errorf("kind=customize 应 1 条, total=%d", total)
 	}
-	if got[1].Usage.Total.Total != 0 {
-		t.Errorf("还在跑的 run 没有汇总，不该编一个出来: %+v", got[1].Usage)
+	if _, total, _ = st.ListRuns(1, ListFilter{Kind: "tplsugg"}, 0, 0); total != 1 {
+		t.Errorf("kind=tplsugg 应 1 条, total=%d", total)
+	}
+
+	// status=error：只有补了 error run_end 的那条
+	got, total, _ = st.ListRuns(1, ListFilter{Status: StatusError}, 0, 0)
+	if total != 1 || got[0].RunID != "1700000000004-d" {
+		t.Errorf("status=error 应 1 条, total=%d got=%+v", total, got)
+	}
+
+	// q：匹配 user_content（大小写不敏感）与 deck_id
+	if _, total, _ = st.ListRuns(1, ListFilter{Query: "复试讲稿"}, 0, 0); total != 2 {
+		t.Errorf("q=复试讲稿 应命中 2 条（对话输入+推荐标题）, total=%d", total)
+	}
+	if _, total, _ = st.ListRuns(1, ListFilter{Query: "DECK-0003"}, 0, 0); total != 1 {
+		t.Errorf("q 应对 deck_id 大小写不敏感, total=%d", total)
+	}
+
+	// 筛选 + 分页叠加：total 是过滤后总数，窗口只影响 runs
+	got, total, _ = st.ListRuns(1, ListFilter{Kind: "deck"}, 1, 1)
+	if total != 2 || len(got) != 1 || got[0].RunID != "1700000000001-a" {
+		t.Errorf("kind=deck + offset=1&limit=1 应返回第 2 条且 total=2, got total=%d runs=%+v", total, got)
+	}
+
+	// sessionID>0：只看该会话
+	if _, total, _ = st.ListRuns(1, ListFilter{SessionID: 3}, 0, 0); total != 1 {
+		t.Errorf("单会话路径应只有 1 条, total=%d", total)
+	}
+
+	// 未知 kind 不在 store 里特判：handler 白名单负责 400，store 里当作"匹配不到"
+	if _, total, _ = st.ListRuns(1, ListFilter{Kind: "bogus"}, 0, 0); total != 0 {
+		t.Errorf("未知 kind 应 0 条, total=%d", total)
 	}
 }
 
@@ -433,12 +507,15 @@ func TestSumBySession(t *testing.T) {
 // 这会在"刚部署、还没人聊过"时直接触发，报 500 会让人以为观测工具坏了。
 func TestStoreOnMissingDir(t *testing.T) {
 	st := NewStore(filepath.Join(t.TempDir(), "not-created-yet"))
-	metas, err := st.ListRuns(1, 0, 0, 0)
+	metas, total, err := st.ListRuns(1, ListFilter{}, 0, 0)
 	if err != nil {
 		t.Fatalf("目录不存在不该报错: %v", err)
 	}
 	if metas == nil || len(metas) != 0 {
 		t.Errorf("应返回空切片，实际 %+v", metas)
+	}
+	if total != 0 {
+		t.Errorf("total 应为 0，实际 %d", total)
 	}
 	if _, err := st.ReadEvents(1, 1, "1700000000001-a", ReadOptions{}); err != ErrNotFound {
 		t.Errorf("目录不存在时读取应返回 ErrNotFound，实际 %v", err)

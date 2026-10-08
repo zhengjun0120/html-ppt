@@ -1,0 +1,81 @@
+{
+  "id": "mountain-green-literary",
+  "name": "山野葱郁",
+  "description": "深绿山峦与晒亮的黄草地压场、细字诗句留白的文艺夏日：粗笔手写大字、山形 ambient 与草黄标签，图重字轻，带童年野趣与文学性",
+  "tags": ["插画", "手绘", "自然", "文艺"],
+  "scenario": ["民宿与乡旅企划", "户外夏令营", "自然环保分享", "文艺品牌叙事", "成长主题班会"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "山野封面",
+      "use": "开场：草黄标签 + 粗笔大字标题 + 一句定位，页底山峦草地自动铺陈",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤10 字；lede 24-48 字；标签 ≤12 字；药丸 ≤12 字"
+    },
+    {
+      "id": "contents",
+      "name": "企划目录",
+      "use": "议程：纸卡里 4 行篇目（色卡圆点编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 12-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三张木牌",
+      "use": "三个并列要点：纸卡 + 草黄标签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤6 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 药丸），右边纸卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个药丸；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "松白数字",
+      "use": "三个关键数据：深绿大数字 + 草黄笔触指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "手记引文",
+      "use": "整页一句引文：粗笔大字 + 出处 + 两个支撑标签，右侧留白处立一条竖排诗句",
+      "roles": ["quote"],
+      "constraints": "引文 10-24 字；出处 ≤22 字且真实；标签各 ≤10 字；竖排诗句 ≤7 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：进度标签 + 粗笔大字章节名 + 一个过渡问题 + 两个看点",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤10 字"
+    },
+    {
+      "id": "moments",
+      "name": "档期时间线",
+      "use": "3-4 个节点的横向时间线：色卡圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾页",
+      "use": "收尾：粗笔大字 + 一句行动提醒 + 深绿按钮 + 药丸，像手账落款",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；药丸 ≤12 字"
+    }
+  ],
+  "fonts": ["STKaiti", "KaiTi", "PingFang SC", "Microsoft YaHei"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/mountain-green-literary",
+    "license": "Apache-2.0"
+  }
+}

@@ -1,0 +1,118 @@
+/* tokyo-night — 东京夜。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/tokyo-night（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 夜蓝底幕上的霓虹：蓝 #7AA2F7 / 紫 #BB9AF7 / 青 #7DCFFF 三色分工，
+ * 暗面板 + 等宽数字是身份元素；顶部霓虹细线、右上辉光与页底天际线是
+ * 每页自动衬底的 ambient 层（z-index:-1，画在内容之下，骨架零成本）。 */
+.tpl-tokyo-night{
+  --bg:#1A1B26;              /* 渐变中段：letterbox 与翻页同色不跳 */
+  --bg-soft:#24283B;         /* 夜云蓝（时间线圆点底） */
+  --ink:#C0CAF5;             /* 冷白偏暮蓝标题 */
+  --ink-2:#A9B1D6;           /* 蓝白正文 */
+  --ink-3:#818CAF;           /* 蓝灰小字 */
+  --border:rgba(169,177,214,.22);
+  --border-soft:rgba(169,177,214,.12);
+  --accent:#7AA2F7;          /* 霓虹蓝（身份色） */
+  --accent-2:#BB9AF7;        /* 霓虹紫 */
+  --accent-3:#7DCFFF;        /* 霓虹青 */
+  --accent-ink:#101014;      /* 蓝底上的近黑字 */
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+/* ---- 画布：无月夜空的径向渐变，外圈一圈蓝紫细光 ---- */
+.tpl-tokyo-night .slide{
+  background:radial-gradient(circle at 20% 0%, #24283b 0%, #1a1b26 50%, #101014 100%);
+  box-shadow:0 0 0 1px rgba(122,162,247,.14);
+}
+
+/* ---- 字阶：清晰但不张扬，数字与代码交给等宽 ---- */
+.tpl-tokyo-night .h1{font-size:86px;line-height:1.15;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-bottom:12px;text-shadow:0 0 40px rgba(122,162,247,.16)}
+.tpl-tokyo-night .h2{font-size:52px;line-height:1.2;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px}
+.tpl-tokyo-night h4{color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.02em}
+.tpl-tokyo-night .lede{font-size:23px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-tokyo-night .deck-footer{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：顶部霓虹细线 + 右上蓝紫辉光；页底城市天际线与零星灯窗 ---- */
+.tpl-tokyo-night .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(90deg,transparent,rgba(122,162,247,.5) 32%,rgba(187,154,247,.5) 62%,transparent),
+    radial-gradient(40% 50% at 84% 0%, rgba(122,162,247,.13), transparent 70%);
+  background-size:100% 3px,100% 100%;
+  background-position:0 0,0 0;
+  background-repeat:no-repeat,no-repeat;
+}
+.tpl-tokyo-night .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:240px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 240' preserveAspectRatio='none'%3E%3Cg fill='%23252940' opacity='.9'%3E%3Crect x='0' y='128' width='140' height='112'/%3E%3Crect x='150' y='76' width='90' height='164'/%3E%3Crect x='252' y='152' width='118' height='88'/%3E%3Crect x='382' y='44' width='108' height='196'/%3E%3Crect x='500' y='112' width='84' height='128'/%3E%3Crect x='596' y='150' width='138' height='90'/%3E%3Crect x='746' y='62' width='100' height='178'/%3E%3Crect x='858' y='128' width='120' height='112'/%3E%3Crect x='990' y='92' width='92' height='148'/%3E%3Crect x='1094' y='150' width='128' height='90'/%3E%3Crect x='1234' y='52' width='102' height='188'/%3E%3Crect x='1348' y='118' width='92' height='122'/%3E%3Crect x='1452' y='152' width='148' height='88'/%3E%3Crect x='1612' y='82' width='92' height='158'/%3E%3Crect x='1716' y='128' width='204' height='112'/%3E%3C/g%3E%3Cg fill='%237AA2F7' opacity='.4'%3E%3Crect x='170' y='96' width='7' height='5'/%3E%3Crect x='196' y='120' width='7' height='5'/%3E%3Crect x='404' y='66' width='7' height='5'/%3E%3Crect x='432' y='92' width='7' height='5'/%3E%3Crect x='766' y='86' width='7' height='5'/%3E%3Crect x='792' y='112' width='7' height='5'/%3E%3Crect x='1012' y='112' width='7' height='5'/%3E%3Crect x='1256' y='76' width='7' height='5'/%3E%3Crect x='1284' y='104' width='7' height='5'/%3E%3Crect x='1634' y='104' width='7' height='5'/%3E%3C/g%3E%3Cg fill='%23BB9AF7' opacity='.35'%3E%3Crect x='418' y='130' width='7' height='5'/%3E%3Crect x='780' y='150' width='7' height='5'/%3E%3Crect x='1248' y='140' width='7' height='5'/%3E%3C/g%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 终端标签：等宽 $ 命令芯片（封面/收尾用） ---- */
+.tpl-tokyo-night .tn-tag{display:inline-flex;align-items:center;gap:10px;padding:9px 20px;border:1px solid rgba(125,207,255,.35);border-radius:6px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.05em;color:var(--accent-3);background:rgba(125,207,255,.08);white-space:nowrap}
+
+/* ---- 题签：霓虹青小字 + 蓝紫渐变短线（页首） ---- */
+.tpl-tokyo-night .tn-kicker{display:flex;align-items:center;gap:16px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;letter-spacing:.3em;color:var(--accent-3)}
+.tpl-tokyo-night .tn-kicker::before{content:"";width:34px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+
+/* ---- 渐隐线：标题下的一笔，蓝紫渐隐 ---- */
+.tpl-tokyo-night .tn-rule{width:220px;height:4px;background:linear-gradient(90deg,var(--accent),var(--accent-2) 55%,transparent)}
+
+/* ---- 暗面板：比夜空亮半档的面，蓝调细描边 ---- */
+.tpl-tokyo-night .tn-card{background:rgba(16,18,27,.72);border:1px solid rgba(122,162,247,.16);border-radius:14px;padding:34px 38px;display:flex;flex-direction:column;min-height:270px}
+
+/* ---- 目录行：方括号编号 + 篇名 + 说明 ---- */
+.tpl-tokyo-night .tn-item{display:flex;align-items:baseline;gap:24px;padding:26px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-tokyo-night .tn-item:last-child{border-bottom:none}
+.tpl-tokyo-night .tn-n{flex:none;width:70px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:19px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.tpl-tokyo-night .tn-t{flex:none;width:270px;font-size:28px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-tokyo-night .tn-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 药丸：圆角胶囊，蓝是主调、紫是强调 ---- */
+.tpl-tokyo-night .tn-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 22px;border:1px solid var(--border);border-radius:8px;font-size:16px;letter-spacing:.14em;color:var(--ink-2);background:rgba(16,18,27,.6);white-space:nowrap}
+.tpl-tokyo-night .tn-pill-accent{border-color:rgba(187,154,247,.5);color:var(--accent-2);background:rgba(187,154,247,.09)}
+
+/* ---- 霓虹数字：数据页主视觉，等宽冷光 ---- */
+.tpl-tokyo-night .tn-stat{border-top:2px solid rgba(122,162,247,.5);padding-top:28px}
+.tpl-tokyo-night .tn-stat-v{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:98px;line-height:1;font-weight:700;letter-spacing:-.02em;color:var(--accent);text-shadow:0 0 34px rgba(122,162,247,.28)}
+.tpl-tokyo-night .tn-stat-u{font-size:26px;font-weight:400;color:var(--ink-3);margin-left:8px}
+.tpl-tokyo-night .tn-stat-l{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+.tpl-tokyo-night .tn-stat-note{margin:12px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：夜半箴言，清晰不张扬 ---- */
+.tpl-tokyo-night .tn-quote{font-size:60px;line-height:1.55;font-weight:800;letter-spacing:.03em;color:var(--ink);max-width:24em;margin:0}
+.tpl-tokyo-night .tn-src{margin:0;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;letter-spacing:.08em;color:var(--ink-3)}
+
+/* ---- 时间线：蓝框序号 + 紫色时刻 + 细蓝连接线 ---- */
+.tpl-tokyo-night .tn-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-tokyo-night .tn-tl-item{flex:1;position:relative}
+.tpl-tokyo-night .tn-tl-item:not(:last-child)::before{content:"";position:absolute;top:27px;left:56px;right:-44px;height:1px;background:var(--border)}
+.tpl-tokyo-night .tn-tl-dot{position:relative;z-index:1;width:54px;height:54px;border:1.5px solid rgba(122,162,247,.55);border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;font-weight:700;color:var(--accent)}
+.tpl-tokyo-night .tn-tl-t{margin-top:20px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:21px;font-weight:700;letter-spacing:.04em;color:var(--accent-2)}
+.tpl-tokyo-night .tn-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-tokyo-night .tn-step{display:flex;align-items:center;gap:20px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-tokyo-night .tn-step:last-child{border-bottom:none}
+.tpl-tokyo-night .tn-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：蓝调描边，收尾页 ---- */
+.tpl-tokyo-night .tn-btn{display:inline-flex;align-items:center;gap:12px;padding:15px 38px;border:2px solid var(--accent);border-radius:8px;background:rgba(122,162,247,.12);font-size:22px;font-weight:700;letter-spacing:.16em;color:var(--accent);white-space:nowrap}
+
+/* ---- 正文补充句：卡说明 / 左栏补充 / 代码页尾注共用的正文档 ---- */
+.tpl-tokyo-night .tn-note{margin:0;font-size:19px;line-height:1.8;color:var(--ink-2);letter-spacing:.01em}
+
+/* ---- IDE 终端：code 版式的母题，标题栏三圆点 + 文件名 + 状态栏 ---- */
+.tpl-tokyo-night .tn-term{border:1px solid rgba(122,162,247,.2);border-radius:10px;background:rgba(13,15,22,.94);overflow:hidden}
+.tpl-tokyo-night .tn-term-bar{display:flex;align-items:center;gap:10px;padding:14px 22px;background:rgba(22,24,37,.9);border-bottom:1px solid var(--border-soft)}
+.tpl-tokyo-night .tn-dot{width:13px;height:13px;border-radius:50%;background:rgba(129,140,175,.35)}
+.tpl-tokyo-night .tn-dot:nth-child(1){background:#F7768E}
+.tpl-tokyo-night .tn-dot:nth-child(2){background:#E0AF68}
+.tpl-tokyo-night .tn-dot:nth-child(3){background:#9ECE6A}
+.tpl-tokyo-night .tn-term-name{margin-left:10px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;letter-spacing:.06em;color:var(--ink-2)}
+.tpl-tokyo-night .tn-lang{margin-left:auto;padding:3px 14px;border:1px solid rgba(125,207,255,.4);border-radius:999px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;letter-spacing:.1em;color:var(--accent-3)}
+.tpl-tokyo-night .tn-codeblock{margin:0;padding:28px 30px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:20px;line-height:1.85;color:var(--ink-2)}
+.tpl-tokyo-night .tn-status{display:flex;align-items:center;justify-content:space-between;padding:10px 22px;background:rgba(122,162,247,.16);border-top:1px solid rgba(122,162,247,.14);color:var(--ink);font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:15px;letter-spacing:.08em}
+
+/* ---- 页面切换：像霓虹眨眼一样轻 ---- */
+.tpl-tokyo-night{--page-shift:22px;--page-dur:.5s;--page-ease:cubic-bezier(.4,0,.2,1)}

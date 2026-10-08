@@ -38,7 +38,7 @@ async function submit(skip: boolean) {
 </script>
 
 <template>
-  <div class="w-[95%] self-start rounded-[10px] border border-accent-border border-l-[3px] border-l-accent bg-surface px-3.5 py-3 text-[13px]">
+  <div class="w-[95%] self-start rounded-card border border-accent-border border-l-[3px] border-l-accent bg-surface px-3.5 py-3 text-[13px]">
     <div v-for="(q, i) in questions" :key="i" class="mb-3 last:mb-0">
       <p class="mb-2 font-semibold">{{ i + 1 }}. {{ q.question }}</p>
 

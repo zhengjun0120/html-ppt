@@ -1,0 +1,93 @@
+/* e-ink-editorial — 墨页叙事。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/e-ink-editorial（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 纸灰底 + 纯黑字 + 极细线，全程无彩色：阅读秩序靠 1px 细线、等宽元数据与
+ * 大留白建立；纸面颗粒与右缘页边线是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-e-ink-editorial{
+  --bg:#F1EFEA;              /* 暖纸灰（letterbox 同值，翻页不跳） */
+  --bg-deep:#E8E5DE;         /* 深一档纸灰 */
+  --ink:#0A0A0B;             /* 纯黑墨 */
+  --ink-2:#45423C;           /* 炭灰正文 */
+  --ink-3:#716B62;           /* 弱元数据灰 */
+  --border:rgba(10,10,11,.35);
+  --border-soft:rgba(10,10,11,.14);
+  --accent:#0A0A0B;          /* 无彩色纪律：强调即纯黑 */
+  --paper:#F1EFEA;           /* 压在墨黑块上的纸灰字 */
+  font-family:Georgia,'Songti SC','STSong','Noto Serif SC','SimSun',serif;
+}
+
+/* ---- 画布：暖纸灰平涂 ---- */
+.tpl-e-ink-editorial .slide{background:var(--bg)}
+
+/* ---- 字阶：衬线正文 + 等宽元数据，正文页保持安静 ---- */
+.tpl-e-ink-editorial .h1{font-size:94px;line-height:1.04;font-weight:700;letter-spacing:.01em;color:var(--ink);margin-bottom:14px}
+.tpl-e-ink-editorial .h2{font-size:54px;line-height:1.16;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:8px}
+.tpl-e-ink-editorial h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.03em}
+.tpl-e-ink-editorial .lede{font-size:24px;line-height:1.85;color:var(--ink-2);font-weight:400;max-width:56ch}
+.tpl-e-ink-editorial .deck-footer{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.22em}
+
+/* ---- ambient：纸面颗粒 + 右缘页边细线，z-index:-1 画在内容之下 ---- */
+.tpl-e-ink-editorial .slide::before{
+  content:"";position:absolute;inset:0;z-index:-1;opacity:.6;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.tpl-e-ink-editorial .slide::after{
+  content:"";position:absolute;right:56px;top:96px;bottom:96px;width:1px;z-index:-1;
+  background:rgba(10,10,11,.10);
+}
+
+/* ---- 刊号行：等宽字元数据，页首的阅读秩序 ---- */
+.tpl-e-ink-editorial .ei-folio{display:flex;align-items:center;gap:16px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:15px;font-weight:700;letter-spacing:.30em;color:var(--ink-3)}
+
+/* ---- 通栏细线：1px 纯黑，标题下的「付印线」 ---- */
+.tpl-e-ink-editorial .ei-rule{width:100%;height:1px;background:var(--ink)}
+
+/* ---- 细线框卡：只有描边没有填充，墨水屏的克制 ---- */
+.tpl-e-ink-editorial .ei-card{background:transparent;border:1px solid var(--border);padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 墨黑实块：整页唯一的反转面 ---- */
+.tpl-e-ink-editorial .ei-card-ink{background:var(--ink);color:var(--paper);padding:36px 40px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 描边药丸：方角细线；实底款是黑签 ---- */
+.tpl-e-ink-editorial .ei-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 20px;border:1px solid var(--border);font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:15px;letter-spacing:.20em;color:var(--ink-2);white-space:nowrap}
+.tpl-e-ink-editorial .ei-pill-accent{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+
+/* ---- 目次行：等宽编号 + 篇名 + 说明，细线分组 ---- */
+.tpl-e-ink-editorial .ei-item{display:flex;align-items:baseline;gap:26px;padding:27px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-e-ink-editorial .ei-item:last-child{border-bottom:none}
+.tpl-e-ink-editorial .ei-n{flex:none;width:44px;height:44px;border:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-e-ink-editorial .ei-t{flex:none;width:260px;font-family:inherit;font-size:29px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-e-ink-editorial .ei-d{flex:1;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 墨黑数字：数据页主视觉，无彩色的分量 ---- */
+.tpl-e-ink-editorial .ei-stat{border-top:2px solid var(--ink);padding-top:28px}
+.tpl-e-ink-editorial .ei-stat-v{font-family:Georgia,'Songti SC',serif;font-size:104px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.tpl-e-ink-editorial .ei-stat-u{font-size:26px;color:var(--ink-3);margin-left:8px}
+.tpl-e-ink-editorial .ei-stat-l{margin-top:18px;font-family:inherit;font-size:27px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.tpl-e-ink-editorial .ei-stat-note{margin:12px 0 0;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 图注/出处：等宽小字，墨水屏的元数据口吻 ---- */
+.tpl-e-ink-editorial .ei-cap{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:15px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 访谈引文：衬线大字 ---- */
+.tpl-e-ink-editorial .ei-quote{font-family:inherit;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.02em;color:var(--ink);max-width:26em;margin:0}
+
+/* ---- 时间线：细线方点 + 极细连接线 ---- */
+.tpl-e-ink-editorial .ei-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-e-ink-editorial .ei-tl-item{flex:1;position:relative}
+.tpl-e-ink-editorial .ei-tl-item:not(:last-child)::before{content:"";position:absolute;top:22px;left:44px;right:-44px;height:1px;background:var(--border)}
+.tpl-e-ink-editorial .ei-tl-dot{position:relative;z-index:1;width:44px;height:44px;border:1px solid var(--ink);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink)}
+.tpl-e-ink-editorial .ei-tl-t{margin-top:18px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:18px;font-weight:700;letter-spacing:.10em;color:var(--ink)}
+.tpl-e-ink-editorial .ei-tl-d{margin-top:8px;font-size:19px;line-height:1.6;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右侧墨黑块内） ---- */
+.tpl-e-ink-editorial .ei-step{display:flex;align-items:center;gap:20px;padding:25px 4px;border-bottom:1px solid rgba(241,239,234,.25)}
+.tpl-e-ink-editorial .ei-step:last-child{border-bottom:none}
+.tpl-e-ink-editorial .ei-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--paper)}
+
+/* ---- 行动钮：细线描边，收尾页 ---- */
+.tpl-e-ink-editorial .ei-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:1.5px solid var(--ink);font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;font-weight:700;letter-spacing:.24em;color:var(--ink)}
+
+/* ---- 页面切换：墨水屏刷新——只有淡入，没有位移 ---- */
+.tpl-e-ink-editorial{--page-shift:0px;--page-dur:.50s;--page-ease:cubic-bezier(.4,0,.2,1)}

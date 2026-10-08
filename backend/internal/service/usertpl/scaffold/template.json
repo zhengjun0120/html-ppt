@@ -1,0 +1,76 @@
+{
+  "id": "{{ID}}",
+  "name": "{{NAME}}",
+  "description": "从空白新建的模板：中性灰阶起点，画布 1920×1080，九个最简版式覆盖封面到收尾（正文另有列表/分栏/数据/金句四种可选）。视觉与结构在 style.css / index.html / layouts.md 里等你定义",
+  "tags": ["空白", "起点", "自定义"],
+  "scenario": ["自由定制"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "blank-cover",
+      "name": "空白封面",
+      "use": "开场页：小引导语 + 大标题 + 一句话定位，垂直居中",
+      "roles": ["cover"],
+      "constraints": "标题 ≤16 字；定位一句话 20-40 字"
+    },
+    {
+      "id": "blank-toc",
+      "name": "空白目录",
+      "use": "目录/议程页：小节标题 + 编号条目行，每行标题带一句看点",
+      "roles": ["toc"],
+      "constraints": "2-5 条；条目标题 4-12 字、看点 12-24 字"
+    },
+    {
+      "id": "blank-divider",
+      "name": "空白章节页",
+      "use": "章节过渡：大标题 + 一句话引导 + 右下角章节数字，垂直居中",
+      "roles": ["divider"],
+      "constraints": "章节标题 ≤12 字；引导语 20-40 字；数字 1-2 字符"
+    },
+    {
+      "id": "blank-content",
+      "name": "空白内容页",
+      "use": "内容页：小节标题 + 2-4 张卡片，自上而下",
+      "roles": ["content"],
+      "constraints": "2-4 卡；卡标题 ≤10 字、正文 20-60 字"
+    },
+    {
+      "id": "blank-list",
+      "name": "空白列表页",
+      "use": "内容页（编号列表）：小节标题 + 编号要点纵列，每条一句论点加一段展开",
+      "roles": ["content"],
+      "constraints": "2-5 条；要点 12-30 字、展开 20-45 字"
+    },
+    {
+      "id": "blank-split",
+      "name": "空白对照页",
+      "use": "内容页（左右对照）：对比主题 + 左右两张对照卡，各带说明与适用前提",
+      "roles": ["content"],
+      "constraints": "两侧各一份；方案名 ≤10 字、说明 25-60 字、前提 15-40 字"
+    },
+    {
+      "id": "blank-data",
+      "name": "空白数据页",
+      "use": "数据/指标页：小节标题 + 2-4 张大数卡 + 来源行",
+      "roles": ["data", "content"],
+      "constraints": "2-4 卡；数值 ≤6 字符、指标名 ≤12 字、口径 12-30 字；底部注来源"
+    },
+    {
+      "id": "blank-quote",
+      "name": "空白金句页",
+      "use": "引用/金句页：大字引文 + 出处 + 一句注释，垂直居中",
+      "roles": ["quote", "content"],
+      "constraints": "引文 15-40 字；出处 ≤24 字；注释 20-45 字"
+    },
+    {
+      "id": "blank-thanks",
+      "name": "空白收尾页",
+      "use": "收尾/行动号召：大标题 + 一句收束 + 联系方式或下一步动作，垂直居中",
+      "roles": ["thanks", "cta"],
+      "constraints": "标题 ≤14 字；收束 20-45 字；联系行 ≤30 字"
+    }
+  ]
+}

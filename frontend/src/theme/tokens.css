@@ -26,6 +26,8 @@
   --danger:  #DC2626;
   --info:    #2563EB;
   --shadow: 0 8px 28px rgba(27, 37, 55, .10);
+  --kbd-inset: rgba(255, 255, 255, .65);
+  --kbd-drop: rgba(27, 37, 55, .22);
 }
 
 /* —— 暗色（data-theme="dark"）："曜石"基调，参照 Raycast ——
@@ -49,6 +51,8 @@
   --info:    #55B3FF;  /* Raycast Blue：交互/链接/焦点 */
   /* 双环容器 + 深投影：外环收边、内环压暗（Raycast 签名） */
   --shadow: 0 0 0 1px rgb(27, 28, 30), 0 12px 32px rgba(0, 0, 0, .55);
+  --kbd-inset: rgba(255, 255, 255, .08);
+  --kbd-drop: rgba(0, 0, 0, .45);
 }
 
 /* —— 派生 token：由基础 token 混出，禁止写死色值 —— */

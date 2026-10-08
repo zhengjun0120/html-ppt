@@ -1,0 +1,98 @@
+/* blue-orange-analytics — 蓝橙经营图谱。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/blue-orange-analytics（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 白底 + 藏蓝秩序 + 赭红点睛：顶部结论、中部图表、底部 KPI 的阅读顺序；
+ * 等宽标签、看板块、色带是全部装饰语言。赭红 #A13422 只标记异常、目标
+ * 或关键节点，永不作大底色。页顶藏蓝数据色带与页底柱状剪影是每页自动
+ * 衬底的 ambient 层（z-index:-1，画在 .deck 背景之上、全部内容之下）。 */
+.tpl-blue-orange-analytics{
+  --bg:#FFFFFF;              /* 白底 */
+  --bg-soft:#F2F2F2;         /* 浅灰看板底 */
+  --surface:#FFFFFF;
+  --surface-2:#F2F2F2;
+  --ink:#0F213A;             /* 关键边界深蓝黑（标题） */
+  --ink-2:#404040;           /* 正文 */
+  --ink-3:#778EAB;           /* 蓝灰小字 */
+  --border:#D1D5DB;          /* 表格线灰 */
+  --navy:#1D4273;            /* 藏蓝主色 */
+  --navy-2:#305598;
+  --blue:#4474C5;
+  --blue-gray:#5C7DB9;
+  --blue-light:#99B0E3;
+  --rust:#A13422;            /* 赭红：只点异常/目标/关键节点 */
+  --rust-soft:#C7857A;
+  font-family:'PingFang SC','Noto Sans SC','Microsoft YaHei',Helvetica,Arial,sans-serif;
+}
+
+/* ---- 字阶：黑标题 + 等宽标签，经营报告的秩序感 ---- */
+.tpl-blue-orange-analytics .h1{font-size:80px;line-height:1.08;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-bottom:12px}
+.tpl-blue-orange-analytics .h2{font-size:52px;line-height:1.15;font-weight:800;letter-spacing:-.005em;color:var(--ink);margin-bottom:10px}
+.tpl-blue-orange-analytics h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:24px;letter-spacing:.02em}
+.tpl-blue-orange-analytics .lede{font-size:23px;line-height:1.8;color:var(--ink-2);font-weight:400}
+.tpl-blue-orange-analytics .deck-footer{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.14em}
+
+/* ---- ambient：页顶藏蓝数据色带 + 页底柱状剪影（图表母题，不参与数据） ---- */
+.tpl-blue-orange-analytics .slide::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:6px;z-index:-1;
+  background:linear-gradient(90deg,var(--navy) 0%,var(--navy-2) 55%,var(--blue) 100%);
+}
+.tpl-blue-orange-analytics .slide::after{
+  content:"";position:absolute;right:96px;bottom:58px;width:430px;height:170px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 430 170'%3E%3Crect x='10' y='96' width='52' height='60' fill='%23305598' opacity='0.10'/%3E%3Crect x='98' y='66' width='52' height='90' fill='%234474C5' opacity='0.12'/%3E%3Crect x='186' y='106' width='52' height='50' fill='%23305598' opacity='0.10'/%3E%3Crect x='274' y='34' width='52' height='122' fill='%23A13422' opacity='0.14'/%3E%3Crect x='362' y='80' width='52' height='76' fill='%23305598' opacity='0.10'/%3E%3Crect x='0' y='158' width='430' height='2' fill='%230F213A' opacity='0.22'/%3E%3C/svg%3E") no-repeat right bottom;
+}
+
+/* ---- 等宽题签：藏蓝小方块 + 等宽字，像看板左上角的读数 ---- */
+.tpl-blue-orange-analytics .bo-kicker{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;font-weight:700;letter-spacing:.28em;color:var(--blue-gray);text-transform:uppercase}
+.tpl-blue-orange-analytics .bo-kicker::before{content:"";flex:none;width:12px;height:12px;background:var(--navy)}
+
+/* ---- 结论细线：关键边界色压标题 ---- */
+.tpl-blue-orange-analytics .bo-rule{width:240px;height:2px;background:var(--ink)}
+
+/* ---- 状态牌：赭红实底白字，只标记聚焦/异常 ---- */
+.tpl-blue-orange-analytics .bo-status{flex:none;display:inline-flex;align-items:center;padding:10px 20px;background:var(--rust);color:#fff;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;font-weight:700;letter-spacing:.16em;white-space:nowrap}
+
+/* ---- 看板卡：浅灰底 + 表格线灰描边，像图表面板 ---- */
+.tpl-blue-orange-analytics .bo-card{background:var(--bg-soft);border:1px solid var(--border);padding:34px 38px;display:flex;flex-direction:column;min-height:260px}
+
+/* ---- 药丸：细描边直角，藏蓝实底为强调 ---- */
+.tpl-blue-orange-analytics .bo-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:8px 22px;border:1px solid var(--border);background:#fff;font-size:16px;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
+.tpl-blue-orange-analytics .bo-pill-accent{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+
+/* ---- 目录行：等宽编号 + 篇名 + 说明 ---- */
+.tpl-blue-orange-analytics .bo-item{display:flex;align-items:baseline;gap:24px;padding:25px 6px;border-bottom:1px solid var(--border)}
+.tpl-blue-orange-analytics .bo-item:last-child{border-bottom:none}
+.tpl-blue-orange-analytics .bo-n{flex:none;width:46px;height:46px;border:1px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-blue-orange-analytics .bo-t{flex:none;width:280px;font-size:26px;font-weight:700;color:var(--ink)}
+.tpl-blue-orange-analytics .bo-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- KPI 看板块：藏蓝实底 + 白色大数字（结论级强调专用） ---- */
+.tpl-blue-orange-analytics .bo-stat{background:var(--navy);border-radius:4px;padding:32px 34px}
+.tpl-blue-orange-analytics .bo-stat:nth-child(2){background:var(--navy-2)}
+.tpl-blue-orange-analytics .bo-stat-v{font-size:88px;line-height:1;font-weight:800;letter-spacing:-.01em;color:#fff}
+.tpl-blue-orange-analytics .bo-stat-u{font-size:24px;font-weight:500;color:var(--blue-light);margin-left:8px}
+.tpl-blue-orange-analytics .bo-stat-l{margin-top:16px;font-size:24px;font-weight:700;letter-spacing:.06em;color:#fff}
+.tpl-blue-orange-analytics .bo-stat-note{margin:10px 0 0;font-size:17px;line-height:1.7;color:rgba(255,255,255,.82)}
+
+/* ---- 会议金句 + 虚线批注框 ---- */
+.tpl-blue-orange-analytics .bo-quote{font-size:58px;line-height:1.55;font-weight:800;letter-spacing:.01em;color:var(--ink);max-width:24em;margin:0}
+.tpl-blue-orange-analytics .bo-src{font-family:'JetBrains Mono','Noto Sans SC',monospace;margin:0;font-size:19px;letter-spacing:.08em;color:var(--blue-gray)}
+.tpl-blue-orange-analytics .bo-note{position:absolute;right:120px;top:50%;transform:translateY(-50%);width:300px;border:1.5px dashed var(--ink);background:#fff;padding:26px 28px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:17px;line-height:1.9;letter-spacing:.04em;color:var(--ink-2)}
+
+/* ---- 时间线：等宽编号方块 + 灰连接线 ---- */
+.tpl-blue-orange-analytics .bo-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-blue-orange-analytics .bo-tl-item{flex:1;position:relative}
+.tpl-blue-orange-analytics .bo-tl-item:not(:last-child)::before{content:"";position:absolute;top:22px;left:46px;right:-40px;height:2px;background:var(--border)}
+.tpl-blue-orange-analytics .bo-tl-dot{position:relative;z-index:1;width:44px;height:44px;border:2px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:16px;font-weight:700;color:var(--ink)}
+.tpl-blue-orange-analytics .bo-tl-t{margin-top:18px;font-family:'JetBrains Mono','Noto Sans SC',monospace;font-size:19px;font-weight:700;letter-spacing:.06em;color:var(--navy-2)}
+.tpl-blue-orange-analytics .bo-tl-d{margin-top:8px;font-size:18px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-blue-orange-analytics .bo-step{display:flex;align-items:center;gap:20px;padding:23px 4px;border-bottom:1px solid var(--border)}
+.tpl-blue-orange-analytics .bo-step:last-child{border-bottom:none}
+.tpl-blue-orange-analytics .bo-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink-2)}
+
+/* ---- 行动钮：藏蓝实底直角，收尾页唯一的按钮 ---- */
+.tpl-blue-orange-analytics .bo-btn{display:inline-flex;align-items:center;gap:14px;padding:14px 40px;border-radius:4px;background:var(--navy);color:#fff;font-size:20px;font-weight:700;letter-spacing:.12em;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：看板翻页般干脆 ---- */
+.tpl-blue-orange-analytics{--page-shift:14px;--page-dur:.5s;--page-ease:cubic-bezier(.4,0,.2,1)}

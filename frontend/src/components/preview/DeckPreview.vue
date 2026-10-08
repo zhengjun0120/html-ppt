@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhDownload, PhExport } from '@phosphor-icons/vue'
+import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhDownload, PhExport, PhPencilSimple } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { authedUrl } from '@/api/client'
@@ -9,7 +9,7 @@ import { useDeckStore } from '@/stores/deck'
 import { useToast } from '@/stores/toast'
 
 const props = defineProps<{ deckId: string }>()
-const emit = defineEmits<{ history: [] }>()
+const emit = defineEmits<{ history: []; edit: [] }>()
 
 const deckStore = useDeckStore()
 const toast = useToast()
@@ -94,6 +94,7 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
   <section class="flex min-w-0 flex-1 flex-col">
     <!-- 预览工具条 -->
     <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
+      <slot name="toolbar-start" />
       <span class="truncate text-[12.5px] font-semibold" :title="title">{{ title }}</span>
       <span v-if="props.deckId" class="truncate font-mono text-[11px] text-ink-3">{{ props.deckId }}</span>
       <span class="ml-auto flex items-center gap-1.5">
@@ -119,6 +120,14 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
           @click="emit('history')"
         >
           <PhClockCounterClockwise :size="12" /> 历史
+        </button>
+        <!-- 编辑器入口（deck-editor-plan §4.6）：弹窗内直接手改文稿 -->
+        <button
+          v-if="props.deckId"
+          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-accent hover:text-ink"
+          @click="emit('edit')"
+        >
+          <PhPencilSimple :size="12" /> 编辑
         </button>
         <button
           v-if="props.deckId"
@@ -160,7 +169,7 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
 
       <!-- 画布 -->
       <div class="flex min-w-0 flex-1 flex-col">
-        <div class="min-h-0 flex-1 bg-bg">
+        <div class="min-h-0 flex-1 bg-canvas">
           <iframe
             v-if="props.deckId"
             :key="reloadKey + ':' + iframeSrc"

@@ -14,6 +14,9 @@
 package template
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+
 	"encoding/json"
 	"fmt"
 	"os"
@@ -43,7 +46,7 @@ type LayoutMeta struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
 	Use         string   `json:"use"`
-	Roles       []string `json:"roles,omitempty"`    // 适用的大纲 role（cover/toc/...）
+	Roles       []string `json:"roles,omitempty"` // 适用的大纲 role（cover/toc/...）
 	Constraints string   `json:"constraints,omitempty"`
 }
 
@@ -68,6 +71,40 @@ type Meta struct {
 	// DemoPages demo 页数（顶层 section 数，装载时统计，不入 template.yaml）。
 	// 预览弹窗显示"第 X / N 页"、翻到尾页收手，靠它；0 = 未知（前端退化为不显示总数）。
 	DemoPages int `json:"demo_pages,omitempty"`
+}
+
+// MetaSummary 清单视图：不含 layouts/fonts/source。
+//
+// 这三个字段占清单体积 ~80%（108 个模板实测 310KB→58KB）：layouts 的版式
+// 索引只有后端 agent 生成管线消费（直接读注册表），前端卡片与筛选只用
+// 名称/简介/标签/场景/画布/变体。清单接口下发 Summary；单模板详情
+// （GET /api/templates/:id）仍回全量 Meta——需要版式信息的消费方从那拿。
+type MetaSummary struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Tags        []string  `json:"tags,omitempty"`
+	Scenario    []string  `json:"scenario,omitempty"`
+	Canvas      Canvas    `json:"canvas"`
+	Variants    []Variant `json:"variants"`
+	DemoPages   int       `json:"demo_pages,omitempty"`
+	// Thumb 内容版本前 8 位（ContentVersion）：缩略图 URL 的 cache-bust 键——
+	// img 地址 /api/templates/<id>/thumb?v=<Thumb>，内容变 URL 变，浏览器长缓存自然失效。
+	Thumb string `json:"thumb,omitempty"`
+}
+
+// Summary 裁出清单视图。
+func (m *Meta) Summary() MetaSummary {
+	return MetaSummary{
+		ID:          m.ID,
+		Name:        m.Name,
+		Description: m.Description,
+		Tags:        m.Tags,
+		Scenario:    m.Scenario,
+		Canvas:      m.Canvas,
+		Variants:    m.Variants,
+		DemoPages:   m.DemoPages,
+	}
 }
 
 // Template 是一个已通过校验的模板：元数据 + 文件内容 + 类名清单。
@@ -273,11 +310,11 @@ func isClassToken(s string) bool {
 // 模板是代码库的一部分，进 git，不热载）；用户层（自定义模板）按发布/
 // 下架增量 Mount/Unmount。
 type Registry struct {
-	mu        sync.RWMutex
-	items     map[string]*Template
-	builtins  map[string]bool // 内置层 id 集合（用户层不可覆盖内置 id）
-	assetsDir string          // 用户层加载需要（内置层在 New 时已用过）
-	builtinsRoot string       // 内置模板根目录（fork 复制来源）
+	mu           sync.RWMutex
+	items        map[string]*Template
+	builtins     map[string]bool // 内置层 id 集合（用户层不可覆盖内置 id）
+	assetsDir    string          // 用户层加载需要（内置层在 New 时已用过）
+	builtinsRoot string          // 内置模板根目录（fork 复制来源）
 	// user 用户自定义模板层（MountUser 注册，Get/List 与内置层合并视图）
 	user map[string]*Template
 	// pendingUser ValidateUserDir → MountUser 之间的校验结果缓存（dir → t）
@@ -346,7 +383,7 @@ func (r *Registry) MountUser(dir string) error {
 
 // ValidateUserDir 按内置层同一套规则校验一个用户模板目录（不注册）。
 // 发布门禁的第一关用它；校验结果缓存一份供紧随其后的 MountUser 复用
-//（避免同一目录连跑两遍完整校验）。
+// （避免同一目录连跑两遍完整校验）。
 func (r *Registry) ValidateUserDir(dir string) error {
 	baseCSS, err := os.ReadFile(filepath.Join(r.assetsDir, "deck-v2", "base.css"))
 	if err != nil {
@@ -417,6 +454,51 @@ func (r *Registry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.items)
+}
+
+// ContentVersion 模板内容版本：demo HTML 与 style.css 的 sha256 前 16 hex。
+// 缩略图/预览类派生物的失效依据——所有编辑路径（手动保存/定制对话/fork）
+// 都会重挂注册表，内存快照即权威，版本随之变化。
+func (r *Registry) ContentVersion(id string) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	t, ok := r.items[id]
+	if !ok {
+		return "", fmt.Errorf("模板 %q 不存在", id)
+	}
+	return r.contentVersionLocked(t)
+}
+
+// ListSummaries 清单视图 + 缩略图版本。List 的瘦身版（见 MetaSummary），
+// 模板清单接口的下发形状。
+func (r *Registry) ListSummaries() []MetaSummary {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]MetaSummary, 0, len(r.items))
+	for _, t := range r.items {
+		s := t.Meta.Summary()
+		if v, err := r.contentVersionLocked(t); err == nil {
+			s.Thumb = v[:8]
+		}
+		out = append(out, s)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+// contentVersionLocked 内容版本（调用方持读锁）。
+// salt 是哈希的代次：缩略图管线的解析 bug 修过后（如草稿 token 渲染），旧版本
+// 字符串对应的缓存图可能是不良产物——URL 内容寻址不会自己失效，升 salt 一次性
+// 全量换 URL。
+const contentVersionSalt = "tplthumb-v2"
+
+func (r *Registry) contentVersionLocked(t *Template) (string, error) {
+	h := sha256.New()
+	h.Write([]byte(contentVersionSalt))
+	h.Write([]byte(t.indexHTML))
+	h.Write([]byte("\x00"))
+	h.Write([]byte(t.styleCSS))
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // ---------- 加载与校验 ----------

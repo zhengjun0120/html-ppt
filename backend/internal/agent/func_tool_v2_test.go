@@ -8,6 +8,7 @@ package agent
 // 断言描述完整、必填字段在位——标签写坏的当次提交立刻红。
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -96,5 +97,52 @@ func TestV2StageToolBoundaries(t *testing.T) {
 	}
 	if !has("clarifying", "ask_user") {
 		t.Error("clarifying 缺 ask_user")
+	}
+	// 冷启动首轮也给 submit_outline：信息给全时一步出稿，API 直连不用两步。
+	// 写侧工具仍然不给——澄清阶段没有 deck，update_outline/write_pages 无处落笔。
+	if !has("clarifying", "submit_outline") {
+		t.Error("clarifying 缺 submit_outline（冷启动首轮直接提交大纲）")
+	}
+	if has("clarifying", "update_outline") || has("clarifying", "write_pages") {
+		t.Error("clarifying 不该看见写侧工具")
+	}
+}
+
+// emitV2 的载荷必须同时进 Content（遗留 JSON 字符串）与 Data（对象）——
+// API 直连的消费者读 data 就不必对 content 做二次 JSON.parse；漏掉 Data
+// 等于把双重包装又变回唯一的形态。
+func TestEmitV2SetsDataField(t *testing.T) {
+	var got StreamEvent
+	ctx := withEmit(context.Background(), func(ev StreamEvent) error {
+		got = ev
+		return nil
+	})
+	as := &AgentService{}
+	as.emitV2(ctx, EventTypeStage, map[string]any{"deck_id": "deck-1", "to": "generating"})
+	if got.Type != EventTypeStage {
+		t.Fatalf("事件类型 = %s", got.Type)
+	}
+	if len(got.Data) == 0 {
+		t.Fatal("Data 未填充：API 直连消费者仍需二次解析 content")
+	}
+	var obj map[string]any
+	if err := json.Unmarshal(got.Data, &obj); err != nil {
+		t.Fatalf("Data 不是合法 JSON 对象: %v", err)
+	}
+	if obj["to"] != "generating" {
+		t.Fatalf("Data 内容不对: %v", obj)
+	}
+	// Content 保持遗留形态（JSON 字符串），旧前端契约不破
+	var legacy map[string]any
+	if err := json.Unmarshal([]byte(got.Content), &legacy); err != nil || legacy["to"] != "generating" {
+		t.Fatalf("Content 遗留形态被破坏: %q err=%v", got.Content, err)
+	}
+	// 整个事件序列化后 data 必须是内联对象而非字符串（SSE 线上形态）
+	wire, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(wire), `"data":{"deck_id":"deck-1","to":"generating"}`) {
+		t.Fatalf("线上形态 data 不是内联对象: %s", wire)
 	}
 }

@@ -1,0 +1,88 @@
+{
+  "id": "dracula",
+  "name": "Dracula 紫",
+  "description": "紫夜笼罩的编辑器底色：冷白标题、银灰正文，荧光粉与薰衣草紫双强调，代码在这个配色下天生就会发光",
+  "tags": ["深色", "科技", "开发者"],
+  "scenario": ["代码分享", "开源项目演示", "编程教学", "技术分享", "黑客马拉松"],
+  "canvas": { "w": 1920, "h": 1080 },
+  "variants": [
+    { "id": "default", "name": "默认", "class": "" }
+  ],
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "幕布封面",
+      "use": "开场：// 注释题签 + 冷白大标题 + 粉紫渐变线 + 一句定位，可配描边标签",
+      "roles": ["cover"],
+      "constraints": "主标题 ≤12 字；lede 24-48 字；标签各 ≤8 字"
+    },
+    {
+      "id": "contents",
+      "name": "目录页",
+      "use": "议程：暗色卡内 4 行篇目（等宽编号 + 篇名 + 一句说明）",
+      "roles": ["toc"],
+      "constraints": "恰好 4 行；篇名 ≤8 字；说明 14-26 字"
+    },
+    {
+      "id": "keynotes",
+      "name": "三卡要点",
+      "use": "三个并列要点：暗色卡 + 荧光粉标签 + 小标题 + 两句说明",
+      "roles": ["content"],
+      "constraints": "恰好 3 卡；标签 ≤8 字；小标题 ≤8 字；说明 22-44 字"
+    },
+    {
+      "id": "split",
+      "name": "左文右列",
+      "use": "左边把一件事讲透（lede + 补充 + 标签），右边暗色卡装三行步骤或条目",
+      "roles": ["content"],
+      "constraints": "左 lede 36-70 字 + 补充 18-40 字 + 2 个标签；右恰好 3 行、每行 12-26 字"
+    },
+    {
+      "id": "metrics",
+      "name": "荧光数字",
+      "use": "三个关键数据：荧光粉大数字 + 指标名 + 口径，页尾标来源",
+      "roles": ["data"],
+      "constraints": "恰好 3 个；数值 ≤6 字符；指标名 ≤8 字；口径 14-30 字；必须标来源"
+    },
+    {
+      "id": "quote",
+      "name": "紫夜引言",
+      "use": "整页一句引文：冷白大字 + 出处 + 两个支撑标签，像编辑器里被高亮的一行",
+      "roles": ["quote"],
+      "constraints": "引文 10-28 字；出处 ≤22 字且真实；标签各 ≤8 字"
+    },
+    {
+      "id": "divider",
+      "name": "章节幕",
+      "use": "章节过渡：// 进度题签 + 冷白大字章节名 + 一个过渡问题 + 两个看点标签",
+      "roles": ["divider"],
+      "constraints": "章节名 ≤10 字；过渡问题 22-44 字；标签各 ≤8 字"
+    },
+    {
+      "id": "moments",
+      "name": "里程碑时间线",
+      "use": "3-4 个节点的横向时间线：紫描边圆点 + 时间点 + 一句事件",
+      "roles": ["content", "data"],
+      "constraints": "3-4 节点；时间点 ≤10 字符；事件 12-26 字；页尾一句口径 14-40 字"
+    },
+    {
+      "id": "closing",
+      "name": "收尾页",
+      "use": "收尾：冷白大字 + 一句行动提醒 + 荧光粉按钮 + 标签",
+      "roles": ["thanks", "cta", "content"],
+      "constraints": "标题 ≤10 字；lede 20-44 字；按钮 ≤8 字；标签 ≤12 字"
+    },
+    {
+      "id": "code",
+      "name": "代码示例",
+      "use": "一段真实代码或配置：编辑器窗口（标题栏三圆点 + 文件名 + 语言标签）承载等宽代码块",
+      "roles": ["code"],
+      "constraints": "代码 6-10 行、每行 ≤56 字符（< > & 需转义）；文件名 ≤16 字符；配一句说明 18-40 字"
+    }
+  ],
+  "fonts": ["Inter", "Noto Sans SC", "JetBrains Mono"],
+  "source": {
+    "derived_from": "oh-my-ppt/resources/styles/dracula",
+    "license": "Apache-2.0"
+  }
+}

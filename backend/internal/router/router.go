@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
 	"html-ppt/backend/internal/config"
@@ -18,17 +19,26 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), middleware.CORS(cfg.Server.AllowOrigins))
 
-		api := r.Group("/api")
+	api := r.Group("/api")
 	{
 		api.GET("/health", h.Health)
 
 		// deck-v2 模板清单：公开。模板元数据不含用户数据，画廊（含登录前的
 		// 展示场景）都要用。单个模板详情走同一条鉴权豁免逻辑。
 		// preview = demo 页 HTML（?variant= 服务端换肤），供选模板页实时预览。
-		api.GET("/templates", h.ListTemplates)
-		api.GET("/templates/:id", h.GetTemplate)
-		api.GET("/templates/:id/preview", h.PreviewTemplate)
-		api.GET("/community-templates", h.CommunityTemplates)
+		// 这四条是体积最大、重访最多的公开读端点，挂传输压缩（JSON/HTML 文本
+		// 5-10 倍压缩比）。绝不挂到 /chat、/generate 这类 SSE 端点上——gzip 的
+		// 缓冲会把流式事件攒住，对话页就死了。Vary 先行：同一路由 gzip 与
+		// identity 响应共存，共享缓存必须按 Accept-Encoding 分键。
+		gz := gzip.Gzip(gzip.DefaultCompression)
+		vary := func(c *gin.Context) {
+			c.Header("Vary", "Accept-Encoding")
+			c.Next()
+		}
+		api.GET("/templates", vary, gz, h.ListTemplates)
+		api.GET("/templates/:id", vary, gz, h.GetTemplate)
+		api.GET("/templates/:id/preview", vary, gz, h.PreviewTemplate)
+		api.GET("/community-templates", vary, gz, h.CommunityTemplates)
 
 		// 视觉审查的一次性取页通道：**必须公开**——无头浏览器是"导航"到它的，
 		// 导航带不了 Authorization 头。安全性靠一次性 nonce（见 vision/grant.go）：
@@ -36,6 +46,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 		// （同一个 deckPageHeaders），否则"审查看到的页面"和"用户看到的页面"不是一个东西。
 		// 路径前缀改了的话，agent/vision_review.go 里拼 URL 那行必须一起改。
 		api.GET("/render/:nonce", h.RenderDeck)
+		// 用户模板发布门禁的渲染端点：nonce 即鉴权（Publish 签发、Peek 语义、
+		// TTL 2 分钟），headless 导航带不了鉴权头，草稿收口后这是唯一的桥
+		// （docs/user-template-history-plan.md §3.5）
+		api.GET("/user-template-render/:nonce/*filepath", h.RenderUserTemplateDemo)
 
 		// 公开：验证码 / 注册 / 登录
 		authg := api.Group("/auth")
@@ -59,10 +73,13 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.PUT("/decks/:id/outline", h.PutOutline)
 			guarded.POST("/decks/:id/outline/confirm", h.ConfirmOutline)
 			guarded.POST("/decks/:id/template", h.SelectTemplate)
+			guarded.POST("/decks/:id/template-suggestions", h.TemplateSuggestions)
 			guarded.POST("/decks/:id/generate", h.GenerateDeck)
 			guarded.POST("/decks/:id/export", h.ExportDeck)
 			guarded.GET("/decks/:id/exports/:file", h.DownloadExport)
 			guarded.GET("/decks/:id/file", h.GetDeckFile)
+			// 编辑器手动保存：全量覆盖 index.html 并记一条 edit 版本（deck-editor-plan §4.1）
+			guarded.PUT("/decks/:id/file", h.SaveDeckFile)
 			guarded.POST("/chat", h.Chat)
 			guarded.POST("/chat/answer", h.AskUser)
 			// 暂停中的提问（页面刷新后重建提问卡片用；没有则 questions 为空串）
@@ -82,6 +99,8 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.POST("/decks/:id/history/:version/restore", h.RestoreDeckVersion)
 			// 缩略图：预览栏翻页与文稿列表封面。首次访问整本渲染（10-20s），
 			// 之后按内容版本缓存；?token= 兼容 <img> 标签带不了鉴权头。
+			// 模板卡片缩略图（img 标签带 ?token=，同 deck thumbs 的鉴权妥协）
+			guarded.GET("/templates/:id/thumb", h.TemplateThumb)
 			guarded.GET("/decks/:id/thumbs", h.DeckThumbs)
 			guarded.GET("/decks/:id/thumbs/:no", h.DeckThumb)
 			// 用户自定义模板：fork / 我的 / 详情 / 改名 / 删除 / 发布门禁 / 下架
@@ -92,7 +111,26 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			guarded.DELETE("/user-templates/:id", h.DeleteUserTemplate)
 			guarded.POST("/user-templates/:id/publish", h.PublishUserTemplate)
 			guarded.POST("/user-templates/:id/unpublish", h.UnpublishUserTemplate)
-				guarded.POST("/user-templates/:id/chat", h.CustomizeUserTemplate)
+			guarded.POST("/user-templates/:id/checkup", h.CheckupUserTemplate)
+			guarded.POST("/user-templates/:id/chat", h.CustomizeUserTemplate)
+			// 定制对话 SSE（工具气泡/生成进度实时可见；帧格式与 deck 对话一致）
+			guarded.POST("/user-templates/:id/chat/stream", h.CustomizeUserTemplateStream)
+			// 编辑器：demo 读取（注入 editor.js）+ index.html 全量保存（滚动备份 5 版）。
+			// 静态路由没有服务端钩子，注入只能走受保护端点（deck-editor-plan §4.2）
+			guarded.GET("/user-templates/:id/editor", h.GetUserTemplateEditor)
+			guarded.PUT("/user-templates/:id/file", h.SaveUserTemplateFile)
+			guarded.PUT("/user-templates/:id/style", h.SaveUserTemplateStyle)
+			// 结构契约（版式面板）：读挂载态契约 / 改版式元数据（roles/名称/用途）
+			guarded.GET("/user-templates/:id/structure", h.GetUserTemplateStructure)
+			guarded.PUT("/user-templates/:id/layouts/:layoutId", h.UpdateUserTemplateLayout)
+			// 鉴权预览与资产（工作台/编辑弹窗；草稿收口后不再依赖公开静态）
+			guarded.GET("/user-templates/:id/demo", h.GetUserTemplateDemo)
+			guarded.GET("/user-templates/:id/assets/:name", h.GetUserTemplateAsset)
+			// 历史版本（docs/user-template-history-plan.md §4）：回滚本身记 restore 版本
+			guarded.GET("/user-templates/:id/history", h.ListUserTemplateHistory)
+			guarded.POST("/user-templates/:id/history/:version/restore", h.RestoreUserTemplateVersion)
+			guarded.DELETE("/user-templates/:id/history/:version", h.DeleteUserTemplateVersion)
+			guarded.DELETE("/user-templates/:id/history", h.ClearUserTemplateHistory)
 			guarded.DELETE("/decks/:id/history/:version", h.DeleteDeckVersion)
 			guarded.DELETE("/decks/:id/history", h.ClearDeckHistory)
 
@@ -110,7 +148,10 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 
 	// reveal.js 等静态资源：deck.html 里的 <link>/<script> 引用 /assets/...
 	// （静态资源不挂 Auth：浏览器加载 <script src> 时不会带 Authorization 头）
-	assets := r.Group("", revalidateStatic())
+	// assetsCORS：预览 iframe 是 scripts-only 沙箱（origin 为 opaque "null"），
+	// 字体请求永远是 CORS 模式——没有 ACAO 头全部被拦，文稿只能退到系统字体
+	// （2026-09-27 用户报控制台报错刷屏）。静态资产公开且无凭据，通配即可。
+	assets := r.Group("", revalidateStatic(), assetsCORS())
 	assets.Static("/assets", cfg.Assets.Dir)
 
 	// deck-v2 模板库静态服务：画廊的 live 预览 iframe 直接加载
@@ -118,13 +159,16 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 	// 模板目录不含用户数据，公开；实例化出的 deck 走的是 /api/decks/:id/file，
 	// 不经过这条路，归属校验不受影响。
 	if h.TemplatesAvailable() {
-		templates := r.Group("", revalidateStatic())
+		templates := r.Group("", builtinTemplateCache())
 		templates.Static("/templates", cfg.Templates.Dir)
-		// 用户自定义模板 demo：公开 + no-cache（定制对话会改 style.css，
-		// 缓存会让预览与发布量测拿到旧样式）。模板设计不含用户数据；发布门禁的无头渲染
-		// 走这里，导航带不了鉴权头）。目录在 main 里保证存在。
-		utStatic := r.Group("", noCacheHeader())
-		utStatic.Static("/user-templates", filepath.Join(cfg.Data.Dir, "user-templates"))
+	}
+	// 用户自定义模板：受控伺服替代原 StaticFS 公开路由（草稿收口，
+	// docs/user-template-history-plan.md §3.5）。published 免登录（社区画廊
+	// iframe 带不了鉴权头）；draft/failed/publishing 仅属主（token）；
+	// 白名单只有 index.html/style.css——template.json/layouts.md/rules.md
+	// 这些"模板源码"和 history/ 永不伺服。
+	if h.UsertplAvailable() {
+		r.GET("/user-templates/:id/*filepath", middleware.AuthOptional(cfg.Auth.JWTSecret), h.UserTemplatePublicFile)
 	}
 
 	// SSE 测试台（同源访问，无 CORS 问题）：http://localhost:8080/chat-test
@@ -154,6 +198,37 @@ func revalidateStatic() gin.HandlerFunc {
 			c.Header("Cache-Control", "public, max-age=604800, must-revalidate")
 		} else {
 			c.Header("Cache-Control", "no-cache")
+		}
+		c.Next()
+	}
+}
+
+// assetsCORS 给静态资产发 Access-Control-Allow-Origin: *。
+//
+// 消费方是 scripts-only 沙箱的预览 iframe：其文档 origin 是 opaque "null"，
+// 对任何来源都是跨域，而字体（@font-face 的 url()）永远走 CORS 模式——
+// 后端不发 ACAO 头字体就全被拦，deck 只能退到系统字体（实测事故）。
+// 资产本身公开且无凭据，通配即可；脚本/样式表标签是非 CORS 模式，加头无副作用。
+func assetsCORS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Next()
+	}
+}
+
+// builtinTemplateCache 内置模板静态资产的缓存策略（2026-09-30 预览缓存化）：
+// demo 是构建产物、运行期不可变（改模板 = 改文件 + 重启，开发时 Ctrl+F5 兜底），
+// 给 1 小时强缓存——选模板页一屏上百张卡、每张 demo 自带 css/js，逐个回源
+// 校验（no-cache）也会放大成可感知的加载。字体沿用 revalidateStatic 的例外
+// 条款：vendored 字体只在升级时变（文件名跟着变），7 天 max-age。
+// 用户模板（/user-templates）不在此列：定制对话随时改 style.css，保持 no-cache
+// 逐次校验（见 noCacheHeader）。
+func builtinTemplateCache() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if isFontAsset(c.Request.URL.Path) {
+			c.Header("Cache-Control", "public, max-age=604800, must-revalidate")
+		} else {
+			c.Header("Cache-Control", "private, max-age=3600")
 		}
 		c.Next()
 	}

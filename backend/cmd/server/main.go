@@ -8,8 +8,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -17,14 +17,15 @@ import (
 	"gorm.io/gorm"
 
 	"html-ppt/backend/internal/agent"
-	"html-ppt/backend/internal/export"
 	"html-ppt/backend/internal/config"
 	"html-ppt/backend/internal/cryptox"
+	"html-ppt/backend/internal/export"
 	"html-ppt/backend/internal/handler"
 	"html-ppt/backend/internal/router"
 	"html-ppt/backend/internal/service/auth"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
+	"html-ppt/backend/internal/service/tplthumb"
 	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
@@ -111,10 +112,10 @@ func run() error {
 	deckSvc.WithTemplateRegistry(templateReg)
 	// AI 味 lint 词表：config 可整体覆盖，缺省用代码内置词表
 	deck.WithLintConfig(deck.LintCfg{
-		CJKBanned: cfg.DeckV2.Lint.CJK_Banned,
-		ENBanned:  cfg.DeckV2.Lint.EN_Banned,
-		TitleMax:  cfg.DeckV2.Lint.TitleMaxChars,
-		BulletMax: cfg.DeckV2.Lint.BulletMaxChars,
+		CJKBanned:    cfg.DeckV2.Lint.CJK_Banned,
+		ENBanned:     cfg.DeckV2.Lint.EN_Banned,
+		TitleMax:     cfg.DeckV2.Lint.TitleMaxChars,
+		BulletMax:    cfg.DeckV2.Lint.BulletMaxChars,
 		EyebrowLimit: cfg.DeckV2.Lint.EyebrowPerPages,
 	})
 
@@ -135,11 +136,11 @@ func run() error {
 	// deck-v2：模板注册表 + 阶段轮数预算（config 缺省走代码内默认）
 	agentSvc.Templates = templateReg
 	agentSvc.StageMaxTurns = map[string]int{
-		"clarifying":         cfg.DeckV2.MaxTurns.Clarify,
-		"outlining":          cfg.DeckV2.MaxTurns.Outline,
-		"outline_review":     cfg.DeckV2.MaxTurns.OutlineReview,
-		"generating":         cfg.DeckV2.MaxTurns.Generate,
-		"iterating":          cfg.DeckV2.MaxTurns.Iterate,
+		"clarifying":     cfg.DeckV2.MaxTurns.Clarify,
+		"outlining":      cfg.DeckV2.MaxTurns.Outline,
+		"outline_review": cfg.DeckV2.MaxTurns.OutlineReview,
+		"generating":     cfg.DeckV2.MaxTurns.Generate,
+		"iterating":      cfg.DeckV2.MaxTurns.Iterate,
 	}
 
 	// 审查的三个运行时依赖在 init 之后补：buildTools 只读开关（features.vision），
@@ -179,7 +180,13 @@ func run() error {
 	_ = os.MkdirAll(userTplRoot, 0o755)
 	var utplSvc usertpl.Service
 	if st != nil && templateReg != nil {
-		utplSvc = *usertpl.New(templateReg, st, userTplRoot, cfg.Vision.ChromePath, loopback)
+		utplSvc = *usertpl.New(templateReg, st, userTplRoot, cfg.Vision.ChromePath, loopback, visionGrants, trace.Config{
+			Enabled:       cfg.Features.Trace,
+			Dir:           cfg.Trace.Dir,
+			MaxFieldBytes: cfg.Trace.MaxFieldBytes,
+			RetainRuns:    cfg.Trace.RetainRunsPerSession,
+			CaptureImages: cfg.Trace.CaptureImages, // 用户附图落盘与视觉截图同一开关
+		})
 		// base 侧修了结构契约（骨架/数量行）后，旧 fork 的 layouts.md 也要跟上。
 		// 必须在下面的重挂循环之前落盘，挂载时读到的才是新文件。骨架的公共类
 		// （grid/notes 等）由外壳 base.css 提供，覆盖判定要把它算进来。
@@ -202,7 +209,21 @@ func run() error {
 		log.Printf("[info] 用户自定义模板已开启（%s）", userTplRoot)
 	}
 
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc)
+	traceCfg := trace.Config{
+		Enabled:       cfg.Features.Trace,
+		Dir:           cfg.Trace.Dir,
+		MaxFieldBytes: cfg.Trace.MaxFieldBytes,
+		RetainRuns:    cfg.Trace.RetainRunsPerSession,
+	}
+	// 模板缩略图：loopback 就绪才装配（渲染浏览器从这里拉 preview 页）。
+	// ChromePath 空串 = chromedp 自动探测本机 Chrome（与导出/观测同口径），
+	// 不能当「无 Chrome」处理；真无 Chrome 时渲染失败 → 404 → 前端回退活 iframe。
+	var thumbSvc *tplthumb.Service
+	if loopback != "" && templateReg != nil {
+		thumbSvc = tplthumb.New(templateReg, loopback, cfg.Vision.ChromePath,
+			filepath.Join(cfg.Data.Dir, "template-thumbs"), 60*time.Second)
+	}
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc, traceCfg, thumbSvc)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 
@@ -216,6 +237,12 @@ func run() error {
 			log.Fatalf("listen: %v", err)
 		}
 	}()
+
+	// 模板缩略图预热：后台把内置模板第 1 页提前渲好（磁盘命中即跳过），
+	// 用户第一次全量浏览也全走缓存；复用信号 ctx，停机时预热一并收手。
+	if thumbSvc != nil {
+		go thumbSvc.Prewarm(ctx)
+	}
 
 	// —— 4. 优雅停机：Ctrl+C 后给在途请求最多 5s 收尾 ——
 	<-ctx.Done()

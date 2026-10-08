@@ -1,0 +1,91 @@
+/* midcentury — 世纪中叶。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/midcentury（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 奶油色画布 + 芥末黄/焦橙/青绿：有机几何即装饰，卡用奶白 90% 底 + 淡焦橙描边，
+ * 圆角但克制；右上有机形状与左下原子射线是每页自动衬底的 ambient 层
+ * （z-index:-1，画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-midcentury{
+  --bg:#FEF9C3;              /* 奶油渐变中段值（letterbox 用，翻页不跳） */
+  --bg-soft:#FFFDF2;         /* 奶白（卡底倾向） */
+  --ink:#78350F;             /* 深棕标题 */
+  --ink-2:#92400E;           /* 焦糖正文 */
+  --ink-3:#B45309;           /* 浅焦糖小字 */
+  --border:rgba(180,83,9,.22);
+  --border-soft:rgba(180,83,9,.13);
+  --mustard:#CA8A04;         /* 芥末黄（身份色） */
+  --teal:#0D9488;            /* 青绿（次身份色） */
+  --burnt:#C2410C;           /* 焦橙（数字与重音） */
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+.tpl-midcentury .slide{background:linear-gradient(160deg,#FEF3C7 0%,#FEF9C3 50%,#FEF3C7 100%)}
+
+/* ---- 字阶：几何无衬线大标题 + 衬线正文，宽行距是客厅的松弛感 ---- */
+.tpl-midcentury .h1{font-family:'Century Gothic','Futura','Avenir Next','Trebuchet MS','Noto Sans SC',sans-serif;font-size:88px;line-height:1.12;font-weight:700;letter-spacing:.04em;color:var(--ink);margin-bottom:10px}
+.tpl-midcentury .h2{font-family:'Century Gothic','Futura','Avenir Next','Trebuchet MS','Noto Sans SC',sans-serif;font-size:52px;line-height:1.18;font-weight:700;letter-spacing:.03em;color:var(--ink);margin-bottom:8px}
+.tpl-midcentury h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.03em}
+.tpl-midcentury .lede{font-size:24px;line-height:1.9;color:var(--ink-2);font-weight:400;letter-spacing:.02em}
+.tpl-midcentury .deck-footer{font-family:'JetBrains Mono','SFMono-Regular',Consolas,'Noto Sans SC',monospace;font-size:14px;color:var(--ink-3);letter-spacing:.16em}
+
+/* ---- ambient：右上有机形状簇 + 左下原子射线，z-index:-1 画在内容之下 ---- */
+.tpl-midcentury .slide::before{
+  content:"";position:absolute;right:0;top:0;width:480px;height:320px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 320'%3E%3Cpath d='M150,70 Q230,10 320,40 Q410,70 430,130 Q440,185 380,200 Q280,225 190,195 Q110,168 118,120 Q122,88 150,70 Z' fill='%23CA8A04' opacity='0.15'/%3E%3Cpath d='M310,238 L372,292 L434,238' stroke='%230D9488' stroke-width='22' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='0.28'/%3E%3Ccircle cx='90' cy='252' r='20' fill='%23C2410C' opacity='0.16'/%3E%3Ccircle cx='62' cy='118' r='8' fill='%230D9488' opacity='0.5'/%3E%3Ccircle cx='212' cy='38' r='6' fill='%23C2410C' opacity='0.45'/%3E%3C/svg%3E") no-repeat top right;
+}
+.tpl-midcentury .slide::after{
+  content:"";position:absolute;left:0;bottom:0;width:520px;height:260px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 520 260'%3E%3Cg stroke='%23CA8A04' stroke-width='9' stroke-linecap='round' opacity='0.22'%3E%3Cline x1='58' y1='262' x2='10' y2='150'/%3E%3Cline x1='58' y1='262' x2='62' y2='128'/%3E%3Cline x1='58' y1='262' x2='118' y2='122'/%3E%3Cline x1='58' y1='262' x2='166' y2='146'/%3E%3Cline x1='58' y1='262' x2='198' y2='188'/%3E%3C/g%3E%3Cellipse cx='420' cy='196' rx='74' ry='42' fill='%230D9488' opacity='0.10' transform='rotate(-14 420 196)'/%3E%3Ccircle cx='300' cy='230' r='9' fill='%23C2410C' opacity='0.4'/%3E%3Ccircle cx='352' cy='96' r='7' fill='%23CA8A04' opacity='0.5'/%3E%3C/svg%3E") no-repeat bottom left;
+}
+
+/* ---- 标本签：几何圆点引导的题签（页首） ---- */
+.tpl-midcentury .mc-kicker{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono','SFMono-Regular',Consolas,'Noto Sans SC',monospace;font-size:15px;font-weight:700;letter-spacing:.3em;color:var(--teal);text-transform:uppercase}
+.tpl-midcentury .mc-kicker::before{content:"";width:13px;height:13px;background:var(--mustard);border-radius:58% 42% 55% 45%/55% 48% 52% 45%}
+
+/* ---- 三色横条：芥末黄/青绿/焦橙的身份横带 ---- */
+.tpl-midcentury .mc-line{width:232px;height:9px;border-radius:5px;background:linear-gradient(90deg,var(--mustard) 0 40%,var(--teal) 40% 70%,var(--burnt) 70% 100%)}
+
+/* ---- 奶白卡：90% 白底 + 淡焦橙轻描，圆角克制 ---- */
+.tpl-midcentury .mc-card{background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:10px;padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+
+/* ---- 年份圆章：细棕描边的圆，收尾与封面呼应 ---- */
+.tpl-midcentury .mc-badge{flex:none;width:86px;height:86px;border:3px solid var(--ink);border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-size:17px;font-weight:700;letter-spacing:.08em;color:var(--ink);line-height:1.3}
+
+/* ---- 描边药丸：细描边胶囊，青绿为重音 ---- */
+.tpl-midcentury .mc-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1.5px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-midcentury .mc-pill-accent{border-color:var(--teal);color:var(--teal)}
+
+/* ---- 目录行：圆号 + 篇名 + 说明 ---- */
+.tpl-midcentury .mc-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-midcentury .mc-item:last-child{border-bottom:none}
+.tpl-midcentury .mc-n{flex:none;width:52px;height:52px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-midcentury .mc-t{flex:none;width:260px;font-family:'Century Gothic','Futura','Trebuchet MS','Noto Sans SC',sans-serif;font-size:29px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-midcentury .mc-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 焦橙数字：数据页主视觉 ---- */
+.tpl-midcentury .mc-stat{border-top:3px solid var(--mustard);padding-top:30px}
+.tpl-midcentury .mc-stat-v{font-family:'Century Gothic','Futura','Trebuchet MS','Noto Sans SC',sans-serif;font-size:100px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--burnt)}
+.tpl-midcentury .mc-stat-u{font-size:27px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-midcentury .mc-stat-l{margin-top:20px;font-family:'Century Gothic','Futura','Trebuchet MS','Noto Sans SC',sans-serif;font-size:26px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+.tpl-midcentury .mc-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 设计师语录：衬线大字 ---- */
+.tpl-midcentury .mc-quote{font-family:Georgia,'Songti SC','SimSun',serif;font-size:62px;line-height:1.6;font-weight:700;letter-spacing:.04em;color:var(--ink);max-width:24em;margin:0}
+.tpl-midcentury .mc-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 时间线：圆点编号 + 细连接线 ---- */
+.tpl-midcentury .mc-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-midcentury .mc-tl-item{flex:1;position:relative}
+.tpl-midcentury .mc-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1px;background:var(--border)}
+.tpl-midcentury .mc-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--ink);border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-midcentury .mc-tl-t{margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--burnt);letter-spacing:.04em}
+.tpl-midcentury .mc-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-midcentury .mc-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-midcentury .mc-step:last-child{border-bottom:none}
+.tpl-midcentury .mc-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：青绿圆角胶囊，收尾页 ---- */
+.tpl-midcentury .mc-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border-radius:999px;background:var(--teal);color:#FFFFFF;font-family:'Century Gothic','Futura','Trebuchet MS','Noto Sans SC',sans-serif;font-size:21px;font-weight:700;letter-spacing:.14em}
+
+/* ---- 页面切换（翻页动画）：像推移一把木脚凳，从容不迫 ---- */
+.tpl-midcentury{--page-shift:12px;--page-dur:.55s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

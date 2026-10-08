@@ -50,3 +50,11 @@
 .tpl-product-launch.pl-violet{--accent:#a78bfa}
 
 .tpl-product-launch.pl-cyan{--accent:#22d3ee}
+
+/* ---- 页面切换（翻页动画）：缩放入场，发布会的登场感 ----
+   base 的横移编排整体让位：三态一起改写（active/prev 特异性更高无条件胜出；
+   静默态与 base 的 .slide.is-active 同特异性，本文件后加载按序胜出） */
+.tpl-product-launch{--page-dur:.5s}
+.tpl-product-launch .slide{transform:scale(.965)}
+.tpl-product-launch .slide.is-active{transform:scale(1)}
+.tpl-product-launch .slide.is-prev{transform:scale(1.03)}

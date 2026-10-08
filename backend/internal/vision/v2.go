@@ -93,12 +93,28 @@ const v2MetaJS = `(function(){
 
 // v2MeasureAllJS 一次量测全部页（利用"非激活页仍参与布局"）。
 // 逐页计算溢出/最小字号/字数/版式，一次性返回数组。
+//
+// fixed 装饰排除：.slide 自带 transform（翻页位移/画布缩放），是 position:fixed
+// 子孙的包含块——模板在 slide 内写的 fixed 装饰（角标、悬浮徽章…）按 slide 坐标
+// 参与滚动区计算，超出画布的部分明明被 overflow:hidden 裁掉、观众看不见，
+// scrollWidth/Height 却被顶爆，溢出/填充率/字号三个指标全被污染。量测期间把它们
+// 摘出布局、量完恢复；body 级 fixed chrome（progress-bar 等）不在 slide 内，本就不参与。
 const v2MeasureAllJS = `(function(){
   var deck = document.querySelector('.deck');
   if (!deck) return JSON.stringify({error:'no deck'});
   var w = parseInt(deck.getAttribute('data-w'),10) || 1920;
   var h = parseInt(deck.getAttribute('data-h'),10) || 1080;
   var slides = deck.querySelectorAll(':scope > .slide');
+  var hidden = [];
+  for (var s = 0; s < slides.length; s++) {
+    var els = slides[s].querySelectorAll('*');
+    for (var e = 0; e < els.length; e++) {
+      if (getComputedStyle(els[e]).position === 'fixed') {
+        hidden.push([els[e], els[e].style.display]);
+        els[e].style.display = 'none';
+      }
+    }
+  }
   var out = [];
   for (var i = 0; i < slides.length; i++) {
     var sec = slides[i];
@@ -150,6 +166,7 @@ const v2MeasureAllJS = `(function(){
       fillPct: +fillPct.toFixed(1)
     });
   }
+  for (var f = 0; f < hidden.length; f++) hidden[f][0].style.display = hidden[f][1];
   return JSON.stringify({slides: out, w: w, h: h});
 })()`
 

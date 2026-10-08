@@ -1,0 +1,107 @@
+/* nord — 北欧。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/nord（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 极夜蓝灰径向/斜向渐变（#2E3440 → #434C5E）+ 极浅灰白标题、浅灰正文，
+ * 冰蓝 #88C0D0 与钢蓝 #81A1C1 是极夜里仅有的光。轻字重、宽行距、方角小圆，
+ * 霜蓝发丝线（1px）代替一切重装饰；禁霓虹、禁辉光堆叠。
+ * ambient 层（顶部极光薄雾 + 四周霜蓝细框）画在 .slide::before/::after，
+ * z-index:-1 在全部内容之下，骨架零成本。 */
+.tpl-nord{
+  --bg:#3b4252;                /* 渐变中段值：letterbox 翻页不跳色 */
+  --bg-deep:#2e3440;           /* 极夜深底（渐变起点） */
+  --bg-raise:#434c5e;          /* 渐变亮段 */
+  --bg-window:#292e3a;         /* 编辑器窗/代码块底 */
+  --ink:#eceff4;               /* 极浅灰白标题（上游标题色） */
+  --ink-2:#d8dee9;             /* 浅灰正文（上游正文色） */
+  --ink-3:#b3bfcd;             /* 页脚/来源小字 */
+  --border:rgba(136,148,164,.24); /* 细如地平线的描边（上游） */
+  --border-soft:rgba(136,148,164,.14);
+  --accent:#88c0d0;            /* 冰蓝：唯一主强调 */
+  --accent-2:#81a1c1;          /* 钢蓝：次强调 */
+  --frost:136,192,208;         /* 霜蓝 RGB 三元组 */
+  --accent-ink:#242933;        /* 冰蓝底上的深底字 */
+  color:var(--ink-2);
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  font-weight:400;
+  --page-shift:10px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94);
+}
+
+/* ---- 画布：极夜天幕渐变 + ambient（顶部极光薄雾、四周霜蓝细框，都在内容之下） ---- */
+.tpl-nord .slide{
+  background:linear-gradient(135deg,#2e3440 0%,#3b4252 40%,#434c5e 70%,#3b4252 100%);
+  color:var(--ink-2);
+}
+.tpl-nord .slide::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:42%;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(136,192,208,.07) 0%,transparent 100%);
+}
+.tpl-nord .slide::after{
+  content:"";position:absolute;inset:18px;border:1px solid rgba(136,192,208,.12);z-index:-1;pointer-events:none;
+}
+
+/* ---- 字阶：轻字重不张扬，每个字都值得被读 ---- */
+.tpl-nord .h1{font-size:72px;line-height:1.16;font-weight:600;letter-spacing:0;color:var(--ink);margin-bottom:12px}
+.tpl-nord .h2{font-size:46px;line-height:1.24;font-weight:600;letter-spacing:0;color:var(--ink);margin-bottom:10px}
+.tpl-nord h4{font-family:inherit;color:var(--ink);font-weight:600;font-size:23px;letter-spacing:.01em}
+.tpl-nord .lede{font-size:23px;line-height:1.95;color:var(--ink-2);font-weight:300}
+.tpl-nord .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- 发丝题签：一道 26px 冰蓝发丝 + 轻字重小字 ---- */
+.tpl-nord .no-kicker{display:flex;align-items:center;gap:14px;font-size:16px;font-weight:500;letter-spacing:.24em;color:var(--accent)}
+.tpl-nord .no-kicker::before{content:"";width:26px;height:1px;background:var(--accent)}
+
+/* ---- 霜蓝细线：标题下的一道淡出 ---- */
+.tpl-nord .no-line{width:260px;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+
+/* ---- 描边标签：小圆角胶囊，冷静不抢戏 ---- */
+.tpl-nord .no-pill{display:inline-flex;align-items:center;padding:8px 20px;border:1px solid var(--border);border-radius:6px;font-size:16px;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
+.tpl-nord .no-pill-accent{border-color:rgba(var(--frost),.5);color:var(--accent);background:rgba(var(--frost),.06)}
+
+/* ---- 键牌：键帽样式的快捷键牌，等宽 + 底边加重 ---- */
+.tpl-nord .no-key{display:inline-flex;align-items:center;padding:7px 16px;border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;background:rgba(46,52,64,.85);font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,monospace;font-size:17px;letter-spacing:.04em;color:var(--accent);white-space:nowrap}
+
+/* ---- 暗色卡：rgba(46,52,64,.75) 稳健承载，方角小圆，无重装饰 ---- */
+.tpl-nord .no-card{background:rgba(46,52,64,.75);border:1px solid var(--border);border-radius:6px;padding:36px 40px}
+
+/* ---- 目录行：等宽编号 + 篇名 + 说明 ---- */
+.tpl-nord .no-item{display:flex;align-items:baseline;gap:24px;padding:26px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-nord .no-item:last-child{border-bottom:none}
+.tpl-nord .no-n{flex:none;width:56px;font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,monospace;font-size:19px;font-weight:400;color:var(--accent)}
+.tpl-nord .no-t{flex:none;width:280px;font-size:27px;font-weight:600;letter-spacing:.02em;color:var(--ink)}
+.tpl-nord .no-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 冰蓝数字：轻字重大数字，安静但有分量 ---- */
+.tpl-nord .no-stat{border-top:1px solid var(--border);padding-top:28px}
+.tpl-nord .no-stat-v{font-family:'Inter','Noto Sans SC',sans-serif;font-size:104px;line-height:1;font-weight:300;letter-spacing:-.01em;color:var(--accent)}
+.tpl-nord .no-stat-u{font-size:26px;font-weight:300;color:var(--ink-3);margin-left:8px}
+.tpl-nord .no-stat-l{margin-top:18px;font-size:25px;font-weight:600;color:var(--ink)}
+.tpl-nord .no-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 引文：极浅灰白大字，轻字重 ---- */
+.tpl-nord .no-quote{font-size:54px;line-height:1.7;font-weight:300;letter-spacing:.02em;color:var(--ink);max-width:24em;margin:0}
+.tpl-nord .no-src{margin:0;font-size:19px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* ---- 时间线：冰蓝圆点 + 地平线般细的连接线 ---- */
+.tpl-nord .no-tl{display:flex;gap:40px;margin-top:6px}
+.tpl-nord .no-tl-item{flex:1;position:relative}
+.tpl-nord .no-tl-item:not(:last-child)::before{content:"";position:absolute;top:7px;left:26px;right:-40px;height:1px;background:var(--border-soft)}
+.tpl-nord .no-tl-dot{position:relative;z-index:1;width:14px;height:14px;border-radius:50%;background:var(--bg-deep);border:2px solid var(--accent)}
+.tpl-nord .no-tl-t{margin-top:18px;font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,monospace;font-size:21px;font-weight:400;color:var(--accent)}
+.tpl-nord .no-tl-d{margin-top:8px;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-nord .no-step{display:flex;align-items:center;gap:18px;padding:24px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-nord .no-step:last-child{border-bottom:none}
+.tpl-nord .no-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink)}
+
+/* ---- 行动钮：冰蓝描边，收尾页 ---- */
+.tpl-nord .no-btn{display:inline-flex;align-items:center;gap:12px;padding:14px 38px;border:1.5px solid var(--accent);border-radius:6px;font-size:21px;font-weight:600;letter-spacing:.12em;color:var(--accent);white-space:nowrap}
+
+/* ---- 编辑器窗（code 版式）：标题栏三圆点 + 文件名 + 语言标签 + 代码块 ---- */
+.tpl-nord .no-term{border:1px solid var(--border);border-radius:8px;background:rgba(41,46,58,.92);overflow:hidden}
+.tpl-nord .no-term-bar{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-soft);background:rgba(46,52,64,.9)}
+.tpl-nord .no-dot{width:12px;height:12px;border-radius:50%;background:#4c566a}
+.tpl-nord .no-term-file{margin-left:8px;font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,monospace;font-size:16px;color:var(--ink-2);letter-spacing:.04em}
+.tpl-nord .no-lang{margin-left:auto;flex:none;padding:3px 12px;border:1px solid rgba(var(--frost),.35);border-radius:4px;font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,monospace;font-size:14px;letter-spacing:.14em;color:var(--accent)}
+.tpl-nord .no-codeblock{margin:0;padding:28px 32px;font-family:'JetBrains Mono','SF Mono',Consolas,Menlo,monospace;font-size:19px;line-height:1.95;color:#dbe3ec;overflow-x:auto;white-space:pre}
+.tpl-nord .no-codenote{margin:0;font-size:18px;line-height:1.7;color:var(--ink-2)}

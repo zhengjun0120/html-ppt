@@ -1,0 +1,97 @@
+/* ink-wash-jiangnan — 水墨江南。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/ink-wash-jiangnan（Apache-2.0，
+ * 借鉴配色与装饰语言，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 宣纸米白 + 浓墨 + 朱砂印：留白即构图，卡用宣纸纹半透明底 + 淡墨描边，
+ * 不用硬阴影；远山与柳枝是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在 .deck 背景之上、全部内容之下，骨架零成本）。 */
+.tpl-ink-wash-jiangnan{
+  --bg:#F6F3E8;              /* 宣纸米白 */
+  --bg-soft:#FAF7F0;         /* 淡雅象牙（卡底） */
+  --ink:#1A1A1A;             /* 浓墨 */
+  --ink-2:#595959;           /* 淡墨灰正文 */
+  --ink-3:#8C8C8C;           /* 远山灰小字 */
+  --border:rgba(26,26,26,.16);
+  --border-soft:rgba(26,26,26,.10);
+  --willow:#6B8E6B;          /* 青苔绿点缀 */
+  --willow-soft:#8FBC8F;
+  --cinnabar:#C03A2E;        /* 朱砂（原 #DC143C 收暗一档，投屏不刺眼） */
+  --cinnabar-ink:#FAF7F0;
+  font-family:Georgia,'Songti SC','STSong','SimSun','Noto Sans SC',serif;
+}
+
+/* ---- 字阶：楷书大字 + 宋体正文，宽行距是呼吸感的一半 ---- */
+.tpl-ink-wash-jiangnan .h1{font-family:'STKaiti','KaiTi','Songti SC','SimSun',serif;font-size:96px;line-height:1.12;font-weight:700;letter-spacing:.10em;color:var(--ink);margin-bottom:10px}
+.tpl-ink-wash-jiangnan .h2{font-family:'STKaiti','KaiTi','Songti SC','SimSun',serif;font-size:54px;line-height:1.18;font-weight:700;letter-spacing:.08em;color:var(--ink);margin-bottom:8px}
+.tpl-ink-wash-jiangnan h4{font-family:inherit;color:var(--ink);font-weight:700;font-size:26px;letter-spacing:.04em}
+.tpl-ink-wash-jiangnan .lede{font-size:24px;line-height:2.0;color:var(--ink-2);font-weight:400;letter-spacing:.03em}
+.tpl-ink-wash-jiangnan .deck-footer{font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--ink-3);letter-spacing:.18em}
+
+/* ---- ambient：柳枝（左上）+ 远山（页底），z-index:-1 画在内容之下 ---- */
+.tpl-ink-wash-jiangnan .slide::before{
+  content:"";position:absolute;left:24px;top:0;width:150px;height:280px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 340'%3E%3Cpath d='M30,0 Q42,90 26,180 Q16,270 38,340' stroke='%236B8E6B' stroke-width='2.5' fill='none' opacity='0.55'/%3E%3Cpath d='M66,0 Q78,110 62,200 Q52,290 74,340' stroke='%238FBC8F' stroke-width='2' fill='none' opacity='0.45'/%3E%3Cpath d='M104,0 Q96,80 112,170 Q122,260 100,330' stroke='%236B8E6B' stroke-width='2' fill='none' opacity='0.5'/%3E%3Cellipse cx='28' cy='150' rx='4' ry='11' fill='%238FBC8F' opacity='0.55' transform='rotate(18 28 150)'/%3E%3Cellipse cx='66' cy='210' rx='4' ry='10' fill='%236B8E6B' opacity='0.5' transform='rotate(-14 66 210)'/%3E%3Cellipse cx='108' cy='120' rx='4' ry='10' fill='%238FBC8F' opacity='0.5' transform='rotate(24 108 120)'/%3E%3C/svg%3E") no-repeat top center;
+}
+.tpl-ink-wash-jiangnan .slide::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:290px;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 300' preserveAspectRatio='none'%3E%3Cpath d='M0,300 L0,170 Q240,90 480,150 Q720,205 960,115 Q1200,50 1440,145 Q1680,205 1920,130 L1920,300 Z' fill='%23696969' opacity='0.13'/%3E%3Cpath d='M0,300 L0,225 Q300,165 600,215 Q900,260 1200,190 Q1500,140 1920,215 L1920,300 Z' fill='%231A1A1A' opacity='0.09'/%3E%3Cpath d='M0,300 L0,270 Q480,242 960,272 Q1440,292 1920,262 L1920,300 Z' fill='%23A9A9A9' opacity='0.19'/%3E%3C/svg%3E") no-repeat bottom center;
+  background-size:100% 100%;
+}
+
+/* ---- 题签：细横线引导的小字标签（页首） ---- */
+.tpl-ink-wash-jiangnan .jw-kicker{display:flex;align-items:center;gap:16px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:16px;letter-spacing:.42em;color:var(--ink-2)}
+.tpl-ink-wash-jiangnan .jw-kicker::before{content:"";width:44px;height:2px;background:var(--cinnabar)}
+
+/* ---- 朱砂印：正方块小印，全模板唯一的红底元素 ---- */
+.tpl-ink-wash-jiangnan .jw-seal{flex:none;width:72px;height:72px;background:var(--cinnabar);color:var(--cinnabar-ink);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'STKaiti','KaiTi',serif;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:.1em}
+
+/* ---- 墨线：标题下的一笔，从浓到淡 ---- */
+.tpl-ink-wash-jiangnan .jw-ink-line{width:230px;height:5px;background:linear-gradient(90deg,var(--ink) 0%,transparent 100%)}
+
+/* ---- 宣纸卡：半透明米白 + 淡墨描边，无阴影 ---- */
+.tpl-ink-wash-jiangnan .jw-card{background:rgba(250,247,240,.72);border:1px solid var(--border-soft);padding:38px 42px;display:flex;flex-direction:column;min-height:280px}
+.tpl-ink-wash-jiangnan .jw-card-line{background:rgba(250,247,240,.72);border:1px solid var(--border-soft);border-left:4px solid var(--cinnabar);padding:38px 42px}
+
+/* ---- 描边药丸：细描边胶囊，低调印章感 ---- */
+.tpl-ink-wash-jiangnan .jw-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-family:'Noto Sans SC','PingFang SC',sans-serif;font-size:17px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap}
+.tpl-ink-wash-jiangnan .jw-pill-accent{border-color:var(--cinnabar);color:var(--cinnabar)}
+
+/* ---- 目录行：墨圈编号 + 篇名 + 说明 ---- */
+.tpl-ink-wash-jiangnan .jw-item{display:flex;align-items:baseline;gap:26px;padding:28px 6px;border-bottom:1px dashed var(--border-soft)}
+.tpl-ink-wash-jiangnan .jw-item:last-child{border-bottom:none}
+.tpl-ink-wash-jiangnan .jw-n{flex:none;width:52px;height:52px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:19px;font-weight:700;color:var(--ink);align-self:center}
+.tpl-ink-wash-jiangnan .jw-t{flex:none;width:260px;font-family:'STKaiti','KaiTi',serif;font-size:30px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-ink-wash-jiangnan .jw-d{flex:1;font-size:19px;line-height:1.7;color:var(--ink-2);letter-spacing:.02em}
+
+/* ---- 朱砂数字：数据页主视觉 ---- */
+.tpl-ink-wash-jiangnan .jw-stat{border-top:2px solid var(--ink);padding-top:30px}
+.tpl-ink-wash-jiangnan .jw-stat-v{font-family:'Noto Sans SC',sans-serif;font-size:104px;line-height:1;font-weight:700;letter-spacing:-.01em;color:var(--cinnabar)}
+.tpl-ink-wash-jiangnan .jw-stat-u{font-size:28px;font-weight:500;color:var(--ink-3);margin-left:8px}
+.tpl-ink-wash-jiangnan .jw-stat-l{margin-top:20px;font-family:'STKaiti','KaiTi',serif;font-size:27px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.tpl-ink-wash-jiangnan .jw-stat-note{margin:12px 0 0;font-size:19px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 题跋引文：楷书大字 ---- */
+.tpl-ink-wash-jiangnan .jw-quote{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:64px;line-height:1.6;font-weight:700;letter-spacing:.06em;color:var(--ink);max-width:26em;margin:0}
+.tpl-ink-wash-jiangnan .jw-src{margin:0;font-size:20px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* ---- 竖排题款：诗句/点缀，只放留白处 ---- */
+.tpl-ink-wash-jiangnan .jw-vert{writing-mode:vertical-rl;font-family:'STKaiti','KaiTi',serif;font-size:26px;letter-spacing:.5em;line-height:2.1;color:var(--ink-2)}
+.tpl-ink-wash-jiangnan .jw-vert-accent{color:var(--cinnabar)}
+
+/* ---- 时间线：墨圈圆点 + 细墨连接线 ---- */
+.tpl-ink-wash-jiangnan .jw-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-ink-wash-jiangnan .jw-tl-item{flex:1;position:relative}
+.tpl-ink-wash-jiangnan .jw-tl-item:not(:last-child)::before{content:"";position:absolute;top:26px;left:53px;right:-44px;height:1px;background:var(--border)}
+.tpl-ink-wash-jiangnan .jw-tl-dot{position:relative;z-index:1;width:53px;height:53px;border:1.5px solid var(--ink);border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:var(--ink)}
+.tpl-ink-wash-jiangnan .jw-tl-t{margin-top:20px;font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:var(--cinnabar);letter-spacing:.04em}
+.tpl-ink-wash-jiangnan .jw-tl-d{margin-top:8px;font-size:19px;line-height:1.65;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-ink-wash-jiangnan .jw-step{display:flex;align-items:center;gap:20px;padding:26px 4px;border-bottom:1px dashed var(--border-soft)}
+.tpl-ink-wash-jiangnan .jw-step:last-child{border-bottom:none}
+.tpl-ink-wash-jiangnan .jw-mini-t{margin:0;font-size:20px;line-height:1.6;color:var(--ink);letter-spacing:.02em}
+
+/* ---- 行动钮：墨框描边，收尾页 ---- */
+.tpl-ink-wash-jiangnan .jw-btn{display:inline-flex;align-items:center;gap:14px;padding:15px 40px;border:2px solid var(--ink);font-family:'STKaiti','KaiTi',serif;font-size:23px;font-weight:700;letter-spacing:.18em;color:var(--ink)}
+
+/* ---- 页面切换（翻页动画）：如卷轴缓缓展开 ---- */
+.tpl-ink-wash-jiangnan{--page-shift:14px;--page-dur:.62s;--page-ease:cubic-bezier(.25,.46,.45,.94)}

@@ -1,0 +1,90 @@
+/* minimal-white — 极简白。
+ * 设计来源：arcsin1/oh-my-ppt resources/styles/minimal-white（Apache-2.0，
+ * 借鉴配色与气质，代码从零手写，UPSTREAM-README.md 有归属说明）。
+ * 纯白到蓝灰的微妙渐变上，深色细字安静存在：层级只靠字重、字号与留白，
+ * 分隔线一律 1px 发丝线，蓝色 #3B82F6 点缀克制到几乎不可见（全模板只有
+ * 标题短线与页顶环境细条两处）。
+ * 右侧巨型「留白」水印与页顶一线蓝是每页自动衬底的 ambient 层（z-index:-1，
+ * 画在内容之下，骨架零成本）。 */
+.tpl-minimal-white{
+  --bg:#F2F5F8;              /* letterbox 底：渐变中段值，翻页不跳 */
+  --bg-soft:#F8FAFC;         /* 浅蓝灰（卡外底） */
+  --ink:#0F172A;             /* 深墨标题 */
+  --ink-2:#475569;           /* 石板灰正文 */
+  --ink-3:#94A3B8;           /* 弱化灰小字 */
+  --blue:#3B82F6;            /* 唯一彩色，一页至多一处 */
+  --blue-soft:#60A5FA;
+  --border:rgba(148,163,184,.32);
+  --border-soft:rgba(148,163,184,.16);
+  font-family:Inter,'Noto Sans SC','PingFang SC','Helvetica Neue',sans-serif;
+}
+
+/* ---- 画布底：纯白到蓝灰的呼吸渐变 ---- */
+.tpl-minimal-white .slide{background:linear-gradient(145deg,#FFFFFF 0%,#F8FAFC 55%,#F1F5F9 100%)}
+
+/* ---- 字阶：细字重大标题是身份，行距慷慨，层级靠字重差 ---- */
+.tpl-minimal-white .h1{font-size:88px;line-height:1.12;font-weight:200;letter-spacing:.05em;color:var(--ink);margin-bottom:14px}
+.tpl-minimal-white .h2{font-size:48px;line-height:1.22;font-weight:300;letter-spacing:.06em;color:var(--ink);margin-bottom:10px}
+.tpl-minimal-white h4{font-family:inherit;color:var(--ink);font-weight:600;font-size:22px;letter-spacing:.02em}
+.tpl-minimal-white .lede{font-size:22px;line-height:1.95;color:var(--ink-2);font-weight:300;letter-spacing:.02em}
+.tpl-minimal-white .deck-footer{font-size:14px;color:var(--ink-3);letter-spacing:.24em;font-weight:400}
+
+/* ---- ambient：右侧巨型「留白」水印 + 页顶一线蓝，z-index:-1 画在内容之下 ---- */
+.tpl-minimal-white .slide::before{
+  content:"留白";position:absolute;right:88px;top:50%;transform:translateY(-50%);z-index:-1;
+  font-family:inherit;font-size:264px;font-weight:100;letter-spacing:.14em;line-height:1;
+  color:rgba(15,23,42,.032);white-space:nowrap;
+}
+.tpl-minimal-white .slide::after{
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;z-index:-1;
+  background:linear-gradient(90deg,var(--blue) 0%,var(--blue-soft) 45%,transparent 85%);opacity:.55;
+}
+
+/* ---- 题签：宽字距弱化灰小字，安静的开场 ---- */
+.tpl-minimal-white .mw-kicker{font-size:15px;font-weight:400;letter-spacing:.34em;color:var(--ink-3)}
+
+/* ---- 一线蓝：标题下的 44px 发丝短线，全模板唯一的蓝色实元素 ---- */
+.tpl-minimal-white .mw-rule{width:44px;height:1px;background:var(--blue)}
+
+/* ---- 发丝边卡：白底 + 1px 近隐形边框，零阴影零装饰 ---- */
+.tpl-minimal-white .mw-card{background:rgba(255,255,255,.94);border:1px solid var(--border-soft);border-radius:4px;padding:36px 40px;display:flex;flex-direction:column;min-height:288px}
+
+/* ---- 细描边签：发丝胶囊，低调收拢信息 ---- */
+.tpl-minimal-white .mw-pill{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 24px;border:1px solid var(--border);border-radius:999px;font-size:16px;font-weight:400;letter-spacing:.12em;color:var(--ink-2);background:rgba(255,255,255,.8);white-space:nowrap}
+
+/* ---- 目录行：细体编号 + 篇名 + 说明，发丝线分行 ---- */
+.tpl-minimal-white .mw-item{display:flex;align-items:baseline;gap:28px;padding:27px 6px;border-bottom:1px solid var(--border-soft)}
+.tpl-minimal-white .mw-item:last-child{border-bottom:none}
+.tpl-minimal-white .mw-n{flex:none;width:52px;font-size:21px;font-weight:300;color:var(--ink-3);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.tpl-minimal-white .mw-t{flex:none;width:250px;font-size:26px;font-weight:600;letter-spacing:.05em;color:var(--ink)}
+.tpl-minimal-white .mw-d{flex:1;font-size:18px;line-height:1.75;color:var(--ink-2);font-weight:400}
+
+/* ---- 细字重大数字：数据页主视觉，数值保持深墨不染色 ---- */
+.tpl-minimal-white .mw-stat{border-top:1px solid var(--border);padding-top:30px}
+.tpl-minimal-white .mw-stat-v{font-size:100px;line-height:1;font-weight:200;letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums}
+.tpl-minimal-white .mw-stat-u{font-size:24px;font-weight:300;color:var(--ink-3);margin-left:8px}
+.tpl-minimal-white .mw-stat-l{margin-top:18px;font-size:22px;font-weight:600;letter-spacing:.05em;color:var(--ink)}
+.tpl-minimal-white .mw-stat-note{margin:10px 0 0;font-size:18px;line-height:1.75;color:var(--ink-2)}
+
+/* ---- 细字引文：字重 200 的大字，靠留白撑气场 ---- */
+.tpl-minimal-white .mw-quote{font-size:56px;line-height:1.7;font-weight:200;letter-spacing:.08em;color:var(--ink);max-width:24em;margin:0}
+.tpl-minimal-white .mw-src{margin:0;font-size:18px;font-weight:400;letter-spacing:.16em;color:var(--ink-3)}
+
+/* ---- 时间线：空心小圆点 + 发丝连接线 ---- */
+.tpl-minimal-white .mw-tl{display:flex;gap:44px;margin-top:6px}
+.tpl-minimal-white .mw-tl-item{flex:1;position:relative}
+.tpl-minimal-white .mw-tl-item:not(:last-child)::before{content:"";position:absolute;top:6px;left:24px;right:-44px;height:1px;background:var(--border-soft)}
+.tpl-minimal-white .mw-tl-dot{position:relative;z-index:1;width:13px;height:13px;border:1px solid var(--ink);border-radius:50%;background:#FFFFFF}
+.tpl-minimal-white .mw-tl-t{margin-top:16px;font-size:19px;font-weight:600;color:var(--ink);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.tpl-minimal-white .mw-tl-d{margin-top:8px;font-size:18px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 步骤行（split 右列） ---- */
+.tpl-minimal-white .mw-step{display:flex;align-items:baseline;gap:20px;padding:26px 4px;border-bottom:1px solid var(--border-soft)}
+.tpl-minimal-white .mw-step:last-child{border-bottom:none}
+.tpl-minimal-white .mw-mini-t{margin:0;font-size:19px;line-height:1.7;color:var(--ink-2)}
+
+/* ---- 行动钮：墨线描边，无填充，收尾页 ---- */
+.tpl-minimal-white .mw-btn{display:inline-flex;align-items:center;padding:14px 42px;border:1px solid var(--ink);font-size:19px;font-weight:500;letter-spacing:.2em;color:var(--ink);background:transparent;white-space:nowrap}
+
+/* ---- 页面切换（翻页动画）：轻轻浮起 ---- */
+.tpl-minimal-white{--page-shift:10px;--page-dur:.6s;--page-ease:cubic-bezier(.25,.46,.45,.94)}
