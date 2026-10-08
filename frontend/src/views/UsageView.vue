@@ -1,21 +1,28 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import { usageApi, type UsageDay, type UsageOverview } from '@/api/usage'
 
 const ov = ref<UsageOverview | null>(null)
 const loading = ref(true)
 const error = ref('')
+// 模型筛选：'' = 全部模型；选项来自账本里出现过的模型，切换重新拉取
+const modelFilter = ref('')
 
-onMounted(async () => {
+async function load() {
+  error.value = ''
   try {
-    ov.value = await usageApi.overview()
+    ov.value = await usageApi.overview({ model: modelFilter.value || undefined })
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(load)
+
+watch(modelFilter, () => void load())
 
 // 柱高的基准是 30 天峰值：任何一天都和最高那天比，趋势形状一眼可读
 const maxTotal = computed(() => Math.max(1, ...(ov.value?.daily.map((d) => d.total) ?? [0])))
@@ -92,12 +99,22 @@ function showAxis(i: number): boolean {
       </div>
 
       <section class="rounded-card border border-line bg-surface p-5">
-        <div class="mb-4 flex items-center justify-between">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-[13px] font-semibold text-ink-2">近 30 天</h2>
-          <div class="flex items-center gap-3 text-[11.5px] text-ink-3">
-            <span class="inline-flex items-center gap-1"><i class="h-2 w-2 rounded-[2px] bg-success" />缓存命中</span>
-            <span class="inline-flex items-center gap-1"><i class="h-2 w-2 rounded-[2px] bg-accent" />未命中输入</span>
-            <span class="inline-flex items-center gap-1"><i class="h-2 w-2 rounded-[2px] bg-info" />输出</span>
+          <div class="flex items-center gap-3">
+            <select
+              v-model="modelFilter"
+              class="cursor-pointer rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 outline-none focus-visible:border-accent"
+              title="只统计所选模型的用量"
+            >
+              <option value="">全部模型</option>
+              <option v-for="m in ov?.models ?? []" :key="m" :value="m">{{ m }}</option>
+            </select>
+            <div class="flex items-center gap-3 text-[11.5px] text-ink-3">
+              <span class="inline-flex items-center gap-1"><i class="h-2 w-2 rounded-[2px] bg-success" />缓存命中</span>
+              <span class="inline-flex items-center gap-1"><i class="h-2 w-2 rounded-[2px] bg-accent" />未命中输入</span>
+              <span class="inline-flex items-center gap-1"><i class="h-2 w-2 rounded-[2px] bg-info" />输出</span>
+            </div>
           </div>
         </div>
 

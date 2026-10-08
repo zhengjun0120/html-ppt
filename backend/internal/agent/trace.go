@@ -25,6 +25,7 @@ type runTraceInfo struct {
 	DeckID      string
 	UserContent string
 	ParentRunID string // ask_user 恢复时指回被暂停的那个 run
+	Model       string // 这次 run 实际用的模型（可能是用户自选的）；空 = 平台模型
 }
 
 // openTraceRecorder 为本次 run 开一个记录器。
@@ -73,7 +74,7 @@ func (as *AgentService) openTraceRecorder(info runTraceInfo, emit func(StreamEve
 		CaptureImages: as.TraceCfg.CaptureImages,
 		MaxFieldBytes: as.TraceCfg.MaxFieldBytes,
 		RetainRuns:    as.TraceCfg.RetainRuns,
-		Model:         as.ModelID,
+		Model:         info.Model,
 		UsageSink:     as.TraceCfg.UsageSink,
 		Live:          live,
 	})
@@ -98,7 +99,7 @@ func (as *AgentService) openTraceRecorder(info runTraceInfo, emit func(StreamEve
 		UserID:      info.UserID,
 		DeckID:      info.DeckID,
 		UserContent: info.UserContent,
-		Model:       as.ModelID,
+		Model:       info.Model,
 		Tools:       names,
 	})
 	return rec
@@ -113,7 +114,7 @@ func (as *AgentService) ledgerTrace(info runTraceInfo) *trace.Recorder {
 		UserID:      info.UserID,
 		DeckID:      info.DeckID,
 		ParentRunID: info.ParentRunID,
-		Model:       as.ModelID,
+		Model:       info.Model,
 		UsageSink:   as.TraceCfg.UsageSink,
 	})
 }

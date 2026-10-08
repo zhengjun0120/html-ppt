@@ -12,8 +12,24 @@ type User struct {
 	// 上次换发 token 的时刻（auth.Refresh 记账用）：NULL 或早于今天零点 = 今天还有刷新额度。
 	// 用指针是刻意的：'从未刷过' 必须是 NULL 而不是 Go 零值——MySQL 严格模式拒收零值日期
 	TokenRefreshedAt *time.Time `json:"-"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	// 当前使用的自选模型（user_models.id）；0 = 平台模型。删除自选模型时若指向它则归零。
+	ActiveModelID uint `json:"-"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// UserModel 用户自选的 OpenAI 兼容模型：选中后全部 LLM 链路（文稿对话/生成、
+// 定制、推荐、看图审查）改走它自己的 base_url + api_key。
+// 名称是展示用的（默认取模型 ID）；ModelID 是发给供应商的 model 字段，逐字原样。
+type UserModel struct {
+	ID      uint   `gorm:"primaryKey" json:"id"`
+	UserID  uint   `gorm:"index;not null" json:"user_id"`
+	Name    string `gorm:"size:128;not null" json:"name"`   // 显示名，默认 = ModelID
+	ModelID string `gorm:"size:128;not null" json:"model_id"` // 供应商的 model 参数
+	BaseURL string `gorm:"size:255;not null" json:"base_url"` // OpenAI 兼容入口（含 /v1 若供应商要求）
+	APIKeyEnc string `gorm:"size:1024" json:"-"`            // base64(nonce|密文)；可空（本地网关可无 key）
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Deck 归属表：deck 文件在磁盘上，这张表负责 id → 归属用户 的权威映射。

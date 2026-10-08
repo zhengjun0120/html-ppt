@@ -4,6 +4,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"html-ppt/backend/internal/authctx"
 	"html-ppt/backend/internal/response"
@@ -23,7 +24,7 @@ func (h *Handler) UsageOverview(c *gin.Context) {
 		response.Err(c, http.StatusServiceUnavailable, "用量统计不可用")
 		return
 	}
-	ov, err := h.usage.Overview(uid)
+	ov, err := h.usage.Overview(uid, strings.TrimSpace(c.Query("model")))
 	if err != nil {
 		response.Err(c, http.StatusInternalServerError, err.Error())
 		return

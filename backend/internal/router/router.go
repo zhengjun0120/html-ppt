@@ -147,6 +147,16 @@ func New(cfg *config.Config, h *handler.Handler) *gin.Engine {
 			// 用量统计（/usage 页）：从账本表（store.UsageEvent）聚合，与观测
 			// JSONL 分离——观测会滚动删除，账本只增不删。
 			guarded.GET("/usage/overview", h.UsageOverview)
+
+			// 模型管理：用户自选 OpenAI 兼容模型（key 永不出后端，连通测试由
+			// 后端拿解密配置代跑）。active 与 :id 同级，与 /decks/new + /decks/:id
+			// 同款静态+参数并存。
+			guarded.GET("/models", h.ListModels)
+			guarded.POST("/models", h.CreateModel)
+			guarded.PUT("/models/:id", h.UpdateModel)
+			guarded.DELETE("/models/:id", h.DeleteModel)
+			guarded.POST("/models/active", h.SetActiveModel)
+			guarded.POST("/models/test", h.TestModel)
 		}
 	}
 

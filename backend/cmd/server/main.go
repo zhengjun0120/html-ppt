@@ -27,6 +27,7 @@ import (
 	"html-ppt/backend/internal/service/template"
 	"html-ppt/backend/internal/service/tplthumb"
 	"html-ppt/backend/internal/service/usage"
+	"html-ppt/backend/internal/service/usermodel"
 	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
@@ -106,6 +107,9 @@ func run() error {
 		usageSvc = usage.New(st.DB)
 		usageSink = usageSvc.Sink()
 	}
+	// 用户自选模型（OpenAI 兼容）：box 为 nil（未配 CRYPTO_AES_KEY）时不可用，
+	// 与 BYOK 的开关语义一致。
+	umSvc := usermodel.New(db, box)
 
 	deckSvc := deck.New(cfg.Data.Dir, cfg.Assets.Dir, st)
 
@@ -141,7 +145,7 @@ func run() error {
 		RetainRuns:    cfg.Trace.RetainRunsPerSession,
 		MaxFieldBytes: cfg.Trace.MaxFieldBytes,
 		UsageSink:     usageSink,
-	}); err != nil {
+	}, umSvc); err != nil {
 		return fmt.Errorf("初始化 agent: %w", err)
 	}
 	agentSvc := agent.GetAgentService()
@@ -237,7 +241,7 @@ func run() error {
 		thumbSvc = tplthumb.New(templateReg, loopback, cfg.Vision.ChromePath,
 			filepath.Join(cfg.Data.Dir, "template-thumbs"), 60*time.Second)
 	}
-	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc, traceCfg, thumbSvc, usageSvc)
+	h := handler.New(st, deckSvc, agentSvc, authSvc, visionGrants, trace.NewStore(cfg.Trace.Dir), templateReg, exportSvc, &utplSvc, traceCfg, thumbSvc, usageSvc, umSvc)
 	engine := router.New(cfg, h)
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: engine}
 

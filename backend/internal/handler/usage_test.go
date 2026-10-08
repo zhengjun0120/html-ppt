@@ -37,7 +37,7 @@ func TestUsageOverview(t *testing.T) {
 	}
 
 	t.Run("未登录401", func(t *testing.T) {
-		h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, trace.Config{}, nil, nil)
+		h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, trace.Config{}, nil, nil, nil)
 		r := gin.New()
 		r.GET("/api/usage/overview", h.UsageOverview)
 		w := httptest.NewRecorder()
@@ -48,7 +48,7 @@ func TestUsageOverview(t *testing.T) {
 	})
 
 	t.Run("服务未装配503", func(t *testing.T) {
-		h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, trace.Config{}, nil, nil)
+		h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, trace.Config{}, nil, nil, nil)
 		r := gin.New()
 		r.GET("/api/usage/overview", h.UsageOverview)
 		req := httptest.NewRequest(http.MethodGet, "/api/usage/overview", nil)
@@ -63,7 +63,7 @@ func TestUsageOverview(t *testing.T) {
 	t.Run("已登录返回聚合", func(t *testing.T) {
 		uid := uint(92_001)
 		svc := seed(t, uid)
-		h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, trace.Config{}, nil, svc)
+		h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, trace.Config{}, nil, svc, nil)
 		r := gin.New()
 		r.GET("/api/usage/overview", h.UsageOverview)
 		req := httptest.NewRequest(http.MethodGet, "/api/usage/overview", nil)

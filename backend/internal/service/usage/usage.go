@@ -151,15 +151,18 @@ type DayUsage struct {
 }
 
 // Overview 用量页一次拉全：今日/本月两块汇总 + 近 30 天逐日。
+// Models 是该用户账本里出现过的全部模型名（筛选下拉的选项，不随本次过滤收窄）。
 type Overview struct {
-	Today TokenStat  `json:"today"`
-	Month TokenStat  `json:"month"`
-	Daily []DayUsage `json:"daily"`
+	Today  TokenStat  `json:"today"`
+	Month  TokenStat  `json:"month"`
+	Daily  []DayUsage `json:"daily"`
+	Models []string   `json:"models"`
 }
 
-// Overview 聚合某用户的用量。时间基准是服务器本地时区；月窗口从当月 1 号起，
-// 日窗口固定近 30 天（含今天），空的日期补零。
-func (s *Service) Overview(uid uint) (*Overview, error) {
+// Overview 聚合某用户的用量。model 非空时只统计该模型（用量页的筛选下拉）。
+// 时间基准是服务器本地时区；月窗口从当月 1 号起，日窗口固定近 30 天（含今天），
+// 空的日期补零。
+func (s *Service) Overview(uid uint, model string) (*Overview, error) {
 	now := time.Now()
 	today := now.Format(dayLayout)
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format(dayLayout)
@@ -168,11 +171,13 @@ func (s *Service) Overview(uid uint) (*Overview, error) {
 		windowStart = monthStart
 	}
 
+	q := s.db.WithContext(context.Background()).
+		Where("user_id = ? AND day >= ?", uid, windowStart)
+	if model != "" {
+		q = q.Where("model = ?", model)
+	}
 	var rows []store.UsageEvent
-	err := s.db.WithContext(context.Background()).
-		Where("user_id = ? AND day >= ?", uid, windowStart).
-		Order("day ASC").Find(&rows).Error
-	if err != nil {
+	if err := q.Order("day ASC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 
@@ -212,6 +217,12 @@ func (s *Service) Overview(uid uint) (*Overview, error) {
 	}
 	ov.Month.CachedRate = cachedRate(monthPrompt, monthCached)
 	ov.Today.CachedRate = cachedRate(todayPrompt, todayCached)
+	// 模型选项取自该用户的全部账本（不受本次 model 过滤影响）——
+	// 筛选下拉要在"选中某个模型"时仍然列出其它可选模型
+	if err := s.db.WithContext(context.Background()).Model(&store.UsageEvent{}).
+		Where("user_id = ?", uid).Distinct().Pluck("model", &ov.Models).Error; err != nil {
+		return nil, err
+	}
 	return ov, nil
 }
 

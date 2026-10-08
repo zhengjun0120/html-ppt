@@ -162,7 +162,7 @@ func performRequest(engine *gin.Engine, method, path string) *httptest.ResponseR
 func newTestHandler(t *testing.T) *handler.Handler {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	return handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), nil, nil, nil, trace.Config{}, nil, nil)
+	return handler.New(nil, nil, nil, nil, &vision.Grants{}, trace.NewStore(t.TempDir()), nil, nil, nil, trace.Config{}, nil, nil, nil)
 }
 
 // 用量接口必须真的注册上：漏注册的表现是 /usage 页一直转圈或空白，
@@ -183,5 +183,32 @@ func TestUsageOverviewRouteIsRegistered(t *testing.T) {
 	}
 	if !found {
 		t.Error("GET /api/usage/overview 没注册：用量页会一直空着，而账本在正常记账")
+	}
+}
+
+// 模型管理 6 条路由必须真的注册上（静态 active/test 与 :id 参数同级并存，
+// 与 /decks/new + /decks/:id 同款；gin 树冲突会在注册期 panic，这里兜住）。
+func TestModelRoutesRegistered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := newTestHandler(t)
+	engine := New(&config.Config{
+		Assets: config.Assets{Dir: t.TempDir()},
+		Auth:   config.Auth{JWTSecret: "test"},
+	}, h)
+	want := map[string]bool{
+		"GET /api/models": false, "POST /api/models": false,
+		"PUT /api/models/:id": false, "DELETE /api/models/:id": false,
+		"POST /api/models/active": false, "POST /api/models/test": false,
+	}
+	for _, r := range engine.Routes() {
+		key := r.Method + " " + r.Path
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for k, found := range want {
+		if !found {
+			t.Errorf("模型管理路由 %s 没注册上", k)
+		}
 	}
 }

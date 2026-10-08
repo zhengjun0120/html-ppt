@@ -25,8 +25,11 @@ export interface UsageOverview {
   month: UsageTokenStat
   /** 固定近 30 天（含今天），空日补零 */
   daily: UsageDay[]
+  /** 账本里出现过的全部模型（筛选下拉的选项，不随当前筛选收窄） */
+  models: string[]
 }
 
 export const usageApi = {
-  overview: () => request<UsageOverview>('/api/usage/overview'),
+  overview: (query?: { model?: string }) =>
+    request<UsageOverview>('/api/usage/overview', { query }),
 }

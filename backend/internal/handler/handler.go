@@ -10,6 +10,7 @@ import (
 	"html-ppt/backend/internal/service/tplsuggest"
 	"html-ppt/backend/internal/service/tplthumb"
 	"html-ppt/backend/internal/service/usage"
+	"html-ppt/backend/internal/service/usermodel"
 	"html-ppt/backend/internal/service/usertpl"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
@@ -44,6 +45,8 @@ type Handler struct {
 	thumbs *tplthumb.Service
 	// usage 用量账本服务（可能为 nil：数据库降级模式下不可用，端点返回 503）
 	usage *usage.Service
+	// um 用户自选模型服务（可能为 nil：数据库降级/未配加密 key 时不可用）
+	um *usermodel.Service
 }
 
 // Exporter 导出服务的最小接口。返回值用 any：export.Result 的形状 handler 不关心
@@ -86,8 +89,8 @@ type UserTemplateService interface {
 	ClearUTHistory(userID uint, id string) (int, error)
 }
 
-func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService, traceCfg trace.Config, thumbs *tplthumb.Service, usageSvc *usage.Service) *Handler {
-	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates, exporter: exporter, usertpl: utpl, suggest: tplsuggest.New(decks, templates, traceCfg), thumbs: thumbs, usage: usageSvc}
+func New(st *store.Store, decks *deck.Service, agentSvc *agent.AgentService, authSvc *auth.Service, renderGrantsSvc *vision.Grants, traces *trace.Store, templates *template.Registry, exporter Exporter, utpl UserTemplateService, traceCfg trace.Config, thumbs *tplthumb.Service, usageSvc *usage.Service, umSvc *usermodel.Service) *Handler {
+	return &Handler{st: st, decks: decks, agent: agentSvc, auth: authSvc, renderGrants: renderGrantsSvc, traces: traces, templates: templates, exporter: exporter, usertpl: utpl, suggest: tplsuggest.New(decks, templates, traceCfg), thumbs: thumbs, usage: usageSvc, um: umSvc}
 }
 
 // TemplatesAvailable 模板库是否可用（router 据此决定挂不挂预览静态路由）。

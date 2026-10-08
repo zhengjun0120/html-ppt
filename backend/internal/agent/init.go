@@ -12,6 +12,7 @@ import (
 	"html-ppt/backend/internal/cryptox"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/template"
+	"html-ppt/backend/internal/service/usermodel"
 	"html-ppt/backend/internal/store"
 	"html-ppt/backend/internal/trace"
 	"html-ppt/backend/internal/vision"
@@ -32,8 +33,8 @@ type AgentService struct {
 	// 它是"审查→修复→再审"这类无收敛循环的唯一硬闸门：提示词是软约束，
 	// 实测的 22 轮 run 就是靠 maxTurns 兜底才停下来的。见 Tool.MaxPerRun 与 execTool。
 	MaxPerRun map[string]int
-	st          *store.Store // BYOK：查用户密钥密文
-	box         *cryptox.Box // BYOK：解密；nil = BYOK 关闭
+	st        *store.Store // BYOK：查用户密钥密文
+	box       *cryptox.Box // BYOK：解密；nil = BYOK 关闭
 	// CustomCSS = features.custom_css：关闭时 buildTools 不挂载自定义样式三件套
 	CustomCSS bool
 	// Templates deck-v2 模板注册表（v2 工具集与 generate 提示词的数据源）。
@@ -56,11 +57,15 @@ type AgentService struct {
 	// TraceCfg 观测配置（features.trace + trace.*）。关掉时循环里一切 Emit 都是空操作，
 	// 连上下文都不会被序列化（见 trace.Active 的用途），所以关掉是真零开销。
 	TraceCfg trace.Config
+
+	// um 用户自选模型服务（可能为 nil：数据库降级/未配加密 key 时没有自选模型，
+	// resolveLLM 回退平台模型）。main 在 InitAgentModel 时装配。
+	um *usermodel.Service
 }
 
 var agentServer *AgentService
 
-func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckService *deck.Service, features config.Features, assetsDir string, traceCfg trace.Config) error {
+func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckService *deck.Service, features config.Features, assetsDir string, traceCfg trace.Config, um *usermodel.Service) error {
 
 	if cfg.APIKey == "" {
 		return errors.New("LLM api_key 未配置（config.yaml 或环境变量 LLM_API_KEY）")
@@ -89,6 +94,7 @@ func InitAgentModel(cfg config.LLM, st *store.Store, box *cryptox.Box, deckServi
 		Vision:           features.Vision,
 		// ChromePath: ,
 		TraceCfg: traceCfg,
+		um:       um,
 	}
 
 	tools := agentServer.buildToolsV2(deck.StageIterating)
@@ -146,6 +152,8 @@ func (as *AgentService) resolveKey(ctx context.Context) (key string, byok bool) 
 // clientFor 返回本次对话使用的 LLM 客户端：用户配置了自带 API Key（BYOK）
 // 就解密用户的来用，否则用服务器默认 key。每个请求解密一次，
 // 明文 key 不缓存在内存里，也不打日志。
+//
+// 只剩 vision 量测等少数旧调用点在用；完整解析（client+模型名）走 resolveLLM。
 func (as *AgentService) clientFor(ctx context.Context) *openai.Client {
 	key, byok := as.resolveKey(ctx)
 
@@ -161,6 +169,49 @@ func (as *AgentService) clientFor(ctx context.Context) *openai.Client {
 	return &client
 }
 
+// resolvedLLM 一次解析出的调用目标。Custom = 用户自选模型：自担费用，
+// 请求参数按最大兼容走（不设 ReasoningEffort——第三方兼容网关对未知参数
+// 的容忍度不可控，模型能力是用户自己选的）。
+type resolvedLLM struct {
+	Client *openai.Client
+	Model  string
+	Custom bool
+}
+
+// resolveLLM 解析本次请求该用的模型：
+//  1. 用户自选模型（设置页选中，user_models 表）——base_url + key 都来自用户；
+//  2. 回退平台模型——BYOK key + 平台入口，或平台单例（现状）。
+//
+// 每个请求解析一次；自选模型解析失败（查库/解密）一律静默回退平台模型，
+// fail-open 与 BYOK 同一条原则：不能因为"换个模型"把对话打断。
+func (as *AgentService) resolveLLM(ctx context.Context) resolvedLLM {
+	if as.um != nil {
+		if uid, ok := authctx.UserID(ctx); ok {
+			res, err := as.um.ActiveTarget(ctx, uid)
+			if err == nil && res != nil && res.Model != nil {
+				return resolvedLLM{
+					Client: usermodel.NewClient(res.Model.BaseURL, res.APIKey, 3),
+					Model:  res.Model.ModelID,
+					Custom: true,
+				}
+			}
+			if err != nil {
+				log.Printf("[warn] 解析用户 %d 的自选模型失败，回退平台模型: %v", uid, err)
+			}
+		}
+	}
+	key, byok := as.resolveKey(ctx)
+	if !byok {
+		return resolvedLLM{Client: as.ModelClient, Model: as.ModelID}
+	}
+	client := openai.NewClient(
+		option.WithAPIKey(key),
+		option.WithBaseURL(as.BaseURL),
+		option.WithMaxRetries(3),
+	)
+	return resolvedLLM{Client: &client, Model: as.ModelID}
+}
+
 func GetAgentService() *AgentService {
 	return agentServer
 }
@@ -174,9 +225,13 @@ type CustomizeLLM struct {
 }
 
 func (as *AgentService) CustomizeLLMFor(ctx context.Context) CustomizeLLM {
+	rl := as.resolveLLM(ctx)
 	return CustomizeLLM{
-		Client:    as.clientFor(ctx),
-		Model:     as.ModelID,
+		Client:    rl.Client,
+		Model:     rl.Model,
 		MaxTokens: 8000,
 	}
 }
+
+// PlatformModelID 平台默认模型名（模型管理列表展示「平台模型」条目用）。
+func (as *AgentService) PlatformModelID() string { return as.ModelID }

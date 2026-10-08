@@ -54,7 +54,7 @@ func TestOverviewAggregates(t *testing.T) {
 		}
 	}
 
-	ov, err := s.Overview(uid)
+	ov, err := s.Overview(uid, "")
 	if err != nil {
 		t.Fatalf("Overview: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestSinkLandsRows(t *testing.T) {
 	}
 
 	// 落库后 Overview 能看到（走通 sink→DB→聚合 整条链）
-	ov, err := s.Overview(uid)
+	ov, err := s.Overview(uid, "")
 	if err != nil {
 		t.Fatalf("Overview: %v", err)
 	}
@@ -152,4 +152,43 @@ func b2i(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+func TestOverviewFiltersByModel(t *testing.T) {
+	s, ctx := newTestService(t)
+	uid := uint(95_010)
+	day := dayOf(0)
+	mk := func(model string, total int64) store.UsageEvent {
+		return store.UsageEvent{UserID: uid, Day: day, Component: "main", Model: model, Total: total, Calls: 1}
+	}
+	for _, r := range []store.UsageEvent{mk("deepseek-flash", 100), mk("my-gpt", 200), mk("deepseek-flash", 50)} {
+		if err := s.db.Create(&r).Error; err != nil {
+			t.Fatalf("造行: %v", err)
+		}
+	}
+
+	all, err := s.Overview(uid, "")
+	if err != nil {
+		t.Fatalf("Overview 全部: %v", err)
+	}
+	if all.Today.Tokens != 350 {
+		t.Errorf("全部模型 tokens = %d，想要 350", all.Today.Tokens)
+	}
+	// 选项取全部账本（不受过滤影响），已排序去重由 DISTINCT 保证
+	if len(all.Models) != 2 {
+		t.Fatalf("模型选项 = %v，想要 2 个", all.Models)
+	}
+
+	one, err := s.Overview(uid, "my-gpt")
+	if err != nil {
+		t.Fatalf("Overview 筛选: %v", err)
+	}
+	if one.Today.Tokens != 200 || one.Today.Calls != 1 {
+		t.Errorf("my-gpt 筛选 = %+v，想要 200/1", one.Today)
+	}
+	// 筛选状态下选项仍然齐全
+	if len(one.Models) != 2 {
+		t.Errorf("筛选状态下模型选项 = %v，仍应有 2 个", one.Models)
+	}
+	_ = ctx
 }

@@ -55,7 +55,7 @@ func newPreviewTestHandler(t *testing.T) *Handler {
 	if err := reg.MountUser(utDir); err != nil {
 		t.Fatalf("挂载用户模板: %v", err)
 	}
-	return New(nil, nil, nil, nil, nil, nil, reg, nil, nil, trace.Config{}, nil, nil)
+	return New(nil, nil, nil, nil, nil, nil, reg, nil, nil, trace.Config{}, nil, nil, nil)
 }
 
 func copyDir(src, dst string) error {
