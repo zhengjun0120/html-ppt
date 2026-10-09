@@ -96,7 +96,7 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
 <template>
   <section class="flex min-w-0 flex-1 flex-col">
     <!-- 预览工具条 -->
-    <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
+    <div class="relative flex items-center gap-2 border-b border-line px-3 py-1.5">
       <slot name="toolbar-start" />
       <span class="truncate text-[12.5px] font-semibold" :title="title">{{ title }}</span>
       <span v-if="props.deckId" class="truncate font-mono text-[11px] text-ink-3">{{ props.deckId }}</span>
@@ -165,6 +165,8 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
           <PhArrowsOutSimple :size="12" /> 新标签
         </button>
       </span>
+      <!-- 导出进行中：不确定进度爬条（导出无真实百分比里程碑，见 doExport） -->
+      <div v-if="exporting" class="export-crawl pointer-events-none absolute inset-x-0 bottom-0 h-[2px]" aria-hidden="true" />
     </div>
 
     <div class="flex min-h-0 flex-1">
@@ -231,3 +233,33 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
     </div>
   </section>
 </template>
+
+<style scoped>
+/* 导出进行中的不确定进度条：爬条只表达「忙碌」，不假装百分比 */
+.export-crawl {
+  overflow: hidden;
+}
+.export-crawl::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--accent);
+  animation: exp-crawl 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .export-crawl::before {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+@keyframes exp-crawl {
+  from {
+    left: -40%;
+  }
+  to {
+    left: 100%;
+  }
+}
+</style>
