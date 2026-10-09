@@ -140,6 +140,6 @@ export async function thumbPages(deckId: string): Promise<number[]> {
 export function exportDeck(deckId: string, format: 'pdf' | 'png' | 'html') {
   return request<{ path: string; filename: string; size: number }>(`/api/decks/${deckId}/export`, {
     method: 'POST',
-    body: JSON.stringify({ format }),
+    body: { format },
   })
 }

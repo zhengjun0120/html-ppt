@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhDownload, PhExport, PhPencilSimple } from '@phosphor-icons/vue'
+import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhCode, PhDownload, PhExport, PhPencilSimple } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { authedUrl } from '@/api/client'
@@ -113,6 +113,14 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
           @click="doExport('png')"
         >
           <PhExport :size="12" /> {{ exporting === 'png' ? '…' : 'PNG' }}
+        </button>
+        <button
+          v-if="props.deckId"
+          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+          :disabled="!!exporting"
+          @click="doExport('html')"
+        >
+          <PhCode :size="12" /> {{ exporting === 'html' ? '…' : 'HTML' }}
         </button>
         <button
           v-if="props.deckId"
