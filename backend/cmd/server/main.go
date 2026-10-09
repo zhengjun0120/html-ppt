@@ -186,7 +186,7 @@ func run() error {
 		if timeout <= 0 {
 			timeout = 60
 		}
-		exportSvc = export.New(deckSvc, loopback, cfg.Vision.ChromePath, time.Duration(timeout)*time.Second, visionGrants)
+		exportSvc = export.New(deckSvc, loopback, cfg.Vision.ChromePath, time.Duration(timeout)*time.Second, visionGrants, cfg.Assets.Dir)
 		log.Printf("[info] deck-v2 导出已开启（pdf/png/html，超时 %ds）", timeout)
 	}
 

@@ -38,6 +38,9 @@ type Service struct {
 	timeout    time.Duration
 	// grants 复用视觉审查的一次性门票：导出走同一条公开渲染通道，免鉴权头问题
 	grants TicketIssuer
+	// assetsDir deck-v2 运行时资产目录（web/assets）：单文件导出时读取
+	// runtime/base.css/animations/fonts 做内联（见 singlefile.go）
+	assetsDir string
 }
 
 // TicketIssuer 一次性门票（与 vision.Grants 同一实例，main 装配）。
@@ -45,8 +48,8 @@ type TicketIssuer interface {
 	Issue(uid uint, deckID string) (string, error)
 }
 
-func New(deck Requester, baseURL, chromePath string, timeout time.Duration, grants TicketIssuer) *Service {
-	return &Service{deck: deck, baseURL: baseURL, chromePath: chromePath, timeout: timeout, grants: grants}
+func New(deck Requester, baseURL, chromePath string, timeout time.Duration, grants TicketIssuer, assetsDir string) *Service {
+	return &Service{deck: deck, baseURL: baseURL, chromePath: chromePath, timeout: timeout, grants: grants, assetsDir: assetsDir}
 }
 
 // Result 导出产物。
@@ -129,9 +132,9 @@ func (s *Service) exportPNG(ctx context.Context, deckID, url, dir string) (Resul
 // styleLinkRe 与 deck 包的同一正则：单文件打包时把 style.css 的 link 换成内联 style。
 var styleLinkRe = regexp.MustCompile(`<link[^>]*href="style\.css"[^>]*>`)
 
-// exportSingleFile 读预览 HTML（style.css 已内联）直接落盘。
-// runtime/base.css/字体保持 /assets 绝对引用——CJK 字体内联会把文件撑到 MB 级，
-// 单文件版的定位是"分享与托管"，同源部署下资产可达；离线场景有系统字体回退。
+// exportSingleFile 读预览 HTML（style.css 已内联），再把翻页三件套与常用
+// 字体内联成真正自包含的单文件：下载到本地、挪去任意静态托管，打开都是
+// 完整的单页翻页版（见 singlefile.go）。等宽 CJK 全量字体除外，走系统回退。
 func (s *Service) exportSingleFile(uid uint, deckID, dir string) (Result, error) {
 	html, err := s.deck.PreviewHTML(uid, deckID)
 	if err != nil {
@@ -139,6 +142,9 @@ func (s *Service) exportSingleFile(uid uint, deckID, dir string) (Result, error)
 	}
 	if styleLinkRe.MatchString(html) {
 		return Result{}, fmt.Errorf("style.css 未内联（异常状态），拒绝导出不完整产物")
+	}
+	if html, err = s.makeSelfContained(html); err != nil {
+		return Result{}, err
 	}
 	name := "deck.html"
 	p := filepath.Join(dir, name)
