@@ -1,0 +1,146 @@
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /api/health               --> html-ppt/backend/internal/handler.(*Handler).Health-fm (4 handlers)
+[GIN-debug] GET    /api/templates            --> html-ppt/backend/internal/handler.(*Handler).ListTemplates-fm (6 handlers)
+[GIN-debug] GET    /api/templates/:id        --> html-ppt/backend/internal/handler.(*Handler).GetTemplate-fm (6 handlers)
+[GIN-debug] GET    /api/templates/:id/preview --> html-ppt/backend/internal/handler.(*Handler).PreviewTemplate-fm (6 handlers)
+[GIN-debug] GET    /api/community-templates  --> html-ppt/backend/internal/handler.(*Handler).CommunityTemplates-fm (6 handlers)
+[GIN-debug] GET    /api/render/:nonce        --> html-ppt/backend/internal/handler.(*Handler).RenderDeck-fm (4 handlers)
+[GIN-debug] GET    /api/user-template-render/:nonce/*filepath --> html-ppt/backend/internal/handler.(*Handler).RenderUserTemplateDemo-fm (4 handlers)
+[GIN-debug] POST   /api/auth/code            --> html-ppt/backend/internal/handler.(*Handler).RequestCode-fm (4 handlers)
+[GIN-debug] POST   /api/auth/register        --> html-ppt/backend/internal/handler.(*Handler).Register-fm (4 handlers)
+[GIN-debug] POST   /api/auth/login           --> html-ppt/backend/internal/handler.(*Handler).Login-fm (4 handlers)
+[GIN-debug] GET    /api/auth/me              --> html-ppt/backend/internal/handler.(*Handler).Me-fm (5 handlers)
+[GIN-debug] POST   /api/auth/refresh         --> html-ppt/backend/internal/handler.(*Handler).Refresh-fm (5 handlers)
+[GIN-debug] POST   /api/auth/apikey          --> html-ppt/backend/internal/handler.(*Handler).SetAPIKey-fm (5 handlers)
+[GIN-debug] GET    /api/decks                --> html-ppt/backend/internal/handler.(*Handler).ListDecks-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/meta       --> html-ppt/backend/internal/handler.(*Handler).GetDeckV2Meta-fm (5 handlers)
+[GIN-debug] PUT    /api/decks/:id/outline    --> html-ppt/backend/internal/handler.(*Handler).PutOutline-fm (5 handlers)
+[GIN-debug] POST   /api/decks/:id/outline/confirm --> html-ppt/backend/internal/handler.(*Handler).ConfirmOutline-fm (5 handlers)
+[GIN-debug] POST   /api/decks/:id/template   --> html-ppt/backend/internal/handler.(*Handler).SelectTemplate-fm (5 handlers)
+[GIN-debug] POST   /api/decks/:id/template-suggestions --> html-ppt/backend/internal/handler.(*Handler).TemplateSuggestions-fm (5 handlers)
+[GIN-debug] POST   /api/decks/:id/generate   --> html-ppt/backend/internal/handler.(*Handler).GenerateDeck-fm (5 handlers)
+[GIN-debug] POST   /api/decks/:id/export     --> html-ppt/backend/internal/handler.(*Handler).ExportDeck-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/exports/:file --> html-ppt/backend/internal/handler.(*Handler).DownloadExport-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/file       --> html-ppt/backend/internal/handler.(*Handler).GetDeckFile-fm (5 handlers)
+[GIN-debug] PUT    /api/decks/:id/file       --> html-ppt/backend/internal/handler.(*Handler).SaveDeckFile-fm (5 handlers)
+[GIN-debug] POST   /api/chat                 --> html-ppt/backend/internal/handler.(*Handler).Chat-fm (5 handlers)
+[GIN-debug] POST   /api/chat/answer          --> html-ppt/backend/internal/handler.(*Handler).AskUser-fm (5 handlers)
+[GIN-debug] GET    /api/chat/pending         --> html-ppt/backend/internal/handler.(*Handler).PendingAsk-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/chat/sessions --> html-ppt/backend/internal/handler.(*Handler).ListDeckSessions-fm (5 handlers)
+[GIN-debug] GET    /api/chat/sessions/:id/messages --> html-ppt/backend/internal/handler.(*Handler).GetSessionMessages-fm (5 handlers)
+[GIN-debug] GET    /api/chat/recent-sessions --> html-ppt/backend/internal/handler.(*Handler).RecentSessions-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/history    --> html-ppt/backend/internal/handler.(*Handler).ListDeckHistory-fm (5 handlers)
+[GIN-debug] POST   /api/decks/:id/history/:version/restore --> html-ppt/backend/internal/handler.(*Handler).RestoreDeckVersion-fm (5 handlers)
+[GIN-debug] GET    /api/templates/:id/thumb  --> html-ppt/backend/internal/handler.(*Handler).TemplateThumb-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/thumbs     --> html-ppt/backend/internal/handler.(*Handler).DeckThumbs-fm (5 handlers)
+[GIN-debug] GET    /api/decks/:id/thumbs/:no --> html-ppt/backend/internal/handler.(*Handler).DeckThumb-fm (5 handlers)
+[GIN-debug] POST   /api/templates/:id/fork   --> html-ppt/backend/internal/handler.(*Handler).ForkTemplate-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates       --> html-ppt/backend/internal/handler.(*Handler).ListUserTemplates-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates/:id   --> html-ppt/backend/internal/handler.(*Handler).GetUserTemplate-fm (5 handlers)
+[GIN-debug] PUT    /api/user-templates/:id   --> html-ppt/backend/internal/handler.(*Handler).UpdateUserTemplate-fm (5 handlers)
+[GIN-debug] DELETE /api/user-templates/:id   --> html-ppt/backend/internal/handler.(*Handler).DeleteUserTemplate-fm (5 handlers)
+[GIN-debug] POST   /api/user-templates/:id/publish --> html-ppt/backend/internal/handler.(*Handler).PublishUserTemplate-fm (5 handlers)
+[GIN-debug] POST   /api/user-templates/:id/unpublish --> html-ppt/backend/internal/handler.(*Handler).UnpublishUserTemplate-fm (5 handlers)
+[GIN-debug] POST   /api/user-templates/:id/checkup --> html-ppt/backend/internal/handler.(*Handler).CheckupUserTemplate-fm (5 handlers)
+[GIN-debug] POST   /api/user-templates/:id/chat --> html-ppt/backend/internal/handler.(*Handler).CustomizeUserTemplate-fm (5 handlers)
+[GIN-debug] POST   /api/user-templates/:id/chat/stream --> html-ppt/backend/internal/handler.(*Handler).CustomizeUserTemplateStream-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates/:id/editor --> html-ppt/backend/internal/handler.(*Handler).GetUserTemplateEditor-fm (5 handlers)
+[GIN-debug] PUT    /api/user-templates/:id/file --> html-ppt/backend/internal/handler.(*Handler).SaveUserTemplateFile-fm (5 handlers)
+[GIN-debug] PUT    /api/user-templates/:id/style --> html-ppt/backend/internal/handler.(*Handler).SaveUserTemplateStyle-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates/:id/structure --> html-ppt/backend/internal/handler.(*Handler).GetUserTemplateStructure-fm (5 handlers)
+[GIN-debug] PUT    /api/user-templates/:id/layouts/:layoutId --> html-ppt/backend/internal/handler.(*Handler).UpdateUserTemplateLayout-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates/:id/demo --> html-ppt/backend/internal/handler.(*Handler).GetUserTemplateDemo-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates/:id/assets/:name --> html-ppt/backend/internal/handler.(*Handler).GetUserTemplateAsset-fm (5 handlers)
+[GIN-debug] GET    /api/user-templates/:id/history --> html-ppt/backend/internal/handler.(*Handler).ListUserTemplateHistory-fm (5 handlers)
+[GIN-debug] POST   /api/user-templates/:id/history/:version/restore --> html-ppt/backend/internal/handler.(*Handler).RestoreUserTemplateVersion-fm (5 handlers)
+[GIN-debug] DELETE /api/user-templates/:id/history/:version --> html-ppt/backend/internal/handler.(*Handler).DeleteUserTemplateVersion-fm (5 handlers)
+[GIN-debug] DELETE /api/user-templates/:id/history --> html-ppt/backend/internal/handler.(*Handler).ClearUserTemplateHistory-fm (5 handlers)
+[GIN-debug] DELETE /api/decks/:id/history/:version --> html-ppt/backend/internal/handler.(*Handler).DeleteDeckVersion-fm (5 handlers)
+[GIN-debug] DELETE /api/decks/:id/history    --> html-ppt/backend/internal/handler.(*Handler).ClearDeckHistory-fm (5 handlers)
+[GIN-debug] GET    /api/traces               --> html-ppt/backend/internal/handler.(*Handler).ListTraces-fm (5 handlers)
+[GIN-debug] GET    /api/traces/:sessionID/:runID --> html-ppt/backend/internal/handler.(*Handler).GetTraceRun-fm (5 handlers)
+[GIN-debug] GET    /api/traces/:sessionID/:runID/events/:seq --> html-ppt/backend/internal/handler.(*Handler).GetTraceEvent-fm (5 handlers)
+[GIN-debug] GET    /api/traces/:sessionID/:runID/img/:name --> html-ppt/backend/internal/handler.(*Handler).GetTraceImage-fm (5 handlers)
+[GIN-debug] GET    /api/traces/:sessionID/:runID/export --> html-ppt/backend/internal/handler.(*Handler).ExportTrace-fm (5 handlers)
+[GIN-debug] GET    /assets/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (6 handlers)
+[GIN-debug] HEAD   /assets/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (6 handlers)
+[GIN-debug] GET    /templates/*filepath      --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (5 handlers)
+[GIN-debug] HEAD   /templates/*filepath      --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (5 handlers)
+[GIN-debug] GET    /user-templates/:id/*filepath --> html-ppt/backend/internal/handler.(*Handler).UserTemplatePublicFile-fm (5 handlers)
+[GIN-debug] GET    /chat-test                --> html-ppt/backend/internal/router.New.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] HEAD   /chat-test                --> html-ppt/backend/internal/router.New.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] GET    /trace                    --> html-ppt/backend/internal/router.New.(*RouterGroup).StaticFile.func9 (4 handlers)
+[GIN-debug] HEAD   /trace                    --> html-ppt/backend/internal/router.New.(*RouterGroup).StaticFile.func9 (4 handlers)
+[GIN] 2026/10/07 - 10:47:03 | 200 |  970.5µs |       127.0.0.1 | GET      "/api/health"
+[GIN] 2026/10/07 - 10:47:04 | 200 |   1.34ms |             ::1 | GET      "/api/health"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  16.56ms |       127.0.0.1 | GET      "/api/auth/me"
+[GIN] 2026/10/07 - 10:47:24 | 200 |   4.75ms |       127.0.0.1 | GET      "/api/decks"
+[GIN] 2026/10/07 - 10:47:24 | 429 |  14.04ms |       127.0.0.1 | POST     "/api/auth/refresh"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  11.72ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  18.08ms |       127.0.0.1 | GET      "/api/decks/deck-0175/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  29.84ms |       127.0.0.1 | GET      "/api/decks/deck-0170/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  30.45ms |       127.0.0.1 | GET      "/api/decks/deck-0168/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  31.97ms |       127.0.0.1 | GET      "/api/decks/deck-0176/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:24 | 200 |  31.18ms |       127.0.0.1 | GET      "/api/decks/deck-0169/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  16.63ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 10:47:36 | 200 |   5.01ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  10.86ms |       127.0.0.1 | GET      "/api/chat/sessions/190/messages"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  22.84ms |       127.0.0.1 | GET      "/api/decks/deck-0177/meta"
+[GIN] 2026/10/07 - 10:47:36 | 200 |   3.19ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  28.77ms |       127.0.0.1 | GET      "/api/decks/deck-0177/file?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  14.02ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/3?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  17.39ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/2?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  20.82ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/5?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:36 | 200 |  24.58ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/4?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:47:37 | 304 |  505.9µs |       127.0.0.1 | GET      "/assets/deck-v2/runtime.js"
+[GIN] 2026/10/07 - 10:47:37 | 304 |  505.9µs |       127.0.0.1 | GET      "/assets/deck-v2/base.css"
+[GIN] 2026/10/07 - 10:47:37 | 304 |  505.9µs |       127.0.0.1 | GET      "/assets/deck-v2/fonts.css"
+[GIN] 2026/10/07 - 10:47:37 | 304 |  505.9µs |       127.0.0.1 | GET      "/assets/deck-v2/animations.css"
+[GIN] 2026/10/07 - 10:47:48 | 200 |    1.84s |       127.0.0.1 | POST     "/api/chat"
+[GIN] 2026/10/07 - 10:47:48 | 200 |   7.02ms |       127.0.0.1 | GET      "/api/decks/deck-0177/meta"
+[GIN] 2026/10/07 - 10:47:48 | 200 |   4.21ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 10:49:57 | 200 |    1.41s |       127.0.0.1 | POST     "/api/chat"
+[GIN] 2026/10/07 - 10:49:57 | 200 |   5.46ms |       127.0.0.1 | GET      "/api/decks/deck-0177/meta"
+[GIN] 2026/10/07 - 10:49:57 | 200 |   7.01ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   2.72ms |       127.0.0.1 | GET      "/api/auth/me"
+[GIN] 2026/10/07 - 10:54:56 | 429 |  24.69ms |       127.0.0.1 | POST     "/api/auth/refresh"
+[GIN] 2026/10/07 - 10:54:56 | 200 |  17.09ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 10:54:56 | 200 |    7.5ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   8.54ms |       127.0.0.1 | GET      "/api/chat/sessions/190/messages"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   5.71ms |       127.0.0.1 | GET      "/api/decks/deck-0177/meta"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   3.32ms |       127.0.0.1 | GET      "/api/decks/deck-0177/file?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   3.63ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   3.17ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/3?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   4.83ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/4?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:54:56 | 200 |   10.9ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:54:56 | 200 |  12.39ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/2?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:54:56 | 200 |  14.22ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/5?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 10:54:56 | 304 |       0s |       127.0.0.1 | GET      "/assets/deck-v2/animations.css"
+[GIN] 2026/10/07 - 10:54:56 | 304 |  697.3µs |       127.0.0.1 | GET      "/assets/deck-v2/base.css"
+[GIN] 2026/10/07 - 10:54:56 | 304 |       0s |       127.0.0.1 | GET      "/assets/deck-v2/runtime.js"
+[GIN] 2026/10/07 - 10:54:56 | 304 |    1.2ms |       127.0.0.1 | GET      "/assets/deck-v2/fonts.css"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   6.51ms |       127.0.0.1 | GET      "/api/auth/me"
+[GIN] 2026/10/07 - 13:12:15 | 429 |   4.71ms |       127.0.0.1 | POST     "/api/auth/refresh"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   5.48ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   4.42ms |       127.0.0.1 | GET      "/api/decks/deck-0177/chat/sessions"
+[GIN] 2026/10/07 - 13:12:15 | 200 |  10.83ms |       127.0.0.1 | GET      "/api/chat/sessions/190/messages"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   8.94ms |       127.0.0.1 | GET      "/api/decks/deck-0177/meta"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   3.64ms |       127.0.0.1 | GET      "/api/decks/deck-0177/file?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   4.52ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   4.49ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 13:12:15 | 200 |   3.93ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/2?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 13:12:15 | 200 |  12.84ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/3?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 13:12:15 | 200 |  13.85ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/5?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 13:12:15 | 200 |  14.37ms |       127.0.0.1 | GET      "/api/decks/deck-0177/thumbs/4?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzkzODcxMjgxLCJpYXQiOjE3OTEyNzkyODF9.ikEnrZrHrPTBtofNpc1zNaiRV26ZewGcw8Ig0-idxQo"
+[GIN] 2026/10/07 - 13:12:15 | 304 |  628.4µs |       127.0.0.1 | GET      "/assets/deck-v2/base.css"
+[GIN] 2026/10/07 - 13:12:15 | 304 |  628.4µs |       127.0.0.1 | GET      "/assets/deck-v2/fonts.css"
+[GIN] 2026/10/07 - 13:12:15 | 304 |       0s |       127.0.0.1 | GET      "/assets/deck-v2/animations.css"
+[GIN] 2026/10/07 - 13:12:15 | 304 |       0s |       127.0.0.1 | GET      "/assets/deck-v2/runtime.js"
+[GIN] 2026/10/07 - 13:13:01 | 200 |  86.32ms |             ::1 | POST     "/api/auth/login"
+[GIN] 2026/10/07 - 13:13:02 | 200 |    1.17s |             ::1 | POST     "/api/user-templates/ut-d278a1db/chat/stream"
+[GIN] 2026/10/07 - 13:13:03 | 200 | 452.48ms |             ::1 | POST     "/api/user-templates/ut-d278a1db/chat/stream"
+[GIN] 2026/10/07 - 13:13:05 | 200 |    1.68s |             ::1 | POST     "/api/user-templates/ut-d278a1db/chat/stream"
+[GIN] 2026/10/07 - 13:13:06 | 200 |    1.39s |             ::1 | POST     "/api/user-templates/ut-d278a1db/chat/stream"
