@@ -54,9 +54,11 @@ func New(deck Requester, baseURL, chromePath string, timeout time.Duration, gran
 
 // Result 导出产物。
 type Result struct {
-	Path    string `json:"path"`    // 相对 deck 目录（exports/<文件名>）
+	Path    string `json:"path"` // 相对 deck 目录（exports/<文件名>）
 	Filename string `json:"filename"`
 	Size    int64  `json:"size"`
+	// DownloadAs 下载落盘名（跟随文稿标题）；磁盘仍是 Filename，命名发生在下载头
+	DownloadAs string `json:"download_as,omitempty"`
 }
 
 // Export 按格式导出。v1 同步实现（8 页实测 < 30s）。

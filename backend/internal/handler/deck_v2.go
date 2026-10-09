@@ -9,6 +9,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 
 	"html-ppt/backend/internal/agent"
 	"html-ppt/backend/internal/authctx"
+	"html-ppt/backend/internal/export"
 	"html-ppt/backend/internal/response"
 	"html-ppt/backend/internal/service/deck"
 	"html-ppt/backend/internal/service/tplsuggest"
@@ -257,7 +259,37 @@ func (h *Handler) ExportDeck(c *gin.Context) {
 		mapDeckErr(c, err)
 		return
 	}
+	// 告诉前端下载会用什么名字（随文稿标题），toast 展示用；权威值在下载头里
+	if r, ok := res.(export.Result); ok {
+		if df, err := h.decks.GetDeckV2(uid, c.Param("id")); err == nil {
+			r.DownloadAs = exportDownloadName(df.Title, r.Filename)
+		}
+		res = r
+	}
 	response.OK(c, res)
+}
+
+// exportDownloadName 把磁盘产物名映射成「文稿标题.ext」的下载名。
+// 磁盘文件保持规范名（deck.html 等，白名单/缓存都依赖它），下载名只在
+// Content-Disposition 里给：清洗标题里的非法文件名字符与控制符、按 rune 截断、
+// 空则回退 deck。中文经 mime.FormatMediaType 走 RFC 2231 编码。
+func exportDownloadName(title, diskName string) string {
+	clean := strings.Map(func(r rune) rune {
+		if r < 0x20 || strings.ContainsRune(`\\/:*?"<>|`, r) {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(title))
+	clean = strings.Join(strings.Fields(clean), " ")
+	const maxRunes = 60
+	if runes := []rune(clean); len(runes) > maxRunes {
+		clean = string(runes[:maxRunes])
+	}
+	clean = strings.Trim(clean, " .")
+	if clean == "" {
+		clean = "deck"
+	}
+	return clean + filepath.Ext(diskName)
 }
 
 // DownloadExport GET /api/decks/:id/exports/:file?token= —— 导出产物下载。
@@ -293,6 +325,11 @@ func (h *Handler) DownloadExport(c *gin.Context) {
 	case strings.HasSuffix(name, ".html"):
 		ct = "text/html; charset=utf-8"
 	}
-	c.Header("Content-Disposition", `attachment; filename="`+name+`"`)
+	// 下载名跟随文稿标题（重命名后下载即刻生效）；标题读不到就退回磁盘名
+	disposition := name
+	if df, err := h.decks.GetDeckV2(uid, c.Param("id")); err == nil {
+		disposition = exportDownloadName(df.Title, name)
+	}
+	c.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": disposition}))
 	c.Data(http.StatusOK, ct, data)
 }

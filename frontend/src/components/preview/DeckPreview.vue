@@ -84,7 +84,7 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
   try {
     const r = await exportDeck(props.deckId, format)
     window.open(authedUrl(`/api/decks/${props.deckId}/exports/${r.filename}`), '_blank', 'noopener')
-    toast.info(`${r.filename} 已生成`)
+    toast.info(`${r.download_as ?? r.filename} 已生成`)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '导出失败')
   } finally {

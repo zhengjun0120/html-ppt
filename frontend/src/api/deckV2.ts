@@ -136,9 +136,10 @@ export async function thumbPages(deckId: string): Promise<number[]> {
   return r.pages
 }
 
-/** 触发导出（pdf/png/html），返回产物文件名；下载用 thumbUrl 风格的 authedUrl 拼 exports 路径 */
+/** 触发导出（pdf/png/html），返回产物文件名；下载用 thumbUrl 风格的 authedUrl 拼 exports 路径。
+ *  download_as 是浏览器实际保存用的名字（跟随文稿标题，后端下载头给出）。 */
 export function exportDeck(deckId: string, format: 'pdf' | 'png' | 'html') {
-  return request<{ path: string; filename: string; size: number }>(`/api/decks/${deckId}/export`, {
+  return request<{ path: string; filename: string; size: number; download_as?: string }>(`/api/decks/${deckId}/export`, {
     method: 'POST',
     body: { format },
   })
