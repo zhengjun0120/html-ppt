@@ -15,6 +15,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    // 构建产物挪到 /app/：/assets/ 是 deck-v2 运行时（翻页脚本/字体）的命名空间，
+    // 生产 nginx 把 /assets/ 代理给后端——Vite 默认的 assets 目录会跟它撞车。
+    assetsDir: 'app',
+  },
   server: {
     port: 5173,
     proxy: {
