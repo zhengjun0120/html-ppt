@@ -134,18 +134,22 @@ func TestProjectTranscript_RoundtripThroughDBJSON(t *testing.T) {
 func TestSessionSummary_PendingFlag(t *testing.T) {
 	sess := &store.ChatSession{}
 	sess.PendingAsk = `{"tool_call_id":"call_p","run_id":"run-1"}`
-	if !sessionSummary(sess).Pending {
+	if !sessionSummary(sess, true).Pending {
 		t.Error("有暂停态的会话 Pending 应为 true")
 	}
 
 	sess.PendingAsk = ""
-	if sessionSummary(sess).Pending {
+	if sessionSummary(sess, false).Pending {
 		t.Error("没有暂停态的会话 Pending 应为 false")
 	}
 	// 坏掉的暂停态按"没有暂停"处理（parsePendingAsk 的约定），列表页不该被单条脏数据打挂
 	sess.PendingAsk = "{not-json"
-	if sessionSummary(sess).Pending {
+	if sessionSummary(sess, false).Pending {
 		t.Error("暂停态损坏时应按 false 处理")
+	}
+	// has_messages 透传：列表侧栏用它标"空对话"，取值来自 messages <> '' 计算列
+	if sessionSummary(sess, true).HasMessages != true {
+		t.Error("has_messages 应如实透传")
 	}
 }
 

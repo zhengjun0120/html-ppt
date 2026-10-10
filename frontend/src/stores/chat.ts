@@ -66,6 +66,10 @@ export const useChatStore = defineStore('chat', {
   getters: {
     /** 输入框可发消息：不在流式/暂停态，也不在历史恢复中 */
     canSend: (s) => s.status === 'idle' && !s.restoring,
+
+    /** 是否已有真实对话内容（用户或模型任一方说过话；think/tool/sys/error 等不算）。
+     *  「新对话」的守卫依据：没有内容时 reset 毫无意义，只会让空会话堆积。 */
+    hasConversation: (s) => s.events.some((e) => e.kind === 'user' || e.kind === 'agent'),
   },
 
   actions: {

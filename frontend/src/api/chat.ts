@@ -1,4 +1,5 @@
 import { currentToken } from './client'
+import type { SessionSummary } from '@/types/chat'
 
 /**
  * chat 相关接口。start/answer 返回原始 Response（SSE 流，由 lib/sse 消费）；
@@ -84,8 +85,8 @@ export function generateDeck(
   )
 }
 
-/** 某个 deck 名下的会话列表（按最近活跃倒序） */
-export async function listSessions(deckId: string): Promise<{ id: number; title: string; pending: boolean; updated_at: string }[]> {
+/** 某个 deck 名下的会话列表（按最近活跃倒序）。has_messages=false = 空对话 */
+export async function listSessions(deckId: string): Promise<SessionSummary[]> {
   const { request } = await import('./client')
   return request(`/api/decks/${deckId}/chat/sessions`)
 }

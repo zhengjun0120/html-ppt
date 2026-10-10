@@ -4,6 +4,7 @@ import { ApiError } from '@/api/client'
 import { listSessions } from '@/api/chat'
 import { useChatStore } from '@/stores/chat'
 import { useToast } from '@/stores/toast'
+import type { SessionSummary } from '@/types/chat'
 
 /**
  * 工作台/向导共享的启动逻辑（plan-v3 C1 从 WorkspaceView 抽出）：
@@ -13,7 +14,7 @@ import { useToast } from '@/stores/toast'
 export function useWorkspaceBoot() {
   const chat = useChatStore()
   const toast = useToast()
-  const sessions = ref<{ id: number; title: string; pending: boolean; updated_at: string }[]>([])
+  const sessions = ref<SessionSummary[]>([])
   const previewKey = ref(0)
 
   async function loadSessions(deckId: string) {

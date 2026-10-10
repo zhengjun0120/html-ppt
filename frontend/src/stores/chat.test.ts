@@ -70,7 +70,7 @@ describe('projectTranscript（历史回放投影）', () => {
 
   it('标准对话投影：system 跳过、工具结果回填、ask_user 应答展示', () => {
     const t: Transcript = {
-      session: { id: 21, deck_id: 'deck-0020', title: 't', pending: false, created_at: '', updated_at: '' },
+      session: { id: 21, deck_id: 'deck-0020', title: 't', pending: false, has_messages: true, created_at: '', updated_at: '' },
       messages: [
         { seq: 1, role: 'user', content: '做一份 Go 介绍' },
         {
@@ -98,7 +98,7 @@ describe('projectTranscript（历史回放投影）', () => {
 
   it('暂停中的会话：最后一个 ask_user 保持可交互', () => {
     const t: Transcript = {
-      session: { id: 16, deck_id: '', title: 't', pending: true, created_at: '', updated_at: '' },
+      session: { id: 16, deck_id: '', title: 't', pending: true, has_messages: true, created_at: '', updated_at: '' },
       messages: [
         { seq: 1, role: 'user', content: '做 PPT' },
         { seq: 2, role: 'assistant', content: '', tool_calls: [{ id: 'cp', name: 'ask_user', arguments: '{"questions":[{"question":"风格？"}]}' }] },
