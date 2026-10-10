@@ -268,8 +268,23 @@ const headTitle = computed(
              flex-1/overflow-y-auto 依赖 flex 父级定高，否则消息区按内容长高、
              被裁剪且无法滚动 -->
         <div v-else class="mx-auto flex h-full w-full max-w-[760px] flex-col">
-          <!-- 澄清对话入口：跨文稿找回还没产出大纲的澄清会话（含横幅那类） -->
-          <div class="mx-4 mt-3 flex items-center justify-end">
+          <!-- 顶行：内容密度三档（随会话记住，发消息时生效）+ 澄清对话入口 -->
+          <div class="mx-4 mt-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] text-ink-3">内容密度</span>
+              <div class="flex rounded-control border border-line p-0.5">
+                <button
+                  v-for="d in ([['concise', '精炼'], ['standard', '标准'], ['rich', '详实']] as const)"
+                  :key="d[0]"
+                  class="cursor-pointer rounded px-2 py-0.5 text-[11.5px] transition-colors"
+                  :class="chat.density === d[0] ? 'bg-accent font-semibold text-accent-contrast' : 'text-ink-3 hover:text-ink'"
+                  :title="d[0] === 'concise' ? '要点式页面，留白多' : d[0] === 'standard' ? '内容页正文约 180-280 字' : '阅读型页面，内容页 300 字以上'"
+                  @click="chat.density = d[0]"
+                >
+                  {{ d[1] }}
+                </button>
+              </div>
+            </div>
             <button
               class="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
               title="查看之前的澄清对话"

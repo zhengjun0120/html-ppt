@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { configureClient } from '@/api/client'
 import { projectTranscript, useChatStore } from './chat'
 import type { Transcript } from '@/types/chat'
 
@@ -70,7 +71,7 @@ describe('projectTranscript（历史回放投影）', () => {
 
   it('标准对话投影：system 跳过、工具结果回填、ask_user 应答展示', () => {
     const t: Transcript = {
-      session: { id: 21, deck_id: 'deck-0020', title: 't', pending: false, has_messages: true, created_at: '', updated_at: '' },
+      session: { id: 21, deck_id: 'deck-0020', title: 't', pending: false, has_messages: true, density: 'standard', created_at: '', updated_at: '' },
       messages: [
         { seq: 1, role: 'user', content: '做一份 Go 介绍' },
         {
@@ -98,7 +99,7 @@ describe('projectTranscript（历史回放投影）', () => {
 
   it('暂停中的会话：最后一个 ask_user 保持可交互', () => {
     const t: Transcript = {
-      session: { id: 16, deck_id: '', title: 't', pending: true, has_messages: true, created_at: '', updated_at: '' },
+      session: { id: 16, deck_id: '', title: 't', pending: true, has_messages: true, density: 'standard', created_at: '', updated_at: '' },
       messages: [
         { seq: 1, role: 'user', content: '做 PPT' },
         { seq: 2, role: 'assistant', content: '', tool_calls: [{ id: 'cp', name: 'ask_user', arguments: '{"questions":[{"question":"风格？"}]}' }] },
@@ -107,5 +108,54 @@ describe('projectTranscript（历史回放投影）', () => {
     const out = projectTranscript(t)
     const ask = out.find((e) => e.kind === 'ask')
     expect(ask && 'active' in ask && ask.active).toBe(true)
+  })
+})
+
+// 内容密度三档：新会话默认标准；loadSession 按会话回填（未知/空值归一 standard）；
+// send 的请求体带上当前档位（后端落会话、注入提示词的入口）。
+describe('内容密度档位', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    // node 环境没有 localStorage：注入空 token 源（deckV2.test.ts 同款）
+    configureClient({ getToken: () => null, onUnauthorized: () => {} })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function transcript(density: string): Transcript {
+    return {
+      session: { id: 30, deck_id: '', title: 't', pending: false, has_messages: true, density, created_at: '', updated_at: '' },
+      messages: [],
+    }
+  }
+
+  it('reset 归默认 standard', () => {
+    const chat = useChatStore()
+    chat.density = 'rich'
+    chat.reset('deck-x')
+    expect(chat.density).toBe('standard')
+  })
+
+  it('loadSession 回填档位，未知/空值归一 standard', async () => {
+    const chat = useChatStore()
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(transcript('rich')), { status: 200 })))
+    await chat.loadSession(30)
+    expect(chat.density).toBe('rich')
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(transcript('')), { status: 200 })))
+    await chat.loadSession(31)
+    expect(chat.density).toBe('standard')
+  })
+
+  it('send 请求体带当前档位', async () => {
+    const chat = useChatStore()
+    chat.density = 'rich'
+    const fetchMock = vi.fn(async () => new Response('', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await chat.send('做一份 Go 介绍')
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, { body: string }]
+    expect(url).toBe('/api/chat')
+    expect(JSON.parse(init.body).density).toBe('rich')
   })
 })

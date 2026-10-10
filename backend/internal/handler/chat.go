@@ -28,6 +28,7 @@ type ChatRequest struct {
 	EnableWebSearch bool   `json:"enable_web_search,omitempty"` //预留是否开启联网搜索
 	DeckID          string `json:"deck_id,omitempty"`
 	Images          []string `json:"images,omitempty"` // 用户附图（data URL；校验在 chatimg.Normalize）
+	Density         string `json:"density,omitempty"` // 内容密度档位（concise/standard/rich；空 = standard）
 }
 
 // maxChatBodyBytes 带图对话的请求体上限（/api/chat 与定制对话两端点共用）。
@@ -77,7 +78,7 @@ func (h *Handler) Chat(c *gin.Context) {
 	}
 
 	serveAgentSSE(c, func(emit func(agent.StreamEvent) error) (uint, error) {
-		return h.agent.NewStreamChat(c.Request.Context(), uid, req.SessionID, req.UserContent, req.DeckID, imgs, emit)
+		return h.agent.NewStreamChat(c.Request.Context(), uid, req.SessionID, req.UserContent, req.DeckID, req.Density, imgs, emit)
 	})
 
 	//设置sse响应头

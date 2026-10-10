@@ -59,6 +59,9 @@ type ChatSession struct {
 	PendingAsk string `gorm:"size:1024" json:"-"`  //非空 = 循环暂停等待回答
 	Title     string    `gorm:"size:128" json:"title"`
 	Messages  string    `gorm:"type:longtext" json:"-"` // 完整消息列表的 JSON（阶段2启用）
+	// Density 内容密度档位（concise/standard/rich；空 = standard）。决定大纲要点
+	// 数量、每条长度与页面正文目标，注入 outline/generate/iterate 提示词。
+	Density   string    `gorm:"size:16;default:''" json:"density"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

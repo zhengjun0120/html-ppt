@@ -36,6 +36,8 @@ export interface StartChatArgs {
   webSearch?: boolean
   /** 用户附图（压缩后的 data URL，≤3 张；服务端 chatimg.Normalize 校验） */
   images?: string[]
+  /** 内容密度档位（concise/standard/rich），随会话落库；空 = standard */
+  density?: string
 }
 
 export function startChat(a: StartChatArgs, signal?: AbortSignal): Promise<Response> {
@@ -47,6 +49,7 @@ export function startChat(a: StartChatArgs, signal?: AbortSignal): Promise<Respo
       deck_id: a.deckId,
       enable_web_search: a.webSearch ?? false,
       images: a.images ?? [],
+      density: a.density ?? '',
     },
     signal,
   )
@@ -98,6 +101,7 @@ export interface RecentSession {
   title: string
   pending: boolean
   has_messages: boolean
+  density: string
   deck_stage: string
   deck_format: string
   created_at: string

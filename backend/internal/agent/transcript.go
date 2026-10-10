@@ -38,6 +38,7 @@ type SessionSummary struct {
 	Title       string    `json:"title"`
 	Pending     bool      `json:"pending"` // true = 有 ask_user 提问还没回答
 	HasMessages bool      `json:"has_messages"`
+	Density     string    `json:"density"` // 内容密度档位（空 = standard），前端选择器回显用
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -84,7 +85,7 @@ func (as *AgentService) DeckSessions(ctx context.Context, userID uint, deckID st
 	// 空会话标记用计算列带出
 	err := as.st.DB.WithContext(ctx).
 		Model(&store.ChatSession{}).
-		Select("id", "user_id", "deck_id", "pending_ask", "title", "created_at", "updated_at", "messages <> '' AS has_messages").
+		Select("id", "user_id", "deck_id", "pending_ask", "title", "density", "created_at", "updated_at", "messages <> '' AS has_messages").
 		Where("deck_id = ? AND user_id = ?", deckID, userID).
 		Order("updated_at DESC").
 		Scan(&rows).Error
@@ -120,7 +121,7 @@ func (as *AgentService) RecentSessions(ctx context.Context, userID uint, limit i
 	var rows []sessionRow
 	err := as.st.DB.WithContext(ctx).
 		Model(&store.ChatSession{}).
-		Select("id", "user_id", "deck_id", "pending_ask", "title", "created_at", "updated_at", "messages <> '' AS has_messages").
+		Select("id", "user_id", "deck_id", "pending_ask", "title", "density", "created_at", "updated_at", "messages <> '' AS has_messages").
 		Where("user_id = ?", userID).
 		Order("updated_at DESC").
 		Limit(limit).
@@ -176,6 +177,7 @@ func sessionSummary(sess *store.ChatSession, hasMessages bool) SessionSummary {
 		Title:       sess.Title,
 		Pending:     parsePendingAsk(sess).ToolCallID != "",
 		HasMessages: hasMessages,
+		Density:     sess.Density,
 		CreatedAt:   sess.CreatedAt,
 		UpdatedAt:   sess.UpdatedAt,
 	}
