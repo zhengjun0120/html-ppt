@@ -97,6 +97,7 @@ export interface RecentSession {
   deck_id: string
   title: string
   pending: boolean
+  has_messages: boolean
   deck_stage: string
   deck_format: string
   created_at: string

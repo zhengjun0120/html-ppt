@@ -158,21 +158,50 @@ function newConversation() {
 
 const sessionsOpen = ref(false)
 const sessionsLoading = ref(false)
+/** 澄清步专用：跨文稿拉回来的纯澄清会话（还没产出大纲落到 deck 的） */
+const clarifySessions = ref<RecentSession[]>([])
 
-/** 打开会话抽屉：先刷新列表再展示（澄清对话没有 deck 行时按空 deckId 查冷启动会话） */
+/** 打开会话抽屉：澄清步走 recent-sessions 过滤纯澄清会话（此时可能还没有 deckId，
+ *  按 deck 查的接口无从下手）；其余步按 deck 刷新列表 */
 async function openSessions() {
   sessionsOpen.value = true
   sessionsLoading.value = true
   try {
-    await loadSessions(deckId.value)
+    if (routeStep.value === 'clarify') {
+      const recent = await listRecentSessions(50)
+      clarifySessions.value = recent.filter((s) => !s.deck_id && s.has_messages)
+    } else {
+      await loadSessions(deckId.value)
+    }
   } finally {
     sessionsLoading.value = false
   }
 }
 
+/** 抽屉数据源：澄清步用澄清会话，其余步用本 deck 的会话 */
+const drawerSessions = computed(() =>
+  routeStep.value === 'clarify' ? clarifySessions.value : sessions.value,
+)
+
 function onSwitchSession(id: number) {
   sessionsOpen.value = false
+  if (routeStep.value === 'clarify') return void resumeClarify(id)
   switchSession(deckId.value, (id) => wizard.syncFromChat(id), id)
+}
+
+/** 澄清步恢复一个纯澄清会话（与横幅 resumeLast 同链路；deck 还没绑，留在本页续聊） */
+async function resumeClarify(id: number) {
+  if (id === (chat.sessionId ?? 0) || chat.status !== 'idle') return
+  if (resumeBanner.value?.id === id) {
+    resumeBanner.value = null
+    sessionStorage.removeItem('wizard.resumeDismissed')
+  }
+  try {
+    await chat.loadSession(id)
+    await wizard.syncFromChat(chat.deckId)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '恢复会话失败')
+  }
 }
 
 /** 会话按钮上显示的当前会话名：列表里找标题；找不到（刚 reset/新建未落列表）给兜底名 */
@@ -239,6 +268,16 @@ const headTitle = computed(
              flex-1/overflow-y-auto 依赖 flex 父级定高，否则消息区按内容长高、
              被裁剪且无法滚动 -->
         <div v-else class="mx-auto flex h-full w-full max-w-[760px] flex-col">
+          <!-- 澄清对话入口：跨文稿找回还没产出大纲的澄清会话（含横幅那类） -->
+          <div class="mx-4 mt-3 flex items-center justify-end">
+            <button
+              class="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+              title="查看之前的澄清对话"
+              @click="openSessions"
+            >
+              <PhChats :size="13" /> 澄清对话
+            </button>
+          </div>
           <!-- 续接横幅：离开 /new 后未走完向导的对话从这里找回 -->
           <div v-if="resumeBanner" class="mx-4 mt-3 flex items-center gap-3 rounded-control border border-accent-border bg-accent-soft px-3 py-2">
             <span class="min-w-0 flex-1 truncate text-[12.5px] text-ink-2">
@@ -300,7 +339,7 @@ const headTitle = computed(
 
     <SessionDrawer
       :open="sessionsOpen"
-      :sessions="sessions"
+      :sessions="drawerSessions"
       :current-id="chat.sessionId"
       :loading="sessionsLoading"
       @close="sessionsOpen = false"
