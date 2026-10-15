@@ -1,4 +1,5 @@
 import { currentToken } from './client'
+import type { SessionSummary } from '@/types/chat'
 
 /**
  * chat 相关接口。start/answer 返回原始 Response（SSE 流，由 lib/sse 消费）；
@@ -35,6 +36,8 @@ export interface StartChatArgs {
   webSearch?: boolean
   /** 用户附图（压缩后的 data URL，≤3 张；服务端 chatimg.Normalize 校验） */
   images?: string[]
+  /** 内容密度档位（concise/standard/rich），随会话落库；空 = standard */
+  density?: string
 }
 
 export function startChat(a: StartChatArgs, signal?: AbortSignal): Promise<Response> {
@@ -46,6 +49,7 @@ export function startChat(a: StartChatArgs, signal?: AbortSignal): Promise<Respo
       deck_id: a.deckId,
       enable_web_search: a.webSearch ?? false,
       images: a.images ?? [],
+      density: a.density ?? '',
     },
     signal,
   )
@@ -84,8 +88,8 @@ export function generateDeck(
   )
 }
 
-/** 某个 deck 名下的会话列表（按最近活跃倒序） */
-export async function listSessions(deckId: string): Promise<{ id: number; title: string; pending: boolean; updated_at: string }[]> {
+/** 某个 deck 名下的会话列表（按最近活跃倒序）。has_messages=false = 空对话 */
+export async function listSessions(deckId: string): Promise<SessionSummary[]> {
   const { request } = await import('./client')
   return request(`/api/decks/${deckId}/chat/sessions`)
 }
@@ -96,6 +100,8 @@ export interface RecentSession {
   deck_id: string
   title: string
   pending: boolean
+  has_messages: boolean
+  density: string
   deck_stage: string
   deck_format: string
   created_at: string

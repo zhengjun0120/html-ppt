@@ -271,7 +271,7 @@ func suggestSessionID(deckID string) uint {
 // 任何失败只打日志不阻断推荐——观测是增强不是故障源。
 func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, pages int, model, sys, user string) (context.Context, *trace.Recorder, func()) {
 	if !s.traceCfg.Enabled || s.traceCfg.Dir == "" {
-		return ctx, nil, func() {}
+		return s.ledgerRun(ctx, uid, deckID, model)
 	}
 	sessID := suggestSessionID(deckID)
 	rec, err := trace.New(trace.Options{
@@ -282,10 +282,12 @@ func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, 
 		DeckID:        deckID,
 		MaxFieldBytes: s.traceCfg.MaxFieldBytes,
 		RetainRuns:    s.traceCfg.RetainRuns,
+		Model:         model,
+		UsageSink:     s.traceCfg.UsageSink,
 	})
 	if err != nil {
 		log.Printf("[warn] tplsuggest: 开启观测失败，本轮不记录 err: %v", err)
-		return ctx, nil, func() {}
+		return s.ledgerRun(ctx, uid, deckID, model)
 	}
 	rec.Emit(trace.Event{
 		Kind: trace.KindRunStart, RunKind: "tplsugg",
@@ -303,6 +305,20 @@ func (s *Service) traceRun(ctx context.Context, uid uint, deckID, title string, 
 	rec.Emit(trace.Event{
 		Kind: trace.KindLLMRequest, Model: model,
 		Messages: msgs, MessageCount: 2, Bytes: len(msgs),
+	})
+	return trace.With(ctx, rec), rec, rec.Close
+}
+
+// ledgerRun 观测关闭/落盘失败时的账本-only 兜底：返回值形状与 traceRun 一致
+// （调用方零改动），用量照记、JSONL 不写、endRun 的 Emit 全是空操作。
+func (s *Service) ledgerRun(ctx context.Context, uid uint, deckID, model string) (context.Context, *trace.Recorder, func()) {
+	rec := trace.LedgerOnly(trace.Options{
+		SessionID: suggestSessionID(deckID),
+		RunID:     trace.NewRunID(time.Now()),
+		UserID:    uid,
+		DeckID:    deckID,
+		Model:     model,
+		UsageSink: s.traceCfg.UsageSink,
 	})
 	return trace.With(ctx, rec), rec, rec.Close
 }

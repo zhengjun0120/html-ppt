@@ -161,9 +161,9 @@ func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, de
 	if deckID == "" {
 		if continuation {
 			// 冷启动的 ask_user 恢复轮：澄清的答案已到手，该产出大纲了
-			return scopeDecision{scope: as.scopeForStage("outlining"), sys: BuildStagePrompt("outlining", "", nil, nil), isV2: true}, nil
+			return scopeDecision{scope: as.scopeForStage("outlining"), sys: BuildStagePrompt("outlining", "", nil, nil, sess.Density), isV2: true}, nil
 		}
-		return scopeDecision{scope: as.scopeForStage("clarifying"), sys: BuildStagePrompt("", "", nil, nil), isV2: true}, nil
+		return scopeDecision{scope: as.scopeForStage("clarifying"), sys: BuildStagePrompt("", "", nil, nil, sess.Density), isV2: true}, nil
 	}
 	if !as.DeckService.IsV2(deckID) {
 		return scopeDecision{}, ErrStageLocked{Msg: "这份文稿是旧格式（deck-v1），已随新版下线；请新建文稿生成"}
@@ -179,10 +179,10 @@ func (as *AgentService) scopeForSession(userID uint, sess *store.ChatSession, de
 	case deck.StageGenerating:
 		return scopeDecision{}, ErrStageLocked{Msg: "deck 正在生成中：请等生成完成，或刷新页面后用「继续生成」恢复"}
 	case deck.StageOutlining, deck.StageOutlineReview:
-		return scopeDecision{scope: as.scopeForStage(df.Stage), sys: BuildStagePrompt(df.Stage, deckID, as.templateOrNil(df), nil), isV2: true}, nil
+		return scopeDecision{scope: as.scopeForStage(df.Stage), sys: BuildStagePrompt(df.Stage, deckID, as.templateOrNil(df), nil, sess.Density), isV2: true}, nil
 	case deck.StageIterating:
 		o, _ := as.DeckService.ReadOutline(userID, deckID)
-		return scopeDecision{scope: as.scopeForStage(deck.StageIterating), sys: BuildStagePrompt(deck.StageIterating, deckID, as.templateOrNil(df), o), isV2: true}, nil
+		return scopeDecision{scope: as.scopeForStage(deck.StageIterating), sys: BuildStagePrompt(deck.StageIterating, deckID, as.templateOrNil(df), o, sess.Density), isV2: true}, nil
 	default:
 		return scopeDecision{}, fmt.Errorf("deck 处于未知阶段 %q", df.Stage)
 	}
@@ -211,12 +211,12 @@ func refreshSystem(messages []openai.ChatCompletionMessageParamUnion, systemProm
 	return messages
 }
 
-func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID string, imgs []chatimg.Image, emit func(StreamEvent) error) (uint, error) {
+func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uint, userContent, deckID, density string, imgs []chatimg.Image, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
-	client := as.clientFor(ctx)
+	rl := as.resolveLLM(ctx)
 
 	// 读取会话历史
-	sess, messages, err := as.loadOrCreateSession(ctx, userID, sessionID, userContent, deckID)
+	sess, messages, err := as.loadOrCreateSession(ctx, userID, sessionID, userContent, deckID, density)
 	if err != nil {
 		return 0, err
 	}
@@ -260,8 +260,9 @@ func (as *AgentService) NewStreamChat(ctx context.Context, userID, sessionID uin
 		return sess.ID, fmt.Errorf("事件推送失败: %w", emitErr)
 	}
 
-	paused, rr, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+	paused, rr, err := as.runLoop(ctx, rl, sess, messages, emit, runTraceInfo{
 		UserID:      userID,
+		Model:       rl.Model,
 		DeckID:      sess.DeckID,
 		UserContent: userContent,
 	}, dec.scope)
@@ -297,7 +298,7 @@ func (as *AgentService) bindDeckFromRun(sess *store.ChatSession, rr *runRecorder
 // AnswerChat 用户回答 ask_user 后恢复循环
 func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, answersJSON string, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
-	client := as.clientFor(ctx)
+	rl := as.resolveLLM(ctx)
 
 	sess, messages, err := as.loadSession(ctx, userID, sessionID)
 	if err != nil {
@@ -334,8 +335,9 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	if dec.isV2 {
 		messages = refreshSystem(messages, dec.sys)
 	}
-	paused, rr, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+	paused, rr, err := as.runLoop(ctx, rl, sess, messages, emit, runTraceInfo{
 		UserID:      userID,
+		Model:       rl.Model,
 		DeckID:      sess.DeckID,
 		UserContent: "(用户回答了 ask_user 的提问)",
 		ParentRunID: pending.RunID,
@@ -350,7 +352,7 @@ func (as *AgentService) AnswerChat(ctx context.Context, userID, sessionID uint, 
 	return sess.ID, nil
 }
 
-func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error, info runTraceInfo, scope *runScope) (paused bool, rr *runRecorder, err error) {
+func (as *AgentService) runLoop(ctx context.Context, rl resolvedLLM, sess *store.ChatSession, messages []openai.ChatCompletionMessageParamUnion, emit func(StreamEvent) error, info runTraceInfo, scope *runScope) (paused bool, rr *runRecorder, err error) {
 	rr = newRunRecorder()
 	defer func() {
 		if err == nil {
@@ -392,7 +394,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 		endRun(trace.StatusError)
 	}()
 
-	opt := as.setChatOpts()
+	opt := as.setChatOpts(rl)
 	opt.Messages = messages
 	opt.StreamOptions = openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)}
 	opt.Tools = scope.tools
@@ -428,7 +430,7 @@ func (as *AgentService) runLoop(ctx context.Context, client *openai.Client, sess
 				return false, rr, err
 			}
 		}
-		msg, usage, streamErr := as.streamOnce(turnCtx, client, opt, &fullText, emit)
+		msg, usage, streamErr := as.streamOnce(turnCtx, rl.Client, opt, &fullText, emit)
 		if streamErr != nil {
 			return false, rr, streamErr
 		}
@@ -756,7 +758,7 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 		raw = chatimg.RedactDataURLs(raw)
 		trace.Emit(ctx, trace.Event{
 			Kind:         trace.KindLLMRequest,
-			Model:        as.ModelID,
+			Model:        string(opt.Model),
 			Messages:     raw,
 			MessageCount: len(opt.Messages),
 			Bytes:        len(raw),
@@ -839,10 +841,14 @@ func (as *AgentService) streamOnce(ctx context.Context, client *openai.Client, o
 	return msg, acc.Usage, nil
 }
 
-func (as *AgentService) setChatOpts() openai.ChatCompletionNewParams {
+// setChatOpts 按解析出的目标构造请求参数。用户自选模型不设 ReasoningEffort：
+// 第三方兼容网关对未知参数的容忍度不可控，模型能力是用户自己选的。
+func (as *AgentService) setChatOpts(rl resolvedLLM) openai.ChatCompletionNewParams {
 	opt := openai.ChatCompletionNewParams{
-		Model:           openai.ChatModel(as.ModelID),
-		ReasoningEffort: shared.ReasoningEffortHigh,
+		Model: openai.ChatModel(rl.Model),
+	}
+	if !rl.Custom {
+		opt.ReasoningEffort = shared.ReasoningEffortHigh
 	}
 	return opt
 }
@@ -867,7 +873,7 @@ func (as *AgentService) recordRunVersions(ctx context.Context, rr *runRecorder) 
 // stage 停在 generating，resume=true 的 run 会先对齐现状再续写。
 func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionID uint, deckIDParam string, resume bool, emit func(StreamEvent) error) (uint, error) {
 	ctx = authctx.WithUser(ctx, userID)
-	client := as.clientFor(ctx)
+	rl := as.resolveLLM(ctx)
 
 	sess, _, err := as.loadSession(ctx, userID, sessionID)
 	if err != nil {
@@ -905,7 +911,7 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 		userMsg = kickoffGenerateMsg
 	}
 	messages := []openai.ChatCompletionMessageParamUnion{
-		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df), outline))),
+		openai.SystemMessage(appendDate(BuildStagePrompt(deck.StageGenerating, sess.DeckID, as.templateOrNil(df), outline, sess.Density))),
 		openai.UserMessage(userMsg),
 	}
 	if err := as.persistSession(sess, messages); err != nil {
@@ -916,8 +922,9 @@ func (as *AgentService) StartGenerationRun(ctx context.Context, userID, sessionI
 	}
 
 	scope := as.scopeForStage(deck.StageGenerating)
-	_, rr, err := as.runLoop(ctx, client, sess, messages, emit, runTraceInfo{
+	_, rr, err := as.runLoop(ctx, rl, sess, messages, emit, runTraceInfo{
 		UserID:      userID,
+		Model:       rl.Model,
 		DeckID:      sess.DeckID,
 		UserContent: userMsg,
 	}, scope)

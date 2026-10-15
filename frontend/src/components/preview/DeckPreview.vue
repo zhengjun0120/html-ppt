@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhArrowsOutSimple, PhArrowClockwise, PhClockCounterClockwise, PhDownload, PhExport, PhPencilSimple } from '@phosphor-icons/vue'
+import { PhArrowsOutSimple, PhArrowClockwise, PhCaretDown, PhClockCounterClockwise, PhCode, PhDownload, PhExport, PhPencilSimple } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { authedUrl } from '@/api/client'
@@ -74,14 +74,17 @@ watch(() => props.deckId, () => {
   void loadThumbs()
 })
 
+// 导出格式收进下拉：工具条按钮太多，三种格式不是一个层级的操作
+const exportMenu = ref(false)
 const exporting = ref('')
 async function doExport(format: 'pdf' | 'png' | 'html') {
   if (!props.deckId) return
+  exportMenu.value = false
   exporting.value = format
   try {
     const r = await exportDeck(props.deckId, format)
     window.open(authedUrl(`/api/decks/${props.deckId}/exports/${r.filename}`), '_blank', 'noopener')
-    toast.info(`${r.filename} 已生成`)
+    toast.info(`${r.download_as ?? r.filename} 已生成`)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '导出失败')
   } finally {
@@ -93,27 +96,45 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
 <template>
   <section class="flex min-w-0 flex-1 flex-col">
     <!-- 预览工具条 -->
-    <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
+    <div class="relative flex items-center gap-2 border-b border-line px-3 py-1.5">
       <slot name="toolbar-start" />
       <span class="truncate text-[12.5px] font-semibold" :title="title">{{ title }}</span>
       <span v-if="props.deckId" class="truncate font-mono text-[11px] text-ink-3">{{ props.deckId }}</span>
       <span class="ml-auto flex items-center gap-1.5">
-        <button
-          v-if="props.deckId"
-          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
-          :disabled="!!exporting"
-          @click="doExport('pdf')"
-        >
-          <PhDownload :size="12" /> {{ exporting === 'pdf' ? '…' : 'PDF' }}
-        </button>
-        <button
-          v-if="props.deckId"
-          class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
-          :disabled="!!exporting"
-          @click="doExport('png')"
-        >
-          <PhExport :size="12" /> {{ exporting === 'png' ? '…' : 'PNG' }}
-        </button>
+        <!-- 导出下拉：透明背板点击即关，免挂 document 监听 -->
+        <div v-if="props.deckId" class="relative">
+          <button
+            class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="!!exporting"
+            @click="exportMenu = !exportMenu"
+          >
+            <PhDownload :size="12" />
+            {{ exporting ? `导出中（${exporting.toUpperCase()}）…` : '导出' }}
+            <PhCaretDown :size="10" :class="exportMenu ? 'rotate-180 transition-transform' : 'transition-transform'" />
+          </button>
+          <div v-if="exportMenu" class="fixed inset-0 z-20 cursor-default" @click="exportMenu = false" />
+          <div
+            v-if="exportMenu"
+            class="absolute right-0 top-full z-30 mt-1 w-48 rounded border border-line bg-surface py-1 shadow-md"
+          >
+            <button
+              v-for="opt in [
+                { format: 'pdf', icon: PhDownload, label: 'PDF', desc: '矢量文档，打印分享' },
+                { format: 'png', icon: PhExport, label: 'PNG 图片包', desc: '逐页图片，zip 打包' },
+                { format: 'html', icon: PhCode, label: 'HTML 单文件', desc: '可翻页，随处打开' },
+              ] as const"
+              :key="opt.format"
+              class="flex w-full cursor-pointer items-start gap-2 px-3 py-1.5 text-left transition-colors hover:bg-surface-2"
+              @click="doExport(opt.format)"
+            >
+              <component :is="opt.icon" :size="14" class="mt-0.5 shrink-0 text-ink-3" />
+              <span>
+                <span class="block text-[12px] text-ink">{{ opt.label }}</span>
+                <span class="block text-[10.5px] text-ink-3">{{ opt.desc }}</span>
+              </span>
+            </button>
+          </div>
+        </div>
         <button
           v-if="props.deckId"
           class="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
@@ -144,6 +165,8 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
           <PhArrowsOutSimple :size="12" /> 新标签
         </button>
       </span>
+      <!-- 导出进行中：不确定进度爬条（导出无真实百分比里程碑，见 doExport） -->
+      <div v-if="exporting" class="export-crawl pointer-events-none absolute inset-x-0 bottom-0 h-[2px]" aria-hidden="true" />
     </div>
 
     <div class="flex min-h-0 flex-1">
@@ -210,3 +233,33 @@ async function doExport(format: 'pdf' | 'png' | 'html') {
     </div>
   </section>
 </template>
+
+<style scoped>
+/* 导出进行中的不确定进度条：爬条只表达「忙碌」，不假装百分比 */
+.export-crawl {
+  overflow: hidden;
+}
+.export-crawl::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--accent);
+  animation: exp-crawl 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .export-crawl::before {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+@keyframes exp-crawl {
+  from {
+    left: -40%;
+  }
+  to {
+    left: 100%;
+  }
+}
+</style>

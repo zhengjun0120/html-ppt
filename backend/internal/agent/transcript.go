@@ -33,12 +33,14 @@ var ErrSessionStoreUnavailable = errors.New("数据库不可用，会话功能�
 // SessionSummary 会话摘要。列表页只需要知道"有哪些对话、各自聊到哪了"，
 // 完整消息列表（longtext，单个会话可能上百 KB）不随列表拉取。
 type SessionSummary struct {
-	ID        uint      `json:"id"`
-	DeckID    string    `json:"deck_id"`
-	Title     string    `json:"title"`
-	Pending   bool      `json:"pending"` // true = 有 ask_user 提问还没回答
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          uint      `json:"id"`
+	DeckID      string    `json:"deck_id"`
+	Title       string    `json:"title"`
+	Pending     bool      `json:"pending"` // true = 有 ask_user 提问还没回答
+	HasMessages bool      `json:"has_messages"`
+	Density     string    `json:"density"` // 内容密度档位（空 = standard），前端选择器回显用
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // TranscriptToolCall 一次工具调用的展示形状（来自 assistant 消息的声明）。
@@ -77,20 +79,22 @@ func (as *AgentService) DeckSessions(ctx context.Context, userID uint, deckID st
 	if as.st == nil {
 		return nil, ErrSessionStoreUnavailable
 	}
-	var rows []store.ChatSession
+	var rows []sessionRow
 	// 刻意不 SELECT messages：那是 longtext，列表页用不上，
-	// 不加限制的话"看一眼有哪些对话"要把每个会话的完整上下文从库里搬出来
+	// 不加限制的话"看一眼有哪些对话"要把每个会话的完整上下文从库里搬出来；
+	// 空会话标记用计算列带出
 	err := as.st.DB.WithContext(ctx).
-		Select("id", "user_id", "deck_id", "pending_ask", "title", "created_at", "updated_at").
+		Model(&store.ChatSession{}).
+		Select("id", "user_id", "deck_id", "pending_ask", "title", "density", "created_at", "updated_at", "messages <> '' AS has_messages").
 		Where("deck_id = ? AND user_id = ?", deckID, userID).
 		Order("updated_at DESC").
-		Find(&rows).Error
+		Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("查询会话列表: %w", err)
 	}
 	out := make([]SessionSummary, 0, len(rows)) // 保证空列表序列化成 [] 而不是 null
 	for i := range rows {
-		out = append(out, sessionSummary(&rows[i]))
+		out = append(out, sessionSummary(&rows[i].ChatSession, rows[i].HasMessages))
 	}
 	return out, nil
 }
@@ -114,13 +118,14 @@ func (as *AgentService) RecentSessions(ctx context.Context, userID uint, limit i
 	if limit <= 0 || limit > 50 {
 		limit = 10
 	}
-	var rows []store.ChatSession
+	var rows []sessionRow
 	err := as.st.DB.WithContext(ctx).
-		Select("id", "user_id", "deck_id", "pending_ask", "title", "created_at", "updated_at").
+		Model(&store.ChatSession{}).
+		Select("id", "user_id", "deck_id", "pending_ask", "title", "density", "created_at", "updated_at", "messages <> '' AS has_messages").
 		Where("user_id = ?", userID).
 		Order("updated_at DESC").
 		Limit(limit).
-		Find(&rows).Error
+		Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("查询最近会话: %w", err)
 	}
@@ -146,7 +151,7 @@ func (as *AgentService) RecentSessions(ctx context.Context, userID uint, limit i
 	}
 	out := make([]RecentSessionSummary, 0, len(rows))
 	for i := range rows {
-		s := RecentSessionSummary{SessionSummary: sessionSummary(&rows[i])}
+		s := RecentSessionSummary{SessionSummary: sessionSummary(&rows[i].ChatSession, rows[i].HasMessages)}
 		if d, ok := deckByID[rows[i].DeckID]; ok {
 			s.DeckStage = d.Stage
 			s.DeckFormat = d.Format
@@ -156,14 +161,25 @@ func (as *AgentService) RecentSessions(ctx context.Context, userID uint, limit i
 	return out, nil
 }
 
-func sessionSummary(sess *store.ChatSession) SessionSummary {
+// sessionRow 列表查询的扫描目标：ChatSession 去掉 messages 长文本列，
+// 换成一个"messages 非空"计算列——空会话标记（前端侧栏标"空对话"）
+// 不需要把上下文从库里搬出来。
+type sessionRow struct {
+	store.ChatSession
+	HasMessages bool `gorm:"column:has_messages"`
+}
+
+// sessionSummary 把会话行投影成响应摘要。
+func sessionSummary(sess *store.ChatSession, hasMessages bool) SessionSummary {
 	return SessionSummary{
-		ID:        sess.ID,
-		DeckID:    sess.DeckID,
-		Title:     sess.Title,
-		Pending:   parsePendingAsk(sess).ToolCallID != "",
-		CreatedAt: sess.CreatedAt,
-		UpdatedAt: sess.UpdatedAt,
+		ID:          sess.ID,
+		DeckID:      sess.DeckID,
+		Title:       sess.Title,
+		Pending:     parsePendingAsk(sess).ToolCallID != "",
+		HasMessages: hasMessages,
+		Density:     sess.Density,
+		CreatedAt:   sess.CreatedAt,
+		UpdatedAt:   sess.UpdatedAt,
 	}
 }
 
@@ -181,7 +197,7 @@ func (as *AgentService) SessionTranscript(ctx context.Context, userID, sessionID
 	}
 	pending := parsePendingAsk(sess)
 	t := &Transcript{
-		Session:  sessionSummary(sess),
+		Session:  sessionSummary(sess, len(messages) > 0),
 		Messages: projectTranscript(messages, pending.ToolCallID, afterSeq),
 	}
 	if t.Messages == nil {

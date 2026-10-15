@@ -19,8 +19,9 @@ var ErrPaused = errors.New("agent paused: waiting for user answer")
 // ErrPendingAsk（会话在等 ask_user 的回答，此时不接受新的用户消息）定义在 toolcalls.go，
 // 它和那条协议不变式是一套东西。
 
-// 续轮读回历史，首轮新建会话
-func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID uint,userContent,deckID string) (*store.ChatSession,[]openai.ChatCompletionMessageParamUnion,error){
+// 续轮读回历史，首轮新建会话。density 是本轮请求带的内容密度档位：
+// 新会话直接落库；老会话请求带了不同值就更新（随下一个检查点写回）。
+func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID uint,userContent,deckID,density string) (*store.ChatSession,[]openai.ChatCompletionMessageParamUnion,error){
 	if as.st == nil{
 		return nil,nil,errors.New("数据库不可用，会话功能关闭")
 	}
@@ -34,6 +35,9 @@ func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID
 		}
 		if err !=nil{
 			return nil,nil,fmt.Errorf("加载会话时 数据库失败 err:%w",err)
+		}
+		if density != "" && density != sess.Density{
+			sess.Density = density // 提示词本 run 就要用；落盘交给本次请求的 persistSession
 		}
 
 		var messages []openai.ChatCompletionMessageParamUnion
@@ -67,7 +71,7 @@ func (as *AgentService) loadOrCreateSession(ctx context.Context,userID,sessionID
 	if r := []rune(title);len(r) >30{
 		title = string(r[:30])
 	}
-	sess := &store.ChatSession{UserID: userID,DeckID: deckID,Title:title}
+	sess := &store.ChatSession{UserID: userID,DeckID: deckID,Title:title,Density:normalizeDensity(density)}
 	if err := as.st.DB.Create(sess).Error;err!=nil{
 		return nil,nil,fmt.Errorf("创建会话时 数据库失败 err:%w",err)
 	}
@@ -79,7 +83,7 @@ func (as *AgentService) loadSession(ctx context.Context,userID,sessionID uint)(*
 	if sessionID == 0{
 		return nil,nil,errors.New("缺少 session_id")
 	}
-	sess,messages,err := as.loadOrCreateSession(ctx,userID,sessionID,"","")
+	sess,messages,err := as.loadOrCreateSession(ctx,userID,sessionID,"","","")
 	return sess,messages,err
 }
 
@@ -93,6 +97,7 @@ func (as *AgentService) persistSession(sess *store.ChatSession,messages []openai
 	err = as.st.DB.Model(sess).Updates(map[string]any{
 		"messages":sess.Messages,
 		"pending_ask":sess.PendingAsk,
+		"density":sess.Density,
 	}).Error
 	if err !=nil{
 		return fmt.Errorf("更新会话时 数据库时失败 err:%w",err)

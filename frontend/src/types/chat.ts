@@ -113,6 +113,10 @@ export interface SessionSummary {
   deck_id: string
   title: string
   pending: boolean
+  /** false = 还没有任何对话内容（侧栏标"空对话"） */
+  has_messages: boolean
+  /** 内容密度档位（concise/standard/rich；空 = standard） */
+  density: string
   created_at: string
   updated_at: string
 }

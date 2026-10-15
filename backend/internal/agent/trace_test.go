@@ -231,13 +231,13 @@ func TestOpenTraceRecorderGatingAndLivePolicy(t *testing.T) {
 		Exec:    map[string]ToolFunc{"write_deck": nil, "web_search": nil, "ask_user": nil},
 	}
 
-	// —— 关掉：什么都不该发生 ——
+	// —— 关掉：不落一个文件、不推一条实时事件，但账本归属还在（LedgerOnly） ——
 	rootOff := t.TempDir()
 	as.TraceCfg = trace.Config{Enabled: false, Dir: rootOff, CaptureImages: true}
 	c := &collector{}
 	rec := as.openTraceRecorder(runTraceInfo{SessionID: 1, UserID: 1}, c.emit)
-	if rec != trace.Discard {
-		t.Error("关掉观测时应返回 Discard")
+	if rec != trace.Discard && !rec.IsLedgerOnly() {
+		t.Error("关掉观测时应返回 Discard 或账本-only recorder")
 	}
 	trace.Emit(trace.With(context.Background(), rec), trace.Event{Kind: trace.KindToolCall, Args: "x"})
 	rec.Close()
@@ -248,7 +248,7 @@ func TestOpenTraceRecorderGatingAndLivePolicy(t *testing.T) {
 		t.Errorf("关掉观测时不该推实时事件，实际 %+v", c.evs)
 	}
 	if trace.Active(trace.With(context.Background(), rec)) {
-		t.Error("Discard 不该报告为活跃（否则每轮都要白序列化一遍上下文）")
+		t.Error("关掉观测不该报告为活跃（否则每轮都要白序列化一遍上下文）")
 	}
 
 	// —— 打开：run_start 要带工具清单，实时事件要剔除 messages ——

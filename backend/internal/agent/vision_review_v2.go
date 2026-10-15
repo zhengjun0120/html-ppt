@@ -173,14 +173,14 @@ func (a *AgentService) toolReviewSlidesV2(ctx context.Context, arguments string)
 		}
 	}
 
-	client := a.clientFor(ctx)
+	rl := a.resolveLLM(ctx)
 	// 主模型关注点 + 逐页大纲意图随图注入：看图是一次隔离调用，主对话的上下文
 	// 它拿不到——focus 不传就只做泛泛审查，大纲意图不给就审不了"内容切题"。
 	rc := &vision.ReviewContext{Focus: args.Focus, PageBriefs: a.outlineBriefs(uid, args.DeckID)}
 	if rc.Focus == "" && len(rc.PageBriefs) == 0 {
 		rc = nil
 	}
-	rr, err := vision.ReviewV2(ctx, client, a.ModelID, d, pages, rc, onDelta)
+	rr, err := vision.ReviewV2(ctx, rl.Client, rl.Model, d, pages, rc, onDelta)
 	if err != nil {
 		log.Printf("[warn] 视觉审查(v2)：看图失败，只回量测 err:%v", err)
 		trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{
@@ -192,7 +192,7 @@ func (a *AgentService) toolReviewSlidesV2(ctx context.Context, arguments string)
 
 	trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{
 		Name: "vision", Stage: "review_prompt", Text: rr.Prompt,
-		Data: map[string]any{"images": rr.Images, "model": a.ModelID, "pages": pages, "focus": args.Focus},
+		Data: map[string]any{"images": rr.Images, "model": rl.Model, "pages": pages, "focus": args.Focus},
 	}})
 	trace.Usage(ctx, trace.CompVision, usagePartFrom(rr.Usage))
 	trace.Emit(ctx, trace.Event{Kind: trace.KindSubStep, Sub: &trace.SubStep{

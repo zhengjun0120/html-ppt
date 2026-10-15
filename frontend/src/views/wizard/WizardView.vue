@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { PhChatCircleDots, PhPlus, PhX } from '@phosphor-icons/vue'
+import { PhChatCircleDots, PhChats, PhPlus, PhX } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import Button from '@/components/ui/Button.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessages from '@/components/chat/ChatMessages.vue'
+import SessionDrawer from '@/components/chat/SessionDrawer.vue'
 import { listRecentSessions, type RecentSession } from '@/api/chat'
 import { useToast } from '@/stores/toast'
 import GeneratingProgress from '@/components/wizard/GeneratingProgress.vue'
@@ -145,14 +146,70 @@ async function enforce() {
 }
 
 function newConversation() {
+  // 空上下文时 reset 毫无意义：还会让"自动恢复的空会话"被弃置、下次发消息再堆一个新会话
+  if (!chat.hasConversation) {
+    toast.info('当前已经是新对话了')
+    return
+  }
   chat.reset(deckId.value)
   wizard.reset()
   void router.replace('/new')
 }
 
-function onSessionChange(e: Event) {
-  switchSession(deckId.value, (id) => wizard.syncFromChat(id), Number((e.target as HTMLSelectElement).value))
+const sessionsOpen = ref(false)
+const sessionsLoading = ref(false)
+/** 澄清步专用：跨文稿拉回来的纯澄清会话（还没产出大纲落到 deck 的） */
+const clarifySessions = ref<RecentSession[]>([])
+
+/** 打开会话抽屉：澄清步走 recent-sessions 过滤纯澄清会话（此时可能还没有 deckId，
+ *  按 deck 查的接口无从下手）；其余步按 deck 刷新列表 */
+async function openSessions() {
+  sessionsOpen.value = true
+  sessionsLoading.value = true
+  try {
+    if (routeStep.value === 'clarify') {
+      const recent = await listRecentSessions(50)
+      clarifySessions.value = recent.filter((s) => !s.deck_id && s.has_messages)
+    } else {
+      await loadSessions(deckId.value)
+    }
+  } finally {
+    sessionsLoading.value = false
+  }
 }
+
+/** 抽屉数据源：澄清步用澄清会话，其余步用本 deck 的会话 */
+const drawerSessions = computed(() =>
+  routeStep.value === 'clarify' ? clarifySessions.value : sessions.value,
+)
+
+function onSwitchSession(id: number) {
+  sessionsOpen.value = false
+  if (routeStep.value === 'clarify') return void resumeClarify(id)
+  switchSession(deckId.value, (id) => wizard.syncFromChat(id), id)
+}
+
+/** 澄清步恢复一个纯澄清会话（与横幅 resumeLast 同链路；deck 还没绑，留在本页续聊） */
+async function resumeClarify(id: number) {
+  if (id === (chat.sessionId ?? 0) || chat.status !== 'idle') return
+  if (resumeBanner.value?.id === id) {
+    resumeBanner.value = null
+    sessionStorage.removeItem('wizard.resumeDismissed')
+  }
+  try {
+    await chat.loadSession(id)
+    await wizard.syncFromChat(chat.deckId)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '恢复会话失败')
+  }
+}
+
+/** 会话按钮上显示的当前会话名：列表里找标题；找不到（刚 reset/新建未落列表）给兜底名 */
+const currentSessionTitle = computed(() => {
+  if (chat.sessionId == null) return '新对话'
+  const cur = sessions.value.find((s) => s.id === chat.sessionId)
+  return cur ? cur.title || `会话 ${cur.id}` : '本次对话（进行中）'
+})
 
 // 冷启动时 deckId 由管线事件送回 → 加载会话列表
 watch(
@@ -211,6 +268,31 @@ const headTitle = computed(
              flex-1/overflow-y-auto 依赖 flex 父级定高，否则消息区按内容长高、
              被裁剪且无法滚动 -->
         <div v-else class="mx-auto flex h-full w-full max-w-[760px] flex-col">
+          <!-- 顶行：内容密度三档（随会话记住，发消息时生效）+ 澄清对话入口 -->
+          <div class="mx-4 mt-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] text-ink-3">内容密度</span>
+              <div class="flex rounded-control border border-line p-0.5">
+                <button
+                  v-for="d in ([['concise', '精炼'], ['standard', '标准'], ['rich', '详实']] as const)"
+                  :key="d[0]"
+                  class="cursor-pointer rounded px-2 py-0.5 text-[11.5px] transition-colors"
+                  :class="chat.density === d[0] ? 'bg-accent font-semibold text-accent-contrast' : 'text-ink-3 hover:text-ink'"
+                  :title="d[0] === 'concise' ? '要点式页面，留白多' : d[0] === 'standard' ? '内容页正文约 180-280 字' : '阅读型页面，内容页 300 字以上'"
+                  @click="chat.density = d[0]"
+                >
+                  {{ d[1] }}
+                </button>
+              </div>
+            </div>
+            <button
+              class="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+              title="查看之前的澄清对话"
+              @click="openSessions"
+            >
+              <PhChats :size="13" /> 澄清对话
+            </button>
+          </div>
           <!-- 续接横幅：离开 /new 后未走完向导的对话从这里找回 -->
           <div v-if="resumeBanner" class="mx-4 mt-3 flex items-center gap-3 rounded-control border border-accent-border bg-accent-soft px-3 py-2">
             <span class="min-w-0 flex-1 truncate text-[12.5px] text-ink-2">
@@ -244,16 +326,15 @@ const headTitle = computed(
         </Button>
       </div>
       <div v-if="deckId && sessions.length" class="border-b border-line px-3 py-1.5">
-        <select
-          class="w-full cursor-pointer rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 outline-none focus-visible:border-accent"
-          :value="chat.sessionId ?? 0"
-          @change="onSessionChange"
+        <button
+          class="flex w-full cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+          :title="currentSessionTitle"
+          @click="openSessions"
         >
-          <option v-if="chat.sessionId == null" :value="0">本次对话</option>
-          <option v-for="s in sessions" :key="s.id" :value="s.id">
-            {{ s.title || `会话 ${s.id}` }}{{ s.pending ? '（待回答）' : '' }}
-          </option>
-        </select>
+          <PhChats :size="13" class="shrink-0" />
+          <span class="min-w-0 flex-1 truncate text-left">{{ currentSessionTitle }}</span>
+          <span class="shrink-0 text-[10.5px] text-ink-3">{{ sessions.length }} 个对话</span>
+        </button>
       </div>
       <ChatMessages class="min-h-0 flex-1 overflow-y-auto" />
       <div class="border-t border-line p-3">
@@ -270,5 +351,14 @@ const headTitle = computed(
     >
       <PhChatCircleDots :size="16" />
     </button>
+
+    <SessionDrawer
+      :open="sessionsOpen"
+      :sessions="drawerSessions"
+      :current-id="chat.sessionId"
+      :loading="sessionsLoading"
+      @close="sessionsOpen = false"
+      @switch="onSwitchSession"
+    />
   </div>
 </template>

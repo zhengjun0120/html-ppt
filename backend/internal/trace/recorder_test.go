@@ -483,3 +483,78 @@ func TestNewRunIDSortableAndUnique(t *testing.T) {
 		}
 	}
 }
+
+// TestUsageSinkGetsAttribution 账本回调每笔用量都要带全归属：谁、哪个会话/run、
+// 哪个分项、哪个模型。这是用量页数据链路的源头，归属错了账就记到别人头上。
+func TestUsageSinkGetsAttribution(t *testing.T) {
+	root := t.TempDir()
+	runID := "1700000000005-sink"
+	var got []UsageRecord
+	r := mustNew(t, Options{
+		Dir: root, SessionID: 42, RunID: runID, UserID: 7,
+		Model: "deepseek-flash", UsageSink: func(rec UsageRecord) { got = append(got, rec) },
+	})
+	ctx := With(context.Background(), r)
+
+	Usage(ctx, CompMain, UsagePart{Prompt: 100, Completion: 20, Total: 120, Cached: 60, Calls: 1})
+	Usage(ctx, CompWebSearch, UsagePart{Prompt: 10, Completion: 5, Total: 15})
+
+	if len(got) != 2 {
+		t.Fatalf("sink 应收到 2 笔，实际 %d", len(got))
+	}
+	m := got[0]
+	if m.UserID != 7 || m.SessionID != 42 || m.RunID != runID ||
+		m.Component != CompMain || m.Model != "deepseek-flash" ||
+		m.Prompt != 100 || m.Completion != 20 || m.Total != 120 || m.Cached != 60 || m.Calls != 1 {
+		t.Errorf("第一笔归属/数字不对: %+v", m)
+	}
+	if m.At.IsZero() {
+		t.Errorf("At 不该是零值")
+	}
+	if w := got[1]; w.Component != CompWebSearch || w.Model != "deepseek-flash" {
+		t.Errorf("第二笔分项/模型不对: %+v", w)
+	}
+	r.Close()
+}
+
+// TestWithRefusesPlainDisabledRecorder 无归属无回调的 disabled recorder（Discard 同款）
+// 不该被挂进 ctx——挂上去只会让 From 拿到一个纯摆设。
+func TestWithRefusesPlainDisabledRecorder(t *testing.T) {
+	r := &Recorder{disabled: true}
+	ctx := With(context.Background(), r)
+	if From(ctx) == r {
+		t.Errorf("无 sink 的 disabled recorder 不该被挂进 ctx")
+	}
+	// LedgerOnly（disabled 但带 sink）则必须挂上去，Usage 才有记账入口
+	led := LedgerOnly(Options{SessionID: 1, RunID: "1700000000007-with", UserID: 1,
+		UsageSink: func(UsageRecord) {}})
+	if From(With(context.Background(), led)) != led {
+		t.Errorf("LedgerOnly 必须能挂进 ctx，否则账本收不到数")
+	}
+}
+
+// TestLedgerOnlyRecordsWithoutFile 观测关闭时账本照记：sink 收到带归属的用量，
+// 但 Active 是 false（MB 级的上下文序列化不能白做），Close 可重复调用不出错。
+func TestLedgerOnlyRecordsWithoutFile(t *testing.T) {
+	var got []UsageRecord
+	r := LedgerOnly(Options{
+		SessionID: 9, RunID: "1700000000006-ledg", UserID: 3, Model: "m1",
+		UsageSink: func(rec UsageRecord) { got = append(got, rec) },
+	})
+	ctx := With(context.Background(), r)
+
+	Emit(ctx, Event{Kind: KindRunStart}) // 落盘路径必须仍是空操作
+	Usage(ctx, CompMain, UsagePart{Prompt: 10, Completion: 2, Total: 12, Calls: 1})
+
+	if len(got) != 1 {
+		t.Fatalf("LedgerOnly 应触发 1 笔账本，实际 %d", len(got))
+	}
+	if rec := got[0]; rec.UserID != 3 || rec.Component != CompMain || rec.Model != "m1" || rec.Total != 12 {
+		t.Errorf("账本记录不对: %+v", rec)
+	}
+	if Active(ctx) {
+		t.Errorf("LedgerOnly 的 Active 必须是 false，否则观测关闭还在白做序列化")
+	}
+	r.Close()
+	r.Close() // 可重复调用
+}

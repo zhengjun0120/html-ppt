@@ -67,7 +67,7 @@ var custToolNames = []string{"finish", "set_meta", "write_demo", "write_style", 
 // JSONL 只留相对路径（capture 关闭时只记张数，与视觉截图同一开关语义）。
 func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message string, imgs []chatimg.Image, model string) *trace.Recorder {
 	if !s.traceCfg.Enabled || s.traceCfg.Dir == "" {
-		return trace.Discard
+		return s.ledgerRecorder(userID, row, model)
 	}
 	sessID := customSessionID(row.ID)
 	rec, err := trace.New(trace.Options{
@@ -79,10 +79,12 @@ func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message
 		MaxFieldBytes: s.traceCfg.MaxFieldBytes,
 		RetainRuns:    s.traceCfg.RetainRuns,
 		CaptureImages: s.traceCfg.CaptureImages, // 用户附图与视觉截图同一开关
+		Model:         model,
+		UsageSink:     s.traceCfg.UsageSink,
 	})
 	if err != nil {
 		log.Printf("[warn] usertpl: 开启定制观测失败，本轮不记录 err: %v", err)
-		return trace.Discard
+		return s.ledgerRecorder(userID, row, model)
 	}
 	ev := trace.Event{
 		Kind: trace.KindRunStart, RunKind: "customize",
@@ -98,6 +100,19 @@ func (s *Service) openCustRecorder(userID uint, row *store.UserTemplate, message
 	}
 	rec.Emit(ev)
 	return rec
+}
+
+// ledgerRecorder 观测关闭/落盘失败时的账本-only recorder：定制对话的用量照记
+// （账本是业务数据），JSONL 不落、无任何序列化开销。
+func (s *Service) ledgerRecorder(userID uint, row *store.UserTemplate, model string) *trace.Recorder {
+	return trace.LedgerOnly(trace.Options{
+		SessionID: customSessionID(row.ID),
+		RunID:     trace.NewRunID(time.Now()),
+		UserID:    userID,
+		DeckID:    row.ID,
+		Model:     model,
+		UsageSink: s.traceCfg.UsageSink,
+	})
 }
 
 // custStream 流式跑一轮定制 LLM 调用（请求上下文归属由 ctx 携带）。

@@ -51,6 +51,8 @@ export const useChatStore = defineStore('chat', {
     deckId: '',
     status: 'idle' as ChatStatus,
     events: [] as ViewEvent[],
+    /** 内容密度档位（concise/standard/rich）：随每条消息发给后端落会话，选档即时生效 */
+    density: 'standard' as string,
     /** 暂停中的提问（ask_user）；非 null 时输入框锁定、提问卡可交互 */
     pendingAsk: null as { toolCallId: string; questions: AskQuestion[] } | null,
     /** 并行工具调用：tool_index → tool_call_id（流式期间） */
@@ -66,6 +68,10 @@ export const useChatStore = defineStore('chat', {
   getters: {
     /** 输入框可发消息：不在流式/暂停态，也不在历史恢复中 */
     canSend: (s) => s.status === 'idle' && !s.restoring,
+
+    /** 是否已有真实对话内容（用户或模型任一方说过话；think/tool/sys/error 等不算）。
+     *  「新对话」的守卫依据：没有内容时 reset 毫无意义，只会让空会话堆积。 */
+    hasConversation: (s) => s.events.some((e) => e.kind === 'user' || e.kind === 'agent'),
   },
 
   actions: {
@@ -78,6 +84,7 @@ export const useChatStore = defineStore('chat', {
       this.toolIndexToId = {}
       this.deckTouched = false
       this.pageProgress = {}
+      this.density = 'standard' // 新会话回默认档；选择器随 store 显示，用户可再切
       abortCtl?.abort()
       abortCtl = null
     },
@@ -267,7 +274,7 @@ export const useChatStore = defineStore('chat', {
       this.events.push({ kind: 'user', id: nextId(), text: content, images: images.length ? images : undefined })
       this.status = 'streaming'
       await this.consume(() =>
-        startChat({ sessionId: this.sessionId ?? 0, deckId: this.deckId, content, webSearch, images }),
+        startChat({ sessionId: this.sessionId ?? 0, deckId: this.deckId, content, webSearch, images, density: this.density }),
       )
     },
 
@@ -344,6 +351,7 @@ export const useChatStore = defineStore('chat', {
         this.sessionId = sessionId
         this.deckId = t.session.deck_id
         this.status = t.session.pending ? 'paused' : 'idle'
+        this.density = ['concise', 'standard', 'rich'].includes(t.session.density) ? t.session.density : 'standard'
         this.toolIndexToId = {}
         this.events = projectTranscript(t)
         const lastAsk = [...this.events].reverse().find(

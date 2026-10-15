@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { PhArrowLeft, PhPlus } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhChats, PhPlus } from '@phosphor-icons/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import Button from '@/components/ui/Button.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import ChatMessages from '@/components/chat/ChatMessages.vue'
+import SessionDrawer from '@/components/chat/SessionDrawer.vue'
 import HistoryDrawer from '@/components/preview/HistoryDrawer.vue'
 import DeckPreview from '@/components/preview/DeckPreview.vue'
 import DeckEditModal from '@/components/editor/DeckEditModal.vue'
@@ -31,6 +32,31 @@ const routeDeckId = isNew ? '' : String(route.params.id)
 const { chat, sessions, previewKey, loadSessions, boot, switchSession } = useWorkspaceBoot()
 const historyOpen = ref(false)
 const editOpen = ref(false)
+const sessionsOpen = ref(false)
+const sessionsLoading = ref(false)
+
+/** 打开会话抽屉：先刷新列表再展示（switchSession/删改后保持新鲜） */
+async function openSessions() {
+  sessionsOpen.value = true
+  sessionsLoading.value = true
+  try {
+    await loadSessions(deckId.value)
+  } finally {
+    sessionsLoading.value = false
+  }
+}
+
+function onSwitchSession(id: number) {
+  sessionsOpen.value = false
+  switchSession(deckId.value, (id) => wizardSync(id), id)
+}
+
+/** 会话按钮上显示的当前会话名：列表里找标题；找不到（刚 reset/新建未落列表）给兜底名 */
+const currentSessionTitle = computed(() => {
+  if (chat.sessionId == null) return '新对话'
+  const cur = sessions.value.find((s) => s.id === chat.sessionId)
+  return cur ? cur.title || `会话 ${cur.id}` : '本次对话（进行中）'
+})
 const deckStore = useDeckStore()
 const deckStoreTitle = computed(() => deckStore.titleOf(deckId.value) || '编辑文稿')
 
@@ -89,6 +115,11 @@ watch(
 )
 
 function newConversation() {
+  // 空上下文时 reset 毫无意义：还会让"自动恢复的空会话"被弃置、下次发消息再堆一个新会话
+  if (!chat.hasConversation) {
+    toast.info('当前已经是新对话了')
+    return
+  }
   chat.reset(deckId.value)
   toast.info('已开启新对话')
 }
@@ -147,19 +178,15 @@ function backToDecks() {
         </Button>
       </div>
       <div v-if="deckId && sessions.length" class="border-b border-line px-3 py-1.5">
-        <select
-          class="w-full cursor-pointer rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 outline-none focus-visible:border-accent"
-          :value="chat.sessionId ?? 0"
-          @change="switchSession(deckId, (id) => wizardSync(id), Number(($event.target as HTMLSelectElement).value))"
+        <button
+          class="flex w-full cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface-2 px-2 py-1 text-[12px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+          :title="currentSessionTitle"
+          @click="openSessions"
         >
-          <option v-if="chat.sessionId == null" :value="0">本次对话</option>
-          <option v-for="s in sessions" :key="s.id" :value="s.id">
-            {{ s.title || `会话 ${s.id}` }}{{ s.pending ? '（待回答）' : '' }}
-          </option>
-          <option v-if="chat.sessionId != null && !sessions.some((s) => s.id === chat.sessionId)" :value="chat.sessionId">
-            本次对话（进行中）
-          </option>
-        </select>
+          <PhChats :size="13" class="shrink-0" />
+          <span class="min-w-0 flex-1 truncate text-left">{{ currentSessionTitle }}</span>
+          <span class="shrink-0 text-[10.5px] text-ink-3">{{ sessions.length }} 个对话</span>
+        </button>
       </div>
       <ChatMessages />
       <div class="border-t border-line p-3 pb-14 md:pb-3">
@@ -173,6 +200,15 @@ function backToDecks() {
       :deck-id="deckId"
       @close="historyOpen = false"
       @restored="onRestored"
+    />
+
+    <SessionDrawer
+      :open="sessionsOpen"
+      :sessions="sessions"
+      :current-id="chat.sessionId"
+      :loading="sessionsLoading"
+      @close="sessionsOpen = false"
+      @switch="onSwitchSession"
     />
 
     <!-- 手动编辑弹窗：保存后刷新预览（deck 文件是 no-store，重挂 iframe 即拿到新版） -->
