@@ -1,4 +1,7 @@
 data/
+data.old-backup/
 config.yaml
 *.tmp
 *.exe
+# 部署编译产物（Linux ELF，无扩展名，*.exe 管不到）
+cmd/server/main
